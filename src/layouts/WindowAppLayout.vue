@@ -49,7 +49,7 @@ const sidebarCategories: SidebarCategory[] = [
         :categories="sidebarCategories"
       />
 
-			<main class="min-w-0 flex-1 rounded-corner border border-ui-border bg-ui-bg/80 p-4 md:ml-1 overflow-hidden">
+			<main class="min-h-0 min-w-0 flex-1 rounded-corner border border-ui-border bg-ui-bg/80 p-4 md:ml-1 overflow-y-auto overflow-x-hidden">
 				<slot />
 			</main>
     </div>

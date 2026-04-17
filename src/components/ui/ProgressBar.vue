@@ -2,7 +2,6 @@
 defineProps<{
 	label: string;
 	value: number;
-	colorClass?: string;
 }>();
 
 const progressWidth = (value: number) => `${Math.max(0, Math.min(100, value))}%`;
@@ -16,8 +15,7 @@ const progressWidth = (value: number) => `${Math.max(0, Math.min(100, value))}%`
 		</div>
 		<div class="h-2 overflow-hidden rounded-corner bg-ui-surface">
 			<div
-				class="h-full rounded-corner transition-[width] duration-300"
-				:class="colorClass ?? 'bg-primary'"
+				class="h-full rounded-corner transition-[width] duration-300 bg-linear-to-r from-secondary to-primary"
 				:style="{ width: progressWidth(value) }"
 			/>
 		</div>

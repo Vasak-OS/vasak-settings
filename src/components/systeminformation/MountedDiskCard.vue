@@ -34,7 +34,7 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 			</div>
 
 			<div class="mt-3">
-				<ProgressBar label="Uso del disco" :value="disk.usage_percent" color-class="bg-status-warning" />
+				<ProgressBar label="Uso del disco" :value="disk.usage_percent" />
 			</div>
 		</div>
 	</SectionCard>

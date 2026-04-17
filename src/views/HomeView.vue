@@ -86,7 +86,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-	<div class="flex h-full min-h-0 flex-col gap-4 overflow-hidden">
+	<div class="flex min-h-full flex-col gap-4">
 		<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
 			<div>
 				<p class="text-xs uppercase tracking-[0.2em] text-tx-muted">Centro de control</p>
@@ -117,7 +117,7 @@ onUnmounted(() => {
 			{{ errorMessage }}
 		</div>
 
-		<div v-else-if="systemInfo" class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+		<div v-else-if="systemInfo" class="flex flex-col gap-4 pb-4">
 				<SystemOverviewCard :metrics="metrics" />
 
 				<section class="grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">

@@ -61,7 +61,7 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 				</div>
 
 				<div class="mt-4">
-					<ProgressBar label="Uso de RAM" :value="memory.usage_percent" color-class="bg-secondary" />
+					<ProgressBar label="Uso de RAM" :value="memory.usage_percent" />
 				</div>
 
 				<div class="mt-4 grid gap-3">
