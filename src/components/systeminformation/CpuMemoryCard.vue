@@ -2,7 +2,7 @@
 import ProgressBar from '@/components/ui/ProgressBar.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import StatTile from '@/components/ui/StatTile.vue';
-import type { MemoryInfo, TemperatureInfo, CpuInfo } from '@/types/system';
+import type { CpuInfo, MemoryInfo, TemperatureInfo } from '@/types/system';
 
 defineProps<{
 	cpu: CpuInfo;

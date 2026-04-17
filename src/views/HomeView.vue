@@ -2,9 +2,11 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import CpuMemoryCard from '@/components/systeminformation/CpuMemoryCard.vue';
 import DisksCard from '@/components/systeminformation/DisksCard.vue';
-import SystemDetailsCard from '@/components/systeminformation/SystemDetailsCard.vue';
 import SwapSensorsCard from '@/components/systeminformation/SwapSensorsCard.vue';
-import SystemOverviewCard, { type SystemMetricItem } from '@/components/systeminformation/SystemOverviewCard.vue';
+import SystemDetailsCard from '@/components/systeminformation/SystemDetailsCard.vue';
+import SystemOverviewCard, {
+	type SystemMetricItem,
+} from '@/components/systeminformation/SystemOverviewCard.vue';
 import { getSystemInfo } from '@/services/system.service';
 import type { SystemInfo } from '@/types/system';
 
@@ -50,10 +52,22 @@ const metrics = computed<SystemMetricItem[]>(() => {
 	if (!systemInfo.value) return [];
 
 	return [
-		{ label: 'CPU', value: formatPercent(systemInfo.value.cpu.usage), hint: systemInfo.value.cpu.model },
-		{ label: 'Memoria', value: formatPercent(systemInfo.value.memory.usage_percent), hint: `${formatGb(systemInfo.value.memory.used_gb)} / ${formatGb(systemInfo.value.memory.total_gb)}` },
+		{
+			label: 'CPU',
+			value: formatPercent(systemInfo.value.cpu.usage),
+			hint: systemInfo.value.cpu.model,
+		},
+		{
+			label: 'Memoria',
+			value: formatPercent(systemInfo.value.memory.usage_percent),
+			hint: `${formatGb(systemInfo.value.memory.used_gb)} / ${formatGb(systemInfo.value.memory.total_gb)}`,
+		},
 		{ label: 'Discos', value: String(systemInfo.value.disks.length), hint: 'montajes detectados' },
-		{ label: 'Uptime', value: formatUptime(systemInfo.value.system.uptime_seconds), hint: systemInfo.value.system.hostname },
+		{
+			label: 'Uptime',
+			value: formatUptime(systemInfo.value.system.uptime_seconds),
+			hint: systemInfo.value.system.hostname,
+		},
 	];
 });
 
@@ -65,7 +79,8 @@ const loadSystemInfo = async () => {
 		systemInfo.value = await getSystemInfo();
 		lastUpdatedAt.value = new Date();
 	} catch (error) {
-		errorMessage.value = error instanceof Error ? error.message : 'No se pudo obtener la informacion del sistema';
+		errorMessage.value =
+			error instanceof Error ? error.message : 'No se pudo obtener la informacion del sistema';
 	} finally {
 		loading.value = false;
 	}
