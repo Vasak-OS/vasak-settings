@@ -192,10 +192,27 @@ onUnmounted(() => {
 
 					<div v-if="selectedWallpaperPath" class="mt-4 rounded-corner border border-ui-border bg-ui-surface/30 p-3">
 						<p class="mb-2 text-xs uppercase tracking-[0.16em] text-tx-muted">Preview</p>
-						<div class="overflow-hidden rounded-corner border border-ui-border bg-ui-surface/30">
-							<img :src="wallpaperPreviewUrl" alt="Wallpaper seleccionado" class="h-40 w-full object-cover" />
+						<div class="group relative flex h-40 w-full items-center justify-center overflow-hidden rounded-corner border-2 border-dashed border-[var(--primary-color,#0084ff)]/30 bg-ui-surface/80 transition-colors hover:border-[var(--primary-color,#0084ff)]/50 hover:bg-[var(--primary-color,#0084ff)]/5">
+							<img :src="wallpaperPreviewUrl" alt="Wallpaper seleccionado" class="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+							
+							<div class="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors hover:bg-black/20">
+								<div class="pointer-events-none text-center">
+									<span class="mb-2 block text-sm text-white">📂 Arrastra una imagen aquí para cambiar</span>
+									<span class="text-xs text-white/70">{{ selectedWallpaperPath.split('/').pop() }}</span>
+								</div>
+							</div>
 						</div>
 						<p class="mt-2 break-all text-xs text-tx-muted">{{ selectedWallpaperPath }}</p>
+					</div>
+					<div v-else class="mt-4 rounded-corner border border-ui-border bg-ui-surface/30 p-3">
+						<p class="mb-2 text-xs uppercase tracking-[0.16em] text-tx-muted">Preview</p>
+						<div class="group relative flex h-40 w-full items-center justify-center overflow-hidden rounded-corner border-2 border-dashed border-[var(--primary-color,#0084ff)]/30 bg-ui-surface/80 transition-colors hover:border-[var(--primary-color,#0084ff)]/50 hover:bg-[var(--primary-color,#0084ff)]/5">
+							<div class="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors hover:bg-black/20">
+								<div class="pointer-events-none text-center">
+									<span class="mb-2 block text-sm text-white">📂 Arrastra una imagen aquí</span>
+								</div>
+							</div>
+						</div>
 					</div>
 				</SectionCard>
 			</div>

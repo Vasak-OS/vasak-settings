@@ -8,6 +8,11 @@ const routes = [
 		component: () => import('@/views/AppearanceThemeView.vue'),
 	},
 	{
+		path: '/appearance-desktop',
+		name: 'appearance-desktop',
+		component: () => import('@/views/AppearanceDesktopView.vue'),
+	},
+	{
 		path: '/appearance-wallpaper',
 		name: 'appearance-wallpaper',
 		component: () => import('@/views/WallpaperView.vue'),

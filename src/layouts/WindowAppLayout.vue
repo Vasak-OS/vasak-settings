@@ -40,6 +40,7 @@ const sidebarCategories: SidebarCategory[] = [
 		items: [
 			{ id: 'appearance-theme', label: 'Tema', icon: 'preferences-theme' },
 			{ id: 'appearance-wallpaper', label: 'Fondos', icon: 'preferences-wallpaper' },
+			{ id: 'appearance-desktop', label: 'Escritorio', icon: 'preferences-desktop-display' },
 			{ id: 'appearance-font', label: 'Tipografia', icon: 'preferences-desktop-font' },
 		],
 	},
