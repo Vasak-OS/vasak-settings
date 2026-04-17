@@ -1,24 +1,24 @@
 <script lang="ts" setup>
 const props = withDefaults(
-  defineProps<{
-    label: string;
-    icon?: string;
-    active?: boolean;
-    collapsed?: boolean;
-    disabled?: boolean;
-    badge?: string | number;
-  }>(),
-  {
-    icon: '',
-    active: false,
-    collapsed: false,
-    disabled: false,
-    badge: '',
-  },
+	defineProps<{
+		label: string;
+		icon?: string;
+		active?: boolean;
+		collapsed?: boolean;
+		disabled?: boolean;
+		badge?: string | number;
+	}>(),
+	{
+		icon: '',
+		active: false,
+		collapsed: false,
+		disabled: false,
+		badge: '',
+	}
 );
 
 defineEmits<{
-  click: [];
+	click: [];
 }>();
 </script>
 

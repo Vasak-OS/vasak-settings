@@ -2,20 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import SidebarButton from '@/components/sidebar/SidebarButton.vue';
 import SidebarCategoryGroup from '@/components/sidebar/SidebarCategoryGroup.vue';
-
-export interface SidebarItem {
-	id: string;
-	label: string;
-	icon?: string;
-	badge?: string | number;
-	disabled?: boolean;
-}
-
-export interface SidebarCategory {
-	id: string;
-	title: string;
-	items: SidebarItem[];
-}
+import { SidebarCategory } from '@/types/sidebar';
 
 const props = withDefaults(
 	defineProps<{
@@ -29,7 +16,7 @@ const props = withDefaults(
 		subtitle: 'VasakOS',
 		categories: () => [],
 		modelValue: '',
-	},
+	}
 );
 
 const emit = defineEmits<{

@@ -1,38 +1,39 @@
 <script lang="ts" setup>
 import { ref } from 'vue';
-import SidebarComponent, { type SidebarCategory } from '@/components/sidebar/SidebarComponent.vue';
+import SidebarComponent from '@/components/sidebar/SidebarComponent.vue';
 import TopBarComponent from '@/components/topbar/TopBarComponent.vue';
+import { SidebarCategory } from '@/types/sidebar';
 
 const selectedSection = ref('appearance-theme');
 
 const sidebarCategories: SidebarCategory[] = [
-  {
-    id: 'appearance',
-    title: 'Apariencia',
-    items: [
-      { id: 'appearance-theme', label: 'Tema', icon: 'TH' },
-      { id: 'appearance-wallpaper', label: 'Fondos', icon: 'FD' },
-      { id: 'appearance-font', label: 'Tipografia', icon: 'TX' },
-    ],
-  },
-  {
-    id: 'system',
-    title: 'Sistema',
-    items: [
-      { id: 'system-power', label: 'Energia', icon: 'EN' },
-      { id: 'system-storage', label: 'Almacenamiento', icon: 'AL' },
-      { id: 'system-updates', label: 'Actualizaciones', icon: 'UP', badge: '3' },
-    ],
-  },
-  {
-    id: 'network',
-    title: 'Conectividad',
-    items: [
-      { id: 'network-wifi', label: 'Wi-Fi', icon: 'WF' },
-      { id: 'network-bluetooth', label: 'Bluetooth', icon: 'BT' },
-      { id: 'network-vpn', label: 'VPN', icon: 'VP' },
-    ],
-  },
+	{
+		id: 'appearance',
+		title: 'Apariencia',
+		items: [
+			{ id: 'appearance-theme', label: 'Tema', icon: 'TH' },
+			{ id: 'appearance-wallpaper', label: 'Fondos', icon: 'FD' },
+			{ id: 'appearance-font', label: 'Tipografia', icon: 'TX' },
+		],
+	},
+	{
+		id: 'system',
+		title: 'Sistema',
+		items: [
+			{ id: 'system-power', label: 'Energia', icon: 'EN' },
+			{ id: 'system-storage', label: 'Almacenamiento', icon: 'AL' },
+			{ id: 'system-updates', label: 'Actualizaciones', icon: 'UP', badge: '3' },
+		],
+	},
+	{
+		id: 'network',
+		title: 'Conectividad',
+		items: [
+			{ id: 'network-wifi', label: 'Wi-Fi', icon: 'WF' },
+			{ id: 'network-bluetooth', label: 'Bluetooth', icon: 'BT' },
+			{ id: 'network-vpn', label: 'VPN', icon: 'VP' },
+		],
+	},
 ];
 </script>
 <template>

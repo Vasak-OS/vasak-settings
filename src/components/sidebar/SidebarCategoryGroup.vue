@@ -2,26 +2,26 @@
 import { ref, watch } from 'vue';
 
 const props = withDefaults(
-  defineProps<{
-    title: string;
-    collapsed?: boolean;
-    defaultOpen?: boolean;
-  }>(),
-  {
-    collapsed: false,
-    defaultOpen: true,
-  },
+	defineProps<{
+		title: string;
+		collapsed?: boolean;
+		defaultOpen?: boolean;
+	}>(),
+	{
+		collapsed: false,
+		defaultOpen: true,
+	}
 );
 
 const isOpen = ref(props.defaultOpen);
 
 watch(
-  () => props.collapsed,
-  (value) => {
-    if (value) {
-      isOpen.value = true;
-    }
-  },
+	() => props.collapsed,
+	(value) => {
+		if (value) {
+			isOpen.value = true;
+		}
+	}
 );
 </script>
 
