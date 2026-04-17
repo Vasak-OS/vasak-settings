@@ -21,6 +21,8 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 
 const formatPercent = (value: number) => `${formatNumber(value, 1)}%`;
 
+const progressWidth = (value: number) => `${Math.max(0, Math.min(100, value))}%`;
+
 const formatTemp = (value: number | null) => (value === null ? 'N/A' : `${formatNumber(value, 1)} °C`);
 
 const formatLastUpdatedAt = (value: Date | null) => {
@@ -134,6 +136,16 @@ onUnmounted(() => {
 							<span class="rounded-corner bg-ui-surface px-3 py-1 text-sm font-medium">{{ formatPercent(systemInfo.cpu.usage) }}</span>
 						</div>
 
+						<div class="mt-4">
+							<div class="mb-2 flex items-center justify-between text-xs text-tx-muted">
+								<span>Uso de CPU</span>
+								<span>{{ formatPercent(systemInfo.cpu.usage) }}</span>
+							</div>
+							<div class="h-2 overflow-hidden rounded-corner bg-ui-surface">
+								<div class="h-full rounded-corner bg-primary transition-[width] duration-300" :style="{ width: progressWidth(systemInfo.cpu.usage) }" />
+							</div>
+						</div>
+
 						<div class="mt-4 grid gap-3 sm:grid-cols-3">
 							<div class="rounded-corner bg-ui-surface/40 p-3">
 								<p class="text-xs text-tx-muted">Nucleos</p>
@@ -157,6 +169,16 @@ onUnmounted(() => {
 								<h2 class="mt-1 text-lg font-semibold">Uso actual</h2>
 							</div>
 							<span class="rounded-corner bg-ui-surface px-3 py-1 text-sm font-medium">{{ formatPercent(systemInfo.memory.usage_percent) }}</span>
+						</div>
+
+						<div class="mt-4">
+							<div class="mb-2 flex items-center justify-between text-xs text-tx-muted">
+								<span>Uso de RAM</span>
+								<span>{{ formatPercent(systemInfo.memory.usage_percent) }}</span>
+							</div>
+							<div class="h-2 overflow-hidden rounded-corner bg-ui-surface">
+								<div class="h-full rounded-corner bg-secondary transition-[width] duration-300" :style="{ width: progressWidth(systemInfo.memory.usage_percent) }" />
+							</div>
 						</div>
 
 						<div class="mt-4 grid gap-3 sm:grid-cols-3">
@@ -235,6 +257,16 @@ onUnmounted(() => {
 								<span>Total: {{ formatGb(disk.total_gb) }}</span>
 								<span>Usado: {{ formatGb(disk.used_gb) }}</span>
 								<span>Libre: {{ formatGb(disk.available_gb) }}</span>
+							</div>
+
+							<div class="mt-3">
+								<div class="mb-2 flex items-center justify-between text-xs text-tx-muted">
+									<span>Uso del disco</span>
+									<span>{{ formatPercent(disk.usage_percent) }}</span>
+								</div>
+								<div class="h-2 overflow-hidden rounded-corner bg-ui-bg">
+									<div class="h-full rounded-corner bg-status-warning transition-[width] duration-300" :style="{ width: progressWidth(disk.usage_percent) }" />
+								</div>
 							</div>
 						</div>
 					</div>
