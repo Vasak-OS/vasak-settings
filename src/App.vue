@@ -33,5 +33,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <WindowAppLayout />
+	<WindowAppLayout>
+		<RouterView />
+	</WindowAppLayout>
 </template>
