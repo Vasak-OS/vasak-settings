@@ -1,14 +1,38 @@
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import SidebarComponent from '@/components/sidebar/SidebarComponent.vue';
 import TopBarComponent from '@/components/topbar/TopBarComponent.vue';
 import { SidebarCategory } from '@/types/sidebar';
 import { getIconSource } from '@vasakgroup/plugin-vicons';
 
-const selectedSection = ref('appearance-theme');
+const route = useRoute();
+const router = useRouter();
+
+const selectedSection = ref((route.name as string) || 'home');
+
+watch(selectedSection, (newSection) => {
+	if (newSection !== route.name) {
+		router.push({ name: newSection });
+	}
+});
+
+watch(() => route.name, (newName) => {
+	if (newName && newName !== selectedSection.value) {
+		selectedSection.value = newName as string;
+	}
+});
+
 const appIcon = ref(''); 
 
 const sidebarCategories: SidebarCategory[] = [
+	{
+		id: 'general',
+		title: 'General',
+		items: [
+			{ id: 'home', label: 'Inicio', icon: 'IN' },
+		],
+	},
 	{
 		id: 'appearance',
 		title: 'Apariencia',

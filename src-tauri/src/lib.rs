@@ -13,6 +13,12 @@ pub fn run() {
             commands::system_info::get_system_info,
             commands::system_info::get_cpu_usage_only,
             commands::system_info::get_memory_usage_only,
+            commands::system_config::get_system_config,
+            commands::system_config::get_current_system_state,
+            commands::system_config::set_system_config,
+            commands::system_config::get_gtk_themes,
+            commands::system_config::get_cursor_themes,
+            commands::system_config::get_icon_packs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
