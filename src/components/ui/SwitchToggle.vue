@@ -9,7 +9,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
 	disabled: false,
-	activeClass: 'bg-[var(--primary-color,#0084ff)]',
+	activeClass: 'bg-primary border-secondary',
 	inactiveClass: 'bg-ui-surface/70 border border-ui-border',
 	customClass: '',
 });
