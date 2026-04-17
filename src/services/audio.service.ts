@@ -20,3 +20,23 @@ export const getAudioDevices = (): Promise<AudioDevice[]> => {
 export const setAudioDevice = (deviceId: string): Promise<boolean> => {
 	return invoke<boolean>('set_audio_device', { deviceId });
 };
+
+export const getAudioInputVolume = (): Promise<VolumeInfo> => {
+	return invoke<VolumeInfo>('get_audio_input_volume');
+};
+
+export const setAudioInputVolume = (volume: number): Promise<void> => {
+	return invoke<void>('set_audio_input_volume', { volume });
+};
+
+export const toggleAudioInputMute = (): Promise<boolean> => {
+	return invoke<boolean>('toggle_audio_input_mute');
+};
+
+export const getAudioInputDevices = (): Promise<AudioDevice[]> => {
+	return invoke<AudioDevice[]>('get_audio_input_devices');
+};
+
+export const setAudioInputDevice = (deviceId: string): Promise<boolean> => {
+	return invoke<boolean>('set_audio_input_device', { deviceId });
+};

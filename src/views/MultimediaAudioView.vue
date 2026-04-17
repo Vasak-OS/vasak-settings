@@ -164,8 +164,8 @@ onUnmounted(() => {
 		<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
 			<div>
 				<p class="text-xs uppercase tracking-[0.2em] text-tx-muted">Multimedia</p>
-				<h1 class="text-2xl font-semibold">Configuración de Audio</h1>
-				<p class="text-sm text-tx-muted">Administra el dispositivo de salida y el volumen actual del sistema.</p>
+				<h1 class="text-2xl font-semibold">Audio de Salida</h1>
+				<p class="text-sm text-tx-muted">Administra parlantes y volumen de reproducción del sistema.</p>
 			</div>
 			
 			<div class="flex flex-col items-center">

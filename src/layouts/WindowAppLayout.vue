@@ -48,7 +48,8 @@ const sidebarCategories: SidebarCategory[] = [
 		id: 'multimedia',
 		title: 'Multimedia',
 		items: [
-			{ id: 'multimedia-audio', label: 'Audio', icon: 'audio-card' },
+			{ id: 'multimedia-audio', label: 'Audio salida', icon: 'audio-speakers-symbolic' },
+			{ id: 'multimedia-audio-input', label: 'Audio entrada', icon: 'audio-input-microphone-symbolic' },
 		],
 	},
 	{
