@@ -376,3 +376,38 @@ pub async fn get_icon_packs() -> Result<Vec<String>, String> {
     result.sort();
     Ok(result)
 }
+
+#[tauri::command]
+pub async fn get_official_wallpapers() -> Result<Vec<String>, String> {
+    let wallpapers_path = PathBuf::from("/usr/share/backgrounds/vasakos");
+
+    if !wallpapers_path.exists() {
+        return Ok(vec![]);
+    }
+
+    let entries = std::fs::read_dir(&wallpapers_path)
+        .map_err(|e| format!("Error leyendo wallpapers oficiales: {}", e))?;
+
+    let allowed_extensions = ["jpg", "jpeg", "png", "webp", "bmp", "gif", "avif"];
+    let mut wallpapers = Vec::new();
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+
+        let extension = path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| ext.to_lowercase())
+            .unwrap_or_default();
+
+        if allowed_extensions.contains(&extension.as_str()) {
+            wallpapers.push(path.to_string_lossy().to_string());
+        }
+    }
+
+    wallpapers.sort();
+    Ok(wallpapers)
+}

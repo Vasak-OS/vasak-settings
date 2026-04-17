@@ -19,6 +19,7 @@ pub fn run() {
             commands::system_config::get_gtk_themes,
             commands::system_config::get_cursor_themes,
             commands::system_config::get_icon_packs,
+            commands::system_config::get_official_wallpapers,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
