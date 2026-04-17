@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue';
 import { getIconSource } from '@vasakgroup/plugin-vicons';
+import { onMounted, ref } from 'vue';
 
-const iconSrc = ref('')
+const iconSrc = ref('');
 const props = withDefaults(
 	defineProps<{
 		label: string;
@@ -25,10 +25,10 @@ defineEmits<{
 	click: [];
 }>();
 
-onMounted(async() => {
-  if (props.icon) {
-    iconSrc.value = await getIconSource(props.icon);
-  }
+onMounted(async () => {
+	if (props.icon) {
+		iconSrc.value = await getIconSource(props.icon);
+	}
 });
 </script>
 

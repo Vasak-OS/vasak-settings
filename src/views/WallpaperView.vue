@@ -3,12 +3,12 @@ import { convertFileSrc } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import {
 	readConfig,
-	writeConfig,
 	useConfigStore,
 	type VSKConfig,
+	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import type { Store } from 'pinia';
-import { computed, onMounted, onUnmounted, ref, type Ref } from 'vue';
+import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import { getOfficialWallpapers } from '@/services/style.service';
 

@@ -1,10 +1,10 @@
 <script lang="ts" setup>
-import { ref, onMounted, watch } from 'vue';
+import { getIconSource } from '@vasakgroup/plugin-vicons';
+import { onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import SidebarComponent from '@/components/sidebar/SidebarComponent.vue';
 import TopBarComponent from '@/components/topbar/TopBarComponent.vue';
 import { SidebarCategory } from '@/types/sidebar';
-import { getIconSource } from '@vasakgroup/plugin-vicons';
 
 const route = useRoute();
 const router = useRouter();
@@ -17,21 +17,22 @@ watch(selectedSection, (newSection) => {
 	}
 });
 
-watch(() => route.name, (newName) => {
-	if (newName && newName !== selectedSection.value) {
-		selectedSection.value = newName as string;
+watch(
+	() => route.name,
+	(newName) => {
+		if (newName && newName !== selectedSection.value) {
+			selectedSection.value = newName as string;
+		}
 	}
-});
+);
 
-const appIcon = ref(''); 
+const appIcon = ref('');
 
 const sidebarCategories: SidebarCategory[] = [
 	{
 		id: 'general',
 		title: 'General',
-		items: [
-			{ id: 'home', label: 'Inicio', icon: 'home' },
-		],
+		items: [{ id: 'home', label: 'Inicio', icon: 'home' }],
 	},
 	{
 		id: 'appearance',
@@ -61,8 +62,8 @@ const sidebarCategories: SidebarCategory[] = [
 	},
 ];
 
-onMounted(async() => {
-  appIcon.value = await getIconSource('preferences');
+onMounted(async () => {
+	appIcon.value = await getIconSource('preferences');
 });
 </script>
 <template>
