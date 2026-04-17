@@ -30,34 +30,33 @@ const sidebarCategories: SidebarCategory[] = [
 		id: 'general',
 		title: 'General',
 		items: [
-			{ id: 'home', label: 'Inicio', icon: 'IN' },
+			{ id: 'home', label: 'Inicio', icon: 'home' },
 		],
 	},
 	{
 		id: 'appearance',
 		title: 'Apariencia',
 		items: [
-			{ id: 'appearance-theme', label: 'Tema', icon: 'TH' },
-			{ id: 'appearance-wallpaper', label: 'Fondos', icon: 'FD' },
-			{ id: 'appearance-font', label: 'Tipografia', icon: 'TX' },
+			{ id: 'appearance-theme', label: 'Tema', icon: 'preferences-theme' },
+			{ id: 'appearance-wallpaper', label: 'Fondos', icon: 'preferences-wallpaper' },
+			{ id: 'appearance-font', label: 'Tipografia', icon: 'preferences-desktop-font' },
 		],
 	},
 	{
 		id: 'system',
 		title: 'Sistema',
 		items: [
-			{ id: 'system-power', label: 'Energia', icon: 'EN' },
-			{ id: 'system-storage', label: 'Almacenamiento', icon: 'AL' },
-			{ id: 'system-updates', label: 'Actualizaciones', icon: 'UP', badge: '3' },
+			{ id: 'system-power', label: 'Energia', icon: 'preferences-system-power-management' },
+			{ id: 'system-storage', label: 'Almacenamiento', icon: 'preferences-system-disks' },
 		],
 	},
 	{
 		id: 'network',
 		title: 'Conectividad',
 		items: [
-			{ id: 'network-wifi', label: 'Wi-Fi', icon: 'WF' },
-			{ id: 'network-bluetooth', label: 'Bluetooth', icon: 'BT' },
-			{ id: 'network-vpn', label: 'VPN', icon: 'VP' },
+			{ id: 'network-wifi', label: 'Wi-Fi', icon: 'network-wireless' },
+			{ id: 'network-bluetooth', label: 'Bluetooth', icon: 'preferences-bluetooth' },
+			{ id: 'network-vpn', label: 'VPN', icon: 'preferences-system-network-vpn' },
 		],
 	},
 ];
