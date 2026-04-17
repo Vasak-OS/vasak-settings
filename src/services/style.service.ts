@@ -19,3 +19,7 @@ export const getCurrentSystemState = <T = any>(args?: any): Promise<T> => {
 export const setSystemConfig = <T = any>(args: any): Promise<T> => {
 	return invoke<T>('set_system_config', args);
 };
+
+export const getOfficialWallpapers = <T = string[]>(args?: any): Promise<T> => {
+	return invoke<T>('get_official_wallpapers', args);
+};
