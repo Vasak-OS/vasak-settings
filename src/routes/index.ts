@@ -17,6 +17,11 @@ const routes = [
 		name: 'appearance-wallpaper',
 		component: () => import('@/views/WallpaperView.vue'),
 	},
+	{
+		path: '/network-bluetooth',
+		name: 'network-bluetooth',
+		component: () => import('@/views/NetworkBluetoothView.vue'),
+	},
 ];
 export const router = createRouter({
 	history: createMemoryHistory(),
