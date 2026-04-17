@@ -4241,7 +4241,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "vapp"
+name = "vasak-settings"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
