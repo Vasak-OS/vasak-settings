@@ -1,10 +1,12 @@
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import SidebarComponent from '@/components/sidebar/SidebarComponent.vue';
 import TopBarComponent from '@/components/topbar/TopBarComponent.vue';
 import { SidebarCategory } from '@/types/sidebar';
+import { getIconSource } from '@vasakgroup/plugin-vicons';
 
 const selectedSection = ref('appearance-theme');
+const appIcon = ref(''); 
 
 const sidebarCategories: SidebarCategory[] = [
 	{
@@ -35,11 +37,18 @@ const sidebarCategories: SidebarCategory[] = [
 		],
 	},
 ];
+
+onMounted(async() => {
+  appIcon.value = await getIconSource('preferences');
+});
 </script>
 <template>
   <div
     class="h-screen w-screen bg-ui-bg/80 rounded-corner-window flex flex-col border border-ui-border overflow-hidden">
     <TopBarComponent>
+      <div><img :src="appIcon" class="w-8 h-8" alt="Icono de la aplicación"></div>
+      <div class="text-lg font-semibold">Centro de Control</div>
+      <div></div>
     </TopBarComponent>
     <div class="relative flex flex-1 overflow-hidden p-1">
       <SidebarComponent
