@@ -1,5 +1,6 @@
 use std::fs;
 use std::process::Command;
+use std::collections::HashMap;
 use crate::structs::{
     DiskInfo, GpuInfo, MemoryInfo, SensorReading, SwapInfo, SystemDetails, TemperatureInfo,
 };
@@ -132,7 +133,8 @@ pub(crate) fn get_swap_info() -> Option<SwapInfo> {
 
 /// Obtiene información de discos usando `df -T -B1`
 pub(crate) fn get_disks_info() -> Vec<DiskInfo> {
-    let mut disks = Vec::new();
+    let mut disks: Vec<DiskInfo> = Vec::new();
+    let mut grouped_indexes: HashMap<(String, String, u64, u64, u64), usize> = HashMap::new();
 
     if let Ok(output) = Command::new("df").arg("-T").arg("-B1").output() {
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -146,12 +148,15 @@ pub(crate) fn get_disks_info() -> Vec<DiskInfo> {
 
             let device = parts[0].to_string();
             let fstype = parts[1].to_string();
-            let total_bytes: f64 = parts[2].parse::<f64>().unwrap_or(0.0);
-            let used_bytes: f64 = parts[3].parse::<f64>().unwrap_or(0.0);
-            let avail_bytes: f64 = parts[4].parse::<f64>().unwrap_or(0.0);
-            let usep_str = parts[5].trim_end_matches('%');
-            let usage_percent: f32 = usep_str.parse::<f32>().unwrap_or(0.0);
+            let total_bytes: u64 = parts[2].parse::<u64>().unwrap_or(0);
+            let used_bytes: u64 = parts[3].parse::<u64>().unwrap_or(0);
+            let avail_bytes: u64 = parts[4].parse::<u64>().unwrap_or(0);
             let mountpoint = parts[6].to_string();
+
+            // Omitir entradas sin capacidad real.
+            if total_bytes == 0 {
+                continue;
+            }
 
             // Filtrar sistemas de archivos no relevantes
             let device_lower = device.to_lowercase();
@@ -167,19 +172,39 @@ pub(crate) fn get_disks_info() -> Vec<DiskInfo> {
                 continue;
             }
 
-            let total_gb = total_bytes / 1_000_000_000.0;
-            let used_gb = used_bytes / 1_000_000_000.0;
-            let available_gb = avail_bytes / 1_000_000_000.0;
+            let grouping_key = (device.clone(), fstype.clone(), total_bytes, used_bytes, avail_bytes);
+
+            if let Some(existing_index) = grouped_indexes.get(&grouping_key) {
+                let grouped_disk = &mut disks[*existing_index];
+
+                if !grouped_disk.mountpoints.iter().any(|existing_mount| existing_mount == &mountpoint) {
+                    grouped_disk.mountpoints.push(mountpoint);
+                }
+
+                continue;
+            }
+
+            let total_gb = total_bytes as f64 / 1_000_000_000.0;
+            let used_gb = used_bytes as f64 / 1_000_000_000.0;
+            let available_gb = avail_bytes as f64 / 1_000_000_000.0;
+            let usage_percent = if total_bytes > 0 {
+                ((used_bytes as f64 / total_bytes as f64) * 100.0) as f32
+            } else {
+                0.0
+            };
 
             disks.push(DiskInfo {
                 device,
-                mountpoint,
+                mountpoint: mountpoint.clone(),
+                mountpoints: vec![mountpoint],
                 fstype,
                 total_gb,
                 used_gb,
                 available_gb,
                 usage_percent,
             });
+
+            grouped_indexes.insert(grouping_key, disks.len() - 1);
         }
     }
 

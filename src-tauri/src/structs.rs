@@ -41,6 +41,7 @@ pub struct SwapInfo {
 pub struct DiskInfo {
     pub device: String,
     pub mountpoint: String,
+    pub mountpoints: Vec<String>,
     pub fstype: String,
     pub total_gb: f64,
     pub used_gb: f64,

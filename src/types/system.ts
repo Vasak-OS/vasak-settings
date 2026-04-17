@@ -32,6 +32,7 @@ export interface SwapInfo {
 export interface DiskInfo {
 	device: string;
 	mountpoint: string;
+	mountpoints: string[];
 	fstype: string;
 	total_gb: number;
 	used_gb: number;

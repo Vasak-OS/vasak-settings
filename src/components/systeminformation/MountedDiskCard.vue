@@ -23,6 +23,15 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 				<div class="min-w-0">
 					<p class="truncate font-medium">{{ disk.mountpoint }}</p>
 					<p class="truncate text-sm text-tx-muted">{{ disk.device }} · {{ disk.fstype }}</p>
+					<div v-if="disk.mountpoints.length > 1" class="mt-2 flex flex-wrap gap-1.5">
+						<span
+							v-for="mountTag in disk.mountpoints"
+							:key="mountTag"
+							class="rounded-corner border border-ui-border bg-ui-bg px-2 py-0.5 text-xs text-tx-muted"
+						>
+							{{ mountTag }}
+						</span>
+					</div>
 				</div>
 				<span class="rounded-corner bg-ui-bg px-2 py-1 text-sm font-medium">{{ formatNumber(disk.usage_percent, 1) }}%</span>
 			</div>

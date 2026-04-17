@@ -12,11 +12,11 @@ defineProps<{
 	<SectionCard>
 		<div class="flex items-center justify-between gap-3">
 			<h2 class="text-lg font-semibold">Discos</h2>
-			<span class="text-sm text-tx-muted">{{ disks.length }} montajes</span>
+			<span class="text-sm text-tx-muted">{{ disks.length }} discos agrupados</span>
 		</div>
 
 		<div class="mt-4 grid gap-3">
-			<MountedDiskCard v-for="disk in disks" :key="`${disk.device}-${disk.mountpoint}`" :disk="disk" />
+			<MountedDiskCard v-for="disk in disks" :key="`${disk.device}-${disk.mountpoint}-${disk.mountpoints.join('|')}`" :disk="disk" />
 		</div>
 	</SectionCard>
 </template>
