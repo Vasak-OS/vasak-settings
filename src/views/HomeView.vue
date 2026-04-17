@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { getSystemInfo } from '@/services/system.service';
 import type { SystemInfo } from '@/types/system';
+
+const refreshIntervalMs = 30000;
+let refreshTimer: ReturnType<typeof window.setInterval> | null = null;
 
 const systemInfo = ref<SystemInfo | null>(null);
 const loading = ref(true);
 const errorMessage = ref('');
+const lastUpdatedAt = ref<Date | null>(null);
 
 const formatNumber = (value: number, digits = 0) =>
 	new Intl.NumberFormat('es-AR', {
@@ -18,6 +22,16 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 const formatPercent = (value: number) => `${formatNumber(value, 1)}%`;
 
 const formatTemp = (value: number | null) => (value === null ? 'N/A' : `${formatNumber(value, 1)} °C`);
+
+const formatLastUpdatedAt = (value: Date | null) => {
+	if (value === null) return 'Sin actualizaciones';
+
+	return new Intl.DateTimeFormat('es-AR', {
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+	}).format(value);
+};
 
 const formatUptime = (seconds: number) => {
 	const days = Math.floor(seconds / 86400);
@@ -46,6 +60,7 @@ const loadSystemInfo = async () => {
 
 	try {
 		systemInfo.value = await getSystemInfo();
+		lastUpdatedAt.value = new Date();
 	} catch (error) {
 		errorMessage.value = error instanceof Error ? error.message : 'No se pudo obtener la informacion del sistema';
 	} finally {
@@ -54,6 +69,17 @@ const loadSystemInfo = async () => {
 };
 
 onMounted(loadSystemInfo);
+
+onMounted(() => {
+	refreshTimer = window.setInterval(loadSystemInfo, refreshIntervalMs);
+});
+
+onUnmounted(() => {
+	if (refreshTimer !== null) {
+		window.clearInterval(refreshTimer);
+		refreshTimer = null;
+	}
+});
 </script>
 
 <template>
@@ -65,13 +91,19 @@ onMounted(loadSystemInfo);
 				<p class="text-sm text-tx-muted">Resumen rapido de recursos, hardware y entorno actual.</p>
 			</div>
 
-			<button
-				type="button"
-				class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-2 text-sm font-medium hover:bg-ui-surface"
-				@click="loadSystemInfo"
-			>
-				Actualizar
-			</button>
+			<div class="flex flex-wrap items-center gap-2">
+				<span class="rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-2 text-xs text-tx-muted">
+					Ultima actualizacion: {{ formatLastUpdatedAt(lastUpdatedAt) }}
+				</span>
+
+				<button
+					type="button"
+					class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-2 text-sm font-medium hover:bg-ui-surface"
+					@click="loadSystemInfo"
+				>
+					Actualizar
+				</button>
+			</div>
 		</header>
 
 		<div v-if="loading" class="grid flex-1 place-items-center rounded-corner border border-dashed border-ui-border bg-ui-surface/20 p-6 text-sm text-tx-muted">
