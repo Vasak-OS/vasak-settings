@@ -117,89 +117,95 @@ onUnmounted(() => {
 		</div>
 
 		<div v-else-if="systemInfo" class="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
-			<section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-				<article v-for="metric in metrics" :key="metric.label" class="rounded-corner border border-ui-border bg-ui-bg/70 p-4">
-					<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">{{ metric.label }}</p>
-					<p class="mt-2 text-2xl font-semibold">{{ metric.value }}</p>
-					<p class="mt-1 truncate text-sm text-tx-muted">{{ metric.hint }}</p>
+			<section class="grid gap-4 xl:grid-cols-[1.35fr_0.65fr]">
+				<article class="rounded-corner border border-ui-border bg-ui-bg/75 p-5 shadow-sm">
+					<div class="flex items-center justify-between gap-3">
+						<div>
+							<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">Rendimiento</p>
+							<h2 class="mt-1 text-lg font-semibold">CPU y RAM</h2>
+						</div>
+						<span class="rounded-corner bg-ui-surface px-3 py-1 text-sm font-medium text-tx-muted">{{ formatLastUpdatedAt(lastUpdatedAt) }}</span>
+					</div>
+
+					<div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+						<article v-for="metric in metrics" :key="metric.label" class="rounded-corner border border-ui-border bg-ui-surface/40 p-4">
+							<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">{{ metric.label }}</p>
+							<p class="mt-2 text-2xl font-semibold">{{ metric.value }}</p>
+							<p class="mt-1 truncate text-sm text-tx-muted">{{ metric.hint }}</p>
+						</article>
+					</div>
+
+					<div class="mt-5 grid gap-4 xl:grid-cols-2">
+						<div class="rounded-corner bg-ui-surface/30 p-4">
+							<div class="flex items-center justify-between gap-3">
+								<div>
+									<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">Procesador</p>
+									<p class="mt-1 truncate text-base font-semibold">{{ systemInfo.cpu.model }}</p>
+								</div>
+								<span class="rounded-corner bg-ui-bg px-2 py-1 text-sm font-medium">{{ formatPercent(systemInfo.cpu.usage) }}</span>
+							</div>
+
+							<div class="mt-4">
+								<div class="mb-2 flex items-center justify-between text-xs text-tx-muted">
+									<span>Uso de CPU</span>
+									<span>{{ formatPercent(systemInfo.cpu.usage) }}</span>
+								</div>
+								<div class="h-2 overflow-hidden rounded-corner bg-ui-surface">
+									<div class="h-full rounded-corner bg-primary transition-[width] duration-300" :style="{ width: progressWidth(systemInfo.cpu.usage) }" />
+								</div>
+							</div>
+
+							<div class="mt-4 grid gap-3 sm:grid-cols-3">
+								<div class="rounded-corner bg-ui-bg/80 p-3">
+									<p class="text-xs text-tx-muted">Nucleos</p>
+									<p class="mt-1 text-lg font-semibold">{{ systemInfo.cpu.cores }}</p>
+								</div>
+								<div class="rounded-corner bg-ui-bg/80 p-3">
+									<p class="text-xs text-tx-muted">Frecuencia</p>
+									<p class="mt-1 text-lg font-semibold">{{ systemInfo.cpu.frequency ? `${formatNumber(systemInfo.cpu.frequency, 2)} GHz` : 'N/A' }}</p>
+								</div>
+								<div class="rounded-corner bg-ui-bg/80 p-3">
+									<p class="text-xs text-tx-muted">Temperatura</p>
+									<p class="mt-1 text-lg font-semibold">{{ formatTemp(systemInfo.temperature?.cpu_temp ?? null) }}</p>
+								</div>
+							</div>
+						</div>
+
+						<div class="rounded-corner bg-ui-surface/30 p-4">
+							<div class="flex items-center justify-between gap-3">
+								<div>
+									<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">Memoria</p>
+									<p class="mt-1 text-base font-semibold">Uso actual</p>
+								</div>
+								<span class="rounded-corner bg-ui-bg px-2 py-1 text-sm font-medium">{{ formatPercent(systemInfo.memory.usage_percent) }}</span>
+							</div>
+
+							<div class="mt-4">
+								<div class="mb-2 flex items-center justify-between text-xs text-tx-muted">
+									<span>Uso de RAM</span>
+									<span>{{ formatPercent(systemInfo.memory.usage_percent) }}</span>
+								</div>
+								<div class="h-2 overflow-hidden rounded-corner bg-ui-surface">
+									<div class="h-full rounded-corner bg-secondary transition-[width] duration-300" :style="{ width: progressWidth(systemInfo.memory.usage_percent) }" />
+								</div>
+							</div>
+
+							<div class="mt-4 grid gap-3">
+								<div class="rounded-corner bg-ui-bg/80 p-3">
+									<p class="text-xs text-tx-muted">Total</p>
+									<p class="mt-1 text-lg font-semibold">{{ formatGb(systemInfo.memory.total_gb) }}</p>
+								</div>
+								<div class="rounded-corner bg-ui-bg/80 p-3">
+									<p class="text-xs text-tx-muted">Usada / Disponible</p>
+									<p class="mt-1 text-lg font-semibold">{{ formatGb(systemInfo.memory.used_gb) }} · {{ formatGb(systemInfo.memory.available_gb) }}</p>
+								</div>
+							</div>
+						</div>
+					</div>
 				</article>
-			</section>
 
-			<section class="grid min-h-0 gap-4 xl:grid-cols-[1.3fr_0.7fr]">
 				<div class="grid gap-4">
-					<article class="rounded-corner border border-ui-border bg-ui-bg/70 p-4">
-						<div class="flex items-center justify-between gap-3">
-							<div>
-								<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">Procesador</p>
-								<h2 class="mt-1 text-lg font-semibold">{{ systemInfo.cpu.model }}</h2>
-							</div>
-							<span class="rounded-corner bg-ui-surface px-3 py-1 text-sm font-medium">{{ formatPercent(systemInfo.cpu.usage) }}</span>
-						</div>
-
-						<div class="mt-4">
-							<div class="mb-2 flex items-center justify-between text-xs text-tx-muted">
-								<span>Uso de CPU</span>
-								<span>{{ formatPercent(systemInfo.cpu.usage) }}</span>
-							</div>
-							<div class="h-2 overflow-hidden rounded-corner bg-ui-surface">
-								<div class="h-full rounded-corner bg-primary transition-[width] duration-300" :style="{ width: progressWidth(systemInfo.cpu.usage) }" />
-							</div>
-						</div>
-
-						<div class="mt-4 grid gap-3 sm:grid-cols-3">
-							<div class="rounded-corner bg-ui-surface/40 p-3">
-								<p class="text-xs text-tx-muted">Nucleos</p>
-								<p class="mt-1 text-lg font-semibold">{{ systemInfo.cpu.cores }}</p>
-							</div>
-							<div class="rounded-corner bg-ui-surface/40 p-3">
-								<p class="text-xs text-tx-muted">Frecuencia</p>
-								<p class="mt-1 text-lg font-semibold">{{ systemInfo.cpu.frequency ? `${formatNumber(systemInfo.cpu.frequency, 2)} GHz` : 'N/A' }}</p>
-							</div>
-							<div class="rounded-corner bg-ui-surface/40 p-3">
-								<p class="text-xs text-tx-muted">Temperatura</p>
-								<p class="mt-1 text-lg font-semibold">{{ formatTemp(systemInfo.temperature?.cpu_temp ?? null) }}</p>
-							</div>
-						</div>
-					</article>
-
-					<article class="rounded-corner border border-ui-border bg-ui-bg/70 p-4">
-						<div class="flex items-center justify-between gap-3">
-							<div>
-								<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">Memoria</p>
-								<h2 class="mt-1 text-lg font-semibold">Uso actual</h2>
-							</div>
-							<span class="rounded-corner bg-ui-surface px-3 py-1 text-sm font-medium">{{ formatPercent(systemInfo.memory.usage_percent) }}</span>
-						</div>
-
-						<div class="mt-4">
-							<div class="mb-2 flex items-center justify-between text-xs text-tx-muted">
-								<span>Uso de RAM</span>
-								<span>{{ formatPercent(systemInfo.memory.usage_percent) }}</span>
-							</div>
-							<div class="h-2 overflow-hidden rounded-corner bg-ui-surface">
-								<div class="h-full rounded-corner bg-secondary transition-[width] duration-300" :style="{ width: progressWidth(systemInfo.memory.usage_percent) }" />
-							</div>
-						</div>
-
-						<div class="mt-4 grid gap-3 sm:grid-cols-3">
-							<div class="rounded-corner bg-ui-surface/40 p-3">
-								<p class="text-xs text-tx-muted">Total</p>
-								<p class="mt-1 text-lg font-semibold">{{ formatGb(systemInfo.memory.total_gb) }}</p>
-							</div>
-							<div class="rounded-corner bg-ui-surface/40 p-3">
-								<p class="text-xs text-tx-muted">Usada</p>
-								<p class="mt-1 text-lg font-semibold">{{ formatGb(systemInfo.memory.used_gb) }}</p>
-							</div>
-							<div class="rounded-corner bg-ui-surface/40 p-3">
-								<p class="text-xs text-tx-muted">Disponible</p>
-								<p class="mt-1 text-lg font-semibold">{{ formatGb(systemInfo.memory.available_gb) }}</p>
-							</div>
-						</div>
-					</article>
-				</div>
-
-				<div class="grid gap-4 overflow-hidden">
-					<article class="rounded-corner border border-ui-border bg-ui-bg/70 p-4">
+					<article class="rounded-corner border border-ui-border bg-ui-bg/75 p-5 shadow-sm">
 						<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">Sistema</p>
 						<div class="mt-3 grid gap-3 text-sm">
 							<div class="flex items-center justify-between gap-3">
@@ -225,7 +231,7 @@ onUnmounted(() => {
 						</div>
 					</article>
 
-					<article class="rounded-corner border border-ui-border bg-ui-bg/70 p-4">
+					<article class="rounded-corner border border-ui-border bg-ui-bg/75 p-5 shadow-sm">
 						<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">GPU</p>
 						<div v-if="systemInfo.gpu" class="mt-3 space-y-2 text-sm">
 							<p class="font-medium">{{ systemInfo.gpu.vendor }}</p>
@@ -236,15 +242,15 @@ onUnmounted(() => {
 				</div>
 			</section>
 
-			<section class="grid gap-4 xl:grid-cols-2">
-				<article class="rounded-corner border border-ui-border bg-ui-bg/70 p-4">
+			<section class="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
+				<article class="rounded-corner border border-ui-border bg-ui-bg/75 p-5 shadow-sm">
 					<div class="flex items-center justify-between gap-3">
 						<h2 class="text-lg font-semibold">Discos</h2>
 						<span class="text-sm text-tx-muted">{{ systemInfo.disks.length }} montajes</span>
 					</div>
 
 					<div class="mt-4 grid gap-3">
-						<div v-for="disk in systemInfo.disks" :key="`${disk.device}-${disk.mountpoint}`" class="rounded-corner bg-ui-surface/40 p-3">
+						<div v-for="disk in systemInfo.disks" :key="`${disk.device}-${disk.mountpoint}`" class="rounded-corner bg-ui-surface/40 p-4">
 							<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
 								<div class="min-w-0">
 									<p class="truncate font-medium">{{ disk.mountpoint }}</p>
@@ -272,11 +278,11 @@ onUnmounted(() => {
 					</div>
 				</article>
 
-				<article class="rounded-corner border border-ui-border bg-ui-bg/70 p-4">
+				<article class="rounded-corner border border-ui-border bg-ui-bg/75 p-5 shadow-sm">
 					<h2 class="text-lg font-semibold">Swap y sensores</h2>
 
 					<div class="mt-4 grid gap-3">
-						<div class="rounded-corner bg-ui-surface/40 p-3">
+						<div class="rounded-corner bg-ui-surface/40 p-4">
 							<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">Swap</p>
 							<div v-if="systemInfo.swap" class="mt-2 grid gap-2 text-sm sm:grid-cols-2">
 								<span>Total: {{ formatGb(systemInfo.swap.total_gb) }}</span>
@@ -287,7 +293,7 @@ onUnmounted(() => {
 							<p v-else class="mt-2 text-sm text-tx-muted">No hay swap activa.</p>
 						</div>
 
-						<div class="rounded-corner bg-ui-surface/40 p-3">
+						<div class="rounded-corner bg-ui-surface/40 p-4">
 							<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">Temperaturas</p>
 							<div v-if="systemInfo.temperature?.sensors.length" class="mt-2 space-y-2">
 								<div v-for="sensor in systemInfo.temperature.sensors" :key="sensor.name" class="flex items-center justify-between gap-3 text-sm">
