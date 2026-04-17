@@ -3,6 +3,23 @@ use std::fs::File;
 use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct VolumeInfo {
+    pub current: i64,
+    pub min: i64,
+    pub max: i64,
+    pub is_muted: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AudioDevice {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub is_default: bool,
+    pub volume: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SystemInfo {
     pub cpu: CpuInfo,
     pub memory: MemoryInfo,

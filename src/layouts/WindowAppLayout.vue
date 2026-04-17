@@ -45,6 +45,13 @@ const sidebarCategories: SidebarCategory[] = [
 		],
 	},
 	{
+		id: 'multimedia',
+		title: 'Multimedia',
+		items: [
+			{ id: 'multimedia-audio', label: 'Audio', icon: 'audio-card' },
+		],
+	},
+	{
 		id: 'system',
 		title: 'Sistema',
 		items: [

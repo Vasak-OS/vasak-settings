@@ -2,6 +2,7 @@ mod commands;
 mod logger;
 mod structs;
 mod tools;
+mod audio;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -21,6 +22,11 @@ pub fn run() {
             commands::system_config::get_cursor_themes,
             commands::system_config::get_icon_packs,
             commands::system_config::get_official_wallpapers,
+            commands::audio::get_audio_volume,
+            commands::audio::set_audio_volume,
+            commands::audio::toggle_audio_mute,
+            commands::audio::get_audio_devices,
+            commands::audio::set_audio_device,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

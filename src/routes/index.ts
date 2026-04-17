@@ -22,6 +22,11 @@ const routes = [
 		name: 'network-bluetooth',
 		component: () => import('@/views/NetworkBluetoothView.vue'),
 	},
+	{
+		path: '/multimedia-audio',
+		name: 'multimedia-audio',
+		component: () => import('@/views/MultimediaAudioView.vue'),
+	}
 ];
 export const router = createRouter({
 	history: createMemoryHistory(),
