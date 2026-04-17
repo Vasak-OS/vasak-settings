@@ -71,25 +71,31 @@ const metrics = computed<SystemMetricItem[]>(() => {
 	];
 });
 
-const loadSystemInfo = async () => {
-	loading.value = true;
-	errorMessage.value = '';
+const loadSystemInfo = async (showLoading = false) => {
+	if (showLoading) {
+		loading.value = true;
+		errorMessage.value = '';
+	}
 
 	try {
 		systemInfo.value = await getSystemInfo();
 		lastUpdatedAt.value = new Date();
+		errorMessage.value = '';
 	} catch (error) {
-		errorMessage.value =
-			error instanceof Error ? error.message : 'No se pudo obtener la informacion del sistema';
+		if (!systemInfo.value) {
+			errorMessage.value =
+				error instanceof Error ? error.message : 'No se pudo obtener la informacion del sistema';
+		}
 	} finally {
-		loading.value = false;
+		if (showLoading) {
+			loading.value = false;
+		}
 	}
 };
 
-onMounted(loadSystemInfo);
-
 onMounted(() => {
-	refreshTimer = window.setInterval(loadSystemInfo, refreshIntervalMs);
+	loadSystemInfo(true);
+	refreshTimer = window.setInterval(() => loadSystemInfo(false), refreshIntervalMs);
 });
 
 onUnmounted(() => {
@@ -117,7 +123,7 @@ onUnmounted(() => {
 				<button
 					type="button"
 					class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-2 text-sm font-medium hover:bg-ui-surface"
-					@click="loadSystemInfo"
+					@click="loadSystemInfo(false)"
 				>
 					Actualizar
 				</button>
