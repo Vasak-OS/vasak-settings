@@ -10,9 +10,11 @@ import {
 	scanForDevices,
 	toggleBluetooth,
 } from '@vasakgroup/plugin-bluetooth-manager';
-import { getIconSource, getSymbolSource } from '@vasakgroup/plugin-vicons';
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import BluetoothDeviceCard from '@/components/cards/BluetoothDeviceCard.vue';
+import AlertMessage from '@/components/ui/AlertMessage.vue';
+import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 
@@ -48,7 +50,7 @@ const toggleBT = async () => {
 
 const refreshDevices = async () => {
 	defaultAdapter.value = await getDefaultAdapter();
-	if (!defaultAdapter.value || !defaultAdapter.value.powered) {
+	if (!defaultAdapter.value?.powered) {
 		connectedDevices.value = [];
 		availableDevices.value = [];
 		loading.value = false;
@@ -69,7 +71,7 @@ const refreshDevices = async () => {
 };
 
 const scanDevices = async () => {
-	if (!defaultAdapter.value || !defaultAdapter.value.powered) return;
+	if (!defaultAdapter.value?.powered) return;
 
 	isScanning.value = true;
 	error.value = '';
@@ -127,26 +129,24 @@ onUnmounted(() => {
 
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
-		<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-			<div>
-				<p class="text-xs uppercase tracking-[0.2em] text-tx-muted">Conectividad</p>
-				<h1 class="text-2xl font-semibold">Bluetooth</h1>
-				<p class="text-sm text-tx-muted">Empareja y administra tus dispositivos inalámbricos.</p>
-			</div>
+		<PageHeader
+			section="Conectividad"
+			title="Bluetooth"
+			description="Empareja y administra tus dispositivos inalámbricos."
+		>
+			<template #actions>
+				<div class="flex items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2">
+					<span class="text-sm font-medium">{{ isBluetoothOn ? 'Encendido' : 'Apagado' }}</span>
+					<SwitchToggle
+						:is-on="isBluetoothOn"
+						:disabled="isTogglingBluetooth"
+						@toggle="toggleBT"
+					/>
+				</div>
+			</template>
+		</PageHeader>
 
-			<div class="flex items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2">
-				<span class="text-sm font-medium">{{ isBluetoothOn ? 'Encendido' : 'Apagado' }}</span>
-				<SwitchToggle
-					:is-on="isBluetoothOn"
-					:disabled="isTogglingBluetooth"
-					@toggle="toggleBT"
-				/>
-			</div>
-		</header>
-
-		<div v-if="error" class="rounded-corner border border-status-error/40 bg-status-error/10 p-4 text-sm text-status-error">
-			{{ error }}
-		</div>
+		<AlertMessage v-if="error" :message="error" tone="error" />
 
 		<!-- Estado Apagado -->
 		<div v-if="!isBluetoothOn && !loading && !isTogglingBluetooth" class="grid flex-1 place-items-center rounded-corner border border-dashed border-ui-border bg-ui-surface/20 p-6">
@@ -162,9 +162,7 @@ onUnmounted(() => {
 		</div>
 
 		<!-- Estado Cargando -->
-		<div v-else-if="loading || isTogglingBluetooth" class="grid flex-1 place-items-center rounded-corner border border-dashed border-ui-border bg-ui-surface/20 p-6 text-sm text-tx-muted">
-			Sincronizando estado del dispositivo de radio...
-		</div>
+		<EmptyStateBox v-else-if="loading || isTogglingBluetooth" message="Sincronizando estado del dispositivo de radio..." padding="lg" />
 
 		<!-- Estado Listando Dispositivos -->
 		<template v-else>
@@ -178,9 +176,7 @@ onUnmounted(() => {
 						</span>
 					</h3>
 					
-					<div v-if="connectedDevices.length === 0" class="py-6 text-center text-sm text-tx-muted border border-dashed border-ui-border rounded-corner bg-ui-surface/20">
-						No hay dispositivos conectados
-					</div>
+					<EmptyStateBox v-if="connectedDevices.length === 0" message="No hay dispositivos conectados" />
 					
 					<ul v-else class="flex flex-col gap-1">
 						<li v-for="dev in connectedDevices" :key="dev.path">
@@ -212,9 +208,7 @@ onUnmounted(() => {
 						</button>
 					</div>
 
-					<div v-if="availableDevices.length === 0" class="py-6 text-center text-sm text-tx-muted border border-dashed border-ui-border rounded-corner bg-ui-surface/20">
-						No se encontraron dispositivos en el área
-					</div>
+					<EmptyStateBox v-if="availableDevices.length === 0" message="No se encontraron dispositivos en el área" />
 					
 					<ul v-else class="flex flex-col gap-1 max-h-[50vh] overflow-y-auto pr-1">
 						<li v-for="dev in availableDevices" :key="dev.path">

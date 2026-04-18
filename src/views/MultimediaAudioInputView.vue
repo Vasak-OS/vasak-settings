@@ -3,6 +3,7 @@ import { listen } from '@tauri-apps/api/event';
 import { getSymbolSource } from '@vasakgroup/plugin-vicons';
 import { computed, onMounted, onUnmounted, type Ref, ref, watch } from 'vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
 import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
@@ -154,21 +155,21 @@ onUnmounted(() => {
 
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
-		<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-			<div>
-				<p class="text-xs uppercase tracking-[0.2em] text-tx-muted">Multimedia</p>
-				<h1 class="text-2xl font-semibold">Audio de Entrada</h1>
-				<p class="text-sm text-tx-muted">Administra micrófonos y nivel de captura del sistema.</p>
-			</div>
-
-			<div class="flex flex-col items-center">
-				<p class="mb-2 text-xs uppercase tracking-[0.2em] text-tx-muted">Estado</p>
-				<StatusBadge
-					:text="inputVolumeInfo.is_muted ? 'MICRÓFONO SILENCIADO' : 'MICRÓFONO ACTIVO'"
-					:tone="inputVolumeInfo.is_muted ? 'error' : 'success'"
-				/>
-			</div>
-		</header>
+		<PageHeader
+			section="Multimedia"
+			title="Audio de Entrada"
+			description="Administra micrófonos y nivel de captura del sistema."
+		>
+			<template #actions>
+				<div class="flex flex-col items-center">
+					<p class="mb-2 text-xs uppercase tracking-[0.2em] text-tx-muted">Estado</p>
+					<StatusBadge
+						:text="inputVolumeInfo.is_muted ? 'MICRÓFONO SILENCIADO' : 'MICRÓFONO ACTIVO'"
+						:tone="inputVolumeInfo.is_muted ? 'error' : 'success'"
+					/>
+				</div>
+			</template>
+		</PageHeader>
 
 		<div class="mt-2 grid gap-6 xl:grid-cols-2">
 			<SectionCard>

@@ -9,6 +9,9 @@ import {
 } from '@vasakgroup/plugin-config-manager';
 import type { Store } from 'pinia';
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
+import AlertMessage from '@/components/ui/AlertMessage.vue';
+import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import { getOfficialWallpapers } from '@/services/style.service';
 
@@ -113,35 +116,29 @@ onUnmounted(() => {
 
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
-		<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-			<div>
-				<p class="text-xs uppercase tracking-[0.2em] text-tx-muted">Apariencia</p>
-				<h1 class="text-2xl font-semibold">Wallpaper</h1>
-				<p class="text-sm text-tx-muted">Selecciona un fondo oficial o define una ruta completa personalizada.</p>
-			</div>
+		<PageHeader
+			section="Apariencia"
+			title="Wallpaper"
+			description="Selecciona un fondo oficial o define una ruta completa personalizada."
+		>
+			<template #actions>
+				<button
+					type="button"
+					class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
+					:disabled="saving"
+					@click="saveWallpaperConfig"
+				>
+					{{ saving ? 'Guardando...' : 'Guardar Wallpaper' }}
+				</button>
+			</template>
+		</PageHeader>
 
-			<button
-				type="button"
-				class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
-				:disabled="saving"
-				@click="saveWallpaperConfig"
-			>
-				{{ saving ? 'Guardando...' : 'Guardar Wallpaper' }}
-			</button>
-		</header>
-
-		<div v-if="loading" class="grid place-items-center rounded-corner border border-dashed border-ui-border bg-ui-surface/20 p-6 text-sm text-tx-muted">
-			Cargando wallpapers...
-		</div>
+		<EmptyStateBox v-if="loading" message="Cargando wallpapers..." padding="lg" />
 
 		<template v-else>
-			<div v-if="error" class="rounded-corner border border-status-error/40 bg-status-error/10 p-4 text-sm text-status-error">
-				{{ error }}
-			</div>
+			<AlertMessage v-if="error" :message="error" tone="error" />
 
-			<div v-if="successMessage" class="rounded-corner border border-status-success/40 bg-status-success/10 p-4 text-sm text-status-success">
-				{{ successMessage }}
-			</div>
+			<AlertMessage v-if="successMessage" :message="successMessage" tone="success" />
 
 			<div class="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
 				<SectionCard>
@@ -150,8 +147,8 @@ onUnmounted(() => {
 						<span class="text-sm text-tx-muted">{{ officialWallpapers.length }} opciones</span>
 					</div>
 
-					<div v-if="officialWallpapers.length === 0" class="mt-4 rounded-corner border border-dashed border-ui-border bg-ui-surface/20 p-4 text-sm text-tx-muted">
-						No se encontraron wallpapers en /usr/share/backgrounds/vasakos.
+					<div v-if="officialWallpapers.length === 0" class="mt-4">
+						<EmptyStateBox message="No se encontraron wallpapers en /usr/share/backgrounds/vasakos." />
 					</div>
 
 					<div v-else class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

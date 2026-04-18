@@ -7,6 +7,9 @@ import SystemDetailsCard from '@/components/systeminformation/SystemDetailsCard.
 import SystemOverviewCard, {
 	type SystemMetricItem,
 } from '@/components/systeminformation/SystemOverviewCard.vue';
+import AlertMessage from '@/components/ui/AlertMessage.vue';
+import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
 import { getSystemInfo } from '@/services/system.service';
 import type { SystemInfo } from '@/types/system';
 
@@ -108,14 +111,12 @@ onUnmounted(() => {
 
 <template>
 	<div class="flex min-h-full flex-col gap-4">
-		<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-			<div>
-				<p class="text-xs uppercase tracking-[0.2em] text-tx-muted">Centro de control</p>
-				<h1 class="text-2xl font-semibold">Estado del sistema</h1>
-				<p class="text-sm text-tx-muted">Resumen rapido de recursos, hardware y entorno actual.</p>
-			</div>
-
-			<div class="flex flex-wrap items-center gap-2">
+		<PageHeader
+			section="Centro de control"
+			title="Estado del sistema"
+			description="Resumen rapido de recursos, hardware y entorno actual."
+		>
+			<template #actions>
 				<span class="rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-2 text-xs text-tx-muted">
 					Ultima actualizacion: {{ formatLastUpdatedAt(lastUpdatedAt) }}
 				</span>
@@ -127,16 +128,12 @@ onUnmounted(() => {
 				>
 					Actualizar
 				</button>
-			</div>
-		</header>
+			</template>
+		</PageHeader>
 
-		<div v-if="loading" class="grid flex-1 place-items-center rounded-corner border border-dashed border-ui-border bg-ui-surface/20 p-6 text-sm text-tx-muted">
-			Cargando informacion del sistema...
-		</div>
+		<EmptyStateBox v-if="loading" message="Cargando informacion del sistema..." padding="lg" />
 
-		<div v-else-if="errorMessage" class="rounded-corner border border-status-error/40 bg-status-error/10 p-4 text-sm text-status-error">
-			{{ errorMessage }}
-		</div>
+		<AlertMessage v-else-if="errorMessage" :message="errorMessage" tone="error" />
 
 		<div v-else-if="systemInfo" class="flex flex-col gap-4 pb-4">
 				<SystemOverviewCard :metrics="metrics" />

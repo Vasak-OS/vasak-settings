@@ -7,7 +7,10 @@ import {
 } from '@vasakgroup/plugin-config-manager';
 import type { Store } from 'pinia';
 import { computed, onMounted, type Ref, ref } from 'vue';
+import AlertMessage from '@/components/ui/AlertMessage.vue';
+import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
 import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
@@ -84,14 +87,12 @@ const isFormValid = computed(() => {
 
 <template>
 	<div class="flex min-h-full flex-col gap-4">
-		<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-			<div>
-				<p class="text-xs uppercase tracking-[0.2em] text-tx-muted">Apariencia</p>
-				<h1 class="text-2xl font-semibold">Archivos del Escritorio</h1>
-				<p class="text-sm text-tx-muted">Ajusta la visibilidad y el tamaño de los iconos en el fondo de escritorio.</p>
-			</div>
-
-			<div class="flex flex-wrap items-center gap-2">
+		<PageHeader
+			section="Apariencia"
+			title="Archivos del Escritorio"
+			description="Ajusta la visibilidad y el tamaño de los iconos en el fondo de escritorio."
+		>
+			<template #actions>
 				<button
 					v-if="!loading"
 					type="button"
@@ -101,21 +102,15 @@ const isFormValid = computed(() => {
 				>
 					{{ saving ? 'Guardando...' : 'Aplicar Cambios' }}
 				</button>
-			</div>
-		</header>
+			</template>
+		</PageHeader>
 
-		<div v-if="loading" class="grid flex-1 place-items-center rounded-corner border border-dashed border-ui-border bg-ui-surface/20 p-6 text-sm text-tx-muted">
-			Cargando configuración...
-		</div>
+		<EmptyStateBox v-if="loading" message="Cargando configuración..." padding="lg" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
-			<div v-if="error" class="rounded-corner border border-status-error/40 bg-status-error/10 p-4 text-sm text-status-error">
-				{{ error }}
-			</div>
+			<AlertMessage v-if="error" :message="error" tone="error" />
 			
-			<div v-if="successMessage" class="rounded-corner border border-status-success/40 bg-status-success/10 p-4 text-sm text-status-success">
-				{{ successMessage }}
-			</div>
+			<AlertMessage v-if="successMessage" :message="successMessage" tone="success" />
 
 			<div class="grid gap-4 xl:grid-cols-2">
 				<SectionCard>

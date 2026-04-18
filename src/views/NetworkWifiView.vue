@@ -9,7 +9,9 @@ import {
 } from '@vasakgroup/plugin-network-manager';
 import { getSymbolSource } from '@vasakgroup/plugin-vicons';
 import { computed, nextTick, onMounted, onUnmounted, type Ref, ref } from 'vue';
+import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import StatTile from '@/components/ui/StatTile.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
@@ -210,33 +212,31 @@ onUnmounted(() => {
 
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
-		<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-			<div>
-				<p class="text-xs uppercase tracking-[0.2em] text-tx-muted">Conectividad</p>
-				<h1 class="text-2xl font-semibold">Wi-Fi</h1>
-				<p class="text-sm text-tx-muted">Administra redes inalámbricas, estado del adaptador y conexión activa.</p>
-			</div>
-
-			<div class="flex items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2">
-				<div class="flex items-center gap-2">
-					<img v-if="currentNetworkIcon" :src="currentNetworkIcon" alt="Red actual" class="h-5 w-5" />
-					<span class="text-sm font-medium">
-						{{
-							currentConnectedNetwork
-								? `Conectado a ${getNetworkName(currentConnectedNetwork)}`
-								: wifiEnabled
-									? 'Sin conexión activa'
-									: 'Wi-Fi desactivado'
-						}}
-					</span>
+		<PageHeader
+			section="Conectividad"
+			title="Wi-Fi"
+			description="Administra redes inalámbricas, estado del adaptador y conexión activa."
+		>
+			<template #actions>
+				<div class="flex items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2">
+					<div class="flex items-center gap-2">
+						<img v-if="currentNetworkIcon" :src="currentNetworkIcon" alt="Red actual" class="h-5 w-5" />
+						<span class="text-sm font-medium">
+							{{
+								currentConnectedNetwork
+									? `Conectado a ${getNetworkName(currentConnectedNetwork)}`
+									: wifiEnabled
+										? 'Sin conexión activa'
+										: 'Wi-Fi desactivado'
+							}}
+						</span>
+					</div>
+					<SwitchToggle :is-on="wifiEnabled" :disabled="!wifiAvailable" @toggle="toggleWifi" />
 				</div>
-				<SwitchToggle :is-on="wifiEnabled" :disabled="!wifiAvailable" @toggle="toggleWifi" />
-			</div>
-		</header>
+			</template>
+		</PageHeader>
 
-		<div v-if="error" class="rounded-corner border border-status-error/40 bg-status-error/10 p-4 text-sm text-status-error">
-			{{ error }}
-		</div>
+		<AlertMessage v-if="error" :message="error" tone="error" />
 
 		<div class="grid gap-4 xl:grid-cols-3">
 			<SectionCard class="xl:col-span-2">

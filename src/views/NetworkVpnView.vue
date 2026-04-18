@@ -2,7 +2,9 @@
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentNetworkState, type NetworkInfo } from '@vasakgroup/plugin-network-manager';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import StatTile from '@/components/ui/StatTile.vue';
 
@@ -58,25 +60,23 @@ onUnmounted(() => {
 
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
-		<header class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-			<div>
-				<p class="text-xs uppercase tracking-[0.2em] text-tx-muted">Conectividad</p>
-				<h1 class="text-2xl font-semibold">VPN</h1>
-				<p class="text-sm text-tx-muted">Consulta el estado de la red privada virtual y la conexión activa del sistema.</p>
-			</div>
+		<PageHeader
+			section="Conectividad"
+			title="VPN"
+			description="Consulta el estado de la red privada virtual y la conexión activa del sistema."
+		>
+			<template #actions>
+				<button
+					class="rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-1.5 text-sm text-tx-muted transition-colors hover:bg-ui-surface"
+					@click="refreshNetworkState"
+					:disabled="loading"
+				>
+					{{ loading ? 'Actualizando...' : 'Actualizar estado' }}
+				</button>
+			</template>
+		</PageHeader>
 
-			<button
-				class="rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-1.5 text-sm text-tx-muted transition-colors hover:bg-ui-surface"
-				@click="refreshNetworkState"
-				:disabled="loading"
-			>
-				{{ loading ? 'Actualizando...' : 'Actualizar estado' }}
-			</button>
-		</header>
-
-		<div v-if="error" class="rounded-corner border border-status-error/40 bg-status-error/10 p-4 text-sm text-status-error">
-			{{ error }}
-		</div>
+		<AlertMessage v-if="error" :message="error" tone="error" />
 
 		<div class="grid gap-4 xl:grid-cols-3">
 			<SectionCard class="xl:col-span-2">
