@@ -2,7 +2,9 @@
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentNetworkState, type NetworkInfo } from '@vasakgroup/plugin-network-manager';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
+import StatTile from '@/components/ui/StatTile.vue';
 
 const networkState = ref<NetworkInfo | null>(null);
 const loading = ref(true);
@@ -80,29 +82,12 @@ onUnmounted(() => {
 			<SectionCard class="xl:col-span-2">
 				<h3 class="mb-4 text-lg font-medium text-tx-primary">Estado Actual</h3>
 
-				<div v-if="loading" class="rounded-corner border border-dashed border-ui-border bg-ui-surface/20 py-6 text-center text-sm text-tx-muted">
-					Leyendo estado de red...
-				</div>
+				<EmptyStateBox v-if="loading" message="Leyendo estado de red..." />
 
 				<div v-else class="space-y-3">
-					<div class="rounded-corner border border-ui-border bg-ui-surface/40 px-3 py-2">
-						<p class="text-xs uppercase tracking-[0.18em] text-tx-muted">Estado VPN</p>
-						<p class="text-sm font-medium" :class="isVpnConnection ? 'text-status-success' : 'text-tx-primary'">
-							{{ vpnStatus }}
-						</p>
-					</div>
-
-					<div class="rounded-corner border border-ui-border bg-ui-surface/40 px-3 py-2">
-						<p class="text-xs uppercase tracking-[0.18em] text-tx-muted">Conexión Activa</p>
-						<p class="text-sm font-medium text-tx-primary">{{ activeConnectionLabel }}</p>
-					</div>
-
-					<div class="rounded-corner border border-ui-border bg-ui-surface/40 px-3 py-2">
-						<p class="text-xs uppercase tracking-[0.18em] text-tx-muted">Tipo de Conexión</p>
-						<p class="text-sm font-medium text-tx-primary">
-							{{ networkState?.connection_type || 'Desconocido' }}
-						</p>
-					</div>
+					<StatTile label="Estado VPN" :value="vpnStatus" />
+					<StatTile label="Conexión Activa" :value="activeConnectionLabel" />
+					<StatTile label="Tipo de Conexión" :value="networkState?.connection_type || 'Desconocido'" />
 				</div>
 			</SectionCard>
 

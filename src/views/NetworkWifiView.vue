@@ -8,10 +8,16 @@ import {
 	type WiFiConnectionConfig,
 } from '@vasakgroup/plugin-network-manager';
 import { getSymbolSource } from '@vasakgroup/plugin-vicons';
-import { computed, nextTick, onMounted, onUnmounted, ref, type Ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, type Ref, ref } from 'vue';
+import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
+import StatTile from '@/components/ui/StatTile.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
-import { getWirelessEnabled, isWirelessAvailable, setWirelessEnabled } from '@/services/network.service';
+import {
+	getWirelessEnabled,
+	isWirelessAvailable,
+	setWirelessEnabled,
+} from '@/services/network.service';
 
 const wifiEnabled = ref(true);
 const wifiAvailable = ref(true);
@@ -29,7 +35,9 @@ const currentNetworkIcon = ref('');
 
 let unlistenNetwork: (() => void) | null = null;
 
-const currentConnectedNetwork = computed(() => availableNetworks.value.find((network) => network.is_connected) || null);
+const currentConnectedNetwork = computed(
+	() => availableNetworks.value.find((network) => network.is_connected) || null
+);
 
 const getNetworkName = (network: NetworkInfo): string => {
 	return network.ssid || network.name || 'Red sin nombre';
@@ -152,7 +160,7 @@ const openConnectDialog = async (network: NetworkInfo) => {
 	wifiPassword.value = '';
 	error.value = '';
 
-	if (!network.security_type || network.security_type === 'NONE') {
+	if (!network.security_type || String(network.security_type).toUpperCase() === 'NONE') {
 		await connectToSelectedNetwork('');
 		return;
 	}
@@ -247,21 +255,10 @@ onUnmounted(() => {
 					</button>
 				</div>
 
-				<div v-if="!wifiAvailable" class="py-6 text-center text-sm text-tx-muted border border-dashed border-ui-border rounded-corner bg-ui-surface/20">
-					No se detectó hardware inalámbrico disponible
-				</div>
-
-				<div v-else-if="!wifiEnabled" class="py-6 text-center text-sm text-tx-muted border border-dashed border-ui-border rounded-corner bg-ui-surface/20">
-					Activa Wi-Fi para escanear redes
-				</div>
-
-				<div v-else-if="loading" class="py-6 text-center text-sm text-tx-muted border border-dashed border-ui-border rounded-corner bg-ui-surface/20">
-					Buscando redes disponibles...
-				</div>
-
-				<div v-else-if="availableNetworks.length === 0" class="py-6 text-center text-sm text-tx-muted border border-dashed border-ui-border rounded-corner bg-ui-surface/20">
-					No se encontraron redes Wi-Fi
-				</div>
+				<EmptyStateBox v-if="!wifiAvailable" message="No se detectó hardware inalámbrico disponible" />
+				<EmptyStateBox v-else-if="!wifiEnabled" message="Activa Wi-Fi para escanear redes" />
+				<EmptyStateBox v-else-if="loading" message="Buscando redes disponibles..." />
+				<EmptyStateBox v-else-if="availableNetworks.length === 0" message="No se encontraron redes Wi-Fi" />
 
 				<ul v-else class="flex max-h-[55vh] flex-col gap-2 overflow-y-auto pr-1">
 					<li
@@ -305,14 +302,8 @@ onUnmounted(() => {
 			<SectionCard>
 				<h3 class="mb-4 text-lg font-medium text-tx-primary">Estado de Red</h3>
 				<div class="space-y-3">
-					<div class="rounded-corner border border-ui-border bg-ui-surface/40 px-3 py-2">
-						<p class="text-xs uppercase tracking-[0.18em] text-tx-muted">Wi-Fi</p>
-						<p class="text-sm font-medium text-tx-primary">{{ wifiStatus }}</p>
-					</div>
-					<div class="rounded-corner border border-ui-border bg-ui-surface/40 px-3 py-2">
-						<p class="text-xs uppercase tracking-[0.18em] text-tx-muted">Ethernet</p>
-						<p class="text-sm font-medium text-tx-primary">{{ ethernetStatus }}</p>
-					</div>
+					<StatTile label="Wi-Fi" :value="wifiStatus" />
+					<StatTile label="Ethernet" :value="ethernetStatus" />
 				</div>
 			</SectionCard>
 		</div>

@@ -18,7 +18,9 @@ const emit = defineEmits<{
 
 const deviceTitle = computed(() => props.device.alias || props.device.name || props.device.address);
 const deviceSubtitle = computed(() => props.device.address);
-const deviceMetadata = computed(() => props.device.icon || props.device.type ? props.device.type : '');
+const deviceMetadata = computed(() =>
+	props.device.icon || props.device.type ? props.device.type : ''
+);
 
 const deviceExtraInfo = computed(() => {
 	const info: string[] = [];

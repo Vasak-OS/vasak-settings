@@ -2,8 +2,10 @@
 import { listen } from '@tauri-apps/api/event';
 import { getSymbolSource } from '@vasakgroup/plugin-vicons';
 import { computed, onMounted, onUnmounted, type Ref, ref, watch } from 'vue';
+import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
+import StatusBadge from '@/components/ui/StatusBadge.vue';
 import {
 	getAudioInputDevices,
 	getAudioInputVolume,
@@ -91,11 +93,7 @@ const toggleInputMute = async () => {
 };
 
 const getDeviceName = (device: AudioDevice): string => {
-	return device.name
-		.replace('ALSA', '')
-		.replace('PulseAudio', '')
-		.replace('PipeWire', '')
-		.trim();
+	return device.name.replace('ALSA', '').replace('PulseAudio', '').replace('PipeWire', '').trim();
 };
 
 const loadInputDevices = async () => {
@@ -165,16 +163,10 @@ onUnmounted(() => {
 
 			<div class="flex flex-col items-center">
 				<p class="mb-2 text-xs uppercase tracking-[0.2em] text-tx-muted">Estado</p>
-				<span
-					class="rounded-corner border px-3 py-1 text-xs font-semibold"
-					:class="
-						inputVolumeInfo.is_muted
-							? 'border-status-error/40 bg-status-error/10 text-status-error'
-							: 'border-status-success/40 bg-status-success/10 text-status-success'
-					"
-				>
-					{{ inputVolumeInfo.is_muted ? 'MICRÓFONO SILENCIADO' : 'MICRÓFONO ACTIVO' }}
-				</span>
+				<StatusBadge
+					:text="inputVolumeInfo.is_muted ? 'MICRÓFONO SILENCIADO' : 'MICRÓFONO ACTIVO'"
+					:tone="inputVolumeInfo.is_muted ? 'error' : 'success'"
+				/>
 			</div>
 		</header>
 
@@ -245,18 +237,8 @@ onUnmounted(() => {
 					</button>
 				</h3>
 
-				<div
-					v-if="inputDevicesLoading"
-					class="flex items-center justify-center rounded-corner border border-dashed border-ui-border bg-ui-surface/20 py-6 text-sm text-tx-muted"
-				>
-					Cargando micrófonos...
-				</div>
-				<div
-					v-else-if="inputDevices.length === 0"
-					class="flex items-center justify-center rounded-corner border border-dashed border-ui-border bg-ui-surface/20 py-6 text-sm text-tx-muted"
-				>
-					No hay dispositivos de entrada disponibles
-				</div>
+				<EmptyStateBox v-if="inputDevicesLoading" message="Cargando micrófonos..." />
+				<EmptyStateBox v-else-if="inputDevices.length === 0" message="No hay dispositivos de entrada disponibles" />
 
 				<ul v-else class="flex max-h-[14rem] flex-col gap-2 overflow-y-auto pr-1">
 					<li

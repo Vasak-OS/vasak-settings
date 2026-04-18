@@ -41,7 +41,7 @@ const routes = [
 		path: '/multimedia-audio-input',
 		name: 'multimedia-audio-input',
 		component: () => import('@/views/MultimediaAudioInputView.vue'),
-	}
+	},
 ];
 export const router = createRouter({
 	history: createMemoryHistory(),

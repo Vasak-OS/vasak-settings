@@ -37,7 +37,7 @@ const toggleBT = async () => {
 	try {
 		await toggleBluetooth();
 		// Una pequeña espera ayuda a que el bus dbus recupere el estado
-		await new Promise(r => setTimeout(r, 600)); 
+		await new Promise((r) => setTimeout(r, 600));
 		await refreshDevices();
 	} catch (err) {
 		error.value = `Error alternando Bluetooth: ${err}`;
@@ -70,7 +70,7 @@ const refreshDevices = async () => {
 
 const scanDevices = async () => {
 	if (!defaultAdapter.value || !defaultAdapter.value.powered) return;
-	
+
 	isScanning.value = true;
 	error.value = '';
 	try {
@@ -105,8 +105,8 @@ const handleBluetoothChange = async (event: any) => {
 	const { change_type } = event.payload;
 	// Refrescar el estado de forma general cuando cambia alguna propiedad local
 	if (
-		change_type === 'adapter-property-changed' || 
-		change_type === 'device-added' || 
+		change_type === 'adapter-property-changed' ||
+		change_type === 'device-added' ||
 		change_type === 'device-removed' ||
 		change_type === 'device-connected' ||
 		change_type === 'device-disconnected'

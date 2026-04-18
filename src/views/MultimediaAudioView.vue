@@ -2,8 +2,10 @@
 import { listen } from '@tauri-apps/api/event';
 import { getSymbolSource } from '@vasakgroup/plugin-vicons';
 import { computed, onMounted, onUnmounted, type Ref, ref, watch } from 'vue';
+import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
+import StatusBadge from '@/components/ui/StatusBadge.vue';
 import {
 	getAudioDevices,
 	getAudioVolume,
@@ -96,11 +98,7 @@ const toggleMute = async () => {
 
 // --- Lógica Dispositivos ---
 const getDeviceName = (device: AudioDevice): string => {
-	return device.name
-		.replace('ALSA', '')
-		.replace('PulseAudio', '')
-		.replace('PipeWire', '')
-		.trim();
+	return device.name.replace('ALSA', '').replace('PulseAudio', '').replace('PipeWire', '').trim();
 };
 
 const loadDevices = async () => {
@@ -170,10 +168,10 @@ onUnmounted(() => {
 			
 			<div class="flex flex-col items-center">
 				<p class="text-xs uppercase tracking-[0.2em] text-tx-muted mb-2">Estado</p>
-				<span class="rounded-corner border px-3 py-1 text-xs font-semibold"
-					:class="volumeInfo.is_muted ? 'border-status-error/40 bg-status-error/10 text-status-error' : 'border-status-success/40 bg-status-success/10 text-status-success'">
-					{{ volumeInfo.is_muted ? 'SILENCIADO' : 'ACTIVO' }}
-				</span>
+				<StatusBadge
+					:text="volumeInfo.is_muted ? 'SILENCIADO' : 'ACTIVO'"
+					:tone="volumeInfo.is_muted ? 'error' : 'success'"
+				/>
 			</div>
 		</header>
 
@@ -224,12 +222,8 @@ onUnmounted(() => {
 					</button>
 				</h3>
 
-				<div v-if="devicesLoading" class="flex items-center justify-center py-6 text-sm text-tx-muted border border-dashed border-ui-border bg-ui-surface/20 rounded-corner">
-					Cargando tarjetas de sonido...
-				</div>
-				<div v-else-if="devices.length === 0" class="flex items-center justify-center py-6 text-sm text-tx-muted border border-dashed border-ui-border bg-ui-surface/20 rounded-corner">
-					No hay dispositivos de audio disponibles
-				</div>
+				<EmptyStateBox v-if="devicesLoading" message="Cargando tarjetas de sonido..." />
+				<EmptyStateBox v-else-if="devices.length === 0" message="No hay dispositivos de audio disponibles" />
 				
 				<ul v-else class="flex flex-col gap-2 max-h-[14rem] overflow-y-auto pr-1">
 					<li 
