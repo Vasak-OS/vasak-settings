@@ -18,6 +18,11 @@ const routes = [
 		component: () => import('@/views/WallpaperView.vue'),
 	},
 	{
+		path: '/network-wifi',
+		name: 'network-wifi',
+		component: () => import('@/views/NetworkWifiView.vue'),
+	},
+	{
 		path: '/network-bluetooth',
 		name: 'network-bluetooth',
 		component: () => import('@/views/NetworkBluetoothView.vue'),
