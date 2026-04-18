@@ -28,6 +28,11 @@ const routes = [
 		component: () => import('@/views/NetworkBluetoothView.vue'),
 	},
 	{
+		path: '/network-vpn',
+		name: 'network-vpn',
+		component: () => import('@/views/NetworkVpnView.vue'),
+	},
+	{
 		path: '/multimedia-audio',
 		name: 'multimedia-audio',
 		component: () => import('@/views/MultimediaAudioView.vue'),
