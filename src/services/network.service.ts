@@ -1,5 +1,132 @@
 import { invoke } from '@tauri-apps/api/core';
 
+export type WiFiSecurityType =
+	| 'none'
+	| 'wep'
+	| 'wpa-psk'
+	| 'wpa-eap'
+	| 'wpa2-psk'
+	| 'wpa3-psk';
+
+export interface NetworkInfo {
+	name: string;
+	ssid: string;
+	connection_type: string;
+	icon: string;
+	ip_address: string;
+	mac_address: string;
+	signal_strength: number;
+	security_type: WiFiSecurityType;
+	is_connected: boolean;
+}
+
+export interface NetworkStats {
+	download_speed: number;
+	upload_speed: number;
+	total_downloaded: number;
+	total_uploaded: number;
+	connection_duration: number;
+	interface: string;
+}
+
+export interface WiFiConnectionConfig {
+	ssid: string;
+	password?: string;
+	security_type: WiFiSecurityType;
+	username?: string;
+}
+
+export type VpnType =
+	| 'open-vpn'
+	| 'wire-guard'
+	| 'l2tp'
+	| 'pptp'
+	| 'sstp'
+	| 'ikev2'
+	| 'fortisslvpn'
+	| 'open-connect'
+	| 'generic';
+
+export type VpnConnectionState =
+	| 'disconnected'
+	| 'connecting'
+	| 'connected'
+	| 'disconnecting'
+	| 'failed'
+	| 'unknown';
+
+export interface VpnProfile {
+	id: string;
+	uuid: string;
+	vpn_type: VpnType;
+	interface_name?: string;
+	autoconnect: boolean;
+	editable: boolean;
+	last_error?: string;
+}
+
+export interface VpnStatus {
+	state: VpnConnectionState;
+	active_profile_id?: string;
+	active_profile_uuid?: string;
+	active_profile_name?: string;
+	ip_address?: string;
+	gateway?: string;
+	since_unix_ms?: number;
+}
+
+export interface VpnCreateInput {
+	id: string;
+	vpn_type: VpnType;
+	autoconnect?: boolean;
+	username?: string;
+	password?: string;
+	gateway?: string;
+	ca_cert_path?: string;
+	user_cert_path?: string;
+	private_key_path?: string;
+	private_key_password?: string;
+	settings?: Record<string, string>;
+	secrets?: Record<string, string>;
+}
+
+export interface VpnUpdateInput {
+	uuid: string;
+	id?: string;
+	autoconnect?: boolean;
+	username?: string;
+	password?: string;
+	gateway?: string;
+	ca_cert_path?: string;
+	user_cert_path?: string;
+	private_key_path?: string;
+	private_key_password?: string;
+	settings?: Record<string, string>;
+	secrets?: Record<string, string>;
+}
+
+export const getCurrentNetworkState = (): Promise<NetworkInfo> => {
+	return invoke<NetworkInfo>('plugin:network-manager|get_network_state');
+};
+
+export const listWifiNetworks = (options?: {
+	forceRefresh?: boolean;
+	ttlMs?: number;
+}): Promise<NetworkInfo[]> => {
+	return invoke<NetworkInfo[]>('plugin:network-manager|list_wifi_networks', {
+		force_refresh: options?.forceRefresh,
+		ttl_ms: options?.ttlMs,
+	});
+};
+
+export const rescanWifi = (): Promise<NetworkInfo[]> => {
+	return invoke<NetworkInfo[]>('plugin:network-manager|rescan_wifi');
+};
+
+export const connectToWifi = (config: WiFiConnectionConfig): Promise<void> => {
+	return invoke<void>('plugin:network-manager|connect_to_wifi', { config });
+};
+
 export const isWirelessAvailable = (): Promise<boolean> => {
 	return invoke<boolean>('plugin:network-manager|is_wireless_available');
 };
@@ -10,4 +137,40 @@ export const getWirelessEnabled = (): Promise<boolean> => {
 
 export const setWirelessEnabled = (enabled: boolean): Promise<boolean> => {
 	return invoke<boolean>('plugin:network-manager|set_wireless_enabled', { enabled });
+};
+
+export const getNetworkStats = (): Promise<NetworkStats> => {
+	return invoke<NetworkStats>('plugin:network-manager|get_network_stats');
+};
+
+export const getNetworkInterfaces = (): Promise<string[]> => {
+	return invoke<string[]>('plugin:network-manager|get_network_interfaces');
+};
+
+export const listVpnProfiles = (): Promise<VpnProfile[]> => {
+	return invoke<VpnProfile[]>('plugin:network-manager|list_vpn_profiles');
+};
+
+export const getVpnStatus = (): Promise<VpnStatus> => {
+	return invoke<VpnStatus>('plugin:network-manager|get_vpn_status');
+};
+
+export const connectVpn = (uuid: string): Promise<void> => {
+	return invoke<void>('plugin:network-manager|connect_vpn', { uuid });
+};
+
+export const disconnectVpn = (uuid?: string): Promise<void> => {
+	return invoke<void>('plugin:network-manager|disconnect_vpn', { uuid });
+};
+
+export const createVpnProfile = (config: VpnCreateInput): Promise<VpnProfile> => {
+	return invoke<VpnProfile>('plugin:network-manager|create_vpn_profile', { config });
+};
+
+export const updateVpnProfile = (config: VpnUpdateInput): Promise<VpnProfile> => {
+	return invoke<VpnProfile>('plugin:network-manager|update_vpn_profile', { config });
+};
+
+export const deleteVpnProfile = (uuid: string): Promise<void> => {
+	return invoke<void>('plugin:network-manager|delete_vpn_profile', { uuid });
 };

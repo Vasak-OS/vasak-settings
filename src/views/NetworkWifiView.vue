@@ -3,10 +3,14 @@ import { listen } from '@tauri-apps/api/event';
 import {
 	connectToWifi,
 	getCurrentNetworkState,
+	getNetworkInterfaces,
+	getNetworkStats,
 	listWifiNetworks,
+	rescanWifi,
+	type NetworkStats,
 	type NetworkInfo,
 	type WiFiConnectionConfig,
-} from '@vasakgroup/plugin-network-manager';
+} from '@/services/network.service';
 import { getSymbolSource } from '@vasakgroup/plugin-vicons';
 import { computed, nextTick, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
@@ -34,6 +38,8 @@ const wifiPassword = ref('');
 const showPasswordDialog = ref(false);
 const error = ref('');
 const currentNetworkIcon = ref('');
+const networkStats = ref<NetworkStats | null>(null);
+const networkInterfaces = ref<string[]>([]);
 
 let unlistenNetwork: (() => void) | null = null;
 
@@ -81,6 +87,36 @@ const updateEthernetStatus = (state: NetworkInfo | null) => {
 	ethernetStatus.value = 'Sin enlace activo';
 };
 
+const formatBytesPerSecond = (bytes: number): string => {
+	if (!Number.isFinite(bytes) || bytes <= 0) return '0 B/s';
+	const units = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+	let value = bytes;
+	let idx = 0;
+	while (value >= 1024 && idx < units.length - 1) {
+		value /= 1024;
+		idx += 1;
+	}
+	return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[idx]}`;
+};
+
+const refreshNetworkTelemetry = async () => {
+	try {
+		networkStats.value = await getNetworkStats();
+		console.log('Network stats fetched:', networkStats.value);
+	} catch (err) {
+		console.error('Error fetching network stats:', err);
+		networkStats.value = null;
+	}
+
+	try {
+		networkInterfaces.value = await getNetworkInterfaces();
+		console.log('Network interfaces fetched:', networkInterfaces.value);
+	} catch (err) {
+		console.error('Error fetching network interfaces:', err);
+		networkInterfaces.value = [];
+	}
+};
+
 const refreshEthernetStatus = async () => {
 	try {
 		const state = await getCurrentNetworkState();
@@ -98,8 +134,26 @@ const refreshNetworks = async () => {
 	try {
 		availableNetworks.value = await listWifiNetworks();
 		await updateCurrentIcon();
+		await refreshNetworkTelemetry();
 	} catch (scanError) {
 		error.value = `Error actualizando redes: ${String(scanError)}`;
+	} finally {
+		loading.value = false;
+		isRefreshing.value = false;
+	}
+};
+
+const triggerRescan = async () => {
+	if (!wifiEnabled.value || !wifiAvailable.value) return;
+	isRefreshing.value = true;
+	loading.value = true;
+	error.value = '';
+	try {
+		availableNetworks.value = await rescanWifi();
+		await updateCurrentIcon();
+		await refreshNetworkTelemetry();
+	} catch (scanError) {
+		error.value = `Error escaneando redes: ${String(scanError)}`;
 	} finally {
 		loading.value = false;
 		isRefreshing.value = false;
@@ -121,12 +175,16 @@ const checkWirelessStatus = async () => {
 				await refreshNetworks();
 			} else {
 				availableNetworks.value = [];
+				networkStats.value = null;
+				networkInterfaces.value = [];
 				await updateCurrentIcon();
 			}
 		} else {
 			wifiStatus.value = 'Hardware no disponible';
 			wifiEnabled.value = false;
 			availableNetworks.value = [];
+			networkStats.value = null;
+			networkInterfaces.value = [];
 			await updateCurrentIcon();
 		}
 	} catch (wirelessError) {
@@ -149,6 +207,8 @@ const toggleWifi = async () => {
 			await refreshNetworks();
 		} else {
 			availableNetworks.value = [];
+			networkStats.value = null;
+			networkInterfaces.value = [];
 			await updateCurrentIcon();
 		}
 	} catch (toggleError) {
@@ -180,6 +240,7 @@ const connectToSelectedNetwork = async (password: string) => {
 		await connectToWifi({
 			ssid: selectedNetwork.value.ssid,
 			password,
+			security_type: selectedNetwork.value.security_type,
 		} as WiFiConnectionConfig);
 		showPasswordDialog.value = false;
 		wifiPassword.value = '';
@@ -196,17 +257,28 @@ const confirmConnect = async () => {
 	await connectToSelectedNetwork(wifiPassword.value);
 };
 
+let statsUpdateInterval: ReturnType<typeof setInterval> | null = null;
+
 onMounted(async () => {
 	await checkWirelessStatus();
 	await refreshEthernetStatus();
+	await refreshNetworkTelemetry();
+	
+	// Actualizar estadísticas cada 2 segundos para mostrar velocidades en tiempo real
+	statsUpdateInterval = setInterval(async () => {
+		await refreshNetworkTelemetry();
+	}, 2000);
+	
 	unlistenNetwork = await listen('network-changed', async () => {
 		await checkWirelessStatus();
 		await refreshEthernetStatus();
+		await refreshNetworkTelemetry();
 	});
 });
 
 onUnmounted(() => {
 	if (unlistenNetwork) unlistenNetwork();
+	if (statsUpdateInterval) clearInterval(statsUpdateInterval);
 });
 </script>
 
@@ -245,9 +317,9 @@ onUnmounted(() => {
 					<button
 						class="flex items-center justify-center rounded p-1.5 transition-colors hover:bg-ui-surface border-transparent border hover:border-ui-border"
 						:class="isRefreshing || !wifiEnabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'"
-						@click="refreshNetworks"
+						@click="triggerRescan"
 						:disabled="isRefreshing || !wifiEnabled"
-						title="Actualizar redes"
+						title="Escanear redes"
 					>
 						<svg class="h-4 w-4 text-tx-muted" :class="{ 'animate-spin text-primary': isRefreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -304,6 +376,19 @@ onUnmounted(() => {
 				<div class="space-y-3">
 					<StatTile label="Wi-Fi" :value="wifiStatus" />
 					<StatTile label="Ethernet" :value="ethernetStatus" />
+					<StatTile
+						label="Interfaz activa"
+						:value="networkStats?.interface || 'Sin interfaz detectada'"
+						:hint="networkInterfaces.length ? networkInterfaces.join(', ') : 'Sin interfaces reportadas'"
+					/>
+					<StatTile
+						label="Descarga"
+						:value="formatBytesPerSecond(networkStats?.download_speed || 0)"
+					/>
+					<StatTile
+						label="Subida"
+						:value="formatBytesPerSecond(networkStats?.upload_speed || 0)"
+					/>
 				</div>
 			</SectionCard>
 		</div>

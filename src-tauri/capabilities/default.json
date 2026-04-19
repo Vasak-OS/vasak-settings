@@ -21,6 +21,8 @@
     "network-manager:allow-set-wireless-enabled",
     "network-manager:allow-is-wireless-available",
     "network-manager:allow-connect-to-wifi",
+    "network-manager:allow-get-network-stats",
+    "network-manager:allow-get-network-interfaces",
     "network-manager:allow-list-vpn-profiles",
     "network-manager:allow-get-vpn-status",
     "network-manager:allow-connect-vpn",
