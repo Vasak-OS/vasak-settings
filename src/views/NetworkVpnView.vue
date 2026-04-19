@@ -12,7 +12,6 @@ import {
 	type VpnCreateInput,
 	type VpnProfile,
 	type VpnStatus,
-	type VpnType,
 	type VpnUpdateInput,
 } from '@/services/network.service';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
@@ -20,7 +19,9 @@ import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
-import StatTile from '@/components/ui/StatTile.vue';
+import NewProfileComponent from '@/components/vpn/NewProfileComponent.vue';
+import VpnProfileItem from '@/components/vpn/VpnProfileItem.vue';
+import VpnStatusPanel from '@/components/vpn/VpnStatusPanel.vue';
 
 const vpnProfiles = ref<VpnProfile[]>([]);
 const vpnStatus = ref<VpnStatus | null>(null);
@@ -28,35 +29,8 @@ const loading = ref(true);
 const error = ref('');
 const actionProfileUuid = ref<string | null>(null);
 const showProfileDialog = ref(false);
-const isSubmittingProfile = ref(false);
-const editingProfileUuid = ref<string | null>(null);
-
-const profileId = ref('');
-const profileType = ref<VpnType>('generic');
-const profileAutoconnect = ref(false);
-const profileGateway = ref('');
-const profileUsername = ref('');
-const profilePassword = ref('');
-const profileCaCertPath = ref('');
-const profileUserCertPath = ref('');
-const profilePrivateKeyPath = ref('');
-const profilePrivateKeyPassword = ref('');
-const profileSettingsJson = ref('');
-const profileSecretsJson = ref('');
 
 const unlisteners: Array<() => void> = [];
-
-const vpnTypes: Array<{ value: VpnType; label: string }> = [
-	{ value: 'open-vpn', label: 'OpenVPN' },
-	{ value: 'wire-guard', label: 'WireGuard' },
-	{ value: 'l2tp', label: 'L2TP' },
-	{ value: 'pptp', label: 'PPTP' },
-	{ value: 'sstp', label: 'SSTP' },
-	{ value: 'ikev2', label: 'IKEv2' },
-	{ value: 'fortisslvpn', label: 'FortiSSLVPN' },
-	{ value: 'open-connect', label: 'OpenConnect' },
-	{ value: 'generic', label: 'Generic' },
-];
 
 const activeProfile = computed(() => {
 	const uuid = vpnStatus.value?.active_profile_uuid;
@@ -81,51 +55,6 @@ const vpnStateLabel = computed(() => {
 });
 
 const hasActiveVpn = computed(() => vpnStatus.value?.state === 'connected');
-
-const dialogTitle = computed(() =>
-	editingProfileUuid.value ? 'Editar perfil VPN' : 'Crear perfil VPN'
-);
-
-const resetProfileForm = () => {
-	profileId.value = '';
-	profileType.value = 'generic';
-	profileAutoconnect.value = false;
-	profileGateway.value = '';
-	profileUsername.value = '';
-	profilePassword.value = '';
-	profileCaCertPath.value = '';
-	profileUserCertPath.value = '';
-	profilePrivateKeyPath.value = '';
-	profilePrivateKeyPassword.value = '';
-	profileSettingsJson.value = '';
-	profileSecretsJson.value = '';
-	editingProfileUuid.value = null;
-};
-
-const parseStringMap = (raw: string, label: string): Record<string, string> | undefined => {
-	if (!raw.trim()) return undefined;
-
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch {
-		throw new Error(`${label} debe ser un JSON válido`);
-	}
-
-	if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-		throw new Error(`${label} debe ser un objeto clave/valor`);
-	}
-
-	const out: Record<string, string> = {};
-	for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-		if (typeof value !== 'string') {
-			throw new Error(`${label}: el valor de '${key}' debe ser string`);
-		}
-		out[key] = value;
-	}
-
-	return out;
-};
 
 const errorMessage = (err: unknown): string => {
 	const readString = (value: unknown): string | null => {
@@ -250,87 +179,23 @@ const removeProfile = async (profile: VpnProfile) => {
 	}
 };
 
-const openCreateDialog = () => {
-	resetProfileForm();
-	showProfileDialog.value = true;
-};
-
-const openEditDialog = (profile: VpnProfile) => {
-	resetProfileForm();
-	editingProfileUuid.value = profile.uuid;
-	profileId.value = profile.id;
-	profileType.value = profile.vpn_type;
-	profileAutoconnect.value = profile.autoconnect;
-	showProfileDialog.value = true;
-};
-
-const buildCreateInput = (): VpnCreateInput => {
-	const settings = parseStringMap(profileSettingsJson.value, 'Settings');
-	const secrets = parseStringMap(profileSecretsJson.value, 'Secrets');
-
-	return {
-		id: profileId.value.trim(),
-		vpn_type: profileType.value,
-		autoconnect: profileAutoconnect.value,
-		username: profileUsername.value.trim() || undefined,
-		password: profilePassword.value || undefined,
-		gateway: profileGateway.value.trim() || undefined,
-		ca_cert_path: profileCaCertPath.value.trim() || undefined,
-		user_cert_path: profileUserCertPath.value.trim() || undefined,
-		private_key_path: profilePrivateKeyPath.value.trim() || undefined,
-		private_key_password: profilePrivateKeyPassword.value || undefined,
-		settings,
-		secrets,
-	};
-};
-
-const buildUpdateInput = (uuid: string): VpnUpdateInput => {
-	const settings = parseStringMap(profileSettingsJson.value, 'Settings');
-	const secrets = parseStringMap(profileSecretsJson.value, 'Secrets');
-
-	return {
-		uuid,
-		id: profileId.value.trim() || undefined,
-		autoconnect: profileAutoconnect.value,
-		username: profileUsername.value.trim() || undefined,
-		password: profilePassword.value || undefined,
-		gateway: profileGateway.value.trim() || undefined,
-		ca_cert_path: profileCaCertPath.value.trim() || undefined,
-		user_cert_path: profileUserCertPath.value.trim() || undefined,
-		private_key_path: profilePrivateKeyPath.value.trim() || undefined,
-		private_key_password: profilePrivateKeyPassword.value || undefined,
-		settings,
-		secrets,
-	};
-};
-
-const submitProfile = async () => {
-	if (!profileId.value.trim()) {
-		error.value = 'El nombre del perfil es obligatorio';
-		return;
-	}
-
-	isSubmittingProfile.value = true;
+const handleProfileSubmit = async (input: VpnCreateInput | VpnUpdateInput) => {
 	error.value = '';
 	try {
-		if (editingProfileUuid.value) {
-			await updateVpnProfile(buildUpdateInput(editingProfileUuid.value));
+		if ('uuid' in input) {
+			await updateVpnProfile(input as VpnUpdateInput);
 		} else {
-			await createVpnProfile(buildCreateInput());
+			await createVpnProfile(input as VpnCreateInput);
 		}
 		showProfileDialog.value = false;
-		resetProfileForm();
 		await refreshVpnData();
 	} catch (submitError) {
 		error.value = `Error guardando perfil VPN: ${errorMessage(submitError)}`;
-	} finally {
-		isSubmittingProfile.value = false;
 	}
 };
 
-const cancelDialog = () => {
+const handleProfileCancel = () => {
 	showProfileDialog.value = false;
-	resetProfileForm();
 };
 
 onMounted(async () => {
@@ -362,7 +227,7 @@ onUnmounted(() => {
 				<div class="flex gap-2">
 					<button
 						class="rounded-corner border border-primary/20 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15"
-						@click="openCreateDialog"
+						@click="showProfileDialog = true"
 					>
 						Nuevo perfil
 					</button>
@@ -385,16 +250,12 @@ onUnmounted(() => {
 
 				<EmptyStateBox v-if="loading" message="Leyendo estado de red..." />
 
-				<div v-else class="space-y-3">
-					<StatTile label="Estado VPN" :value="vpnStateLabel" />
-					<StatTile
-						label="Perfil activo"
-						:value="activeProfile?.id || vpnStatus?.active_profile_name || 'Sin conexión activa'"
-						:hint="vpnStatus?.active_profile_uuid || undefined"
-					/>
-					<StatTile label="Gateway" :value="vpnStatus?.gateway || 'No disponible'" />
-					<StatTile label="IP" :value="vpnStatus?.ip_address || 'No disponible'" />
-				</div>
+				<VpnStatusPanel
+					v-else
+					:vpn-status="vpnStatus"
+					:active-profile="activeProfile"
+					:is-loading="loading"
+				/>
 			</SectionCard>
 
 			<SectionCard>
@@ -419,8 +280,10 @@ onUnmounted(() => {
 		<SectionCard>
 			<div class="mb-4 flex items-center justify-between">
 				<h3 class="text-lg font-medium text-tx-primary">Perfiles VPN</h3>
-				<span class="text-xs uppercase tracking-[0.16em] text-tx-muted">{{ vpnProfiles.length }} perfiles</span>
-				</div>
+				<span class="text-xs uppercase tracking-[0.16em] text-tx-muted">
+					{{ vpnProfiles.length }} perfiles
+				</span>
+			</div>
 
 			<EmptyStateBox
 				v-if="!loading && vpnProfiles.length === 0"
@@ -428,191 +291,27 @@ onUnmounted(() => {
 			/>
 
 			<ul v-else class="space-y-2">
-				<li
+				<VpnProfileItem
 					v-for="profile in vpnProfiles"
 					:key="profile.uuid"
-					class="rounded-corner border border-ui-border bg-ui-surface/35 p-3"
-				>
-					<div class="flex flex-wrap items-center justify-between gap-3">
-						<div>
-							<p class="text-sm font-medium text-tx-primary">{{ profile.id }}</p>
-							<p class="text-xs text-tx-muted">
-								{{ profile.vpn_type }} · UUID: {{ profile.uuid }}
-								<span v-if="profile.autoconnect"> · autoconnect</span>
-							</p>
-						</div>
-						<div class="flex flex-wrap gap-2">
-							<button
-								v-if="vpnStatus?.active_profile_uuid === profile.uuid && vpnStatus?.state === 'connected'"
-								class="rounded-corner border border-ui-border px-2 py-1 text-xs text-tx-muted hover:bg-ui-surface disabled:cursor-not-allowed disabled:opacity-50"
-								@click="disconnectProfile(profile.uuid)"
-								:disabled="actionProfileUuid === profile.uuid"
-							>
-								{{ actionProfileUuid === profile.uuid ? 'Desconectando...' : 'Desconectar' }}
-							</button>
-							<button
-								v-else
-								class="rounded-corner border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
-								@click="connectProfile(profile.uuid)"
-								:disabled="actionProfileUuid === profile.uuid"
-							>
-								{{ actionProfileUuid === profile.uuid ? 'Conectando...' : 'Conectar' }}
-							</button>
-							<button
-								class="rounded-corner border border-ui-border px-2 py-1 text-xs text-tx-muted hover:bg-ui-surface"
-								@click="openEditDialog(profile)"
-							>
-								Editar
-							</button>
-							<button
-								class="rounded-corner border border-status-danger/20 bg-status-danger/10 px-2 py-1 text-xs text-status-danger hover:bg-status-danger/20 disabled:cursor-not-allowed disabled:opacity-50"
-								@click="removeProfile(profile)"
-								:disabled="actionProfileUuid === profile.uuid"
-							>
-								Eliminar
-							</button>
-						</div>
-					</div>
-				</li>
+					:profile="profile"
+					:is-active="vpnStatus?.active_profile_uuid === profile.uuid"
+					:is-connected="vpnStatus?.state === 'connected'"
+					:is-loading="loading"
+					:action-profile-uuid="actionProfileUuid"
+					@connect="connectProfile(profile.uuid)"
+					@disconnect="disconnectProfile(profile.uuid)"
+					@edit="showProfileDialog = true"
+					@delete="removeProfile(profile)"
+				/>
 			</ul>
 		</SectionCard>
 
-		<div
-			v-if="showProfileDialog"
-			class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
-		>
-			<div class="w-full max-w-2xl rounded-corner border border-ui-border bg-ui-bg p-4 shadow-xl">
-				<h2 class="text-lg font-semibold text-tx-primary">{{ dialogTitle }}</h2>
-				<p class="mt-1 text-sm text-tx-muted">Configura los datos principales del perfil VPN.</p>
-
-				<div class="mt-4 grid gap-3 md:grid-cols-2">
-					<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-						Nombre del perfil
-						<input
-							v-model="profileId"
-							type="text"
-							class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-						/>
-					</label>
-
-					<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-						Tipo VPN
-						<select
-							v-model="profileType"
-							class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-						>
-							<option v-for="opt in vpnTypes" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-						</select>
-					</label>
-
-					<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-						Gateway / Remote
-						<input
-							v-model="profileGateway"
-							type="text"
-							class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-						/>
-					</label>
-
-					<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-						Usuario
-						<input
-							v-model="profileUsername"
-							type="text"
-							class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-						/>
-					</label>
-
-					<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-						Password
-						<input
-							v-model="profilePassword"
-							type="password"
-							class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-						/>
-					</label>
-
-					<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-						CA cert path
-						<input
-							v-model="profileCaCertPath"
-							type="text"
-							class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-						/>
-					</label>
-
-					<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-						User cert path
-						<input
-							v-model="profileUserCertPath"
-							type="text"
-							class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-						/>
-					</label>
-
-					<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-						Private key path
-						<input
-							v-model="profilePrivateKeyPath"
-							type="text"
-							class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-						/>
-					</label>
-
-					<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-						Private key password
-						<input
-							v-model="profilePrivateKeyPassword"
-							type="password"
-							class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-						/>
-					</label>
-				</div>
-
-				<div class="mt-3 grid gap-3 md:grid-cols-2">
-					<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-						Settings JSON (objeto string/string)
-						<textarea
-							v-model="profileSettingsJson"
-							rows="4"
-							class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-xs"
-							placeholder='{"remote":"vpn.example.com:51820"}'
-						/>
-					</label>
-
-					<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-						Secrets JSON (objeto string/string)
-						<textarea
-							v-model="profileSecretsJson"
-							rows="4"
-							class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-xs"
-							placeholder='{"private_key":"***"}'
-						/>
-					</label>
-				</div>
-
-				<label class="mt-2 flex items-center gap-2 text-sm text-tx-muted">
-					<input v-model="profileAutoconnect" type="checkbox" />
-					Autoconectar este perfil
-				</label>
-
-				<div class="mt-4 flex justify-end gap-2">
-					<button
-						class="rounded-corner border border-ui-border px-3 py-1.5 text-sm text-tx-muted hover:bg-ui-surface"
-						@click="cancelDialog"
-						:disabled="isSubmittingProfile"
-					>
-						Cancelar
-					</button>
-					<button
-						class="rounded-corner border border-primary/20 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
-						@click="submitProfile"
-						:disabled="isSubmittingProfile"
-					>
-						{{ isSubmittingProfile ? 'Guardando...' : 'Guardar perfil' }}
-					</button>
-				</div>
-			</div>
-		</div>
+		<NewProfileComponent
+			:open="showProfileDialog"
+			@update:open="showProfileDialog = $event"
+			@submit="handleProfileSubmit"
+			@cancel="handleProfileCancel"
+		/>
 	</div>
 </template>
