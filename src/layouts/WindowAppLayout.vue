@@ -41,7 +41,6 @@ const sidebarCategories: SidebarCategory[] = [
 			{ id: 'appearance-theme', label: 'Tema', icon: 'preferences-theme' },
 			{ id: 'appearance-wallpaper', label: 'Fondos', icon: 'preferences-wallpaper' },
 			{ id: 'appearance-desktop', label: 'Escritorio', icon: 'preferences-desktop-display' },
-			{ id: 'appearance-font', label: 'Tipografia', icon: 'preferences-desktop-font' },
 		],
 	},
 	{
@@ -54,14 +53,6 @@ const sidebarCategories: SidebarCategory[] = [
 				label: 'Audio entrada',
 				icon: 'audio-input-microphone-symbolic',
 			},
-		],
-	},
-	{
-		id: 'system',
-		title: 'Sistema',
-		items: [
-			{ id: 'system-power', label: 'Energia', icon: 'preferences-system-power-management' },
-			{ id: 'system-storage', label: 'Almacenamiento', icon: 'preferences-system-disks' },
 		],
 	},
 	{
