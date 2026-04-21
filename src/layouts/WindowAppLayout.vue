@@ -39,6 +39,7 @@ const sidebarCategories: SidebarCategory[] = [
 		title: 'Apariencia',
 		items: [
 			{ id: 'appearance-theme', label: 'Tema', icon: 'preferences-theme' },
+			{ id: 'appearance-fonts', label: 'Fuentes', icon: 'preferences-desktop-font' },
 			{ id: 'appearance-icon-packs', label: 'Iconos', icon: 'preferences-desktop-icons' },
 			{ id: 'appearance-wallpaper', label: 'Fondos', icon: 'preferences-wallpaper' },
 			{ id: 'appearance-desktop', label: 'Escritorio', icon: 'preferences-desktop-display' },
