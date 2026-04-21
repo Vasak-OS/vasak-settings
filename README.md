@@ -1,16 +1,114 @@
-# Tauri + Vue + TypeScript
+# vasak-settings
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Aplicacion de configuracion de VasakOS construida con Tauri 2, Vue 3, TypeScript y Tailwind.
 
-## Recommended IDE Setup
+Permite gestionar temas, esquemas de color, iconos, fondos, escritorio, conectividad, audio y fuentes del sistema desde una interfaz unificada.
 
-- [VS Code](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+## Stack
 
-## Type Support For `.vue` Imports in TS
+- Frontend: Vue 3 + Vite + TypeScript + Pinia + Vue Router + Tailwind
+- Backend desktop: Tauri 2 (Rust)
+- Tooling JS/TS: Bun
 
-Since TypeScript cannot handle type information for `.vue` imports, they are shimmed to be a generic Vue component type by default. In most cases this is fine if you don't really care about component prop types outside of templates. However, if you wish to get actual prop types in `.vue` imports (for example to get props validation when using manual `h(...)` calls), you can enable Volar's Take Over mode by following these steps:
+## Requisitos
 
-1. Run `Extensions: Show Built-in Extensions` from VS Code's command palette, look for `TypeScript and JavaScript Language Features`, then right click and select `Disable (Workspace)`. By default, Take Over mode will enable itself if the default TypeScript extension is disabled.
-2. Reload the VS Code window by running `Developer: Reload Window` from the command palette.
+### 1) Bun
 
-You can learn more about Take Over mode [here](https://github.com/johnsoncodehk/volar/discussions/471).
+Instala Bun (si aun no lo tienes):
+
+```bash
+curl -fsSL https://bun.sh/install | bash
+```
+
+Verifica:
+
+```bash
+bun --version
+```
+
+### 2) Toolchain Rust
+
+Tauri necesita Rust para compilar el backend:
+
+```bash
+rustc --version
+cargo --version
+```
+
+Si no lo tienes instalado:
+
+```bash
+curl https://sh.rustup.rs -sSf | sh
+```
+
+### 3) Dependencias del sistema (Linux)
+
+Para compilar apps Tauri en Linux se requieren librerias de WebKitGTK y GTK.
+Instala los paquetes equivalentes de tu distro antes de ejecutar la app.
+
+## Instalacion
+
+Desde la raiz de este proyecto:
+
+```bash
+bun install
+```
+
+## Desarrollo (usando Bun)
+
+### Frontend (Vite)
+
+```bash
+bun run dev
+```
+
+### App desktop (Tauri)
+
+```bash
+bun run tauri dev
+```
+
+## Build
+
+### Build del frontend
+
+```bash
+bun run build
+```
+
+### Build de la app desktop
+
+```bash
+bun run tauri build
+```
+
+## Calidad de codigo
+
+### Lint
+
+```bash
+bun run lint
+```
+
+### Lint con autocorreccion y formato
+
+```bash
+bun run lint:fix
+```
+
+### Formato
+
+```bash
+bun run format
+```
+
+## Scripts disponibles
+
+- `bun run dev`: levanta Vite en modo desarrollo
+- `bun run build`: typecheck + build de frontend
+- `bun run preview`: previsualiza el build de frontend
+- `bun run tauri dev`: ejecuta la app desktop en desarrollo
+- `bun run tauri build`: genera build de produccion de Tauri
+- `bun run lint`: chequeo con Biome
+- `bun run lint:fix`: corrige issues y formatea
+- `bun run format`: aplica formato con Biome
