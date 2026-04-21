@@ -5,6 +5,7 @@ import {
 	type VSKConfig,
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
+import { convertFileSrc } from '@tauri-apps/api/core';
 import type { Store } from 'pinia';
 import { computed, onMounted, type Ref, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
@@ -53,9 +54,8 @@ onMounted(async () => {
 		const packs = await getIconPacks();
 		iconPacks.value = Array.isArray(packs) && packs.length ? packs : ['Adwaita'];
 
-		// Cargar previsualizaciones para los packs seleccionados
-		await loadPackPreview(selectedDarkPack.value);
-		await loadPackPreview(selectedLightPack.value);
+		// Cargar previsualizaciones para todos los packs visibles
+		await Promise.all(iconPacks.value.map((packName) => loadPackPreview(packName)));
 	} catch (err) {
 		error.value = `Error cargando configuración: ${err}`;
 		console.error(err);
@@ -185,7 +185,7 @@ const isChanged = computed(() => {
 									<img
 										v-for="(icon, idx) in (getPackPreview(pack)?.icons || []).slice(0, 4)"
 										:key="`${pack}-icon-${idx}`"
-										:src="`file://${icon}`"
+										:src="convertFileSrc(icon)"
 										:alt="`${pack} icon ${idx}`"
 										class="w-8 h-8 rounded opacity-80 hover:opacity-100 transition-opacity"
 										@error="(e) => (e.target as HTMLImageElement).style.display = 'none'"
@@ -198,12 +198,6 @@ const isChanged = computed(() => {
 									</div>
 								</div>
 								<p class="text-sm font-medium text-tx-primary text-center truncate">{{ pack }}</p>
-								<div
-									v-if="selectedDarkPack === pack"
-									class="text-xs text-primary font-medium text-center"
-								>
-									✓ Seleccionado
-								</div>
 							</div>
 						</div>
 					</div>
@@ -233,7 +227,7 @@ const isChanged = computed(() => {
 									<img
 										v-for="(icon, idx) in (getPackPreview(pack)?.icons || []).slice(0, 4)"
 										:key="`${pack}-light-icon-${idx}`"
-										:src="`file://${icon}`"
+										:src="convertFileSrc(icon)"
 										:alt="`${pack} icon ${idx}`"
 										class="w-8 h-8 rounded opacity-80 hover:opacity-100 transition-opacity"
 										@error="(e) => (e.target as HTMLImageElement).style.display = 'none'"

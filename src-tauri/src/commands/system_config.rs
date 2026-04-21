@@ -368,13 +368,22 @@ pub async fn get_icon_packs() -> Result<Vec<String>, String> {
             for entry in entries.flatten() {
                 let entry_path = entry.path();
                 let index_theme = entry_path.join("index.theme");
-                let cursors_dir = entry_path.join("cursors");
 
-                if index_theme.exists() && !cursors_dir.exists() {
-                    if let Ok(file_name) = entry.file_name().into_string() {
-                        icons.insert(file_name);
-                    }
+                if !index_theme.exists() {
+                    continue;
                 }
+
+                let file_name = match entry.file_name().into_string() {
+                    Ok(file_name) => file_name,
+                    Err(_) => continue,
+                };
+
+                let is_cursor_theme = file_name.to_ascii_lowercase().contains("cursor");
+                if is_cursor_theme {
+                    continue;
+                }
+
+                icons.insert(file_name);
             }
         }
     }
@@ -441,112 +450,211 @@ pub async fn get_icon_pack_icons(icon_pack: String) -> Result<IconPackPreview, S
     }
 
     let mut icons = Vec::new();
-    
-    // Iconos representativos a buscar
-    let icon_names = vec![
-        "folder", "file-manager", "preferences-desktop",
-        "application-default", "preferences", "system-file-manager",
-        "folder-documents", "folder-music", "folder-pictures",
-    ];
+    let mut seen = std::collections::HashSet::new();
 
-    // Intentar encontrar en directorios scalable y sizes
-    let scalable_dir = pack_path.join("scalable");
-    let size_dirs = vec![
-        pack_path.join("48x48"),
-        pack_path.join("64x64"),
-        pack_path.join("32x32"),
-    ];
-
-    for icon_name in icon_names.iter() {
-        // Buscar en scalable/apps
-        if scalable_dir.exists() {
-            let apps_dir = scalable_dir.join("apps");
-            if apps_dir.exists() {
-                if let Ok(entries) = std::fs::read_dir(&apps_dir) {
-                    for entry in entries.flatten() {
-                        let entry_name = entry.file_name();
-                        if let Some(name_str) = entry_name.to_str() {
-                            if name_str.starts_with(icon_name) {
-                                icons.push(entry.path().to_string_lossy().to_string());
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            
-            let places_dir = scalable_dir.join("places");
-            if icons.len() < 4 && places_dir.exists() {
-                if let Ok(entries) = std::fs::read_dir(&places_dir) {
-                    for entry in entries.flatten() {
-                        let entry_name = entry.file_name();
-                        if let Some(name_str) = entry_name.to_str() {
-                            if name_str.contains(icon_name) || name_str.contains("folder") {
-                                icons.push(entry.path().to_string_lossy().to_string());
-                                break;
-                            }
-                        }
-                    }
-                }
+    let push_icon = |path: PathBuf, icons: &mut Vec<String>, seen: &mut std::collections::HashSet<String>| {
+        if path.is_file() {
+            let icon_path = path.to_string_lossy().to_string();
+            if seen.insert(icon_path.clone()) {
+                icons.push(icon_path);
             }
         }
+    };
 
-        if icons.len() >= 4 {
-            break;
-        }
+    let preferred_basenames = [
+        "default-folder",
+        "folder",
+        "emptytrash",
+        "user-trash",
+        "dialog-information",
+        "video-display",
+        "preferences-desktop-display",
+        "application-x-generic",
+        "image-x-generic",
+    ];
 
-        // Buscar en directorios de tamaño
-        for size_dir in &size_dirs {
+    let preferred_aliases: &[(&str, &[&str])] = &[
+        ("default-folder", &["folder", "folder-default", "folder-documents"]),
+        (
+            "emptytrash",
+            &["user-trash", "user-trash-full", "trash-empty", "trash-can"],
+        ),
+        (
+            "dialog-information",
+            &["dialog-information-symbolic", "information", "info"],
+        ),
+        (
+            "video-display",
+            &["preferences-desktop-display", "display", "video-projector"],
+        ),
+    ];
+
+    let image_extensions = ["svg", "png", "xpm", "jpg", "jpeg", "webp"];
+
+    let find_matching_icon = |root: &PathBuf, base_names: &[&str], icons: &mut Vec<String>, seen: &mut std::collections::HashSet<String>| {
+        let mut stack = vec![root.clone()];
+
+        while let Some(current_dir) = stack.pop() {
             if icons.len() >= 4 {
                 break;
             }
-            if let Ok(entries) = std::fs::read_dir(size_dir) {
-                for entry in entries.flatten() {
-                    let entry_path = entry.path();
-                    if entry_path.is_dir() {
-                        let apps_dir = entry_path.join("apps");
-                        if apps_dir.exists() {
-                            if let Ok(app_entries) = std::fs::read_dir(&apps_dir) {
-                                for app_entry in app_entries.flatten() {
-                                    let app_name = app_entry.file_name();
-                                    if let Some(name_str) = app_name.to_str() {
-                                        if name_str.starts_with(icon_name) {
-                                            icons.push(app_entry.path().to_string_lossy().to_string());
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+
+            let entries = match std::fs::read_dir(&current_dir) {
+                Ok(entries) => entries,
+                Err(_) => continue,
+            };
+
+            for entry in entries.flatten() {
+                if icons.len() >= 4 {
+                    break;
+                }
+
+                let entry_path = entry.path();
+                if entry_path.is_dir() {
+                    stack.push(entry_path);
+                    continue;
+                }
+
+                let stem = match entry_path.file_stem().and_then(|stem| stem.to_str()) {
+                    Some(stem) => stem.to_ascii_lowercase(),
+                    None => continue,
+                };
+
+                let extension_ok = entry_path
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .map(|ext| image_extensions.contains(&ext.to_ascii_lowercase().as_str()))
+                    .unwrap_or(false);
+
+                if !extension_ok {
+                    continue;
+                }
+
+                if base_names.iter().any(|base_name| {
+                    let base_name = base_name.to_ascii_lowercase();
+                    stem == base_name || stem.starts_with(&format!("{}-", base_name)) || stem.ends_with(&format!("-{}", base_name))
+                }) {
+                    push_icon(entry_path, icons, seen);
                 }
             }
         }
+    };
 
+    for base_name in preferred_basenames {
         if icons.len() >= 4 {
             break;
         }
+
+        let mut search_names = vec![base_name];
+        if let Some((_, aliases)) = preferred_aliases.iter().find(|(name, _)| *name == base_name) {
+            search_names.extend_from_slice(aliases);
+        }
+
+        find_matching_icon(&pack_path, &search_names, &mut icons, &mut seen);
     }
 
-    // Si no encontramos suficientes, buscar los primeros disponibles
-    if icons.is_empty() {
-        if scalable_dir.exists() {
-            let apps_dir = scalable_dir.join("apps");
-            if apps_dir.exists() {
-                if let Ok(entries) = std::fs::read_dir(&apps_dir) {
-                    for entry in entries.flatten() {
-                        if icons.len() >= 4 {
-                            break;
-                        }
-                        let path = entry.path();
-                        if path.is_file() {
-                            icons.push(path.to_string_lossy().to_string());
-                        }
-                    }
+    let search_roots = [
+        "actions",
+        "status",
+        "places",
+        "mimetypes",
+        "apps",
+        "devices",
+        "categories",
+        "emblems",
+        "stock",
+        "scalable",
+        "48x48",
+        "64x64",
+        "32x32",
+        "24x24",
+        "16x16",
+    ];
+
+    for relative_root in search_roots {
+        if icons.len() >= 4 {
+            break;
+        }
+
+        let root_path = pack_path.join(relative_root);
+        if !root_path.exists() {
+            continue;
+        }
+
+        let mut stack = vec![root_path];
+
+        while let Some(current_dir) = stack.pop() {
+            if icons.len() >= 4 {
+                break;
+            }
+
+            let entries = match std::fs::read_dir(&current_dir) {
+                Ok(entries) => entries,
+                Err(_) => continue,
+            };
+
+            for entry in entries.flatten() {
+                if icons.len() >= 4 {
+                    break;
+                }
+
+                let entry_path = entry.path();
+                if entry_path.is_dir() {
+                    stack.push(entry_path);
+                    continue;
+                }
+
+                let is_preview_icon = entry_path
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .map(|ext| image_extensions.contains(&ext.to_ascii_lowercase().as_str()))
+                    .unwrap_or(false);
+
+                if is_preview_icon {
+                    push_icon(entry_path, &mut icons, &mut seen);
                 }
             }
         }
     }
+
+    if icons.len() < 4 {
+        let mut stack = vec![pack_path.clone()];
+
+        while let Some(current_dir) = stack.pop() {
+            if icons.len() >= 4 {
+                break;
+            }
+
+            let entries = match std::fs::read_dir(&current_dir) {
+                Ok(entries) => entries,
+                Err(_) => continue,
+            };
+
+            for entry in entries.flatten() {
+                if icons.len() >= 4 {
+                    break;
+                }
+
+                let entry_path = entry.path();
+                if entry_path.is_dir() {
+                    stack.push(entry_path);
+                    continue;
+                }
+
+                let is_preview_icon = entry_path
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .map(|ext| image_extensions.contains(&ext.to_ascii_lowercase().as_str()))
+                    .unwrap_or(false);
+
+                if is_preview_icon {
+                    push_icon(entry_path, &mut icons, &mut seen);
+                }
+            }
+        }
+    }
+
+    icons.truncate(4);
 
     Ok(IconPackPreview {
         name: icon_pack.clone(),
