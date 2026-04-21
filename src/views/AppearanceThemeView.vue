@@ -114,8 +114,12 @@ const buildPreviewValues = (variant?: SchemeVariant): SchemePreviewValue[] => {
 	];
 };
 
-const selectedDarkPreview = computed(() => buildPreviewValues(selectedScheme.value?.scheme.colors.dark));
-const selectedLightPreview = computed(() => buildPreviewValues(selectedScheme.value?.scheme.colors.light));
+const selectedDarkPreview = computed(() =>
+	buildPreviewValues(selectedScheme.value?.scheme.colors.dark)
+);
+const selectedLightPreview = computed(() =>
+	buildPreviewValues(selectedScheme.value?.scheme.colors.light)
+);
 
 onMounted(async () => {
 	try {
@@ -147,7 +151,8 @@ onMounted(async () => {
 		cursorThemes.value = Array.isArray(cursors) && cursors.length ? cursors : ['Adwaita'];
 		schemes.value = Array.isArray(loadedSchemes) ? loadedSchemes : [];
 
-		const storedSchemeId = vskConfig.value?.style?.color_scheme || configStore.value.config?.style?.color_scheme || '';
+		const storedSchemeId =
+			vskConfig.value?.style?.color_scheme || configStore.value.config?.style?.color_scheme || '';
 		selectedSchemeId.value = storedSchemeId;
 
 		if (selectedGtkTheme.value && !gtkThemes.value.includes(selectedGtkTheme.value)) {
@@ -158,7 +163,9 @@ onMounted(async () => {
 		}
 
 		if (selectedSchemeId.value) {
-			const schemeExists = schemes.value.some((scheme) => scheme.scheme.id === selectedSchemeId.value);
+			const schemeExists = schemes.value.some(
+				(scheme) => scheme.scheme.id === selectedSchemeId.value
+			);
 			if (!schemeExists) {
 				try {
 					const selectedSchemeData = await getSchemeById(selectedSchemeId.value);
@@ -168,7 +175,10 @@ onMounted(async () => {
 						selectedSchemeId.value = schemes.value[0].scheme.id;
 					}
 				} catch (schemeErr) {
-					console.warn('No se pudo cargar el scheme guardado, usando el primero disponible:', schemeErr);
+					console.warn(
+						'No se pudo cargar el scheme guardado, usando el primero disponible:',
+						schemeErr
+					);
 					if (schemes.value.length > 0) {
 						selectedSchemeId.value = schemes.value[0].scheme.id;
 					}
@@ -204,7 +214,11 @@ const saveConfig = async () => {
 	successMessage.value = '';
 
 	try {
-		if (!vskConfig.value?.style?.radius || vskConfig.value.style.radius < 1 || vskConfig.value.style.radius > 20) {
+		if (
+			!vskConfig.value?.style?.radius ||
+			vskConfig.value.style.radius < 1 ||
+			vskConfig.value.style.radius > 20
+		) {
 			throw new Error('Border radius debe estar entre 1 y 20');
 		}
 

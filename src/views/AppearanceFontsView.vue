@@ -1,5 +1,10 @@
 <script lang="ts" setup>
-import { readConfig, useConfigStore, type VSKConfig, writeConfig } from '@vasakgroup/plugin-config-manager';
+import {
+	readConfig,
+	useConfigStore,
+	type VSKConfig,
+	writeConfig,
+} from '@vasakgroup/plugin-config-manager';
 import type { Store } from 'pinia';
 import { computed, onMounted, type Ref, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
@@ -55,7 +60,9 @@ const filteredFonts = computed(() => {
 			return true;
 		}
 
-		return [font.name, font.fontName, font.path].some((value) => value.toLowerCase().includes(query));
+		return [font.name, font.fontName, font.path].some((value) =>
+			value.toLowerCase().includes(query)
+		);
 	});
 
 	return list.slice(0, 180);
@@ -83,7 +90,10 @@ const updateSelectionFromConfig = () => {
 
 onMounted(async () => {
 	try {
-		configStore.value = useConfigStore() as Store<'config', { config: VSKConfig; loadConfig: () => Promise<void> }>;
+		configStore.value = useConfigStore() as Store<
+			'config',
+			{ config: VSKConfig; loadConfig: () => Promise<void> }
+		>;
 		await configStore.value.loadConfig();
 		vskConfig.value = await readConfig();
 		updateSelectionFromConfig();
@@ -136,7 +146,9 @@ const saveConfig = async () => {
 };
 
 const isFormValid = computed(() => {
-	return Boolean(selectedFonts.value.termina && selectedFonts.value.title && selectedFonts.value.apps);
+	return Boolean(
+		selectedFonts.value.termina && selectedFonts.value.title && selectedFonts.value.apps
+	);
 });
 </script>
 

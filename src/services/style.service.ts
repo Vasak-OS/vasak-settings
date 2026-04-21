@@ -1,5 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
-import { getSchemes as pluginGetSchemes, getSchemeById as pluginGetSchemeById } from '@vasakgroup/plugin-config-manager';
+import {
+	getSchemeById as pluginGetSchemeById,
+	getSchemes as pluginGetSchemes,
+} from '@vasakgroup/plugin-config-manager';
 
 export type SystemFontItem = {
 	id: string;

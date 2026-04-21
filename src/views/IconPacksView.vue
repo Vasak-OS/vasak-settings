@@ -1,11 +1,11 @@
 <script lang="ts" setup>
+import { convertFileSrc } from '@tauri-apps/api/core';
 import {
 	readConfig,
 	useConfigStore,
 	type VSKConfig,
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
-import { convertFileSrc } from '@tauri-apps/api/core';
 import type { Store } from 'pinia';
 import { computed, onMounted, type Ref, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
