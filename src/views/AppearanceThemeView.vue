@@ -20,7 +20,6 @@ import {
 	getCurrentSystemState,
 	getCursorThemes,
 	getGtkThemes,
-	getIconPacks,
 	setSystemConfig,
 } from '@/services/style.service';
 
@@ -36,7 +35,6 @@ const successMessage = ref('');
 const vskConfig: Ref<VSKConfig | null> = ref(null);
 const selectedGtkTheme = ref('Adwaita');
 const selectedCursorTheme = ref('Adwaita');
-const selectedIconPack = ref('Adwaita');
 
 onMounted(async () => {
 	try {
@@ -52,32 +50,25 @@ onMounted(async () => {
 			const systemState = await getCurrentSystemState();
 			selectedGtkTheme.value = systemState.gtk_theme || 'Adwaita';
 			selectedCursorTheme.value = systemState.cursor_theme || 'Adwaita';
-			selectedIconPack.value = systemState.icon_pack || 'Adwaita';
 		} catch (err) {
 			console.warn('No se pudo obtener estado del sistema, usando valores por defecto:', err);
 			selectedGtkTheme.value = 'Adwaita';
 			selectedCursorTheme.value = 'Adwaita';
-			selectedIconPack.value = 'Adwaita';
 		}
 
-		const [themes, cursors, icons] = await Promise.all([
+		const [themes, cursors] = await Promise.all([
 			getGtkThemes(),
 			getCursorThemes(),
-			getIconPacks(),
 		]);
 
 		gtkThemes.value = Array.isArray(themes) && themes.length ? themes : ['Adwaita'];
 		cursorThemes.value = Array.isArray(cursors) && cursors.length ? cursors : ['Adwaita'];
-		iconPacks.value = Array.isArray(icons) && icons.length ? icons : ['Adwaita'];
 
 		if (selectedGtkTheme.value && !gtkThemes.value.includes(selectedGtkTheme.value)) {
 			gtkThemes.value.unshift(selectedGtkTheme.value);
 		}
 		if (selectedCursorTheme.value && !cursorThemes.value.includes(selectedCursorTheme.value)) {
 			cursorThemes.value.unshift(selectedCursorTheme.value);
-		}
-		if (selectedIconPack.value && !iconPacks.value.includes(selectedIconPack.value)) {
-			iconPacks.value.unshift(selectedIconPack.value);
 		}
 	} catch (err) {
 		error.value = `Error cargando configuración: ${err}`;
@@ -91,7 +82,6 @@ const applySystemChanges = async () => {
 	try {
 		const config = {
 			dark_mode: vskConfig.value?.style?.darkmode || false,
-			icon_pack: selectedIconPack.value,
 			cursor_theme: selectedCursorTheme.value,
 			gtk_theme: selectedGtkTheme.value,
 		};
@@ -135,7 +125,7 @@ const saveConfig = async () => {
 };
 
 const isFormValid = computed(() => {
-	return selectedGtkTheme.value && selectedCursorTheme.value && selectedIconPack.value;
+	return selectedGtkTheme.value && selectedCursorTheme.value;
 });
 </script>
 
@@ -228,13 +218,6 @@ const isFormValid = computed(() => {
 
 						<FormGroup label="Tema de Cursor" html-for="cursor-theme">
 							<SelectInput id="cursor-theme" v-model="selectedCursorTheme" :options="cursorThemes" />
-						</FormGroup>
-
-						<FormGroup label="Pack de Iconos" html-for="icon-pack">
-							<SelectInput id="icon-pack" v-model="selectedIconPack" :options="iconPacks" />
-							<p class="mt-1 text-xs text-status-warning">
-								⚠️ Cambiar el pack de iconos requiere refrescar las aplicaciones
-							</p>
 						</FormGroup>
 					</div>
 				</SectionCard>
