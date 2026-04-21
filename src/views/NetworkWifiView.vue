@@ -1,16 +1,5 @@
 <script setup lang="ts">
 import { listen } from '@tauri-apps/api/event';
-import {
-	connectToWifi,
-	getCurrentNetworkState,
-	getNetworkInterfaces,
-	getNetworkStats,
-	listWifiNetworks,
-	rescanWifi,
-	type NetworkStats,
-	type NetworkInfo,
-	type WiFiConnectionConfig,
-} from '@/services/network.service';
 import { getSymbolSource } from '@vasakgroup/plugin-vicons';
 import { computed, nextTick, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
@@ -20,9 +9,18 @@ import SectionCard from '@/components/ui/SectionCard.vue';
 import StatTile from '@/components/ui/StatTile.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import {
+	connectToWifi,
+	getCurrentNetworkState,
+	getNetworkInterfaces,
+	getNetworkStats,
 	getWirelessEnabled,
 	isWirelessAvailable,
+	listWifiNetworks,
+	type NetworkInfo,
+	type NetworkStats,
+	rescanWifi,
 	setWirelessEnabled,
+	type WiFiConnectionConfig,
 } from '@/services/network.service';
 
 const wifiEnabled = ref(true);
@@ -263,12 +261,12 @@ onMounted(async () => {
 	await checkWirelessStatus();
 	await refreshEthernetStatus();
 	await refreshNetworkTelemetry();
-	
+
 	// Actualizar estadísticas cada 2 segundos para mostrar velocidades en tiempo real
 	statsUpdateInterval = setInterval(async () => {
 		await refreshNetworkTelemetry();
 	}, 2000);
-	
+
 	unlistenNetwork = await listen('network-changed', async () => {
 		await checkWirelessStatus();
 		await refreshEthernetStatus();

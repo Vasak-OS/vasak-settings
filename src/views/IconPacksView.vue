@@ -1,9 +1,9 @@
 <script lang="ts" setup>
 import {
 	readConfig,
-	writeConfig,
 	useConfigStore,
 	type VSKConfig,
+	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import type { Store } from 'pinia';
 import { computed, onMounted, type Ref, ref } from 'vue';
@@ -12,7 +12,7 @@ import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
-import { getIconPacks, getIconPackIcons } from '@/services/style.service';
+import { getIconPackIcons, getIconPacks } from '@/services/style.service';
 
 interface IconPackPreview {
 	name: string;
@@ -45,7 +45,8 @@ onMounted(async () => {
 		// Obtener el estado guardado de los packs
 		if (vskConfig.value?.icons) {
 			selectedDarkPack.value = vskConfig.value.icons.dark || 'Adwaita';
-			selectedLightPack.value = vskConfig.value.icons.ligth || vskConfig.value.icons.light || 'Adwaita';
+			selectedLightPack.value =
+				vskConfig.value.icons.ligth || vskConfig.value.icons.light || 'Adwaita';
 		}
 
 		// Obtener packs disponibles
@@ -128,7 +129,8 @@ const isFormValid = computed(() => {
 const isChanged = computed(() => {
 	return (
 		selectedDarkPack.value !== (vskConfig.value?.icons?.dark || 'Adwaita') ||
-		selectedLightPack.value !== (vskConfig.value?.icons?.ligth || vskConfig.value?.icons?.light || 'Adwaita')
+		selectedLightPack.value !==
+			(vskConfig.value?.icons?.ligth || vskConfig.value?.icons?.light || 'Adwaita')
 	);
 });
 </script>
