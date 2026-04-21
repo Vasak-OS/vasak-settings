@@ -11,6 +11,13 @@ pub struct SystemConfig {
     pub gtk_theme: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IconPackPreview {
+    pub name: String,
+    pub path: String,
+    pub icons: Vec<String>,
+}
+
 impl Default for SystemConfig {
     fn default() -> Self {
         Self {
@@ -361,13 +368,22 @@ pub async fn get_icon_packs() -> Result<Vec<String>, String> {
             for entry in entries.flatten() {
                 let entry_path = entry.path();
                 let index_theme = entry_path.join("index.theme");
-                let cursors_dir = entry_path.join("cursors");
 
-                if index_theme.exists() && !cursors_dir.exists() {
-                    if let Ok(file_name) = entry.file_name().into_string() {
-                        icons.insert(file_name);
-                    }
+                if !index_theme.exists() {
+                    continue;
                 }
+
+                let file_name = match entry.file_name().into_string() {
+                    Ok(file_name) => file_name,
+                    Err(_) => continue,
+                };
+
+                let is_cursor_theme = file_name.to_ascii_lowercase().contains("cursor");
+                if is_cursor_theme {
+                    continue;
+                }
+
+                icons.insert(file_name);
             }
         }
     }
@@ -410,4 +426,239 @@ pub async fn get_official_wallpapers() -> Result<Vec<String>, String> {
 
     wallpapers.sort();
     Ok(wallpapers)
+}
+
+#[tauri::command]
+pub async fn get_icon_pack_icons(icon_pack: String) -> Result<IconPackPreview, String> {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let local_icons = PathBuf::from(&home).join(".local/share/icons");
+
+    let icon_paths = vec![PathBuf::from("/usr/share/icons"), local_icons];
+
+    let mut pack_path = PathBuf::new();
+
+    for path in icon_paths {
+        let potential_pack = path.join(&icon_pack);
+        if potential_pack.exists() {
+            pack_path = potential_pack;
+            break;
+        }
+    }
+
+    if pack_path.as_os_str().is_empty() {
+        return Err(format!("Icon pack '{}' no encontrado", icon_pack));
+    }
+
+    let mut icons = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+
+    let push_icon = |path: PathBuf, icons: &mut Vec<String>, seen: &mut std::collections::HashSet<String>| {
+        if path.is_file() {
+            let icon_path = path.to_string_lossy().to_string();
+            if seen.insert(icon_path.clone()) {
+                icons.push(icon_path);
+            }
+        }
+    };
+
+    let preferred_basenames = [
+        "default-folder",
+        "folder",
+        "emptytrash",
+        "user-trash",
+        "dialog-information",
+        "video-display",
+        "preferences-desktop-display",
+        "application-x-generic",
+        "image-x-generic",
+    ];
+
+    let preferred_aliases: &[(&str, &[&str])] = &[
+        ("default-folder", &["folder", "folder-default", "folder-documents"]),
+        (
+            "emptytrash",
+            &["user-trash", "user-trash-full", "trash-empty", "trash-can"],
+        ),
+        (
+            "dialog-information",
+            &["dialog-information-symbolic", "information", "info"],
+        ),
+        (
+            "video-display",
+            &["preferences-desktop-display", "display", "video-projector"],
+        ),
+    ];
+
+    let image_extensions = ["svg", "png", "xpm", "jpg", "jpeg", "webp"];
+
+    let find_matching_icon = |root: &PathBuf, base_names: &[&str], icons: &mut Vec<String>, seen: &mut std::collections::HashSet<String>| {
+        let mut stack = vec![root.clone()];
+
+        while let Some(current_dir) = stack.pop() {
+            if icons.len() >= 4 {
+                break;
+            }
+
+            let entries = match std::fs::read_dir(&current_dir) {
+                Ok(entries) => entries,
+                Err(_) => continue,
+            };
+
+            for entry in entries.flatten() {
+                if icons.len() >= 4 {
+                    break;
+                }
+
+                let entry_path = entry.path();
+                if entry_path.is_dir() {
+                    stack.push(entry_path);
+                    continue;
+                }
+
+                let stem = match entry_path.file_stem().and_then(|stem| stem.to_str()) {
+                    Some(stem) => stem.to_ascii_lowercase(),
+                    None => continue,
+                };
+
+                let extension_ok = entry_path
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .map(|ext| image_extensions.contains(&ext.to_ascii_lowercase().as_str()))
+                    .unwrap_or(false);
+
+                if !extension_ok {
+                    continue;
+                }
+
+                if base_names.iter().any(|base_name| {
+                    let base_name = base_name.to_ascii_lowercase();
+                    stem == base_name || stem.starts_with(&format!("{}-", base_name)) || stem.ends_with(&format!("-{}", base_name))
+                }) {
+                    push_icon(entry_path, icons, seen);
+                }
+            }
+        }
+    };
+
+    for base_name in preferred_basenames {
+        if icons.len() >= 4 {
+            break;
+        }
+
+        let mut search_names = vec![base_name];
+        if let Some((_, aliases)) = preferred_aliases.iter().find(|(name, _)| *name == base_name) {
+            search_names.extend_from_slice(aliases);
+        }
+
+        find_matching_icon(&pack_path, &search_names, &mut icons, &mut seen);
+    }
+
+    let search_roots = [
+        "actions",
+        "status",
+        "places",
+        "mimetypes",
+        "apps",
+        "devices",
+        "categories",
+        "emblems",
+        "stock",
+        "scalable",
+        "48x48",
+        "64x64",
+        "32x32",
+        "24x24",
+        "16x16",
+    ];
+
+    for relative_root in search_roots {
+        if icons.len() >= 4 {
+            break;
+        }
+
+        let root_path = pack_path.join(relative_root);
+        if !root_path.exists() {
+            continue;
+        }
+
+        let mut stack = vec![root_path];
+
+        while let Some(current_dir) = stack.pop() {
+            if icons.len() >= 4 {
+                break;
+            }
+
+            let entries = match std::fs::read_dir(&current_dir) {
+                Ok(entries) => entries,
+                Err(_) => continue,
+            };
+
+            for entry in entries.flatten() {
+                if icons.len() >= 4 {
+                    break;
+                }
+
+                let entry_path = entry.path();
+                if entry_path.is_dir() {
+                    stack.push(entry_path);
+                    continue;
+                }
+
+                let is_preview_icon = entry_path
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .map(|ext| image_extensions.contains(&ext.to_ascii_lowercase().as_str()))
+                    .unwrap_or(false);
+
+                if is_preview_icon {
+                    push_icon(entry_path, &mut icons, &mut seen);
+                }
+            }
+        }
+    }
+
+    if icons.len() < 4 {
+        let mut stack = vec![pack_path.clone()];
+
+        while let Some(current_dir) = stack.pop() {
+            if icons.len() >= 4 {
+                break;
+            }
+
+            let entries = match std::fs::read_dir(&current_dir) {
+                Ok(entries) => entries,
+                Err(_) => continue,
+            };
+
+            for entry in entries.flatten() {
+                if icons.len() >= 4 {
+                    break;
+                }
+
+                let entry_path = entry.path();
+                if entry_path.is_dir() {
+                    stack.push(entry_path);
+                    continue;
+                }
+
+                let is_preview_icon = entry_path
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .map(|ext| image_extensions.contains(&ext.to_ascii_lowercase().as_str()))
+                    .unwrap_or(false);
+
+                if is_preview_icon {
+                    push_icon(entry_path, &mut icons, &mut seen);
+                }
+            }
+        }
+    }
+
+    icons.truncate(4);
+
+    Ok(IconPackPreview {
+        name: icon_pack.clone(),
+        path: pack_path.to_string_lossy().to_string(),
+        icons,
+    })
 }

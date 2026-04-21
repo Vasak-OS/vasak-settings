@@ -48,9 +48,7 @@ const vpnTypes: Array<{ value: VpnType; label: string }> = [
 	{ value: 'generic', label: 'Generic' },
 ];
 
-const dialogTitle = computed(() =>
-	props.editingUuid ? 'Editar perfil VPN' : 'Crear perfil VPN'
-);
+const dialogTitle = computed(() => (props.editingUuid ? 'Editar perfil VPN' : 'Crear perfil VPN'));
 
 const resetForm = () => {
 	profileId.value = props.initialId || '';

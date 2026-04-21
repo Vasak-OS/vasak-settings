@@ -20,14 +20,57 @@ import {
 	getCurrentSystemState,
 	getCursorThemes,
 	getGtkThemes,
-	getIconPacks,
+	getSchemeById,
+	getSchemes,
 	setSystemConfig,
 } from '@/services/style.service';
+
+interface SchemePreviewValue {
+	label: string;
+	value: string;
+}
+
+interface SchemeVariant {
+	ui: {
+		color: {
+			primary: string;
+			secondary: string;
+		};
+		text: {
+			main: string;
+			muted: string;
+			on_primary: string;
+		};
+		background: string;
+		border: string;
+		surface: string;
+	};
+	terminal: {
+		foreground: string;
+		background: string;
+		cursor: string;
+	};
+}
+
+interface SchemeItem {
+	path: string;
+	scheme: {
+		id: string;
+		name: string;
+		author: string;
+		description: string;
+		version: string;
+		colors: {
+			dark: SchemeVariant;
+			light: SchemeVariant;
+		};
+	};
+}
 
 const configStore = ref<any>(null);
 const gtkThemes = ref<string[]>([]);
 const cursorThemes = ref<string[]>([]);
-const iconPacks = ref<string[]>([]);
+const schemes = ref<SchemeItem[]>([]);
 const loading = ref(true);
 const saving = ref(false);
 const error = ref('');
@@ -36,7 +79,43 @@ const successMessage = ref('');
 const vskConfig: Ref<VSKConfig | null> = ref(null);
 const selectedGtkTheme = ref('Adwaita');
 const selectedCursorTheme = ref('Adwaita');
-const selectedIconPack = ref('Adwaita');
+const selectedSchemeId = ref('');
+
+const selectedScheme = computed(() => {
+	return schemes.value.find((scheme) => scheme.scheme.id === selectedSchemeId.value) ?? null;
+});
+
+const schemeOptions = computed(() => {
+	return schemes.value
+		.slice()
+		.sort((first, second) => first.scheme.name.localeCompare(second.scheme.name))
+		.map((scheme) => ({
+			label: `${scheme.scheme.name} · ${scheme.scheme.id}`,
+			value: scheme.scheme.id,
+		}));
+});
+
+const buildPreviewValues = (variant?: SchemeVariant): SchemePreviewValue[] => {
+	if (!variant) {
+		return [];
+	}
+
+	return [
+		{ label: 'Fondo', value: variant.ui.background },
+		{ label: 'Superficie', value: variant.ui.surface },
+		{ label: 'Borde', value: variant.ui.border },
+		{ label: 'Primario', value: variant.ui.color.primary },
+		{ label: 'Secundario', value: variant.ui.color.secondary },
+		{ label: 'Texto', value: variant.ui.text.main },
+		{ label: 'Texto suave', value: variant.ui.text.muted },
+		{ label: 'Sobre primario', value: variant.ui.text.on_primary },
+		{ label: 'Terminal fondo', value: variant.terminal.background },
+		{ label: 'Terminal texto', value: variant.terminal.foreground },
+	];
+};
+
+const selectedDarkPreview = computed(() => buildPreviewValues(selectedScheme.value?.scheme.colors.dark));
+const selectedLightPreview = computed(() => buildPreviewValues(selectedScheme.value?.scheme.colors.light));
 
 onMounted(async () => {
 	try {
@@ -52,23 +131,24 @@ onMounted(async () => {
 			const systemState = await getCurrentSystemState();
 			selectedGtkTheme.value = systemState.gtk_theme || 'Adwaita';
 			selectedCursorTheme.value = systemState.cursor_theme || 'Adwaita';
-			selectedIconPack.value = systemState.icon_pack || 'Adwaita';
 		} catch (err) {
 			console.warn('No se pudo obtener estado del sistema, usando valores por defecto:', err);
 			selectedGtkTheme.value = 'Adwaita';
 			selectedCursorTheme.value = 'Adwaita';
-			selectedIconPack.value = 'Adwaita';
 		}
 
-		const [themes, cursors, icons] = await Promise.all([
+		const [themes, cursors, loadedSchemes] = await Promise.all([
 			getGtkThemes(),
 			getCursorThemes(),
-			getIconPacks(),
+			getSchemes(),
 		]);
 
 		gtkThemes.value = Array.isArray(themes) && themes.length ? themes : ['Adwaita'];
 		cursorThemes.value = Array.isArray(cursors) && cursors.length ? cursors : ['Adwaita'];
-		iconPacks.value = Array.isArray(icons) && icons.length ? icons : ['Adwaita'];
+		schemes.value = Array.isArray(loadedSchemes) ? loadedSchemes : [];
+
+		const storedSchemeId = vskConfig.value?.style?.color_scheme || configStore.value.config?.style?.color_scheme || '';
+		selectedSchemeId.value = storedSchemeId;
 
 		if (selectedGtkTheme.value && !gtkThemes.value.includes(selectedGtkTheme.value)) {
 			gtkThemes.value.unshift(selectedGtkTheme.value);
@@ -76,8 +156,26 @@ onMounted(async () => {
 		if (selectedCursorTheme.value && !cursorThemes.value.includes(selectedCursorTheme.value)) {
 			cursorThemes.value.unshift(selectedCursorTheme.value);
 		}
-		if (selectedIconPack.value && !iconPacks.value.includes(selectedIconPack.value)) {
-			iconPacks.value.unshift(selectedIconPack.value);
+
+		if (selectedSchemeId.value) {
+			const schemeExists = schemes.value.some((scheme) => scheme.scheme.id === selectedSchemeId.value);
+			if (!schemeExists) {
+				try {
+					const selectedSchemeData = await getSchemeById(selectedSchemeId.value);
+					if (selectedSchemeData?.scheme?.id) {
+						schemes.value.unshift(selectedSchemeData);
+					} else if (schemes.value.length > 0) {
+						selectedSchemeId.value = schemes.value[0].scheme.id;
+					}
+				} catch (schemeErr) {
+					console.warn('No se pudo cargar el scheme guardado, usando el primero disponible:', schemeErr);
+					if (schemes.value.length > 0) {
+						selectedSchemeId.value = schemes.value[0].scheme.id;
+					}
+				}
+			}
+		} else if (schemes.value.length > 0) {
+			selectedSchemeId.value = schemes.value[0].scheme.id;
 		}
 	} catch (err) {
 		error.value = `Error cargando configuración: ${err}`;
@@ -91,7 +189,6 @@ const applySystemChanges = async () => {
 	try {
 		const config = {
 			dark_mode: vskConfig.value?.style?.darkmode || false,
-			icon_pack: selectedIconPack.value,
 			cursor_theme: selectedCursorTheme.value,
 			gtk_theme: selectedGtkTheme.value,
 		};
@@ -107,16 +204,20 @@ const saveConfig = async () => {
 	successMessage.value = '';
 
 	try {
-		if (
-			!vskConfig.value?.style?.radius ||
-			vskConfig.value.style.radius < 1 ||
-			vskConfig.value.style.radius > 20
-		) {
+		if (!vskConfig.value?.style?.radius || vskConfig.value.style.radius < 1 || vskConfig.value.style.radius > 20) {
 			throw new Error('Border radius debe estar entre 1 y 20');
+		}
+
+		if (!selectedSchemeId.value) {
+			throw new Error('Debes seleccionar un scheme');
 		}
 
 		if (vskConfig.value?.style?.darkmode !== (configStore.value.config?.style?.darkmode || false)) {
 			await setDarkMode(vskConfig.value?.style?.darkmode || false);
+		}
+
+		if (vskConfig.value) {
+			(vskConfig.value.style as any).color_scheme = selectedSchemeId.value;
 		}
 
 		await writeConfig(vskConfig.value);
@@ -135,7 +236,7 @@ const saveConfig = async () => {
 };
 
 const isFormValid = computed(() => {
-	return selectedGtkTheme.value && selectedCursorTheme.value && selectedIconPack.value;
+	return selectedGtkTheme.value && selectedCursorTheme.value && selectedSchemeId.value;
 });
 </script>
 
@@ -144,7 +245,7 @@ const isFormValid = computed(() => {
 		<PageHeader
 			section="Apariencia"
 			title="Tema y UI"
-			description="Personaliza colores, formas y temas del escritorio."
+			description="Personaliza colores, formas, temas del escritorio y el scheme visual de VasakOS."
 		>
 			<template #actions>
 				<button
@@ -163,7 +264,6 @@ const isFormValid = computed(() => {
 
 		<div v-else class="flex flex-col gap-4 pb-4">
 			<AlertMessage v-if="error" :message="error" tone="error" />
-			
 			<AlertMessage v-if="successMessage" :message="successMessage" tone="success" />
 
 			<div class="grid gap-4 xl:grid-cols-2">
@@ -173,15 +273,9 @@ const isFormValid = computed(() => {
 						<FormGroup label="Border Radius" html-for="border-radius" :label-class="'flex justify-between w-full'">
 							<template #default>
 								<div class="flex items-center gap-3">
-									<span class="text-xs text-tx-muted w-6">1px</span>
-									<RangeSlider
-										v-if="vskConfig"
-										id="border-radius"
-										v-model="vskConfig.style.radius"
-										:min="1"
-										:max="20"
-									/>
-									<span class="text-xs text-tx-muted w-8 text-right">{{ vskConfig?.style.radius }}px</span>
+									<span class="w-6 text-xs text-tx-muted">1px</span>
+									<RangeSlider v-if="vskConfig" id="border-radius" v-model="vskConfig.style.radius" :min="1" :max="20" />
+									<span class="w-8 text-right text-xs text-tx-muted">{{ vskConfig?.style.radius }}px</span>
 								</div>
 							</template>
 						</FormGroup>
@@ -193,7 +287,7 @@ const isFormValid = computed(() => {
 									id="primary-color"
 									type="color"
 									v-model="(vskConfig.style as any)['primarycolor']"
-									class="h-10 w-[50px] cursor-pointer rounded-corner border-2 border-ui-surface/10 bg-transparent transition-colors duration-200 hover:border-[var(--primary-color,#0084ff)] p-0"
+									class="h-10 w-[50px] cursor-pointer rounded-corner border-2 border-ui-surface/10 bg-transparent p-0 transition-colors duration-200 hover:border-[var(--primary-color,#0084ff)]"
 								/>
 								<input
 									v-if="vskConfig"
@@ -208,12 +302,8 @@ const isFormValid = computed(() => {
 						<div class="flex items-center justify-between">
 							<label class="text-sm font-medium text-tx-primary">Modo Oscuro</label>
 							<div class="flex items-center gap-3">
-								<SwitchToggle
-									v-if="vskConfig"
-									:is-on="vskConfig.style.darkmode"
-									@toggle="val => (vskConfig!.style.darkmode = val)"
-								/>
-								<span class="w-20 text-xs text-tx-muted">{{ vskConfig?.style.darkmode ? "Activado" : "Desactivado" }}</span>
+								<SwitchToggle v-if="vskConfig" :is-on="vskConfig.style.darkmode" @toggle="val => (vskConfig!.style.darkmode = val)" />
+								<span class="w-20 text-xs text-tx-muted">{{ vskConfig?.style.darkmode ? 'Activado' : 'Desactivado' }}</span>
 							</div>
 						</div>
 					</div>
@@ -229,16 +319,96 @@ const isFormValid = computed(() => {
 						<FormGroup label="Tema de Cursor" html-for="cursor-theme">
 							<SelectInput id="cursor-theme" v-model="selectedCursorTheme" :options="cursorThemes" />
 						</FormGroup>
-
-						<FormGroup label="Pack de Iconos" html-for="icon-pack">
-							<SelectInput id="icon-pack" v-model="selectedIconPack" :options="iconPacks" />
-							<p class="mt-1 text-xs text-status-warning">
-								⚠️ Cambiar el pack de iconos requiere refrescar las aplicaciones
-							</p>
-						</FormGroup>
 					</div>
 				</SectionCard>
 			</div>
+
+			<SectionCard>
+				<div class="mb-4 flex flex-col gap-1">
+					<h3 class="text-lg font-medium text-tx-primary">Scheme de VasakOS</h3>
+					<p class="text-sm text-tx-muted">
+						Selecciona el <span class="font-mono">scheme id</span> que define la paleta clara y oscura del sistema.
+					</p>
+				</div>
+
+				<div class="flex flex-col gap-5">
+					<FormGroup label="Scheme ID" html-for="scheme-id">
+						<SelectInput
+							id="scheme-id"
+							v-model="selectedSchemeId"
+							:options="schemeOptions"
+							:disabled="schemeOptions.length === 0"
+						/>
+					</FormGroup>
+
+					<div v-if="selectedScheme" class="grid gap-4 xl:grid-cols-[1.15fr_1fr]">
+						<div class="rounded-corner border border-ui-border bg-ui-surface/40 p-4">
+							<div class="mb-4 flex flex-col gap-1">
+								<div class="flex items-center justify-between gap-3">
+									<h4 class="text-base font-medium text-tx-primary">{{ selectedScheme.scheme.name }}</h4>
+									<span class="rounded-full border border-ui-border px-2 py-0.5 text-[11px] uppercase tracking-wider text-tx-muted">
+										{{ selectedScheme.scheme.version }}
+									</span>
+								</div>
+								<p class="text-sm text-tx-muted">{{ selectedScheme.scheme.description }}</p>
+							</div>
+
+							<div class="grid gap-3 sm:grid-cols-2">
+								<div class="rounded-corner border border-ui-border bg-ui-bg/80 p-3">
+									<div class="mb-3 flex items-center justify-between">
+										<span class="text-sm font-medium text-tx-primary">Oscuro</span>
+										<span class="text-xs text-tx-muted">{{ selectedScheme.scheme.colors.dark.ui.background }}</span>
+									</div>
+									<div class="grid gap-2">
+										<div
+											v-for="swatch in selectedDarkPreview"
+											:key="`dark-${swatch.label}`"
+											class="flex items-center gap-2 rounded-corner border border-ui-border/70 bg-ui-surface/40 p-2"
+										>
+											<div class="h-8 w-8 rounded-corner border border-ui-border/60" :style="{ backgroundColor: swatch.value }" />
+											<div class="min-w-0 flex-1">
+												<p class="truncate text-xs font-medium text-tx-primary">{{ swatch.label }}</p>
+												<p class="truncate text-[11px] text-tx-muted">{{ swatch.value }}</p>
+											</div>
+										</div>
+									</div>
+								</div>
+
+								<div class="rounded-corner border border-ui-border bg-ui-bg/80 p-3">
+									<div class="mb-3 flex items-center justify-between">
+										<span class="text-sm font-medium text-tx-primary">Claro</span>
+										<span class="text-xs text-tx-muted">{{ selectedScheme.scheme.colors.light.ui.background }}</span>
+									</div>
+									<div class="grid gap-2">
+										<div
+											v-for="swatch in selectedLightPreview"
+											:key="`light-${swatch.label}`"
+											class="flex items-center gap-2 rounded-corner border border-ui-border/70 bg-ui-surface/40 p-2"
+										>
+											<div class="h-8 w-8 rounded-corner border border-ui-border/60" :style="{ backgroundColor: swatch.value }" />
+											<div class="min-w-0 flex-1">
+												<p class="truncate text-xs font-medium text-tx-primary">{{ swatch.label }}</p>
+												<p class="truncate text-[11px] text-tx-muted">{{ swatch.value }}</p>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="rounded-corner border border-ui-border bg-ui-surface/30 p-4">
+							<h4 class="mb-3 text-sm font-medium text-tx-primary">Información del scheme</h4>
+							<div class="space-y-3 text-sm text-tx-muted">
+								<p><span class="font-medium text-tx-primary">ID:</span> {{ selectedScheme.scheme.id }}</p>
+								<p><span class="font-medium text-tx-primary">Autor:</span> {{ selectedScheme.scheme.author || 'No especificado' }}</p>
+								<p><span class="font-medium text-tx-primary">Ruta:</span> {{ selectedScheme.path }}</p>
+							</div>
+						</div>
+					</div>
+
+					<EmptyStateBox v-else message="No se encontraron schemes disponibles" padding="md" />
+				</div>
+			</SectionCard>
 		</div>
 	</div>
 </template>

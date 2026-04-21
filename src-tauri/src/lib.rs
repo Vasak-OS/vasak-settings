@@ -22,6 +22,7 @@ pub fn run() {
             commands::system_config::get_gtk_themes,
             commands::system_config::get_cursor_themes,
             commands::system_config::get_icon_packs,
+            commands::system_config::get_icon_pack_icons,
             commands::system_config::get_official_wallpapers,
             commands::audio::get_audio_volume,
             commands::audio::set_audio_volume,

@@ -1,5 +1,13 @@
 <script setup lang="ts">
 import { listen } from '@tauri-apps/api/event';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import AlertMessage from '@/components/ui/AlertMessage.vue';
+import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
+import SectionCard from '@/components/ui/SectionCard.vue';
+import NewProfileComponent from '@/components/vpn/NewProfileComponent.vue';
+import VpnProfileItem from '@/components/vpn/VpnProfileItem.vue';
+import VpnStatusPanel from '@/components/vpn/VpnStatusPanel.vue';
 import {
 	connectVpn,
 	createVpnProfile,
@@ -14,14 +22,6 @@ import {
 	type VpnStatus,
 	type VpnUpdateInput,
 } from '@/services/network.service';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import NewProfileComponent from '@/components/vpn/NewProfileComponent.vue';
-import VpnProfileItem from '@/components/vpn/VpnProfileItem.vue';
-import VpnStatusPanel from '@/components/vpn/VpnStatusPanel.vue';
 
 const vpnProfiles = ref<VpnProfile[]>([]);
 const vpnStatus = ref<VpnStatus | null>(null);
@@ -91,13 +91,7 @@ const errorMessage = (err: unknown): string => {
 			if (text) return text;
 		}
 
-		const nestedCandidates = [
-			maybe.error,
-			maybe.details,
-			maybe.cause,
-			maybe.data,
-			maybe.payload,
-		];
+		const nestedCandidates = [maybe.error, maybe.details, maybe.cause, maybe.data, maybe.payload];
 
 		for (const candidate of nestedCandidates) {
 			if (candidate && typeof candidate === 'object') {
@@ -107,9 +101,7 @@ const errorMessage = (err: unknown): string => {
 					details?: unknown;
 				};
 				const nestedText =
-					readString(nested.message) ||
-					readString(nested.error) ||
-					readString(nested.details);
+					readString(nested.message) || readString(nested.error) || readString(nested.details);
 				if (nestedText) return nestedText;
 			}
 		}
