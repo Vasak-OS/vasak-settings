@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "vasak-settings",
-        "width": 800,
-        "height": 600,
+        "width": 980,
+        "height": 670,
         "decorations": false,
         "transparent": true
       }
@@ -25,7 +25,8 @@
         "enable": true,
         "scope": [
           "$HOME/**",
-          "/usr/share/backgrounds/vasakos/**"
+          "/usr/share/backgrounds/vasakos/**",
+          "/usr/share/icons/**"
         ]
       }
     }
