@@ -18,6 +18,11 @@ const routes = [
 		component: () => import('@/views/AppearanceDesktopView.vue'),
 	},
 	{
+		path: '/appearance-fonts',
+		name: 'appearance-fonts',
+		component: () => import('@/views/AppearanceFontsView.vue'),
+	},
+	{
 		path: '/appearance-wallpaper',
 		name: 'appearance-wallpaper',
 		component: () => import('@/views/WallpaperView.vue'),
