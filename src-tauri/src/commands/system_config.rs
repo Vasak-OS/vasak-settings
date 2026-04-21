@@ -11,6 +11,13 @@ pub struct SystemConfig {
     pub gtk_theme: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IconPackPreview {
+    pub name: String,
+    pub path: String,
+    pub icons: Vec<String>,
+}
+
 impl Default for SystemConfig {
     fn default() -> Self {
         Self {
@@ -410,4 +417,140 @@ pub async fn get_official_wallpapers() -> Result<Vec<String>, String> {
 
     wallpapers.sort();
     Ok(wallpapers)
+}
+
+#[tauri::command]
+pub async fn get_icon_pack_icons(icon_pack: String) -> Result<IconPackPreview, String> {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let local_icons = PathBuf::from(&home).join(".local/share/icons");
+
+    let icon_paths = vec![PathBuf::from("/usr/share/icons"), local_icons];
+
+    let mut pack_path = PathBuf::new();
+
+    for path in icon_paths {
+        let potential_pack = path.join(&icon_pack);
+        if potential_pack.exists() {
+            pack_path = potential_pack;
+            break;
+        }
+    }
+
+    if pack_path.as_os_str().is_empty() {
+        return Err(format!("Icon pack '{}' no encontrado", icon_pack));
+    }
+
+    let mut icons = Vec::new();
+    
+    // Iconos representativos a buscar
+    let icon_names = vec![
+        "folder", "file-manager", "preferences-desktop",
+        "application-default", "preferences", "system-file-manager",
+        "folder-documents", "folder-music", "folder-pictures",
+    ];
+
+    // Intentar encontrar en directorios scalable y sizes
+    let scalable_dir = pack_path.join("scalable");
+    let size_dirs = vec![
+        pack_path.join("48x48"),
+        pack_path.join("64x64"),
+        pack_path.join("32x32"),
+    ];
+
+    for icon_name in icon_names.iter() {
+        // Buscar en scalable/apps
+        if scalable_dir.exists() {
+            let apps_dir = scalable_dir.join("apps");
+            if apps_dir.exists() {
+                if let Ok(entries) = std::fs::read_dir(&apps_dir) {
+                    for entry in entries.flatten() {
+                        let entry_name = entry.file_name();
+                        if let Some(name_str) = entry_name.to_str() {
+                            if name_str.starts_with(icon_name) {
+                                icons.push(entry.path().to_string_lossy().to_string());
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            let places_dir = scalable_dir.join("places");
+            if icons.len() < 4 && places_dir.exists() {
+                if let Ok(entries) = std::fs::read_dir(&places_dir) {
+                    for entry in entries.flatten() {
+                        let entry_name = entry.file_name();
+                        if let Some(name_str) = entry_name.to_str() {
+                            if name_str.contains(icon_name) || name_str.contains("folder") {
+                                icons.push(entry.path().to_string_lossy().to_string());
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if icons.len() >= 4 {
+            break;
+        }
+
+        // Buscar en directorios de tamaño
+        for size_dir in &size_dirs {
+            if icons.len() >= 4 {
+                break;
+            }
+            if let Ok(entries) = std::fs::read_dir(size_dir) {
+                for entry in entries.flatten() {
+                    let entry_path = entry.path();
+                    if entry_path.is_dir() {
+                        let apps_dir = entry_path.join("apps");
+                        if apps_dir.exists() {
+                            if let Ok(app_entries) = std::fs::read_dir(&apps_dir) {
+                                for app_entry in app_entries.flatten() {
+                                    let app_name = app_entry.file_name();
+                                    if let Some(name_str) = app_name.to_str() {
+                                        if name_str.starts_with(icon_name) {
+                                            icons.push(app_entry.path().to_string_lossy().to_string());
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if icons.len() >= 4 {
+            break;
+        }
+    }
+
+    // Si no encontramos suficientes, buscar los primeros disponibles
+    if icons.is_empty() {
+        if scalable_dir.exists() {
+            let apps_dir = scalable_dir.join("apps");
+            if apps_dir.exists() {
+                if let Ok(entries) = std::fs::read_dir(&apps_dir) {
+                    for entry in entries.flatten() {
+                        if icons.len() >= 4 {
+                            break;
+                        }
+                        let path = entry.path();
+                        if path.is_file() {
+                            icons.push(path.to_string_lossy().to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(IconPackPreview {
+        name: icon_pack.clone(),
+        path: pack_path.to_string_lossy().to_string(),
+        icons,
+    })
 }

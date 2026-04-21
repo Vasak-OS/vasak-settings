@@ -12,6 +12,10 @@ export const getIconPacks = <T = any>(args?: any): Promise<T> => {
 	return invoke<T>('get_icon_packs', args);
 };
 
+export const getIconPackIcons = <T = any>(packName: string): Promise<T> => {
+	return invoke<T>('get_icon_pack_icons', { icon_pack: packName });
+};
+
 export const getCurrentSystemState = <T = any>(args?: any): Promise<T> => {
 	return invoke<T>('get_current_system_state', args);
 };
