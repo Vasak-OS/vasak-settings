@@ -25,6 +25,8 @@ pub fn run() {
             commands::system_config::get_icon_packs,
             commands::system_config::get_icon_pack_icons,
             commands::system_config::get_official_wallpapers,
+            commands::shortcuts::get_shortcuts,
+            commands::shortcuts::save_shortcuts,
             commands::audio::get_audio_volume,
             commands::audio::set_audio_volume,
             commands::audio::toggle_audio_mute,
