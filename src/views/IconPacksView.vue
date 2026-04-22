@@ -46,8 +46,7 @@ onMounted(async () => {
 		// Obtener el estado guardado de los packs
 		if (vskConfig.value?.icons) {
 			selectedDarkPack.value = vskConfig.value.icons.dark || 'Adwaita';
-			selectedLightPack.value =
-				vskConfig.value.icons.ligth || vskConfig.value.icons.light || 'Adwaita';
+			selectedLightPack.value = vskConfig.value.icons.light || 'Adwaita';
 		}
 
 		// Obtener packs disponibles
@@ -98,10 +97,10 @@ const saveConfig = async () => {
 
 		// Actualizar los packs en la configuración
 		if (!vskConfig.value.icons) {
-			vskConfig.value.icons = { dark: '', ligth: '' };
+			vskConfig.value.icons = { dark: '', light: '' };
 		}
 		vskConfig.value.icons.dark = selectedDarkPack.value;
-		vskConfig.value.icons.ligth = selectedLightPack.value;
+		vskConfig.value.icons.light = selectedLightPack.value;
 
 		// Guardar configuración
 		await writeConfig(vskConfig.value);
@@ -129,8 +128,7 @@ const isFormValid = computed(() => {
 const isChanged = computed(() => {
 	return (
 		selectedDarkPack.value !== (vskConfig.value?.icons?.dark || 'Adwaita') ||
-		selectedLightPack.value !==
-			(vskConfig.value?.icons?.ligth || vskConfig.value?.icons?.light || 'Adwaita')
+		selectedLightPack.value !== (vskConfig.value?.icons?.light || 'Adwaita')
 	);
 });
 </script>

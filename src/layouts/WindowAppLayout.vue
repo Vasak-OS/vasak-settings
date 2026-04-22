@@ -32,7 +32,10 @@ const sidebarCategories: SidebarCategory[] = [
 	{
 		id: 'general',
 		title: 'General',
-		items: [{ id: 'home', label: 'Inicio', icon: 'home' }],
+		items: [
+			{ id: 'home', label: 'Inicio', icon: 'home' },
+			{ id: 'shortcuts', label: 'Shortcuts', icon: 'preferences-desktop-keyboard' },
+		],
 	},
 	{
 		id: 'appearance',

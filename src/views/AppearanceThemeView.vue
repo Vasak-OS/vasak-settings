@@ -152,7 +152,9 @@ onMounted(async () => {
 		schemes.value = Array.isArray(loadedSchemes) ? loadedSchemes : [];
 
 		const storedSchemeId =
-			vskConfig.value?.style?.color_scheme || configStore.value.config?.style?.color_scheme || '';
+			vskConfig.value?.style?.['color-scheme'] ||
+			configStore.value.config?.style?.color_scheme ||
+			'';
 		selectedSchemeId.value = storedSchemeId;
 
 		if (selectedGtkTheme.value && !gtkThemes.value.includes(selectedGtkTheme.value)) {
