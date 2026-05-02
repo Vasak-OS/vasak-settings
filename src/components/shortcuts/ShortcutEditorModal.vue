@@ -23,6 +23,8 @@ const action = ref('launch');
 const target = ref('');
 const formError = ref('');
 const liveKeys = ref<string[]>([]);
+const pressedKeys = ref<string[]>([]);
+const clearPreviewTimer = ref<number | null>(null);
 
 const SPECIAL_CODE_MAP: Record<string, string> = {
 	ArrowUp: 'KEY_UP',
@@ -68,6 +70,11 @@ const resetForm = () => {
 	target.value = props.shortcut?.target || '';
 	formError.value = '';
 	liveKeys.value = [];
+	pressedKeys.value = [];
+	if (clearPreviewTimer.value !== null) {
+		window.clearTimeout(clearPreviewTimer.value);
+		clearPreviewTimer.value = null;
+	}
 };
 
 watch(
@@ -151,6 +158,13 @@ const keyTokenFromEvent = (event: KeyboardEvent): string | null => {
 
 const captureShortcut = (event: KeyboardEvent) => {
 	if (event.key === 'Escape') {
+		keys.value = '';
+		liveKeys.value = [];
+		pressedKeys.value = [];
+		if (clearPreviewTimer.value !== null) {
+			window.clearTimeout(clearPreviewTimer.value);
+			clearPreviewTimer.value = null;
+		}
 		return;
 	}
 
@@ -161,47 +175,53 @@ const captureShortcut = (event: KeyboardEvent) => {
 	if (event.ctrlKey) parts.push('CTRL');
 	if (event.shiftKey) parts.push('SHIFT');
 	if (event.altKey) parts.push('ALT');
-	if (event.metaKey) parts.push('SUPER');
+
+	const keyLower = (event.key || '').toString().toLowerCase();
+	const code = (event.code || '').toString();
+	const metaDetected =
+		event.metaKey || code.startsWith('Meta') || /^(super|win|\bmeta\b|os)$/i.test(keyLower);
+	if (metaDetected) parts.push('SUPER');
 
 	const token = keyTokenFromEvent(event);
 	if (token && !parts.includes(token)) {
 		parts.push(token);
 	}
 
-	if (parts.length > 0) {
-		keys.value = normalizeShortcutKeys(parts.join('+'));
-		liveKeys.value = [];
+	for (const part of parts) {
+		if (!pressedKeys.value.includes(part)) {
+			pressedKeys.value.push(part);
+		}
 	}
+
+	if (pressedKeys.value.length > 4) {
+		pressedKeys.value = pressedKeys.value.slice(-4);
+	}
+
+	keys.value = normalizeShortcutKeys(pressedKeys.value.join('+'));
+	liveKeys.value = [...pressedKeys.value];
+	if (clearPreviewTimer.value !== null) {
+		window.clearTimeout(clearPreviewTimer.value);
+	}
+	clearPreviewTimer.value = window.setTimeout(() => {
+		liveKeys.value = [];
+		clearPreviewTimer.value = null;
+	}, 1000);
 	formError.value = '';
 };
 
-const updateLiveKeys = (event: KeyboardEvent) => {
-	const parts: string[] = [];
-	if (event.ctrlKey) parts.push('CTRL');
-	if (event.shiftKey) parts.push('SHIFT');
-	if (event.altKey) parts.push('ALT');
-	if (event.metaKey) parts.push('SUPER');
-
-	const token = keyTokenFromEvent(event);
-	if (token && !parts.includes(token)) {
-		parts.push(token);
-	}
-
-	liveKeys.value = parts;
-};
-
 const handleKeyDown = (event: KeyboardEvent) => {
-	if (event.key === 'Escape') {
-		return;
-	}
-	event.preventDefault();
-	event.stopPropagation();
 	captureShortcut(event);
-	updateLiveKeys(event);
 };
 
 const handleKeyUp = () => {
-	liveKeys.value = [];
+	if (clearPreviewTimer.value !== null) {
+		window.clearTimeout(clearPreviewTimer.value);
+	}
+	clearPreviewTimer.value = window.setTimeout(() => {
+		liveKeys.value = [];
+		pressedKeys.value = [];
+		clearPreviewTimer.value = null;
+	}, 1000);
 };
 
 const displayKeys = computed(() => {
@@ -214,6 +234,8 @@ const displayKeys = computed(() => {
 const clearShortcut = () => {
 	keys.value = '';
 	formError.value = '';
+	liveKeys.value = [];
+	pressedKeys.value = [];
 };
 
 const handleCancel = () => {
