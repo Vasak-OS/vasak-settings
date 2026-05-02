@@ -179,8 +179,12 @@ onMounted(loadShortcuts);
 							<div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
 								<div class="min-w-0 flex-1">
 									<div class="flex flex-wrap items-center gap-2">
-										<span class="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-												{{ normalizeShortcutKeys(item.shortcut.keys) }}
+										<span
+											v-for="key in normalizeShortcutKeys(item.shortcut.keys).split('+').filter(Boolean)"
+											:key="`${item.index}-${key}`"
+											class="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
+										>
+											{{ key }}
 										</span>
 										<span class="text-xs uppercase tracking-[0.16em] text-tx-muted">{{ item.shortcut.action }}</span>
 									</div>
