@@ -3,6 +3,11 @@ import { createMemoryHistory, createRouter } from 'vue-router';
 const routes = [
 	{ path: '/', name: 'home', component: () => import('@/views/HomeView.vue') },
 	{
+		path: '/shortcuts',
+		name: 'shortcuts',
+		component: () => import('@/views/ShortcutsView.vue'),
+	},
+	{
 		path: '/appearance-theme',
 		name: 'appearance-theme',
 		component: () => import('@/views/AppearanceThemeView.vue'),
