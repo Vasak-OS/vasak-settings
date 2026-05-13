@@ -15,7 +15,7 @@ import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
 import { getSystemFonts, type SystemFontItem } from '@/services/style.service';
 
-type FontTarget = 'termina' | 'title' | 'apps';
+type FontTarget = 'terminal' | 'title' | 'apps';
 
 const configStore = ref<any>(null);
 const loading = ref(true);
@@ -26,16 +26,16 @@ const successMessage = ref('');
 const vskConfig: Ref<VSKConfig | null> = ref(null);
 const fonts = ref<SystemFontItem[]>([]);
 const searchQuery = ref('');
-const activeTarget = ref<FontTarget>('termina');
+const activeTarget = ref<FontTarget>('terminal');
 
 const selectedFonts = ref<Record<FontTarget, string>>({
-	termina: '',
+	terminal: '',
 	title: '',
 	apps: '',
 });
 
 const targetOptions = [
-	{ label: 'Terminal', value: 'termina' },
+	{ label: 'Terminal', value: 'terminal' },
 	{ label: 'Títulos', value: 'title' },
 	{ label: 'Aplicaciones', value: 'apps' },
 ];
@@ -82,7 +82,7 @@ const pickFont = (font: SystemFontItem) => {
 
 const updateSelectionFromConfig = () => {
 	selectedFonts.value = {
-		termina: vskConfig.value?.fonts?.termina || '',
+		terminal: vskConfig.value?.fonts?.terminal || '',
 		title: vskConfig.value?.fonts?.title || '',
 		apps: vskConfig.value?.fonts?.apps || '',
 	};
@@ -101,8 +101,8 @@ onMounted(async () => {
 		const loadedFonts = await getSystemFonts();
 		fonts.value = Array.isArray(loadedFonts) ? loadedFonts : [];
 
-		if (!selectedFonts.value.termina && uniqueFonts.value.length > 0) {
-			selectedFonts.value.termina = uniqueFonts.value[0].name;
+		if (!selectedFonts.value.terminal && uniqueFonts.value.length > 0) {
+			selectedFonts.value.terminal = uniqueFonts.value[0].name;
 		}
 		if (!selectedFonts.value.title && uniqueFonts.value.length > 1) {
 			selectedFonts.value.title = uniqueFonts.value[1].name;
@@ -128,7 +128,7 @@ const saveConfig = async () => {
 		}
 
 		vskConfig.value.fonts = {
-			termina: selectedFonts.value.termina,
+			terminal: selectedFonts.value.terminal,
 			title: selectedFonts.value.title,
 			apps: selectedFonts.value.apps,
 		};
@@ -147,7 +147,7 @@ const saveConfig = async () => {
 
 const isFormValid = computed(() => {
 	return Boolean(
-		selectedFonts.value.termina && selectedFonts.value.title && selectedFonts.value.apps
+		selectedFonts.value.terminal && selectedFonts.value.title && selectedFonts.value.apps
 	);
 });
 </script>
@@ -202,8 +202,8 @@ const isFormValid = computed(() => {
 							<div class="space-y-3 text-sm text-tx-muted">
 								<div>
 									<div class="text-xs uppercase tracking-wide text-tx-muted">Terminal</div>
-									<div class="text-tx-primary" :style="{ fontFamily: fontStack(selectedFonts.termina) }">
-										{{ selectedFonts.termina || 'Sin fuente asignada' }}
+									<div class="text-tx-primary" :style="{ fontFamily: fontStack(selectedFonts.terminal) }">
+										{{ selectedFonts.terminal || 'Sin fuente asignada' }}
 									</div>
 								</div>
 								<div>
