@@ -31,6 +31,7 @@
     "network-manager:allow-create-vpn-profile",
     "network-manager:allow-update-vpn-profile",
     "network-manager:allow-delete-vpn-profile",
+    "network-manager:allow-rescan-wifi",
     "bluetooth-manager:allow-list-adapters",
     "bluetooth-manager:allow-list-devices",
     "bluetooth-manager:allow-set-adapter-powered",
