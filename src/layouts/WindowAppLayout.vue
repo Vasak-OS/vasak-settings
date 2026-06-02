@@ -1,9 +1,9 @@
 <script lang="ts" setup>
-import { getIconSource } from '@vasakgroup/plugin-vicons';
-import { onMounted, ref, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import SidebarComponent from '@/components/sidebar/SidebarComponent.vue';
 import TopBarComponent from '@/components/topbar/TopBarComponent.vue';
+import { useReactiveIcon } from '@/composables/useReactiveIcon';
 import { SidebarCategory } from '@/types/sidebar';
 
 const route = useRoute();
@@ -26,7 +26,7 @@ watch(
 	}
 );
 
-const appIcon = ref('');
+const [appIcon] = useReactiveIcon('preferences');
 
 const sidebarCategories: SidebarCategory[] = [
 	{
@@ -70,10 +70,6 @@ const sidebarCategories: SidebarCategory[] = [
 		],
 	},
 ];
-
-onMounted(async () => {
-	appIcon.value = await getIconSource('preferences');
-});
 </script>
 <template>
   <div

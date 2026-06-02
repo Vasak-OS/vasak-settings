@@ -4,10 +4,10 @@ import {
 	type AdapterInfo,
 	connectDevice,
 	disconnectDevice,
-	getAvailableDevices,
-	getConnectedDevices,
 	getDefaultAdapter,
-	scanForDevices,
+	listDevices,
+	startScan,
+	stopScan,
 	toggleBluetooth,
 } from '@vasakgroup/plugin-bluetooth-manager';
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
@@ -50,6 +50,14 @@ const toggleBT = async () => {
 
 const refreshDevices = async () => {
 	defaultAdapter.value = await getDefaultAdapter();
+
+	console.log(
+		'[BT] Adapter:',
+		defaultAdapter.value?.path,
+		'powered:',
+		defaultAdapter.value?.powered
+	);
+
 	if (!defaultAdapter.value?.powered) {
 		connectedDevices.value = [];
 		availableDevices.value = [];
@@ -59,10 +67,12 @@ const refreshDevices = async () => {
 
 	loading.value = true;
 	try {
-		connectedDevices.value = await getConnectedDevices(defaultAdapter.value.path);
-		availableDevices.value = await getAvailableDevices(defaultAdapter.value.path);
+		const allDevices = await listDevices(defaultAdapter.value.path);
+		console.log('[BT] Total devices from listDevices:', allDevices.length, allDevices);
+		connectedDevices.value = allDevices.filter((d) => d.connected);
+		availableDevices.value = allDevices.filter((d) => !d.connected);
 	} catch (err) {
-		console.error('Error refreshing devices:', err);
+		console.error('[BT] Error refreshing devices:', err);
 		connectedDevices.value = [];
 		availableDevices.value = [];
 	} finally {
@@ -76,9 +86,14 @@ const scanDevices = async () => {
 	isScanning.value = true;
 	error.value = '';
 	try {
-		await scanForDevices(defaultAdapter.value.path);
+		await startScan(defaultAdapter.value.path);
+		await new Promise((r) => setTimeout(r, 6000));
+		await stopScan(defaultAdapter.value.path);
 		await refreshDevices();
 	} catch (err) {
+		try {
+			await stopScan(defaultAdapter.value.path);
+		} catch {}
 		error.value = `Error buscando dispositivos: ${err}`;
 	} finally {
 		isScanning.value = false;

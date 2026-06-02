@@ -1,18 +1,11 @@
 <script lang="ts" setup>
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { getSymbolSource } from '@vasakgroup/plugin-vicons';
-import { onMounted, Ref, ref } from 'vue';
+import { useReactiveSymbol } from '@/composables/useReactiveIcon';
 
 const appWindow = getCurrentWindow();
-const closeIcon: Ref<string> = ref('');
-const minimizeIcon: Ref<string> = ref('');
-const maximizeIcon: Ref<string> = ref('');
-
-onMounted(async () => {
-	closeIcon.value = await getSymbolSource('window-close');
-	minimizeIcon.value = await getSymbolSource('window-minimize');
-	maximizeIcon.value = await getSymbolSource('window-maximize');
-});
+const [closeIcon] = useReactiveSymbol('window-close');
+const [minimizeIcon] = useReactiveSymbol('window-minimize');
+const [maximizeIcon] = useReactiveSymbol('window-maximize');
 </script>
 <template>
   <div class="flex gap-1" data-tauri-drag-region>

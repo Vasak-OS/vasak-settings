@@ -1,8 +1,7 @@
 <script lang="ts" setup>
-import { getIconSource } from '@vasakgroup/plugin-vicons';
-import { onMounted, ref } from 'vue';
+import { useReactiveIcon } from '@/composables/useReactiveIcon';
 
-const iconSrc = ref('');
+const [iconSrc] = useReactiveIcon(() => props.icon || '');
 const props = withDefaults(
 	defineProps<{
 		label: string;
@@ -24,12 +23,6 @@ const props = withDefaults(
 defineEmits<{
 	click: [];
 }>();
-
-onMounted(async () => {
-	if (props.icon) {
-		iconSrc.value = await getIconSource(props.icon);
-	}
-});
 </script>
 
 <template>

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { listen } from '@tauri-apps/api/event';
-import { getSymbolSource } from '@vasakgroup/plugin-vicons';
 import { computed, nextTick, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
@@ -8,6 +7,7 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import StatTile from '@/components/ui/StatTile.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+import { useReactiveSymbol } from '@/composables/useReactiveIcon';
 import {
 	connectToWifi,
 	getCurrentNetworkState,
@@ -35,7 +35,12 @@ const selectedNetwork = ref<NetworkInfo | null>(null);
 const wifiPassword = ref('');
 const showPasswordDialog = ref(false);
 const error = ref('');
-const currentNetworkIcon = ref('');
+const [currentNetworkIcon, updateCurrentIcon] = useReactiveSymbol(() => {
+	if (currentConnectedNetwork.value?.icon) {
+		return currentConnectedNetwork.value.icon;
+	}
+	return 'network-wireless-disconnected-symbolic';
+});
 const networkStats = ref<NetworkStats | null>(null);
 const networkInterfaces = ref<string[]>([]);
 
@@ -51,18 +56,6 @@ const getNetworkName = (network: NetworkInfo): string => {
 
 const getNetworkSecurity = (network: NetworkInfo): string => {
 	return network.security_type || 'Abierta';
-};
-
-const updateCurrentIcon = async () => {
-	try {
-		if (currentConnectedNetwork.value?.icon) {
-			currentNetworkIcon.value = await getSymbolSource(currentConnectedNetwork.value.icon);
-			return;
-		}
-		currentNetworkIcon.value = await getSymbolSource('network-wireless-disconnected-symbolic');
-	} catch (iconError) {
-		console.error('Error loading network icon:', iconError);
-	}
 };
 
 const updateEthernetStatus = (state: NetworkInfo | null) => {

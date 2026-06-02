@@ -1,12 +1,12 @@
 <script lang="ts" setup>
 import { listen } from '@tauri-apps/api/event';
-import { getSymbolSource } from '@vasakgroup/plugin-vicons';
 import { computed, onMounted, onUnmounted, type Ref, ref, watch } from 'vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
+import { useReactiveSymbol } from '@/composables/useReactiveIcon';
 import {
 	getAudioDevices,
 	getAudioVolume,
@@ -24,7 +24,6 @@ const volumeInfo = ref<VolumeInfo>({
 	is_muted: false,
 });
 const currentVolume = ref(0);
-const volumeIconContent = ref('');
 const volumeChanging = ref(false);
 
 // --- Estado Dispositivos ---
@@ -52,18 +51,11 @@ const volumePercentage = computed(() => {
 	return Math.round(((currentVolume.value - min) / (max - min)) * 100);
 });
 
-const updateIcon = async () => {
-	try {
-		const iconName = getVolumeIconName(volumeInfo.value.is_muted, volumePercentage.value);
-		volumeIconContent.value = await getSymbolSource(iconName);
-	} catch (error) {
-		console.error('Error loading volume icon:', error);
-	}
-};
+const [volumeIconContent, updateIcon] = useReactiveSymbol(() =>
+	getVolumeIconName(volumeInfo.value.is_muted, volumePercentage.value)
+);
 
-watch([() => volumeInfo.value.is_muted, volumePercentage], updateIcon, {
-	immediate: true,
-});
+watch([() => volumeInfo.value.is_muted, volumePercentage], updateIcon);
 
 const getVolumeInfo = async () => {
 	try {
