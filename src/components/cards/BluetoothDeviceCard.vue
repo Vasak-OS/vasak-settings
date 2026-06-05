@@ -2,13 +2,13 @@
 import { computed } from 'vue';
 import { useReactiveIcon } from '@/composables/useReactiveIcon';
 
-const [icon] = useReactiveIcon(() => props.device.icon || 'bluetooth');
-
 const props = defineProps<{
 	device: any;
 	actionLabel: string;
 	connected?: boolean;
 }>();
+
+const [icon] = useReactiveIcon(() => props.device.icon || 'bluetooth');
 
 const emit = defineEmits<{
 	action: [];

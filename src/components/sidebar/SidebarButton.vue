@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { useReactiveIcon } from '@/composables/useReactiveIcon';
 
-const [iconSrc] = useReactiveIcon(() => props.icon || '');
 const props = withDefaults(
 	defineProps<{
 		label: string;
@@ -19,6 +18,8 @@ const props = withDefaults(
 		badge: '',
 	}
 );
+
+const [iconSrc] = useReactiveIcon(() => props.icon || '');
 
 defineEmits<{
 	click: [];
