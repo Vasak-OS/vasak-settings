@@ -57,10 +57,14 @@ onMounted(async () => {
 });
 
 async function saveAll() {
-	await Promise.all([
-		blur.save(), wobbly.save(), zoom.save(), alpha.save(),
-		invert.save(), fisheye.save(), cube.save(), wrot.save(),
-	]);
+	await blur.save();
+	await wobbly.save();
+	await zoom.save();
+	await alpha.save();
+	await invert.save();
+	await fisheye.save();
+	await cube.save();
+	await wrot.save();
 }
 </script>
 
