@@ -51,9 +51,9 @@ fn unvariant<'a>(value: &'a Value<'a>) -> &'a Value<'a> {
 fn read_u32(value: &OwnedValue) -> Option<u32> {
     match unvariant(value) {
         Value::U32(x) => Some(*x),
-        Value::I32(x) => Some(*x as u32),
+        Value::I32(x) => (*x >= 0).then(|| *x as u32),
         Value::U64(x) => Some(*x as u32),
-        Value::I64(x) => Some(*x as u32),
+        Value::I64(x) => (*x >= 0).then(|| *x as u32),
         Value::U8(x) => Some(*x as u32),
         _ => None,
     }
