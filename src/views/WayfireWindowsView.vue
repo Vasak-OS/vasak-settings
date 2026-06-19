@@ -53,8 +53,8 @@ onMounted(async () => {
 	});
 });
 
-function saveAll() {
-	Promise.all([grid.save(), move.save(), resize.save(), wmactions.save()]);
+async function saveAll() {
+	await Promise.all([grid.save(), move.save(), resize.save(), wmactions.save()]);
 }
 </script>
 
