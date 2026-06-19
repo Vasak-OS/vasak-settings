@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 
@@ -173,16 +173,16 @@ pub async fn write_wayfire_section(
 #[tauri::command]
 pub async fn get_all_wayfire_sections() -> Result<Vec<String>, String> {
 	let content = read_file()?;
+	let mut seen = HashSet::new();
 	let mut sections = Vec::new();
 	for line in content.lines() {
 		let trimmed = line.trim();
 		if trimmed.starts_with('[') && trimmed.ends_with(']') {
 			let name = trimmed[1..trimmed.len() - 1].trim().to_string();
-			if !name.is_empty() {
+			if !name.is_empty() && seen.insert(name.clone()) {
 				sections.push(name);
 			}
 		}
 	}
-	sections.dedup();
 	Ok(sections)
 }
