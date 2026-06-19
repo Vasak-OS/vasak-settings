@@ -34,6 +34,9 @@ export function useWayfireSection(section: string) {
 		try {
 			await writeWayfireSection(section, values.value);
 			success.value = 'Configuración guardada correctamente';
+			if (successTimer !== null) {
+				clearTimeout(successTimer);
+			}
 			successTimer = setTimeout(() => { success.value = ''; successTimer = null; }, 3000);
 		} catch (e) {
 			error.value = `Error guardando sección [${section}]: ${e}`;
