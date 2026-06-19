@@ -41,7 +41,8 @@ onMounted(async () => {
 });
 
 async function saveAll() {
-	await Promise.all([decoration.save(), animate.save()]);
+	await decoration.save();
+	await animate.save();
 }
 </script>
 
