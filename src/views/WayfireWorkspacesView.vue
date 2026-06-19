@@ -31,7 +31,8 @@ onMounted(async () => {
 });
 
 async function saveAll() {
-	await Promise.all([vswitch.save(), expo.save()]);
+	await vswitch.save();
+	await expo.save();
 }
 </script>
 
