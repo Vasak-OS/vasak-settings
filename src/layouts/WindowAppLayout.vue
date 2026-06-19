@@ -61,6 +61,25 @@ const sidebarCategories: SidebarCategory[] = [
 		],
 	},
 	{
+		id: 'windows',
+		title: 'Ventanas',
+		items: [
+			{ id: 'wayfire-input', label: 'Teclado y Ratón', icon: 'preferences-desktop-keyboard' },
+			{ id: 'wayfire-windows', label: 'Gestión de Ventanas', icon: 'preferences-system-windows' },
+			{ id: 'wayfire-workspaces', label: 'Espacios de trabajo', icon: 'video-display' },
+			{ id: 'wayfire-appearance', label: 'Apariencia WM', icon: 'preferences-desktop-theme' },
+			{ id: 'wayfire-effects', label: 'Efectos', icon: 'preferences-desktop-effects' },
+			{ id: 'wayfire-autostart', label: 'Autoinicio', icon: 'system-run' },
+		],
+	},
+	{
+		id: 'system',
+		title: 'Sistema',
+		items: [
+			{ id: 'power', label: 'Energía', icon: 'battery' },
+		],
+	},
+	{
 		id: 'network',
 		title: 'Conectividad',
 		items: [

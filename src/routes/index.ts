@@ -57,6 +57,41 @@ const routes = [
 		name: 'multimedia-audio-input',
 		component: () => import('@/views/MultimediaAudioInputView.vue'),
 	},
+	{
+		path: '/wayfire-input',
+		name: 'wayfire-input',
+		component: () => import('@/views/WayfireInputView.vue'),
+	},
+	{
+		path: '/wayfire-windows',
+		name: 'wayfire-windows',
+		component: () => import('@/views/WayfireWindowsView.vue'),
+	},
+	{
+		path: '/wayfire-workspaces',
+		name: 'wayfire-workspaces',
+		component: () => import('@/views/WayfireWorkspacesView.vue'),
+	},
+	{
+		path: '/wayfire-appearance',
+		name: 'wayfire-appearance',
+		component: () => import('@/views/WayfireAppearanceView.vue'),
+	},
+	{
+		path: '/wayfire-effects',
+		name: 'wayfire-effects',
+		component: () => import('@/views/WayfireEffectsView.vue'),
+	},
+	{
+		path: '/wayfire-autostart',
+		name: 'wayfire-autostart',
+		component: () => import('@/views/WayfireAutostartView.vue'),
+	},
+	{
+		path: '/power',
+		name: 'power',
+		component: () => import('@/views/PowerView.vue'),
+	},
 ];
 export const router = createRouter({
 	history: createMemoryHistory(),
