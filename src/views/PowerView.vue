@@ -55,7 +55,7 @@ async function selectProfile(profile: string) {
 	try {
 		await setActive(profile);
 	} catch {
-		// error is handled by the composable
+		// setActive sets profilesError ref before throwing — alert is already shown via <AlertMessage v-if="profilesError">
 	}
 }
 </script>
