@@ -3,7 +3,7 @@ import { readWayfireSection, writeWayfireSection } from '@/services/wayfire.serv
 
 export function useWayfireSection(section: string) {
 	const values = ref<Record<string, string>>({}) as Ref<Record<string, string>>;
-	const loading = ref(true);
+	const loading = ref(false);
 	const saving = ref(false);
 	const error = ref('');
 	const success = ref('');
