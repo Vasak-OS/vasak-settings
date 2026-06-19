@@ -4290,7 +4290,9 @@ dependencies = [
  "libc",
  "mio",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2",
+ "tracing",
  "windows-sys 0.61.2",
 ]
 
@@ -4733,6 +4735,7 @@ dependencies = [
  "tauri-plugin-shell",
  "tauri-plugin-system-fonts",
  "tauri-plugin-vicons",
+ "zbus",
 ]
 
 [[package]]
@@ -5775,6 +5778,7 @@ dependencies = [
  "serde_repr",
  "sha1",
  "static_assertions",
+ "tokio",
  "tracing",
  "uds_windows",
  "windows-sys 0.52.0",

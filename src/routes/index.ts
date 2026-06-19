@@ -87,6 +87,11 @@ const routes = [
 		name: 'wayfire-autostart',
 		component: () => import('@/views/WayfireAutostartView.vue'),
 	},
+	{
+		path: '/power',
+		name: 'power',
+		component: () => import('@/views/PowerView.vue'),
+	},
 ];
 export const router = createRouter({
 	history: createMemoryHistory(),

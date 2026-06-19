@@ -73,6 +73,13 @@ const sidebarCategories: SidebarCategory[] = [
 		],
 	},
 	{
+		id: 'system',
+		title: 'Sistema',
+		items: [
+			{ id: 'power', label: 'Energía', icon: 'battery' },
+		],
+	},
+	{
 		id: 'network',
 		title: 'Conectividad',
 		items: [
