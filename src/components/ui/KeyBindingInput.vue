@@ -120,17 +120,6 @@ function handleKeyDown(event: KeyboardEvent) {
 	captureBinding(event);
 }
 
-function handleKeyUp() {
-	if (clearTimer !== null) {
-		window.clearTimeout(clearTimer);
-	}
-	clearTimer = window.setTimeout(() => {
-		showPreview.value = false;
-		pressedKeys.value = [];
-		clearTimer = null;
-	}, 1500);
-}
-
 const displayKeys = computed(() => {
 	if (showPreview.value && pressedKeys.value.length > 0) {
 		return pressedKeys.value;
@@ -161,7 +150,6 @@ function clear() {
 			tabindex="0"
 			class="flex min-h-10 w-full flex-wrap items-center gap-2 rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm outline-none transition-colors focus:border-primary"
 			@keydown="handleKeyDown"
-			@keyup="handleKeyUp"
 		>
 			<span
 				v-for="key in displayKeys"
