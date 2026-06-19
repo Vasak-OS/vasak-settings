@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useReactiveIcon } from '@/composables/useReactiveIcon';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 import PageHeader from '@/components/ui/PageHeader.vue';
@@ -27,6 +27,12 @@ const [invertIcon] = useReactiveIcon('preferences-desktop-display');
 const [fisheyeIcon] = useReactiveIcon('preferences-desktop-effects');
 const [wrotIcon] = useReactiveIcon('object-rotate-right');
 const [cubeIcon] = useReactiveIcon('applications-other');
+
+const sectionError = computed(() => {
+	return blur.error.value || wobbly.error.value || zoom.error.value
+		|| alpha.error.value || invert.error.value || fisheye.error.value
+		|| cube.error.value || wrot.error.value;
+});
 
 const blurMethods = [
 	{ label: 'Box', value: 'box' },
@@ -66,7 +72,7 @@ async function saveAll() {
 			description="Efectos visuales del gestor de ventanas."
 		/>
 
-		<AlertMessage v-if="blur.error.value" tone="error" :message="blur.error.value" />
+		<AlertMessage v-if="sectionError" tone="error" :message="sectionError" />
 
 		<form @submit.prevent="saveAll" class="flex flex-col gap-4">
 			<SectionCard>
