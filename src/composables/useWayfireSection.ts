@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue';
+import { ref, onUnmounted, type Ref } from 'vue';
 import { readWayfireSection, writeWayfireSection } from '@/services/wayfire.service';
 
 export function useWayfireSection(section: string) {
@@ -7,6 +7,14 @@ export function useWayfireSection(section: string) {
 	const saving = ref(false);
 	const error = ref('');
 	const success = ref('');
+	let successTimer: ReturnType<typeof setTimeout> | null = null;
+
+	onUnmounted(() => {
+		if (successTimer !== null) {
+			clearTimeout(successTimer);
+			successTimer = null;
+		}
+	});
 
 	async function load() {
 		loading.value = true;
@@ -26,7 +34,7 @@ export function useWayfireSection(section: string) {
 		try {
 			await writeWayfireSection(section, values.value);
 			success.value = 'Configuración guardada correctamente';
-			setTimeout(() => { success.value = ''; }, 3000);
+			successTimer = setTimeout(() => { success.value = ''; successTimer = null; }, 3000);
 		} catch (e) {
 			error.value = `Error guardando sección [${section}]: ${e}`;
 		} finally {
