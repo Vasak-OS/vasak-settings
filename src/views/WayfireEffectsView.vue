@@ -50,8 +50,8 @@ onMounted(async () => {
 	wrot.initDefaults({ activate: '<super> <ctrl> BTN_RIGHT' });
 });
 
-function saveAll() {
-	Promise.all([
+async function saveAll() {
+	await Promise.all([
 		blur.save(), wobbly.save(), zoom.save(), alpha.save(),
 		invert.save(), fisheye.save(), cube.save(), wrot.save(),
 	]);
