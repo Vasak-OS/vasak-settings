@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, onBeforeUnmount } from 'vue';
 
 interface Props {
 	modelValue: string;
@@ -139,6 +139,13 @@ const displayKeys = computed(() => {
 		return props.modelValue.split(/\s+/).filter(Boolean);
 	}
 	return [];
+});
+
+onBeforeUnmount(() => {
+	if (clearTimer !== null) {
+		window.clearTimeout(clearTimer);
+		clearTimer = null;
+	}
 });
 
 function clear() {
