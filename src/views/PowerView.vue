@@ -96,7 +96,7 @@ async function selectProfile(profile: string) {
 								<div
 									class="h-full rounded-full transition-all duration-500"
 									:class="info.health > 80 ? 'bg-status-success' : info.health > 50 ? 'bg-status-warning' : 'bg-status-error'"
-									:style="{ width: Math.min(info.health, 100) + '%' }"
+									:style="{ width: Math.max(0, Math.min(info.health, 100)) + '%' }"
 								/>
 							</div>
 						</div>
