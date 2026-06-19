@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
@@ -10,6 +10,8 @@ import AlertMessage from '@/components/ui/AlertMessage.vue';
 
 const vswitch = useWayfireSection('vswitch');
 const expo = useWayfireSection('expo');
+
+const isSaving = computed(() => vswitch.saving.value || expo.saving.value);
 
 onMounted(async () => {
 	await Promise.all([vswitch.load(), expo.load()]);
@@ -28,8 +30,8 @@ onMounted(async () => {
 	});
 });
 
-function saveAll() {
-	Promise.all([vswitch.save(), expo.save()]);
+async function saveAll() {
+	await Promise.all([vswitch.save(), expo.save()]);
 }
 </script>
 
@@ -118,12 +120,13 @@ function saveAll() {
 			</SectionCard>
 
 			<div class="flex justify-end">
-				<button
-					type="submit"
-					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white hover:opacity-90"
-				>
-					Guardar cambios
-				</button>
+		<button
+				type="submit"
+				:disabled="isSaving"
+				class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50 hover:enabled:opacity-90"
+			>
+				{{ isSaving ? 'Guardando...' : 'Guardar cambios' }}
+			</button>
 			</div>
 		</form>
 	</div>
