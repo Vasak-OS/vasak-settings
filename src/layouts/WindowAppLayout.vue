@@ -65,7 +65,7 @@ const sidebarCategories: SidebarCategory[] = [
 		title: 'Ventanas',
 		items: [
 			{ id: 'wayfire-input', label: 'Teclado y Ratón', icon: 'preferences-desktop-keyboard' },
-			{ id: 'wayfire-windows', label: 'Ventanas', icon: 'preferences-system-windows' },
+			{ id: 'wayfire-windows', label: 'Gestión de Ventanas', icon: 'preferences-system-windows' },
 			{ id: 'wayfire-workspaces', label: 'Espacios de trabajo', icon: 'video-display' },
 			{ id: 'wayfire-appearance', label: 'Apariencia WM', icon: 'preferences-desktop-theme' },
 			{ id: 'wayfire-effects', label: 'Efectos', icon: 'preferences-desktop-effects' },
