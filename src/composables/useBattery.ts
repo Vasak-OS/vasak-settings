@@ -19,9 +19,12 @@ export function useBattery(pollIntervalMs = 5000) {
 	const info: Ref<BatteryInfo> = ref({ ...EMPTY });
 	const loading = ref(true);
 	const error = ref('');
-	let timer: ReturnType<typeof setInterval> | null = null;
+	let timer: ReturnType<typeof setTimeout> | null = null;
+	let running = false;
 
 	async function poll() {
+		if (running) return;
+		running = true;
 		try {
 			info.value = await getBatteryInfo();
 			error.value = '';
@@ -29,17 +32,25 @@ export function useBattery(pollIntervalMs = 5000) {
 			error.value = `Error obteniendo info de batería: ${e}`;
 		} finally {
 			loading.value = false;
+			running = false;
+		}
+	}
+
+	async function tick() {
+		await poll();
+		if (timer !== null) {
+			timer = setTimeout(tick, pollIntervalMs);
 		}
 	}
 
 	function start() {
-		poll();
-		timer = setInterval(poll, pollIntervalMs);
+		if (timer !== null) return;
+		timer = setTimeout(tick, 0);
 	}
 
 	function stop() {
 		if (timer !== null) {
-			clearInterval(timer);
+			clearTimeout(timer);
 			timer = null;
 		}
 	}
