@@ -11,6 +11,7 @@ export interface CanvasMonitor {
 
 interface Props {
 	monitors: CanvasMonitor[];
+	primaryName?: string;
 }
 
 const props = defineProps<Props>();
@@ -259,12 +260,24 @@ function onWheel(e: WheelEvent) {
 				v-for="m in props.monitors"
 				:key="m.name"
 				class="absolute flex cursor-grab select-none flex-col items-center justify-center rounded-lg border-2 text-center transition-shadow active:cursor-grabbing"
-				:class="dragging?.name === m.name ? 'border-primary shadow-lg shadow-primary/20' : 'border-ui-border hover:border-primary/50'"
+				:class="
+				dragging?.name === m.name
+					? 'border-primary shadow-lg shadow-primary/20'
+					: m.name === props.primaryName
+						? 'border-accent'
+						: 'border-ui-border hover:border-primary/50'
+			"
 				:style="{ ...monitorStyle(m), background: 'var(--color-ui-surface)' }"
 				@pointerdown="(e) => onPointerDown(e, m)"
 			>
 				<span class="text-xs font-semibold leading-tight">{{ m.name }}</span>
 				<span class="mt-0.5 text-[10px] leading-tight text-tx-muted">{{ m.width }}x{{ m.height }}</span>
+				<span
+					v-if="m.name === props.primaryName"
+					class="mt-1 rounded bg-accent/20 px-1.5 py-0.5 text-[9px] font-medium text-accent"
+				>
+					Principal
+				</span>
 			</div>
 		</div>
 

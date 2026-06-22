@@ -104,6 +104,11 @@ function findBestRefresh(modes: MonitorMode[], resolution: string): string {
 	return '60';
 }
 
+const primaryName = computed(() => {
+	const p = monitors.value.find((m) => m.connected && isPrimary(m));
+	return p?.name ?? '';
+});
+
 const canvasMonitors = computed<CanvasMonitor[]>(() =>
 	monitors.value
 		.filter((m) => m.connected)
@@ -222,6 +227,36 @@ function getVal(monitor: EditableMonitor, key: string, defaultVal = ''): string 
 	return monitor.values[key] ?? defaultVal;
 }
 
+const isPrimary = (monitor: EditableMonitor): boolean => {
+	if (!monitor.connected) return false;
+	const pos = monitor.values.position || '0,0';
+	return pos === '0,0';
+};
+
+function setPrimary(monitor: EditableMonitor) {
+	if (!monitor.connected || isPrimary(monitor)) return;
+
+	const { resolution } = parseMode(monitor.values.mode || '1920x1080@60');
+	const parts = resolution.split('x');
+	const myW = Number.parseInt(parts[0], 10) || 1920;
+
+	monitor.values.position = '0,0';
+
+	let offsetX = myW;
+	for (const m of monitors.value) {
+		if (m.connected && m.name !== monitor.name) {
+			const pos = m.values.position || '0,0';
+			const [x, y] = pos.split(',').map(Number);
+			if (x === 0 && y === 0) {
+				m.values.position = `${offsetX},0`;
+				const { resolution: r } = parseMode(m.values.mode || '1920x1080@60');
+				const p = r.split('x');
+				offsetX += Number.parseInt(p[0], 10) || 1920;
+			}
+		}
+	}
+}
+
 function onCanvasPositionChange(name: string, x: number, y: number) {
 	const m = monitors.value.find((m) => m.name === name);
 	if (m) m.values.position = `${x},${y}`;
@@ -302,6 +337,7 @@ async function saveAll() {
 				</h3>
 				<MonitorCanvas
 					:monitors="canvasMonitors"
+					:primaryName="primaryName"
 					@position-change="onCanvasPositionChange"
 				/>
 			</SectionCard>
@@ -331,6 +367,21 @@ async function saveAll() {
 				</div>
 
 				<template v-if="monitor.connected">
+					<div class="mb-3 flex items-center gap-2">
+						<button
+							type="button"
+							class="rounded-corner border px-3 py-1 text-xs transition-colors"
+							:class="
+								isPrimary(monitor)
+									? 'border-accent/40 bg-accent/10 text-accent cursor-default'
+									: 'border-ui-border text-tx-muted hover:border-accent/40 hover:text-accent'
+							"
+							@click="setPrimary(monitor)"
+						>
+							{{ isPrimary(monitor) ? 'Principal' : 'Establecer como principal' }}
+						</button>
+					</div>
+
 					<div class="grid gap-4 sm:grid-cols-2">
 						<FormGroup label="Resolución">
 							<SelectInput
