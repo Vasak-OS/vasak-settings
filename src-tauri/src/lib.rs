@@ -45,6 +45,13 @@ pub fn run() {
             commands::audio::get_audio_input_devices,
             commands::audio::set_audio_input_device,
             commands::monitors::get_detected_monitors,
+            commands::language::get_available_locales,
+            commands::language::get_current_locale,
+            commands::language::set_system_locale,
+            commands::language::get_available_keyboard_layouts,
+            commands::language::get_available_keyboard_variants,
+            commands::language::set_keyboard_layouts,
+            commands::language::get_keyboard_layouts_from_wayfire,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

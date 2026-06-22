@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { useWayfireSection } from '@/composables/useWayfireSection';
+import AlertMessage from '@/components/ui/AlertMessage.vue';
+import FormGroup from '@/components/ui/FormGroup.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
-import FormGroup from '@/components/ui/FormGroup.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
+import { useWayfireSection } from '@/composables/useWayfireSection';
 
 const input = useWayfireSection('input');
 
@@ -37,9 +37,6 @@ onMounted(async () => {
 	input.initDefaults({
 		kb_repeat_delay: '400',
 		kb_repeat_rate: '40',
-		xkb_layout: 'us',
-		xkb_variant: '',
-		xkb_options: '',
 		kb_numlock_default_state: 'false',
 		left_handed_mode: 'false',
 		middle_emulation: 'false',
@@ -90,33 +87,6 @@ onMounted(async () => {
 							type="number" min="1" max="200" step="1"
 							:value="input.getInt('kb_repeat_rate', 40)"
 							@input="input.setVal('kb_repeat_rate', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-						/>
-					</FormGroup>
-					<FormGroup label="Layout del teclado">
-						<input
-							type="text"
-							:value="input.getVal('xkb_layout', 'us')"
-							@input="input.setVal('xkb_layout', ($event.target as HTMLInputElement).value)"
-							placeholder="us,es,fr"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-						/>
-					</FormGroup>
-					<FormGroup label="Variante">
-						<input
-							type="text"
-							:value="input.getVal('xkb_variant', '')"
-							@input="input.setVal('xkb_variant', ($event.target as HTMLInputElement).value)"
-							placeholder="dvorak,bepo"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-						/>
-					</FormGroup>
-					<FormGroup label="Opciones XKB">
-						<input
-							type="text"
-							:value="input.getVal('xkb_options', '')"
-							@input="input.setVal('xkb_options', ($event.target as HTMLInputElement).value)"
-							placeholder="grp:win_space_toggle"
 							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
 						/>
 					</FormGroup>

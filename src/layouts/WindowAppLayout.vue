@@ -76,6 +76,7 @@ const sidebarCategories: SidebarCategory[] = [
 		id: 'system',
 		title: 'Sistema',
 		items: [
+			{ id: 'language-keyboard', label: 'Idioma y Teclado', icon: 'preferences-desktop-locale' },
 			{ id: 'power', label: 'Energía', icon: 'battery' },
 			{ id: 'monitors', label: 'Pantallas', icon: 'video-display' },
 		],

@@ -97,6 +97,11 @@ const routes = [
 		name: 'monitors',
 		component: () => import('@/views/MonitorsView.vue'),
 	},
+	{
+		path: '/language-keyboard',
+		name: 'language-keyboard',
+		component: () => import('@/views/LanguageKeyboardView.vue'),
+	},
 ];
 export const router = createRouter({
 	history: createMemoryHistory(),
