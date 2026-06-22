@@ -92,6 +92,11 @@ const routes = [
 		name: 'power',
 		component: () => import('@/views/PowerView.vue'),
 	},
+	{
+		path: '/monitors',
+		name: 'monitors',
+		component: () => import('@/views/MonitorsView.vue'),
+	},
 ];
 export const router = createRouter({
 	history: createMemoryHistory(),

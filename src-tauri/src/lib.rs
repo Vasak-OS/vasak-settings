@@ -44,6 +44,7 @@ pub fn run() {
             commands::audio::toggle_audio_input_mute,
             commands::audio::get_audio_input_devices,
             commands::audio::set_audio_input_device,
+            commands::monitors::get_detected_monitors,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

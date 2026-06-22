@@ -77,6 +77,7 @@ const sidebarCategories: SidebarCategory[] = [
 		title: 'Sistema',
 		items: [
 			{ id: 'power', label: 'Energía', icon: 'battery' },
+			{ id: 'monitors', label: 'Pantallas', icon: 'video-display' },
 		],
 	},
 	{

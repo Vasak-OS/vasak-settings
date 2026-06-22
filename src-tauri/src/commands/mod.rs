@@ -5,3 +5,4 @@ pub mod shortcuts;
 pub mod wayfire_ini;
 pub mod battery;
 pub mod power_profiles;
+pub mod monitors;
