@@ -1,4 +1,5 @@
 use zbus::Connection;
+use zbus::ProxyBuilder;
 use zbus::zvariant::{OwnedValue, Value};
 
 use crate::logger::{log_debug, log_error};
@@ -81,15 +82,19 @@ async fn get_property(conn: &Connection, prop: &str) -> Result<OwnedValue, Strin
 }
 
 async fn set_property(conn: &Connection, prop: &str, value: &str) -> Result<(), String> {
-    let inner = Value::new(value);
-    let variant = Value::Value(Box::new(inner));
-    conn.call_method(
-            Some(DEST),
-            PATH,
-            Some("org.freedesktop.DBus.Properties"),
-            "Set",
-            &(IFACE, prop, &variant),
-        )
+    let proxy = ProxyBuilder::<zbus::Proxy<'_>>::new(conn)
+        .destination(DEST)
+        .map_err(|e| format!("proxy destination: {e}"))?
+        .path(PATH)
+        .map_err(|e| format!("proxy path: {e}"))?
+        .interface(IFACE)
+        .map_err(|e| format!("proxy interface: {e}"))?
+        .build()
+        .await
+        .map_err(|e| format!("proxy build: {e}"))?;
+
+    proxy
+        .set_property(prop, value)
         .await
         .map_err(|e| format!("D-Bus Properties.Set {prop} = {value} failed: {e}"))?;
 
