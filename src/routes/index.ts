@@ -102,6 +102,11 @@ const routes = [
 		name: 'language-keyboard',
 		component: () => import('@/views/LanguageKeyboardView.vue'),
 	},
+	{
+		path: '/online-accounts',
+		name: 'online-accounts',
+		component: () => import('@/views/OnlineAccountsView.vue'),
+	},
 ];
 export const router = createRouter({
 	history: createMemoryHistory(),

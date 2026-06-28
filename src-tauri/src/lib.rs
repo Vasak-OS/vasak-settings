@@ -2,6 +2,7 @@ mod commands;
 mod logger;
 mod structs;
 mod tools;
+mod utils;
 mod audio;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -52,6 +53,13 @@ pub fn run() {
             commands::language::get_available_keyboard_variants,
             commands::language::set_keyboard_layouts,
             commands::language::get_keyboard_layouts_from_wayfire,
+            commands::online_accounts::register_new_account,
+            commands::online_accounts::list_accounts,
+            commands::online_accounts::remove_account,
+            commands::online_accounts::start_google_oauth,
+            commands::online_accounts::account_manager_ping,
+            commands::online_accounts::get_account_data,
+            commands::online_accounts::get_access_token,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
