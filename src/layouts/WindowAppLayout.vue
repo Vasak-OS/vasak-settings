@@ -79,7 +79,6 @@ const sidebarCategories: SidebarCategory[] = [
 			{ id: 'language-keyboard', label: 'Idioma y Teclado', icon: 'preferences-desktop-locale' },
 			{ id: 'power', label: 'Energía', icon: 'battery' },
 			{ id: 'monitors', label: 'Pantallas', icon: 'video-display' },
-			{ id: 'online-accounts', label: 'Cuentas en Línea', icon: 'preferences-system-network-vpn'}
 		],
 	},
 	{
