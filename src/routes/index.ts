@@ -93,6 +93,11 @@ const routes = [
 		component: () => import('@/views/WayfirePluginsView.vue'),
 	},
 	{
+		path: '/datetime',
+		name: 'datetime',
+		component: () => import('@/views/DateTimeView.vue'),
+	},
+	{
 		path: '/power',
 		name: 'power',
 		component: () => import('@/views/PowerView.vue'),
