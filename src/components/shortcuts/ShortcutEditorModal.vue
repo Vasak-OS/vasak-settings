@@ -142,6 +142,21 @@ const handleSubmit = () => {
 	});
 };
 
+const KEY_NAME_MAP: Record<string, string> = {
+	AudioVolumeMute: 'KEY_MUTE',
+	AudioVolumeDown: 'KEY_VOLUMEDOWN',
+	AudioVolumeUp: 'KEY_VOLUMEUP',
+	BrightnessDown: 'KEY_BRIGHTNESSDOWN',
+	BrightnessUp: 'KEY_BRIGHTNESSUP',
+	MediaPlayPause: 'KEY_PLAYPAUSE',
+	MediaStop: 'KEY_STOPCD',
+	MediaTrackPrevious: 'KEY_PREVIOUSSONG',
+	MediaTrackNext: 'KEY_NEXTSONG',
+	MicrophoneToggle: 'KEY_MICMUTE',
+	CameraToggle: 'KEY_CAMERA',
+	CameraFocus: 'KEY_CAMERA',
+};
+
 const keyTokenFromEvent = (event: KeyboardEvent): string | null => {
 	const { key, code } = event;
 
@@ -173,7 +188,15 @@ const keyTokenFromEvent = (event: KeyboardEvent): string | null => {
 	if (code === 'NumpadDivide') return 'KEY_KPSLASH';
 	if (code === 'NumpadDecimal') return 'KEY_KPDOT';
 
-	return SPECIAL_CODE_MAP[code] || null;
+	const codeMatch = SPECIAL_CODE_MAP[code];
+	if (codeMatch) return codeMatch;
+
+	if (key && !key.startsWith('Unidentified')) {
+		const keyMatch = KEY_NAME_MAP[key];
+		if (keyMatch) return keyMatch;
+	}
+
+	return null;
 };
 
 const captureShortcut = (event: KeyboardEvent) => {
