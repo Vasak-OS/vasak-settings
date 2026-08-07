@@ -14,7 +14,7 @@ import { getSystemInfo } from '@/services/system.service';
 import type { SystemInfo } from '@/types/system';
 
 const refreshIntervalMs = 30000;
-let refreshTimer: ReturnType<typeof window.setInterval> | null = null;
+let refreshTimer: number | null = null;
 
 const systemInfo = ref<SystemInfo | null>(null);
 const loading = ref(true);

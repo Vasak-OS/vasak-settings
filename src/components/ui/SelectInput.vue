@@ -11,8 +11,10 @@ const props = withDefaults(defineProps<Props>(), {
 	disabled: false,
 });
 
+// A <select> always yields a string, so narrowing the emit lets callers type
+// their handlers as (value: string) instead of widening every one of them.
 const emit = defineEmits<{
-	'update:modelValue': [value: string | number];
+	'update:modelValue': [value: string];
 }>();
 
 const updateValue = (event: Event) => {

@@ -158,10 +158,6 @@ const handleCancel = () => {
 	resetForm();
 	emit('cancel');
 };
-
-const handleClose = () => {
-	emit('update:open', false);
-};
 </script>
 
 <template>

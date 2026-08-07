@@ -39,7 +39,7 @@ interface SchemeVariant {
 		text: {
 			main: string;
 			muted: string;
-			on_primary: string;
+			'on-primary': string;
 		};
 		background: string;
 		border: string;
@@ -108,7 +108,7 @@ const buildPreviewValues = (variant?: SchemeVariant): SchemePreviewValue[] => {
 		{ label: 'Secundario', value: variant.ui.color.secondary },
 		{ label: 'Texto', value: variant.ui.text.main },
 		{ label: 'Texto suave', value: variant.ui.text.muted },
-		{ label: 'Sobre primario', value: variant.ui.text.on_primary },
+		{ label: 'Sobre primario', value: variant.ui.text['on-primary'] },
 		{ label: 'Terminal fondo', value: variant.terminal.background },
 		{ label: 'Terminal texto', value: variant.terminal.foreground },
 	];

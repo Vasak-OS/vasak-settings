@@ -323,7 +323,7 @@ const handleCancel = () => {
 						<button
 							type="button"
 							class="rounded-corner border border-ui-border bg-ui-surface/60 px-2.5 py-1.5 text-xs font-medium text-tx-primary transition-colors hover:bg-ui-surface"
-							@click="() => { keys.value = ''; formError.value = ''; }"
+							@click="clearShortcut"
 						>
 							Limpiar
 						</button>

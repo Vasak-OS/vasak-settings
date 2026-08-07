@@ -11,9 +11,9 @@ import { SPECIAL_KEYS, type SpecialKeyDef } from '@/config/specialKeys';
 import {
 	getShortcuts,
 	normalizeShortcutKeys,
-	type ShortcutRule,
 	saveShortcuts,
 } from '@/services/shortcuts.service';
+import type { ShortcutRule } from '@/types/shortcuts';
 
 const loading = ref(true);
 const saving = ref(false);

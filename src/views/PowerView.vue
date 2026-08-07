@@ -7,7 +7,7 @@ import SectionCard from '@/components/ui/SectionCard.vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import ProfileIcon from '@/components/ui/ProfileIcon.vue';
 
-const { info, loading, error, start: startPolling } = useBattery(5000);
+const { info, error, start: startPolling } = useBattery(5000);
 const { profiles, active, loading: profilesLoading, error: profilesError, load: loadProfiles, setActive } = usePowerProfiles();
 
 const [batteryIcon] = useReactiveIcon(() => {

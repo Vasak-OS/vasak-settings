@@ -355,8 +355,8 @@ onMounted(async () => {
 					@click="handleProviderClick(provider)"
 				>
 					<img
-						v-if="providerIcons[provider.kind]"
-						:src="providerIcons[provider.kind]"
+						v-if="providerIcons[provider.kind].value"
+						:src="providerIcons[provider.kind].value"
 						:alt="provider.label"
 						class="h-10 w-10"
 					/>
