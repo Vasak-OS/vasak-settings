@@ -88,6 +88,11 @@ const routes = [
 		component: () => import('@/views/WayfireAutostartView.vue'),
 	},
 	{
+		path: '/wayfire-plugins',
+		name: 'wayfire-plugins',
+		component: () => import('@/views/WayfirePluginsView.vue'),
+	},
+	{
 		path: '/power',
 		name: 'power',
 		component: () => import('@/views/PowerView.vue'),

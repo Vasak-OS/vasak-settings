@@ -70,6 +70,7 @@ const sidebarCategories: SidebarCategory[] = [
 			{ id: 'wayfire-appearance', label: 'Apariencia WM', icon: 'preferences-desktop-theme' },
 			{ id: 'wayfire-effects', label: 'Efectos', icon: 'preferences-desktop-effects' },
 			{ id: 'wayfire-autostart', label: 'Autoinicio', icon: 'system-run' },
+			{ id: 'wayfire-plugins', label: 'Plugins', icon: 'application-x-addon' },
 		],
 	},
 	{
