@@ -507,6 +507,32 @@ slot_c = <super> KEY_UP
 		);
 	}
 
+	/// The workspaces and windows pages both edit [core] now, which is the very
+	/// section holding the continued plugin list.
+	#[test]
+	fn editing_core_itself_preserves_the_continued_plugin_list() {
+		let updated = update_section(
+			SAMPLE,
+			"core",
+			&values(&[("vwidth", "4"), ("vheight", "3")]),
+			false,
+		);
+
+		let core = parse_section(&updated, "core");
+		assert_eq!(
+			core.get("plugins").map(String::as_str),
+			Some("animate autostart blur ipc")
+		);
+		assert_eq!(core.get("vwidth").map(String::as_str), Some("4"));
+		assert_eq!(core.get("vheight").map(String::as_str), Some("3"));
+		assert_eq!(
+			core.get("close_top_view").map(String::as_str),
+			Some("<super> KEY_Q | <alt> KEY_F4"),
+			"unmanaged core keys stay"
+		);
+		assert!(updated.contains("  animate \\"), "continuation lines intact");
+	}
+
 	#[test]
 	fn new_keys_are_appended_inside_the_section() {
 		let updated = update_section(SAMPLE, "grid", &values(&[("restore", "<super> KEY_DOWN")]), false);

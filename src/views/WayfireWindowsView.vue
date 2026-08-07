@@ -5,8 +5,19 @@ import FormGroup from '@/components/ui/FormGroup.vue';
 import KeyBindingInput from '@/components/ui/KeyBindingInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import PluginSection from '@/components/ui/PluginSection.vue';
+import SectionCard from '@/components/ui/SectionCard.vue';
+import SelectInput from '@/components/ui/SelectInput.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import { useWayfireSection } from '@/composables/useWayfireSection';
+
+// [core] keys that belong here and had no UI: closing a window and who draws
+// the window decorations.
+const core = useWayfireSection('core');
+
+const decorationModes = [
+	{ label: 'La aplicación (cliente)', value: 'client' },
+	{ label: 'El compositor (servidor)', value: 'server' },
+];
 
 const grid = useWayfireSection('grid');
 const move = useWayfireSection('move');
@@ -62,13 +73,15 @@ onMounted(async () => {
 		toggle_showdesktop: '',
 		send_to_back: '',
 	});
+	await core.load();
+	core.initDefaults({
+		close_top_view: '<super> KEY_Q | <alt> KEY_F4',
+		preferred_decoration_mode: 'client',
+	});
 });
 
 async function saveAll() {
-	await grid.save();
-	await move.save();
-	await resize.save();
-	await wmactions.save();
+	await Promise.all([grid.save(), move.save(), resize.save(), wmactions.save(), core.save()]);
 }
 </script>
 
@@ -92,6 +105,25 @@ async function saveAll() {
 		/>
 
 		<form @submit.prevent="saveAll" class="flex flex-col gap-4">
+			<SectionCard>
+				<h3 class="text-base font-medium">General</h3>
+				<div class="mt-3 grid gap-4 sm:grid-cols-2">
+					<FormGroup label="Cerrar ventana">
+						<KeyBindingInput
+							:modelValue="core.getVal('close_top_view', '<super> KEY_Q')"
+							@update:modelValue="core.setVal('close_top_view', $event)"
+						/>
+					</FormGroup>
+					<FormGroup label="Quién dibuja la decoración">
+						<SelectInput
+							:modelValue="core.getVal('preferred_decoration_mode', 'client')"
+							:options="decorationModes"
+							@update:modelValue="core.setVal('preferred_decoration_mode', $event)"
+						/>
+					</FormGroup>
+				</div>
+			</SectionCard>
+
 			<PluginSection plugin-id="move" icon="preferences-system-windows">
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup label="Activar movimiento">
