@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
+import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import { useReactiveIcon } from '@/composables/useReactiveIcon';
 import { useWayfirePlugins } from '@/composables/useWayfirePlugins';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 
 interface Props {
 	/** Wayfire plugin id, as it appears in `[core] plugins`. */
@@ -16,15 +16,16 @@ interface Props {
 const props = defineProps<Props>();
 
 const { get, setEnabled, load } = useWayfirePlugins();
-const [icon] = useReactiveIcon(() => props.icon ?? 'application-x-addon');
+const [iconSrc] = useReactiveIcon(() => props.icon ?? 'application-x-addon');
 
 onMounted(load);
 
 const plugin = computed(() => get(props.pluginId));
 const isEnabled = computed(() => plugin.value?.enabled ?? false);
 const isRequired = computed(() => plugin.value?.required ?? false);
-const title = computed(() => props.title ?? plugin.value?.label ?? props.pluginId);
-const description = computed(() => props.description ?? plugin.value?.description ?? '');
+// Falls back to the registry so each view only has to name the plugin.
+const heading = computed(() => props.title ?? plugin.value?.label ?? props.pluginId);
+const summary = computed(() => props.description ?? plugin.value?.description ?? '');
 
 function handleToggle(value: boolean) {
 	void setEnabled(props.pluginId, value);
@@ -34,11 +35,11 @@ function handleToggle(value: boolean) {
 <template>
 	<article class="rounded-corner border border-ui-border bg-ui-surface/40">
 		<header class="flex items-start gap-3 p-4">
-			<img :src="icon" alt="" class="mt-0.5 h-5 w-5 shrink-0" />
+			<img :src="iconSrc" alt="" class="mt-0.5 h-5 w-5 shrink-0" />
 
 			<div class="min-w-0 flex-1">
-				<h3 class="truncate text-sm font-semibold text-tx-primary">{{ title }}</h3>
-				<p v-if="description" class="mt-0.5 text-xs text-tx-muted">{{ description }}</p>
+				<h3 class="truncate text-sm font-semibold text-tx-primary">{{ heading }}</h3>
+				<p v-if="summary" class="mt-0.5 text-xs text-tx-muted">{{ summary }}</p>
 			</div>
 
 			<!-- Required plugins get no switch at all: the desktop depends on them. -->

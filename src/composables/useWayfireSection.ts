@@ -1,7 +1,16 @@
-import { ref, onUnmounted, type Ref } from 'vue';
-import { readWayfireSection, writeWayfireSection } from '@/services/wayfire.service';
+import { onUnmounted, type Ref, ref } from 'vue';
+import {
+	readWayfireSection,
+	replaceWayfireSection,
+	writeWayfireSection,
+} from '@/services/wayfire.service';
 
-export function useWayfireSection(section: string) {
+/**
+ * @param exclusive when the view owns every key of the section, so saving must
+ * also delete the entries the user removed (autostart). Option views leave this
+ * off, which preserves keys no UI exposes.
+ */
+export function useWayfireSection(section: string, exclusive = false) {
 	const values = ref<Record<string, string>>({}) as Ref<Record<string, string>>;
 	const loading = ref(false);
 	const saving = ref(false);
@@ -32,12 +41,16 @@ export function useWayfireSection(section: string) {
 		saving.value = true;
 		error.value = '';
 		try {
-			await writeWayfireSection(section, values.value);
+			const write = exclusive ? replaceWayfireSection : writeWayfireSection;
+			await write(section, values.value);
 			success.value = 'Configuración guardada correctamente';
 			if (successTimer !== null) {
 				clearTimeout(successTimer);
 			}
-			successTimer = setTimeout(() => { success.value = ''; successTimer = null; }, 3000);
+			successTimer = setTimeout(() => {
+				success.value = '';
+				successTimer = null;
+			}, 3000);
 		} catch (e) {
 			error.value = `Error guardando sección [${section}]: ${e}`;
 		} finally {
@@ -75,21 +88,30 @@ export function useWayfireSection(section: string) {
 		const v = values.value[key];
 		if (v === undefined) return defaultVal;
 		const n = parseInt(v, 10);
-		return isNaN(n) ? defaultVal : n;
+		return Number.isNaN(n) ? defaultVal : n;
 	}
 
 	function getFloat(key: string, defaultVal = 0): number {
 		const v = values.value[key];
 		if (v === undefined) return defaultVal;
 		const n = parseFloat(v);
-		return isNaN(n) ? defaultVal : n;
+		return Number.isNaN(n) ? defaultVal : n;
 	}
 
 	return {
-		values, loading, saving, error, success,
-		load, save, initDefaults,
-		getVal, setVal,
-		getBool, setBool,
-		getInt, getFloat,
+		values,
+		loading,
+		saving,
+		error,
+		success,
+		load,
+		save,
+		initDefaults,
+		getVal,
+		setVal,
+		getBool,
+		setBool,
+		getInt,
+		getFloat,
 	};
 }

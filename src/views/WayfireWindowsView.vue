@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { useWayfireSection } from '@/composables/useWayfireSection';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import FormGroup from '@/components/ui/FormGroup.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
-import KeyBindingInput from '@/components/ui/KeyBindingInput.vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
+import FormGroup from '@/components/ui/FormGroup.vue';
+import KeyBindingInput from '@/components/ui/KeyBindingInput.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
+import PluginSection from '@/components/ui/PluginSection.vue';
+import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+import { useWayfireSection } from '@/composables/useWayfireSection';
 
 const grid = useWayfireSection('grid');
 const move = useWayfireSection('move');
@@ -40,16 +40,27 @@ onMounted(async () => {
 	await Promise.all([grid.load(), move.load(), resize.load(), wmactions.load()]);
 	grid.initDefaults({
 		duration: '300',
-		slot_tl: '', slot_t: '', slot_tr: '',
-		slot_l: '', slot_c: '', slot_r: '',
-		slot_bl: '', slot_b: '', slot_br: '',
+		slot_tl: '',
+		slot_t: '',
+		slot_tr: '',
+		slot_l: '',
+		slot_c: '',
+		slot_r: '',
+		slot_bl: '',
+		slot_b: '',
+		slot_br: '',
 		restore: '',
 	});
 	move.initDefaults({ activate: '<super> BTN_LEFT', enable_snap: 'true', snap_threshold: '10' });
 	resize.initDefaults({ activate: '<super> BTN_RIGHT' });
 	wmactions.initDefaults({
-		toggle_fullscreen: '', toggle_always_on_top: '', toggle_sticky: '',
-		toggle_maximize: '', minimize: '', toggle_showdesktop: '', send_to_back: '',
+		toggle_fullscreen: '',
+		toggle_always_on_top: '',
+		toggle_sticky: '',
+		toggle_maximize: '',
+		minimize: '',
+		toggle_showdesktop: '',
+		send_to_back: '',
 	});
 });
 
@@ -81,7 +92,7 @@ async function saveAll() {
 		/>
 
 		<form @submit.prevent="saveAll" class="flex flex-col gap-4">
-			<SectionCard title="Mover ventanas">
+			<PluginSection plugin-id="move" icon="preferences-system-windows">
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup label="Activar movimiento">
 						<KeyBindingInput
@@ -104,9 +115,9 @@ async function saveAll() {
 						/>
 					</FormGroup>
 				</div>
-			</SectionCard>
+			</PluginSection>
 
-			<SectionCard title="Redimensionar ventanas">
+			<PluginSection plugin-id="resize" icon="preferences-system-windows">
 				<div class="grid gap-4 sm:grid-cols-1">
 					<FormGroup label="Activar redimensión">
 						<KeyBindingInput
@@ -115,9 +126,9 @@ async function saveAll() {
 						/>
 					</FormGroup>
 				</div>
-			</SectionCard>
+			</PluginSection>
 
-			<SectionCard title="Grid (posicionamiento)">
+			<PluginSection plugin-id="grid" icon="view-grid">
 				<div class="mb-3">
 					<label class="text-sm font-medium">Duración de animación (ms)</label>
 					<input
@@ -135,9 +146,9 @@ async function saveAll() {
 						/>
 					</FormGroup>
 				</div>
-			</SectionCard>
+			</PluginSection>
 
-			<SectionCard title="Acciones de ventana">
+			<PluginSection plugin-id="wm-actions" icon="preferences-system-windows">
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup v-for="a in winActions" :key="a.key" :label="a.label">
 						<KeyBindingInput
@@ -146,7 +157,7 @@ async function saveAll() {
 						/>
 					</FormGroup>
 				</div>
-			</SectionCard>
+			</PluginSection>
 
 			<div class="flex justify-end">
 				<button

@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
-import { useWayfireSection } from '@/composables/useWayfireSection';
-import { useWayfirePlugins } from '@/composables/useWayfirePlugins';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import PluginSection from '@/components/ui/PluginSection.vue';
+import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import KeyBindingInput from '@/components/ui/KeyBindingInput.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
+import PluginSection from '@/components/ui/PluginSection.vue';
 import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
+import { useWayfirePlugins } from '@/composables/useWayfirePlugins';
+import { useWayfireSection } from '@/composables/useWayfireSection';
 
 const blur = useWayfireSection('blur');
 const wobbly = useWayfireSection('wobbly');
@@ -23,9 +23,17 @@ const wrot = useWayfireSection('wrot');
 const { load: loadPlugins, error: pluginsError } = useWayfirePlugins();
 
 const sectionError = computed(() => {
-	return blur.error.value || wobbly.error.value || zoom.error.value
-		|| alpha.error.value || invert.error.value || fisheye.error.value
-		|| cube.error.value || wrot.error.value || pluginsError.value;
+	return (
+		blur.error.value ||
+		wobbly.error.value ||
+		zoom.error.value ||
+		alpha.error.value ||
+		invert.error.value ||
+		fisheye.error.value ||
+		cube.error.value ||
+		wrot.error.value ||
+		pluginsError.value
+	);
 });
 
 const blurMethods = [
@@ -44,23 +52,46 @@ const backgroundModes = [
 onMounted(async () => {
 	await Promise.all([
 		loadPlugins(),
-		blur.load(), wobbly.load(), zoom.load(), alpha.load(),
-		invert.load(), fisheye.load(), cube.load(), wrot.load(),
+		blur.load(),
+		wobbly.load(),
+		zoom.load(),
+		alpha.load(),
+		invert.load(),
+		fisheye.load(),
+		cube.load(),
+		wrot.load(),
 	]);
-	blur.initDefaults({ method: 'kawase', blur_by_default: 'all', saturation: '1.0', offset: '1.7', iterations: '2' });
+	blur.initDefaults({
+		method: 'kawase',
+		blur_by_default: 'all',
+		saturation: '1.0',
+		offset: '1.7',
+		iterations: '2',
+	});
 	wobbly.initDefaults({ friction: '3.0', spring_k: '8.0', grid_resolution: '6' });
 	zoom.initDefaults({ modifier: '<super>' });
 	alpha.initDefaults({ modifier: '<super> <alt>' });
 	invert.initDefaults({ toggle: '<super> KEY_I' });
 	fisheye.initDefaults({ toggle: '<super> <ctrl> KEY_F', radius: '450', zoom: '7.0' });
-	cube.initDefaults({ activate: '<ctrl> <alt> BTN_LEFT', zoom: '0.1', light: 'true', background_mode: 'simple' });
+	cube.initDefaults({
+		activate: '<ctrl> <alt> BTN_LEFT',
+		zoom: '0.1',
+		light: 'true',
+		background_mode: 'simple',
+	});
 	wrot.initDefaults({ activate: '<super> <ctrl> BTN_RIGHT' });
 });
 
 async function saveAll() {
 	await Promise.all([
-		blur.save(), wobbly.save(), zoom.save(), alpha.save(),
-		invert.save(), fisheye.save(), cube.save(), wrot.save(),
+		blur.save(),
+		wobbly.save(),
+		zoom.save(),
+		alpha.save(),
+		invert.save(),
+		fisheye.save(),
+		cube.save(),
+		wrot.save(),
 	]);
 }
 </script>

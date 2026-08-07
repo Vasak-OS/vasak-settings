@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
-import { useWayfireSection } from '@/composables/useWayfireSection';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import FormGroup from '@/components/ui/FormGroup.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
-import KeyBindingInput from '@/components/ui/KeyBindingInput.vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
+import FormGroup from '@/components/ui/FormGroup.vue';
+import KeyBindingInput from '@/components/ui/KeyBindingInput.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
+import PluginSection from '@/components/ui/PluginSection.vue';
+import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+import { useWayfireSection } from '@/composables/useWayfireSection';
 
 const vswitch = useWayfireSection('vswitch');
 const expo = useWayfireSection('expo');
@@ -18,15 +18,27 @@ onMounted(async () => {
 	vswitch.initDefaults({
 		duration: '300',
 		wraparound: 'false',
-		binding_left: '', binding_down: '', binding_up: '', binding_right: '',
-		with_win_left: '', with_win_down: '', with_win_up: '', with_win_right: '',
+		binding_left: '',
+		binding_down: '',
+		binding_up: '',
+		binding_right: '',
+		with_win_left: '',
+		with_win_down: '',
+		with_win_up: '',
+		with_win_right: '',
 	});
 	expo.initDefaults({
 		toggle: '',
 		duration: '300',
-		select_workspace_1: '', select_workspace_2: '', select_workspace_3: '',
-		select_workspace_4: '', select_workspace_5: '', select_workspace_6: '',
-		select_workspace_7: '', select_workspace_8: '', select_workspace_9: '',
+		select_workspace_1: '',
+		select_workspace_2: '',
+		select_workspace_3: '',
+		select_workspace_4: '',
+		select_workspace_5: '',
+		select_workspace_6: '',
+		select_workspace_7: '',
+		select_workspace_8: '',
+		select_workspace_9: '',
 	});
 });
 
@@ -50,7 +62,7 @@ async function saveAll() {
 			message="Configuración guardada correctamente" />
 
 		<form @submit.prevent="saveAll" class="flex flex-col gap-4">
-			<SectionCard title="Cambio de espacios (vswitch)">
+			<PluginSection plugin-id="vswitch" icon="video-display">
 				<div class="mb-3">
 					<div class="grid gap-4 sm:grid-cols-2">
 						<FormGroup label="Duración de animación (ms)">
@@ -89,9 +101,9 @@ async function saveAll() {
 						/>
 					</FormGroup>
 				</div>
-			</SectionCard>
+			</PluginSection>
 
-			<SectionCard title="Vista general (expo)">
+			<PluginSection plugin-id="expo" icon="view-grid">
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup label="Alternar vista general">
 						<KeyBindingInput
@@ -118,7 +130,7 @@ async function saveAll() {
 						/>
 					</FormGroup>
 				</div>
-			</SectionCard>
+			</PluginSection>
 
 			<div class="flex justify-end">
 		<button

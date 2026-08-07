@@ -1,18 +1,14 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { useReactiveIcon } from '@/composables/useReactiveIcon';
-import { useWayfireSection } from '@/composables/useWayfireSection';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import FormGroup from '@/components/ui/FormGroup.vue';
-import SelectInput from '@/components/ui/SelectInput.vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
+import FormGroup from '@/components/ui/FormGroup.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
+import PluginSection from '@/components/ui/PluginSection.vue';
+import SelectInput from '@/components/ui/SelectInput.vue';
+import { useWayfireSection } from '@/composables/useWayfireSection';
 
 const decoration = useWayfireSection('decoration');
 const animate = useWayfireSection('animate');
-
-const [decorationIcon] = useReactiveIcon('preferences-desktop-theme');
-const [animateIcon] = useReactiveIcon('preferences-desktop-effects');
 
 const animationOptions = [
 	{ label: 'Ninguna', value: 'none' },
@@ -60,17 +56,11 @@ async function saveAll() {
 			message="Configuración guardada correctamente" />
 
 		<form @submit.prevent="saveAll" class="flex flex-col gap-4">
-			<SectionCard>
-				<div class="mb-4 flex items-start gap-3">
-					<img v-if="decorationIcon" :src="decorationIcon" class="mt-0.5 h-8 w-8 shrink-0" />
-					<div>
-						<h3 class="text-base font-medium">Decoración de ventanas</h3>
-						<p class="mt-0.5 text-sm text-tx-muted">
-							Personaliza la barra de título, bordes y botones de las ventanas.
-							Los colores se expresan en formato RGBA hexadecimal (<code>#RRGGBBAA</code>).
-						</p>
-					</div>
-				</div>
+			<PluginSection
+				plugin-id="decoration"
+				icon="preferences-desktop-theme"
+				description="Barra de título, bordes y botones. Los colores van en RGBA hexadecimal (#RRGGBBAA)."
+			>
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup label="Fuente del título">
 						<input
@@ -138,19 +128,13 @@ async function saveAll() {
 						/>
 					</FormGroup>
 				</div>
-			</SectionCard>
+			</PluginSection>
 
-			<SectionCard>
-				<div class="mb-4 flex items-start gap-3">
-					<img v-if="animateIcon" :src="animateIcon" class="mt-0.5 h-8 w-8 shrink-0" />
-					<div>
-						<h3 class="text-base font-medium">Animaciones</h3>
-						<p class="mt-0.5 text-sm text-tx-muted">
-							Controla cómo aparecen y desaparecen las ventanas. La duración global
-							se aplica a la animación de las ventanas (zoom/fade/fuego).
-						</p>
-					</div>
-				</div>
+			<PluginSection
+				plugin-id="animate"
+				icon="preferences-desktop-effects"
+				description="Cómo aparecen y desaparecen las ventanas."
+			>
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup label="Animación de apertura">
 						<SelectInput
@@ -175,7 +159,7 @@ async function saveAll() {
 						/>
 					</FormGroup>
 				</div>
-			</SectionCard>
+			</PluginSection>
 
 			<div class="flex justify-end">
 				<button
