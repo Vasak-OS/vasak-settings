@@ -2,10 +2,12 @@
 import { computed, onMounted, ref } from 'vue';
 import ShortcutDeleteModal from '@/components/shortcuts/ShortcutDeleteModal.vue';
 import ShortcutEditorModal from '@/components/shortcuts/ShortcutEditorModal.vue';
+import SpecialKeysCard from '@/components/shortcuts/SpecialKeysCard.vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
+import { SPECIAL_KEYS, type SpecialKeyDef } from '@/config/specialKeys';
 import {
 	getShortcuts,
 	normalizeShortcutKeys,
@@ -23,6 +25,7 @@ const showEditor = ref(false);
 const showDelete = ref(false);
 const editingIndex = ref<number | null>(null);
 const shortcutToDelete = ref<ShortcutRule | null>(null);
+const defaultShortcut = ref<ShortcutRule | null>(null);
 const shortcutToDeleteIndex = ref<number | null>(null);
 
 const visibleShortcuts = computed(() => {
@@ -118,12 +121,52 @@ const handleDeleteConfirm = async () => {
 const closeEditor = () => {
 	showEditor.value = false;
 	editingIndex.value = null;
+	defaultShortcut.value = null;
 };
 
 const closeDelete = () => {
 	showDelete.value = false;
 	shortcutToDelete.value = null;
 	shortcutToDeleteIndex.value = null;
+};
+
+const handleSpecialKeyEdit = async (def: SpecialKeyDef) => {
+	defaultShortcut.value = {
+		keys: def.keyToken,
+		action: 'launch',
+		target: def.defaultTarget,
+	};
+	editingIndex.value = null;
+	showEditor.value = true;
+};
+
+const handleSpecialKeyEditCustom = (index: number) => {
+	editingIndex.value = index;
+	showEditor.value = true;
+};
+
+const resetSpecialDefaults = async () => {
+	const existing = new Set(shortcuts.value.map((s) => s.keys));
+	const toAdd: ShortcutRule[] = [];
+
+	for (const sk of SPECIAL_KEYS) {
+		if (!existing.has(sk.keyToken) && sk.defaultTarget) {
+			toAdd.push({
+				keys: sk.keyToken,
+				action: 'launch',
+				target: sk.defaultTarget,
+			});
+		}
+	}
+
+	if (toAdd.length === 0) {
+		successMessage.value = 'Todos los valores por defecto ya están asignados';
+		window.setTimeout(() => (successMessage.value = ''), 3000);
+		return;
+	}
+
+	shortcuts.value.push(...toAdd);
+	await persistShortcuts();
 };
 
 onMounted(loadShortcuts);
@@ -214,11 +257,27 @@ onMounted(loadShortcuts);
 					<EmptyStateBox v-else message="No hay shortcuts configurados" padding="md" />
 				</div>
 			</SectionCard>
+
+			<SpecialKeysCard
+				:shortcuts="shortcuts"
+				@edit="handleSpecialKeyEdit"
+				@edit-custom="handleSpecialKeyEditCustom"
+			/>
+
+			<button
+				type="button"
+				class="self-start rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2 text-sm font-medium text-tx-primary transition-colors hover:bg-ui-surface"
+				:disabled="saving"
+				@click="resetSpecialDefaults"
+			>
+				Restablecer valores por defecto
+			</button>
 		</div>
 
 		<ShortcutEditorModal
 			v-model:open="showEditor"
 			:shortcut="editingIndex !== null ? shortcuts[editingIndex] : null"
+			:default-shortcut="editingIndex === null ? defaultShortcut : null"
 			@submit="handleEditorSubmit"
 			@cancel="closeEditor"
 		/>

@@ -8,9 +8,13 @@ import type { ShortcutRule } from '@/types/shortcuts';
 interface Props {
 	open: boolean;
 	shortcut?: ShortcutRule | null;
+	defaultShortcut?: ShortcutRule | null;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+	shortcut: null,
+	defaultShortcut: null,
+});
 
 const emit = defineEmits<{
 	'update:open': [boolean];
@@ -53,6 +57,21 @@ const SPECIAL_CODE_MAP: Record<string, string> = {
 	Period: 'KEY_DOT',
 	Slash: 'KEY_SLASH',
 	Backquote: 'KEY_GRAVE',
+	VolumeDown: 'KEY_VOLUMEDOWN',
+	VolumeUp: 'KEY_VOLUMEUP',
+	VolumeMute: 'KEY_MUTE',
+	MicrophoneMuteToggle: 'KEY_MICMUTE',
+	CameraToggle: 'KEY_CAMERA',
+	BrightnessDown: 'KEY_BRIGHTNESSDOWN',
+	BrightnessUp: 'KEY_BRIGHTNESSUP',
+	MediaPlayPause: 'KEY_PLAYPAUSE',
+	MediaStop: 'KEY_STOPCD',
+	MediaPreviousTrack: 'KEY_PREVIOUSSONG',
+	MediaNextTrack: 'KEY_NEXTSONG',
+	MediaSelect: 'KEY_MEDIA',
+	Mail: 'KEY_EMAIL',
+	Calculator: 'KEY_CALCULATOR',
+	Sleep: 'KEY_SLEEP',
 };
 
 const isEditing = computed(() => Boolean(props.shortcut));
@@ -65,9 +84,10 @@ const dialogDescription = computed(() =>
 );
 
 const resetForm = () => {
-	keys.value = props.shortcut?.keys || '';
-	action.value = props.shortcut?.action || 'launch';
-	target.value = props.shortcut?.target || '';
+	const src = props.shortcut || props.defaultShortcut;
+	keys.value = src?.keys || '';
+	action.value = src?.action || 'launch';
+	target.value = src?.target || '';
 	formError.value = '';
 	liveKeys.value = [];
 	pressedKeys.value = [];
