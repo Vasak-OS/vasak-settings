@@ -79,6 +79,7 @@ const sidebarCategories: SidebarCategory[] = [
 		items: [
 			{ id: 'language-keyboard', label: 'Idioma y Teclado', icon: 'preferences-desktop-locale' },
 			{ id: 'datetime', label: 'Fecha y hora', icon: 'preferences-system-time' },
+			{ id: 'brightness', label: 'Brillo y luz nocturna', icon: 'display-brightness' },
 			{ id: 'power', label: 'Energía', icon: 'battery' },
 			{ id: 'monitors', label: 'Pantallas', icon: 'video-display' },
 		],

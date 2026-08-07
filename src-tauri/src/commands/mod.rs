@@ -3,6 +3,7 @@ pub mod system_config;
 pub mod audio;
 pub mod shortcuts;
 pub mod datetime;
+pub mod display_power;
 pub mod wayfire_ini;
 pub mod wayfire_plugins;
 pub mod battery;

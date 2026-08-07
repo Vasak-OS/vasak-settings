@@ -98,6 +98,11 @@ const routes = [
 		component: () => import('@/views/DateTimeView.vue'),
 	},
 	{
+		path: '/brightness',
+		name: 'brightness',
+		component: () => import('@/views/DisplayBrightnessView.vue'),
+	},
+	{
 		path: '/power',
 		name: 'power',
 		component: () => import('@/views/PowerView.vue'),
