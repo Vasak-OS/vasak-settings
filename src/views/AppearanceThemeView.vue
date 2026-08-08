@@ -6,6 +6,7 @@ import {
 	type VSKConfig,
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import type { Store } from 'pinia';
 import { computed, onMounted, type Ref, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
@@ -68,6 +69,8 @@ interface SchemeItem {
 	};
 }
 
+const { t } = useI18n();
+
 const configStore = ref<any>(null);
 const gtkThemes = ref<string[]>([]);
 const cursorThemes = ref<string[]>([]);
@@ -102,16 +105,22 @@ const buildPreviewValues = (variant?: SchemeVariant): SchemePreviewValue[] => {
 	}
 
 	return [
-		{ label: 'Fondo', value: variant.ui.background },
-		{ label: 'Superficie', value: variant.ui.surface },
-		{ label: 'Borde', value: variant.ui.border },
-		{ label: 'Primario', value: variant.ui.color.primary },
-		{ label: 'Secundario', value: variant.ui.color.secondary },
-		{ label: 'Texto', value: variant.ui.text.main },
-		{ label: 'Texto suave', value: variant.ui.text.muted },
-		{ label: 'Sobre primario', value: variant.ui.text['on-primary'] },
-		{ label: 'Terminal fondo', value: variant.terminal.background },
-		{ label: 'Terminal texto', value: variant.terminal.foreground },
+		{ label: t('views.appearanceTheme.colors.background'), value: variant.ui.background },
+		{ label: t('views.appearanceTheme.colors.surface'), value: variant.ui.surface },
+		{ label: t('views.appearanceTheme.colors.border'), value: variant.ui.border },
+		{ label: t('views.appearanceTheme.colors.primary'), value: variant.ui.color.primary },
+		{ label: t('views.appearanceTheme.colors.secondary'), value: variant.ui.color.secondary },
+		{ label: t('views.appearanceTheme.colors.text'), value: variant.ui.text.main },
+		{ label: t('views.appearanceTheme.colors.textMuted'), value: variant.ui.text.muted },
+		{ label: t('views.appearanceTheme.colors.onPrimary'), value: variant.ui.text['on-primary'] },
+		{
+			label: t('views.appearanceTheme.colors.terminalBackground'),
+			value: variant.terminal.background,
+		},
+		{
+			label: t('views.appearanceTheme.colors.terminalForeground'),
+			value: variant.terminal.foreground,
+		},
 	];
 };
 
@@ -191,7 +200,7 @@ onMounted(async () => {
 			selectedSchemeId.value = schemes.value[0].scheme.id;
 		}
 	} catch (err) {
-		error.value = `Error cargando configuración: ${err}`;
+		error.value = t('views.appearanceTheme.errorLoading').replace('{0}', String(err));
 		console.error(err);
 	} finally {
 		loading.value = false;
@@ -222,11 +231,11 @@ const saveConfig = async () => {
 			vskConfig.value.style.radius < 1 ||
 			vskConfig.value.style.radius > 20
 		) {
-			throw new Error('Border radius debe estar entre 1 y 20');
+			throw new Error(t('views.appearanceTheme.invalidRadius'));
 		}
 
 		if (!selectedSchemeId.value) {
-			throw new Error('Debes seleccionar un scheme');
+			throw new Error(t('views.appearanceTheme.schemeRequired'));
 		}
 
 		if (vskConfig.value?.style?.darkmode !== (configStore.value.config?.style?.darkmode || false)) {
@@ -240,12 +249,12 @@ const saveConfig = async () => {
 		await writeConfig(vskConfig.value);
 		await applySystemChanges();
 
-		successMessage.value = 'Configuración guardada exitosamente';
+		successMessage.value = t('views.appearanceTheme.saved');
 		setTimeout(() => {
 			successMessage.value = '';
 		}, 3000);
 	} catch (err) {
-		error.value = `Error guardando configuración: ${err}`;
+		error.value = t('views.appearanceTheme.errorSaving').replace('{0}', String(err));
 		console.error(err);
 	} finally {
 		saving.value = false;
@@ -260,9 +269,9 @@ const isFormValid = computed(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4">
 		<PageHeader
-			section="Apariencia"
-			title="Tema y UI"
-			description="Personaliza colores, formas, temas del escritorio y el scheme visual de VasakOS."
+			:section="t('sidebar.appearance')"
+			:title="t('views.appearanceTheme.title')"
+			:description="t('views.appearanceTheme.description')"
 		>
 			<template #actions>
 				<button
@@ -272,12 +281,12 @@ const isFormValid = computed(() => {
 					:disabled="!isFormValid || saving"
 					@click="saveConfig"
 				>
-					{{ saving ? 'Guardando...' : 'Aplicar Cambios' }}
+					{{ saving ? t('common.saving') : t('views.appearanceTheme.applyChanges') }}
 				</button>
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" message="Cargando configuración..." padding="lg" />
+		<EmptyStateBox v-if="loading" :message="t('views.appearanceTheme.loading')" padding="lg" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
 			<AlertMessage v-if="error" :message="error" tone="error" />
@@ -285,9 +294,9 @@ const isFormValid = computed(() => {
 
 			<div class="grid gap-4 xl:grid-cols-2">
 				<SectionCard>
-					<h3 class="mb-4 text-lg font-medium text-tx-primary">Estilos Base</h3>
+					<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.appearanceTheme.baseStyles') }}</h3>
 					<div class="flex flex-col gap-5">
-						<FormGroup label="Border Radius" html-for="border-radius" :label-class="'flex justify-between w-full'">
+						<FormGroup :label="t('views.appearanceTheme.borderRadius')" html-for="border-radius" :label-class="'flex justify-between w-full'">
 							<template #default>
 								<div class="flex items-center gap-3">
 									<span class="w-6 text-xs text-tx-muted">1px</span>
@@ -297,7 +306,7 @@ const isFormValid = computed(() => {
 							</template>
 						</FormGroup>
 
-						<FormGroup label="Color Primario" html-for="primary-color">
+						<FormGroup :label="t('views.appearanceTheme.primaryColor')" html-for="primary-color">
 							<div class="flex items-center gap-3">
 								<input
 									v-if="vskConfig"
@@ -317,23 +326,23 @@ const isFormValid = computed(() => {
 						</FormGroup>
 
 						<div class="flex items-center justify-between">
-							<label class="text-sm font-medium text-tx-primary">Modo Oscuro</label>
+							<label class="text-sm font-medium text-tx-primary">{{ t('views.appearanceTheme.darkMode') }}</label>
 							<div class="flex items-center gap-3">
 								<SwitchToggle v-if="vskConfig" :is-on="vskConfig.style.darkmode" @toggle="val => (vskConfig!.style.darkmode = val)" />
-								<span class="w-20 text-xs text-tx-muted">{{ vskConfig?.style.darkmode ? 'Activado' : 'Desactivado' }}</span>
+								<span class="w-20 text-xs text-tx-muted">{{ vskConfig?.style.darkmode ? t('views.appearanceTheme.enabled') : t('views.appearanceTheme.disabled') }}</span>
 							</div>
 						</div>
 					</div>
 				</SectionCard>
 
 				<SectionCard>
-					<h3 class="mb-4 text-lg font-medium text-tx-primary">Temas del Sistema</h3>
+					<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.appearanceTheme.systemThemes') }}</h3>
 					<div class="flex flex-col gap-5">
-						<FormGroup label="Tema GTK" html-for="gtk-theme">
+						<FormGroup :label="t('views.appearanceTheme.gtkTheme')" html-for="gtk-theme">
 							<SelectInput id="gtk-theme" v-model="selectedGtkTheme" :options="gtkThemes" />
 						</FormGroup>
 
-						<FormGroup label="Tema de Cursor" html-for="cursor-theme">
+						<FormGroup :label="t('views.appearanceTheme.cursorTheme')" html-for="cursor-theme">
 							<SelectInput id="cursor-theme" v-model="selectedCursorTheme" :options="cursorThemes" />
 						</FormGroup>
 					</div>
@@ -342,14 +351,14 @@ const isFormValid = computed(() => {
 
 			<SectionCard>
 				<div class="mb-4 flex flex-col gap-1">
-					<h3 class="text-lg font-medium text-tx-primary">Scheme de VasakOS</h3>
+					<h3 class="text-lg font-medium text-tx-primary">{{ t('views.appearanceTheme.schemeSection') }}</h3>
 					<p class="text-sm text-tx-muted">
-						Selecciona el <span class="font-mono">scheme id</span> que define la paleta clara y oscura del sistema.
+						{{ t('views.appearanceTheme.schemeHintPrefix') }} <span class="font-mono">scheme id</span> {{ t('views.appearanceTheme.schemeHintSuffix') }}
 					</p>
 				</div>
 
 				<div class="flex flex-col gap-5">
-					<FormGroup label="Scheme ID" html-for="scheme-id">
+					<FormGroup :label="t('views.appearanceTheme.schemeIdLabel')" html-for="scheme-id">
 						<SelectInput
 							id="scheme-id"
 							v-model="selectedSchemeId"
@@ -373,7 +382,7 @@ const isFormValid = computed(() => {
 							<div class="grid gap-3 sm:grid-cols-2">
 								<div class="rounded-corner border border-ui-border bg-ui-bg/80 p-3">
 									<div class="mb-3 flex items-center justify-between">
-										<span class="text-sm font-medium text-tx-primary">Oscuro</span>
+										<span class="text-sm font-medium text-tx-primary">{{ t('views.appearanceTheme.dark') }}</span>
 										<span class="text-xs text-tx-muted">{{ selectedScheme.scheme.colors.dark.ui.background }}</span>
 									</div>
 									<div class="grid gap-2">
@@ -393,7 +402,7 @@ const isFormValid = computed(() => {
 
 								<div class="rounded-corner border border-ui-border bg-ui-bg/80 p-3">
 									<div class="mb-3 flex items-center justify-between">
-										<span class="text-sm font-medium text-tx-primary">Claro</span>
+										<span class="text-sm font-medium text-tx-primary">{{ t('views.appearanceTheme.light') }}</span>
 										<span class="text-xs text-tx-muted">{{ selectedScheme.scheme.colors.light.ui.background }}</span>
 									</div>
 									<div class="grid gap-2">
@@ -414,16 +423,16 @@ const isFormValid = computed(() => {
 						</div>
 
 						<div class="rounded-corner border border-ui-border bg-ui-surface/30 p-4">
-							<h4 class="mb-3 text-sm font-medium text-tx-primary">Información del scheme</h4>
+							<h4 class="mb-3 text-sm font-medium text-tx-primary">{{ t('views.appearanceTheme.schemeInfo') }}</h4>
 							<div class="space-y-3 text-sm text-tx-muted">
 								<p><span class="font-medium text-tx-primary">ID:</span> {{ selectedScheme.scheme.id }}</p>
-								<p><span class="font-medium text-tx-primary">Autor:</span> {{ selectedScheme.scheme.author || 'No especificado' }}</p>
-								<p><span class="font-medium text-tx-primary">Ruta:</span> {{ selectedScheme.path }}</p>
+								<p><span class="font-medium text-tx-primary">{{ t('views.appearanceTheme.author') }}:</span> {{ selectedScheme.scheme.author || t('views.appearanceTheme.notSpecified') }}</p>
+								<p><span class="font-medium text-tx-primary">{{ t('views.appearanceTheme.path') }}:</span> {{ selectedScheme.path }}</p>
 							</div>
 						</div>
 					</div>
 
-					<EmptyStateBox v-else message="No se encontraron schemes disponibles" padding="md" />
+					<EmptyStateBox v-else :message="t('views.appearanceTheme.noSchemes')" padding="md" />
 				</div>
 			</SectionCard>
 		</div>

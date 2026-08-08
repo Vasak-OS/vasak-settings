@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { onMounted, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
@@ -22,6 +23,8 @@ interface IdleConfig {
 	lock_before_sleep: boolean;
 	legacy_found: boolean;
 }
+
+const { t } = useI18n();
 
 const idle = ref<IdleConfig | null>(null);
 const idleError = ref('');
@@ -119,11 +122,11 @@ function getStatusColor(status: string): string {
 function label(profile: string): string {
 	switch (profile) {
 		case 'performance':
-			return 'Rendimiento';
+			return t('views.power.profilePerformance');
 		case 'balanced':
-			return 'Balanceado';
+			return t('views.power.profileBalanced');
 		case 'power-saver':
-			return 'Ahorro de energía';
+			return t('views.power.profilePowerSaver');
 		default:
 			return profile;
 	}
@@ -141,9 +144,9 @@ async function selectProfile(profile: string) {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			section="Sistema"
-			title="Energía"
-			description="Estado de la batería y perfiles de energía."
+			:section="t('sidebar.system')"
+			:title="t('views.power.title')"
+			:description="t('views.power.description')"
 		/>
 
 		<AlertMessage v-if="error" :message="error" tone="error" />
@@ -153,21 +156,21 @@ async function selectProfile(profile: string) {
 			<div class="flex items-start gap-3">
 				<img v-if="batteryIcon" :src="batteryIcon" class="mt-0.5 h-10 w-10 shrink-0" />
 				<div class="flex-1">
-					<h3 class="text-base font-medium">Batería</h3>
+					<h3 class="text-base font-medium">{{ t('views.power.battery') }}</h3>
 					<p v-if="!info.has_battery" class="mt-2 text-sm text-tx-muted">
-						No se detectó una batería en este equipo.
+						{{ t('views.power.noBattery') }}
 					</p>
 
 					<template v-if="info.has_battery">
 						<div class="mt-3 flex items-baseline gap-2">
 							<span class="text-3xl font-bold">{{ Math.round(info.percentage) }}<span class="text-lg font-normal">%</span></span>
-							<span class="text-sm font-medium" :class="getStatusColor(info.status)">{{ info.status }}</span>
+							<span class="text-sm font-medium" :class="getStatusColor(info.status)">{{ t(`views.power.status.${info.status}`) }}</span>
 						</div>
 
 						<!-- Health bar -->
 						<div class="mt-4">
 							<div class="flex justify-between text-xs text-tx-muted mb-1">
-								<span>Salud de la batería</span>
+								<span>{{ t('views.power.health') }}</span>
 								<span>{{ Math.round(info.health) }}%</span>
 							</div>
 							<div class="h-2 w-full overflow-hidden rounded-full bg-ui-surface">
@@ -181,27 +184,27 @@ async function selectProfile(profile: string) {
 
 						<div class="mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
 							<div v-if="info.time_to_full > 0 && info.status === 'Charging'" class="flex justify-between">
-								<span class="text-tx-muted">Tiempo restante</span>
+								<span class="text-tx-muted">{{ t('views.power.timeRemaining') }}</span>
 								<span class="font-medium">{{ formatTime(info.time_to_full) }}</span>
 							</div>
 							<div v-if="info.time_to_empty > 0 && info.status === 'Discharging'" class="flex justify-between">
-								<span class="text-tx-muted">Tiempo restante</span>
+								<span class="text-tx-muted">{{ t('views.power.timeRemaining') }}</span>
 								<span class="font-medium">{{ formatTime(info.time_to_empty) }}</span>
 							</div>
 							<div class="flex justify-between">
-								<span class="text-tx-muted">Consumo</span>
+								<span class="text-tx-muted">{{ t('views.power.consumption') }}</span>
 								<span class="font-medium">{{ info.energy_rate.toFixed(1) }} W</span>
 							</div>
 							<div class="flex justify-between">
-								<span class="text-tx-muted">Ciclos</span>
+								<span class="text-tx-muted">{{ t('views.power.cycles') }}</span>
 								<span class="font-medium">{{ info.cycle_count }}</span>
 							</div>
 							<div v-if="info.technology" class="flex justify-between">
-								<span class="text-tx-muted">Tecnología</span>
+								<span class="text-tx-muted">{{ t('views.power.technology') }}</span>
 								<span class="font-medium">{{ info.technology }}</span>
 							</div>
 							<div v-if="info.model" class="flex justify-between">
-								<span class="text-tx-muted">Modelo</span>
+								<span class="text-tx-muted">{{ t('views.power.model') }}</span>
 								<span class="font-medium truncate max-w-[180px]" :title="info.model">{{ info.model }}</span>
 							</div>
 						</div>
@@ -214,19 +217,19 @@ async function selectProfile(profile: string) {
 		<SectionCard>
 			<div class="flex items-start gap-3">
 				<div class="flex-1">
-					<h3 class="text-base font-medium">Perfiles de energía</h3>
+					<h3 class="text-base font-medium">{{ t('views.power.profiles') }}</h3>
 					<p class="mt-0.5 text-sm text-tx-muted">
-						Cambia el modo de rendimiento del sistema.
+						{{ t('views.power.profilesDescription') }}
 					</p>
 
 					<AlertMessage v-if="profilesError" :message="profilesError" tone="error" />
 
 					<div v-if="profilesLoading" class="mt-3 text-sm text-tx-muted">
-						Cargando perfiles...
+						{{ t('views.power.loadingProfiles') }}
 					</div>
 
 					<div v-else-if="profiles.length === 0" class="mt-3 text-sm text-tx-muted">
-						No hay perfiles de energía disponibles. ¿Está instalado power-profiles-daemon?
+						{{ t('views.power.noProfiles') }}
 					</div>
 
 					<div v-else class="mt-3 flex flex-wrap gap-2">
@@ -257,9 +260,9 @@ async function selectProfile(profile: string) {
 		<SectionCard v-if="idle">
 			<div class="flex items-start gap-3">
 				<div class="min-w-0 flex-1">
-					<h3 class="text-base font-medium">Bloqueo por inactividad</h3>
+					<h3 class="text-base font-medium">{{ t('views.power.idleLock') }}</h3>
 					<p class="mt-0.5 text-sm text-tx-muted">
-						Bloquea la pantalla cuando dejás el equipo sin usar.
+						{{ t('views.power.idleLockDescription') }}
 					</p>
 				</div>
 				<SwitchToggle
@@ -270,37 +273,37 @@ async function selectProfile(profile: string) {
 			</div>
 
 			<AlertMessage v-if="idleError" tone="error" :message="idleError" class="mt-3" />
-			<AlertMessage v-if="idleSaved" tone="success" message="Configuración guardada" class="mt-3" />
+			<AlertMessage v-if="idleSaved" tone="success" :message="t('views.power.saved')" class="mt-3" />
 			<AlertMessage
 				v-if="!idle.available"
 				tone="warning"
-				message="swayidle no está instalado; el bloqueo por inactividad no puede activarse."
+				:message="t('views.power.swayidleMissing')"
 				class="mt-3"
 			/>
 			<AlertMessage
 				v-if="idle.legacy_found"
 				tone="info"
-				message="Se detectó la configuración antigua en wayfire.ini. Al guardar acá se migra a systemd y se elimina de allí."
+				:message="t('views.power.legacyConfig')"
 				class="mt-3"
 			/>
 
 			<div class="mt-4 flex items-start gap-3">
 				<div class="min-w-0 flex-1">
-					<h4 class="text-sm font-medium">Bloquear la pantalla</h4>
-					<p class="text-xs text-tx-muted">Tras un rato sin actividad.</p>
+					<h4 class="text-sm font-medium">{{ t('views.power.lockScreen') }}</h4>
+					<p class="text-xs text-tx-muted">{{ t('views.power.lockScreenDescription') }}</p>
 				</div>
 				<SwitchToggle :is-on="idle.lock_enabled" @toggle="idle.lock_enabled = $event" />
 			</div>
-			<FormGroup v-if="idle.lock_enabled" label="Minutos hasta bloquear" class="mt-2">
+			<FormGroup v-if="idle.lock_enabled" :label="t('views.power.lockMinutes')" class="mt-2">
 				<NumberInput v-model="idle.lock_minutes" :min="1" :max="180" narrow />
 			</FormGroup>
 
 			<div class="mt-4 flex items-start gap-3">
 				<div class="min-w-0 flex-1">
-					<h4 class="text-sm font-medium">Apagar la pantalla</h4>
+					<h4 class="text-sm font-medium">{{ t('views.power.screenOff') }}</h4>
 					<p class="text-xs text-tx-muted">
-						<template v-if="idle.can_screen_off">Ahorra energía apagando la retroiluminación.</template>
-						<template v-else>Requiere wlopm, que no está instalado.</template>
+						<template v-if="idle.can_screen_off">{{ t('views.power.screenOffDescription') }}</template>
+						<template v-else>{{ t('views.power.wlopmMissing') }}</template>
 					</p>
 				</div>
 				<SwitchToggle
@@ -309,14 +312,14 @@ async function selectProfile(profile: string) {
 					@toggle="idle.screen_off_enabled = $event"
 				/>
 			</div>
-			<FormGroup v-if="idle.screen_off_enabled" label="Minutos hasta apagar" class="mt-2">
+			<FormGroup v-if="idle.screen_off_enabled" :label="t('views.power.screenOffMinutes')" class="mt-2">
 				<NumberInput v-model="idle.screen_off_minutes" :min="1" :max="180" narrow />
 			</FormGroup>
 
 			<div class="mt-4 flex items-start gap-3">
 				<div class="min-w-0 flex-1">
-					<h4 class="text-sm font-medium">Bloquear al suspender</h4>
-					<p class="text-xs text-tx-muted">Pide la contraseña al volver de la suspensión.</p>
+					<h4 class="text-sm font-medium">{{ t('views.power.lockBeforeSleep') }}</h4>
+					<p class="text-xs text-tx-muted">{{ t('views.power.lockBeforeSleepDescription') }}</p>
 				</div>
 				<SwitchToggle
 					:is-on="idle.lock_before_sleep"
@@ -331,7 +334,7 @@ async function selectProfile(profile: string) {
 					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
 					@click="saveIdle"
 				>
-					{{ savingIdle ? 'Guardando…' : 'Guardar cambios' }}
+					{{ savingIdle ? t('common.saving') : t('common.save') }}
 				</button>
 			</div>
 		</SectionCard>

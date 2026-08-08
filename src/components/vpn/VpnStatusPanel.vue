@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed } from 'vue';
 import StatTile from '@/components/ui/StatTile.vue';
 import type { VpnConnectionState, VpnProfile, VpnStatus } from '@/services/network.service';
@@ -26,6 +27,8 @@ const vpnStateLabelComputed = computed(() => {
 
 	return labels[state] ?? 'Desconocido';
 });
+
+const { t } = useI18n();
 </script>
 
 <template>
@@ -33,7 +36,7 @@ const vpnStateLabelComputed = computed(() => {
 		<StatTile label="Estado VPN" :value="vpnStateLabelComputed" />
 		<StatTile
 			label="Perfil activo"
-			:value="activeProfile?.id || vpnStatus?.active_profile_name || 'Sin conexión activa'"
+			:value="activeProfile?.id || vpnStatus?.active_profile_name || t('views.networkVpn.noActiveConnection')"
 			:hint="vpnStatus?.active_profile_uuid || undefined"
 		/>
 		<StatTile label="Gateway" :value="vpnStatus?.gateway || 'No disponible'" />

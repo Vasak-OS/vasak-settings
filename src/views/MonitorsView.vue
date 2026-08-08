@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, ref } from 'vue';
 import MonitorCanvas, { type CanvasMonitor } from '@/components/monitors/MonitorCanvas.vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
@@ -25,22 +26,24 @@ interface EditableMonitor {
 	allModes: MonitorMode[];
 }
 
+const { t } = useI18n();
+
 const monitors = ref<EditableMonitor[]>([]);
 const loading = ref(true);
 const saving = ref(false);
 const error = ref('');
 const success = ref('');
 
-const transforms = [
-	{ label: 'Normal', value: 'normal' },
+const transforms = computed(() => [
+	{ label: t('views.monitors.transformNormal'), value: 'normal' },
 	{ label: '90°', value: '90' },
 	{ label: '180°', value: '180' },
 	{ label: '270°', value: '270' },
-	{ label: 'Reflejado', value: 'flipped' },
-	{ label: 'Reflejado 90°', value: 'flipped-90' },
-	{ label: 'Reflejado 180°', value: 'flipped-180' },
-	{ label: 'Reflejado 270°', value: 'flipped-270' },
-];
+	{ label: t('views.monitors.transformFlipped'), value: 'flipped' },
+	{ label: t('views.monitors.transformFlipped90'), value: 'flipped-90' },
+	{ label: t('views.monitors.transformFlipped180'), value: 'flipped-180' },
+	{ label: t('views.monitors.transformFlipped270'), value: 'flipped-270' },
+]);
 
 const isDirty = computed(() =>
 	monitors.value.some((m) => JSON.stringify(m.values) !== JSON.stringify(m.original))
@@ -189,7 +192,7 @@ onMounted(async () => {
 			usedPositions.add(m.values.position);
 		}
 	} catch (e) {
-		error.value = `Error detectando monitores: ${e}`;
+		error.value = t('views.monitors.detectError').replace('{0}', String(e));
 	} finally {
 		loading.value = false;
 	}
@@ -270,12 +273,14 @@ async function saveMonitor(monitor: EditableMonitor) {
 		await writeWayfireSection(section, monitor.values);
 		monitor.original = { ...monitor.values };
 		monitor.has_config = true;
-		success.value = `Configuración guardada para ${monitor.name}`;
+		success.value = t('views.monitors.savedFor').replace('{0}', monitor.name);
 		setTimeout(() => {
 			success.value = '';
 		}, 3000);
 	} catch (e) {
-		error.value = `Error guardando ${monitor.name}: ${e}`;
+		error.value = t('views.monitors.saveError')
+			.replace('{0}', monitor.name)
+			.replace('{1}', String(e));
 		setTimeout(() => {
 			error.value = '';
 		}, 5000);
@@ -297,12 +302,12 @@ async function saveAll() {
 				m.has_config = true;
 			}
 		}
-		success.value = 'Configuración de pantallas guardada correctamente';
+		success.value = t('views.monitors.savedAll');
 		setTimeout(() => {
 			success.value = '';
 		}, 3000);
 	} catch (e) {
-		error.value = `Error guardando configuración: ${e}`;
+		error.value = t('views.monitors.saveAllError').replace('{0}', String(e));
 	} finally {
 		saving.value = false;
 	}
@@ -312,22 +317,22 @@ async function saveAll() {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			section="Sistema"
-			title="Pantallas"
-			description="Administra la configuración de tus monitores y pantallas."
+			:section="t('sidebar.system')"
+			:title="t('views.monitors.title')"
+			:description="t('views.monitors.description')"
 		/>
 
 		<AlertMessage v-if="error" :message="error" tone="error" />
 		<AlertMessage v-if="success" :message="success" tone="success" />
 
 		<div v-if="loading" class="py-8 text-center text-sm text-tx-muted">
-			Cargando monitores...
+			{{ t('views.monitors.loading') }}
 		</div>
 
 		<template v-else-if="monitors.length === 0">
 			<SectionCard>
 				<p class="py-4 text-center text-sm text-tx-muted">
-					No se detectaron pantallas conectadas.
+					{{ t('views.monitors.emptyState') }}
 				</p>
 			</SectionCard>
 		</template>
@@ -335,7 +340,7 @@ async function saveAll() {
 		<template v-else>
 			<SectionCard v-if="canvasMonitors.length > 0">
 				<h3 class="mb-3 text-sm font-medium text-tx-muted">
-					Arrastra los monitores para acomodarlos
+					{{ t('views.monitors.dragHint') }}
 				</h3>
 				<MonitorCanvas
 					:monitors="canvasMonitors"
@@ -352,13 +357,13 @@ async function saveAll() {
 							v-if="!monitor.connected"
 							class="rounded bg-status-warning/20 px-2 py-0.5 text-xs text-status-warning"
 						>
-							Desconectado
+							{{ t('views.monitors.disconnected') }}
 						</span>
 						<span
 							v-else-if="!monitor.has_config"
 							class="rounded bg-status-info/20 px-2 py-0.5 text-xs text-status-info"
 						>
-							Nuevo
+							{{ t('views.monitors.new') }}
 						</span>
 					</div>
 					<SwitchToggle
@@ -380,12 +385,12 @@ async function saveAll() {
 							"
 							@click="setPrimary(monitor)"
 						>
-							{{ isPrimary(monitor) ? 'Principal' : 'Establecer como principal' }}
+							{{ isPrimary(monitor) ? t('views.monitors.primary') : t('views.monitors.setPrimary') }}
 						</button>
 					</div>
 
 					<div class="grid gap-4 sm:grid-cols-2">
-						<FormGroup label="Resolución">
+						<FormGroup :label="t('views.monitors.resolution')">
 							<SelectInput
 								v-if="getResOptions(monitor).length > 0"
 								:modelValue="parseMode(monitor.values.mode || '1920x1080@60').resolution"
@@ -400,7 +405,7 @@ async function saveAll() {
 							/>
 						</FormGroup>
 
-						<FormGroup label="Frecuencia">
+						<FormGroup :label="t('views.monitors.refreshRate')">
 							<SelectInput
 								v-if="getRefreshOptions(monitor).length > 0"
 								:modelValue="parseMode(monitor.values.mode || '1920x1080@60').refresh"
@@ -414,7 +419,7 @@ async function saveAll() {
 							/>
 						</FormGroup>
 
-						<FormGroup label="Posición (x, y)">
+						<FormGroup :label="t('views.monitors.position')">
 							<TextInput
 								:model-value="getVal(monitor, 'position', '0,0')"
 								placeholder="0,0"
@@ -422,7 +427,7 @@ async function saveAll() {
 							/>
 						</FormGroup>
 
-						<FormGroup label="Escala">
+						<FormGroup :label="t('views.monitors.scale')">
 							<NumberInput
 								:model-value="Number(getVal(monitor, 'scale', '1'))"
 								:min="0.5" :max="3" :step="0.25"
@@ -430,7 +435,7 @@ async function saveAll() {
 							/>
 						</FormGroup>
 
-						<FormGroup label="Rotación">
+						<FormGroup :label="t('views.monitors.rotation')">
 							<SelectInput
 								:modelValue="getVal(monitor, 'transform', 'normal')"
 								:options="transforms"
@@ -446,13 +451,13 @@ async function saveAll() {
 							class="rounded-corner bg-primary px-4 py-1.5 text-sm font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50 hover:enabled:opacity-90"
 							@click="saveMonitor(monitor)"
 						>
-							{{ monitor.has_config ? 'Guardar' : 'Agregar' }}
+							{{ monitor.has_config ? t('views.monitors.save') : t('common.add') }}
 						</button>
 					</div>
 				</template>
 
 				<p v-else class="text-sm text-tx-muted">
-					Conecta el monitor para configurarlo.
+					{{ t('views.monitors.connectHint') }}
 				</p>
 			</SectionCard>
 
@@ -463,7 +468,7 @@ async function saveAll() {
 					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50 hover:enabled:opacity-90"
 					@click="saveAll"
 				>
-					{{ saving ? 'Guardando...' : 'Guardar todos los cambios' }}
+					{{ saving ? t('common.saving') : t('views.monitors.saveAll') }}
 				</button>
 			</div>
 		</template>

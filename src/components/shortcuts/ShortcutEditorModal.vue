@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, ref, watch } from 'vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import ModalDialog from '@/components/ui/ModalDialog.vue';
@@ -21,6 +22,8 @@ const emit = defineEmits<{
 	submit: [ShortcutRule];
 	cancel: [];
 }>();
+
+const { t } = useI18n();
 
 const keys = ref('');
 const action = ref('launch');
@@ -76,11 +79,13 @@ const SPECIAL_CODE_MAP: Record<string, string> = {
 
 const isEditing = computed(() => Boolean(props.shortcut));
 
-const dialogTitle = computed(() => (isEditing.value ? 'Editar shortcut' : 'Nuevo shortcut'));
+const dialogTitle = computed(() =>
+	isEditing.value ? t('views.shortcuts.editor.editTitle') : t('views.shortcuts.editor.createTitle')
+);
 const dialogDescription = computed(() =>
 	isEditing.value
-		? 'Ajusta la combinación, la acción o el comando asociado.'
-		: 'Define la combinación de teclas y el comando que se ejecutará.'
+		? t('views.shortcuts.editor.editDescription')
+		: t('views.shortcuts.editor.createDescription')
 );
 
 const resetForm = () => {
@@ -121,17 +126,17 @@ const handleSubmit = () => {
 	const normalizedTarget = target.value.trim();
 
 	if (!normalizedKeys) {
-		formError.value = 'Debes indicar una combinación de teclas';
+		formError.value = t('views.shortcuts.editor.errorKeys');
 		return;
 	}
 
 	if (!normalizedAction) {
-		formError.value = 'Debes indicar una acción';
+		formError.value = t('views.shortcuts.editor.errorAction');
 		return;
 	}
 
 	if (!normalizedTarget) {
-		formError.value = 'Debes indicar un target o comando';
+		formError.value = t('views.shortcuts.editor.errorTarget');
 		return;
 	}
 
@@ -295,7 +300,7 @@ const handleCancel = () => {
 				{{ formError }}
 			</div>
 
-			<FormGroup label="Combinación" html-for="shortcut-keys">
+			<FormGroup :label="t('views.shortcuts.editor.keysLabel')" html-for="shortcut-keys">
 				<div class="space-y-2">
 					<div
 						id="shortcut-keys"
@@ -313,25 +318,25 @@ const handleCancel = () => {
 							{{ key }}
 						</span>
 						<span v-if="displayKeys.length === 0" class="text-tx-muted/70">
-							Presiona la combinación
+							{{ t('views.shortcuts.editor.keysPlaceholder') }}
 						</span>
 					</div>
 					<div class="flex items-center justify-between gap-2">
 						<p class="text-xs text-tx-muted">
-							Presiona la combinación directamente. Ejemplo: mantén <strong>Ctrl</strong> y pulsa <strong>T</strong>.
+							{{ t('views.shortcuts.editor.keysHint') }} <strong>Ctrl</strong> {{ t('views.shortcuts.editor.keysHintJoin') }} <strong>T</strong>.
 						</p>
 						<button
 							type="button"
 							class="rounded-corner border border-ui-border bg-ui-surface/60 px-2.5 py-1.5 text-xs font-medium text-tx-primary transition-colors hover:bg-ui-surface"
 							@click="clearShortcut"
 						>
-							Limpiar
+							{{ t('views.shortcuts.editor.clear') }}
 						</button>
 					</div>
 				</div>
 			</FormGroup>
 
-			<FormGroup label="Acción" html-for="shortcut-action">
+			<FormGroup :label="t('views.shortcuts.editor.actionLabel')" html-for="shortcut-action">
 				<input
 					id="shortcut-action"
 					v-model="action"
@@ -341,7 +346,7 @@ const handleCancel = () => {
 				/>
 			</FormGroup>
 
-			<FormGroup label="Target / comando" html-for="shortcut-target">
+			<FormGroup :label="t('views.shortcuts.editor.targetLabel')" html-for="shortcut-target">
 				<textarea
 					id="shortcut-target"
 					v-model="target"
@@ -351,7 +356,7 @@ const handleCancel = () => {
 				/>
 			</FormGroup>
 
-			<p class="text-xs text-tx-muted">La combinación se normaliza automáticamente para que el orden de las teclas no importe.</p>
+			<p class="text-xs text-tx-muted">{{ t('views.shortcuts.editor.normalizeNote') }}</p>
 
 			<div class="flex justify-end gap-2 pt-2">
 				<button
@@ -359,14 +364,14 @@ const handleCancel = () => {
 					class="rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2 text-sm font-medium text-tx-primary transition-colors hover:bg-ui-surface"
 					@click="handleCancel"
 				>
-					Cancelar
+					{{ t('common.cancel') }}
 				</button>
 				<button
 					type="button"
 					class="rounded-corner border border-primary bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
 					@click="handleSubmit"
 				>
-					{{ isEditing ? 'Guardar cambios' : 'Agregar shortcut' }}
+					{{ isEditing ? t('common.save') : t('views.shortcuts.editor.submitCreate') }}
 				</button>
 			</div>
 		</div>

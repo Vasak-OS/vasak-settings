@@ -9,10 +9,14 @@ const props = defineProps<Props>();
 
 function iconName(profile: string): string {
 	switch (profile) {
-		case 'performance': return 'battery-profile-performance';
-		case 'balanced': return 'battery-profile-balanced';
-		case 'power-saver': return 'battery-profile-powersave';
-		default: return 'preferences-other';
+		case 'performance':
+			return 'battery-profile-performance';
+		case 'balanced':
+			return 'battery-profile-balanced';
+		case 'power-saver':
+			return 'battery-profile-powersave';
+		default:
+			return 'preferences-other';
 	}
 }
 

@@ -5,6 +5,7 @@ import {
 	type VSKConfig,
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import type { Store } from 'pinia';
 import { computed, onMounted, type Ref, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
@@ -16,6 +17,8 @@ import SelectInput from '@/components/ui/SelectInput.vue';
 import { getSystemFonts, type SystemFontItem } from '@/services/style.service';
 
 type FontTarget = 'terminal' | 'title' | 'apps';
+
+const { t } = useI18n();
 
 const configStore = ref<any>(null);
 const loading = ref(true);
@@ -34,11 +37,11 @@ const selectedFonts = ref<Record<FontTarget, string>>({
 	apps: '',
 });
 
-const targetOptions = [
-	{ label: 'Terminal', value: 'terminal' },
-	{ label: 'Títulos', value: 'title' },
-	{ label: 'Aplicaciones', value: 'apps' },
-];
+const targetOptions = computed(() => [
+	{ label: t('views.appearanceFonts.targets.terminal'), value: 'terminal' },
+	{ label: t('views.appearanceFonts.targets.title'), value: 'title' },
+	{ label: t('views.appearanceFonts.targets.apps'), value: 'apps' },
+]);
 
 const uniqueFonts = computed(() => {
 	const seen = new Set<string>();
@@ -111,7 +114,7 @@ onMounted(async () => {
 			selectedFonts.value.apps = uniqueFonts.value[2].name;
 		}
 	} catch (err) {
-		error.value = `Error cargando fuentes del sistema: ${err}`;
+		error.value = t('views.appearanceFonts.errorLoading').replace('{0}', String(err));
 	} finally {
 		loading.value = false;
 	}
@@ -124,7 +127,7 @@ const saveConfig = async () => {
 
 	try {
 		if (!vskConfig.value) {
-			throw new Error('No se pudo cargar la configuración actual');
+			throw new Error(t('views.appearanceFonts.configNotLoaded'));
 		}
 
 		vskConfig.value.fonts = {
@@ -134,12 +137,12 @@ const saveConfig = async () => {
 		};
 
 		await writeConfig(vskConfig.value);
-		successMessage.value = 'Fuentes guardadas exitosamente';
+		successMessage.value = t('views.appearanceFonts.saved');
 		setTimeout(() => {
 			successMessage.value = '';
 		}, 3000);
 	} catch (err) {
-		error.value = `Error guardando fuentes: ${err}`;
+		error.value = t('views.appearanceFonts.errorSaving').replace('{0}', String(err));
 	} finally {
 		saving.value = false;
 	}
@@ -155,9 +158,9 @@ const isFormValid = computed(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4">
 		<PageHeader
-			section="Apariencia"
-			title="Fuentes"
-			description="Busca fuentes del sistema y asígnalas al terminal, a los títulos y a las aplicaciones."
+			:section="t('sidebar.appearance')"
+			:title="t('views.appearanceFonts.title')"
+			:description="t('views.appearanceFonts.description')"
 		>
 			<template #actions>
 				<button
@@ -167,12 +170,12 @@ const isFormValid = computed(() => {
 					:disabled="!isFormValid || saving"
 					@click="saveConfig"
 				>
-					{{ saving ? 'Guardando...' : 'Aplicar Cambios' }}
+					{{ saving ? t('common.saving') : t('views.appearanceFonts.applyChanges') }}
 				</button>
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" message="Cargando fuentes del sistema..." padding="lg" />
+		<EmptyStateBox v-if="loading" :message="t('views.appearanceFonts.loading')" padding="lg" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
 			<AlertMessage v-if="error" :message="error" tone="error" />
@@ -181,41 +184,41 @@ const isFormValid = computed(() => {
 			<div class="grid gap-4 xl:grid-cols-[360px_1fr]">
 				<SectionCard>
 					<div class="flex flex-col gap-4">
-						<FormGroup label="Objetivo activo" html-for="font-target">
+						<FormGroup :label="t('views.appearanceFonts.activeTarget')" html-for="font-target">
 							<SelectInput id="font-target" v-model="activeTarget" :options="targetOptions" />
 						</FormGroup>
 
-						<FormGroup label="Buscar fuente" html-for="font-search">
+						<FormGroup :label="t('views.appearanceFonts.searchFont')" html-for="font-search">
 							<template #default>
 								<input
 									id="font-search"
 									v-model="searchQuery"
 									type="text"
-									placeholder="Buscar por nombre, ruta o postscript"
+									:placeholder="t('views.appearanceFonts.searchPlaceholder')"
 									class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary outline-none transition-colors placeholder:text-tx-muted/70 focus:border-primary"
 								/>
 							</template>
 						</FormGroup>
 
 						<div class="rounded-corner border border-ui-border bg-ui-bg/60 p-4">
-							<div class="mb-3 text-sm font-medium text-tx-primary">Selecciones actuales</div>
+							<div class="mb-3 text-sm font-medium text-tx-primary">{{ t('views.appearanceFonts.currentSelections') }}</div>
 							<div class="space-y-3 text-sm text-tx-muted">
 								<div>
-									<div class="text-xs uppercase tracking-wide text-tx-muted">Terminal</div>
+									<div class="text-xs uppercase tracking-wide text-tx-muted">{{ t('views.appearanceFonts.targets.terminal') }}</div>
 									<div class="text-tx-primary" :style="{ fontFamily: fontStack(selectedFonts.terminal) }">
-										{{ selectedFonts.terminal || 'Sin fuente asignada' }}
+										{{ selectedFonts.terminal || t('views.appearanceFonts.noFontAssigned') }}
 									</div>
 								</div>
 								<div>
-									<div class="text-xs uppercase tracking-wide text-tx-muted">Títulos</div>
+									<div class="text-xs uppercase tracking-wide text-tx-muted">{{ t('views.appearanceFonts.targets.title') }}</div>
 									<div class="text-tx-primary" :style="{ fontFamily: fontStack(selectedFonts.title) }">
-										{{ selectedFonts.title || 'Sin fuente asignada' }}
+										{{ selectedFonts.title || t('views.appearanceFonts.noFontAssigned') }}
 									</div>
 								</div>
 								<div>
-									<div class="text-xs uppercase tracking-wide text-tx-muted">Aplicaciones</div>
+									<div class="text-xs uppercase tracking-wide text-tx-muted">{{ t('views.appearanceFonts.targets.apps') }}</div>
 									<div class="text-tx-primary" :style="{ fontFamily: fontStack(selectedFonts.apps) }">
-										{{ selectedFonts.apps || 'Sin fuente asignada' }}
+										{{ selectedFonts.apps || t('views.appearanceFonts.noFontAssigned') }}
 									</div>
 								</div>
 							</div>
@@ -226,9 +229,9 @@ const isFormValid = computed(() => {
 				<SectionCard>
 					<div class="flex items-center justify-between gap-3">
 						<div>
-							<h3 class="text-lg font-medium text-tx-primary">Biblioteca de fuentes</h3>
+							<h3 class="text-lg font-medium text-tx-primary">{{ t('views.appearanceFonts.library') }}</h3>
 							<p class="text-sm text-tx-muted">
-								Haz clic en una tarjeta para asignarla al objetivo activo.
+								{{ t('views.appearanceFonts.libraryHint') }}
 							</p>
 						</div>
 						<div class="rounded-full border border-ui-border bg-ui-surface/60 px-3 py-1 text-xs font-medium text-tx-muted">
@@ -248,26 +251,26 @@ const isFormValid = computed(() => {
 							<div class="flex items-start justify-between gap-3">
 								<div>
 									<div class="text-base font-medium text-tx-primary">{{ font.name }}</div>
-									<div class="text-xs text-tx-muted">{{ font.fontName || 'Sin postscript' }}</div>
+									<div class="text-xs text-tx-muted">{{ font.fontName || t('views.appearanceFonts.noPostscript') }}</div>
 								</div>
 								<div class="rounded-full border border-ui-border bg-ui-surface/70 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-tx-muted">
-									{{ font.monospaced ? 'Mono' : 'Proporcional' }}
+									{{ font.monospaced ? t('views.appearanceFonts.mono') : t('views.appearanceFonts.proportional') }}
 								</div>
 							</div>
 
 							<div class="mt-4 rounded-corner border border-ui-border bg-ui-bg/80 p-3">
-								<div class="text-[11px] uppercase tracking-wider text-tx-muted">Vista previa</div>
+								<div class="text-[11px] uppercase tracking-wider text-tx-muted">{{ t('views.appearanceFonts.preview') }}</div>
 								<div
 									class="mt-2 text-sm leading-6 text-tx-primary"
 									:style="{ fontFamily: fontStack(font.name) }"
 								>
-									The quick brown fox jumps over the lazy dog
+									{{ t('views.appearanceFonts.previewText') }}
 								</div>
 							</div>
 
 							<div class="mt-3 flex items-center justify-between text-[11px] text-tx-muted">
 								<span>{{ font.style }}</span>
-								<span>peso {{ font.weight }}</span>
+								<span>{{ t('views.appearanceFonts.weight').replace('{0}', String(font.weight)) }}</span>
 							</div>
 						</button>
 					</div>

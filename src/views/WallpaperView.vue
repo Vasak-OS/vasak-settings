@@ -7,6 +7,7 @@ import {
 	type VSKConfig,
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import type { Store } from 'pinia';
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
@@ -14,6 +15,8 @@ import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import { getOfficialWallpapers } from '@/services/style.service';
+
+const { t } = useI18n();
 
 const loading = ref(true);
 const saving = ref(false);
@@ -47,7 +50,7 @@ const handleDropPath = (path: string) => {
 	const lowered = path.toLowerCase();
 	const valid = ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif', '.avif'];
 	if (!valid.some((ext) => lowered.endsWith(ext))) {
-		error.value = 'El archivo arrastrado no es una imagen valida';
+		error.value = t('views.appearanceWallpaper.invalidImage');
 		return;
 	}
 
@@ -70,12 +73,12 @@ const saveWallpaperConfig = async () => {
 		};
 
 		await writeConfig(vskConfig.value);
-		successMessage.value = 'Wallpaper guardado correctamente';
+		successMessage.value = t('views.appearanceWallpaper.saved');
 		setTimeout(() => {
 			successMessage.value = '';
 		}, 2500);
 	} catch (err) {
-		error.value = `Error guardando wallpaper: ${err}`;
+		error.value = t('views.appearanceWallpaper.errorSaving').replace('{0}', String(err));
 	} finally {
 		saving.value = false;
 	}
@@ -101,7 +104,7 @@ onMounted(async () => {
 			}
 		});
 	} catch (err) {
-		error.value = `Error cargando wallpapers: ${err}`;
+		error.value = t('views.appearanceWallpaper.errorLoading').replace('{0}', String(err));
 	} finally {
 		loading.value = false;
 	}
@@ -117,9 +120,9 @@ onUnmounted(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			section="Apariencia"
-			title="Wallpaper"
-			description="Selecciona un fondo oficial o define una ruta completa personalizada."
+			:section="t('sidebar.appearance')"
+			:title="t('views.appearanceWallpaper.title')"
+			:description="t('views.appearanceWallpaper.description')"
 		>
 			<template #actions>
 				<button
@@ -128,12 +131,12 @@ onUnmounted(() => {
 					:disabled="saving"
 					@click="saveWallpaperConfig"
 				>
-					{{ saving ? 'Guardando...' : 'Guardar Wallpaper' }}
+					{{ saving ? t('common.saving') : t('views.appearanceWallpaper.saveWallpaper') }}
 				</button>
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" message="Cargando wallpapers..." padding="lg" />
+		<EmptyStateBox v-if="loading" :message="t('views.appearanceWallpaper.loading')" padding="lg" />
 
 		<template v-else>
 			<AlertMessage v-if="error" :message="error" tone="error" />
@@ -143,12 +146,12 @@ onUnmounted(() => {
 			<div class="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
 				<SectionCard>
 					<div class="flex items-center justify-between">
-						<h2 class="text-lg font-semibold">Wallpapers Oficiales</h2>
-						<span class="text-sm text-tx-muted">{{ officialWallpapers.length }} opciones</span>
+						<h2 class="text-lg font-semibold">{{ t('views.appearanceWallpaper.officialTitle') }}</h2>
+						<span class="text-sm text-tx-muted">{{ t('views.appearanceWallpaper.optionsCount').replace('{0}', String(officialWallpapers.length)) }}</span>
 					</div>
 
 					<div v-if="officialWallpapers.length === 0" class="mt-4">
-						<EmptyStateBox message="No se encontraron wallpapers en /usr/share/backgrounds/vasakos." />
+						<EmptyStateBox :message="t('views.appearanceWallpaper.noWallpapers')" />
 					</div>
 
 					<div v-else class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -172,29 +175,29 @@ onUnmounted(() => {
 				</SectionCard>
 
 				<SectionCard>
-					<h2 class="text-lg font-semibold">Ruta Personalizada</h2>
-					<p class="mt-1 text-sm text-tx-muted">Define un path absoluto. Siempre se guarda el path completo.</p>
+					<h2 class="text-lg font-semibold">{{ t('views.appearanceWallpaper.customPathTitle') }}</h2>
+					<p class="mt-1 text-sm text-tx-muted">{{ t('views.appearanceWallpaper.customPathHint') }}</p>
 
 					<div class="mt-4">
-						<label class="mb-1 block text-sm text-tx-muted" for="custom-wallpaper-path">Path completo</label>
+						<label class="mb-1 block text-sm text-tx-muted" for="custom-wallpaper-path">{{ t('views.appearanceWallpaper.fullPath') }}</label>
 						<input
 							id="custom-wallpaper-path"
 							type="text"
 							v-model="selectedWallpaperPath"
-							placeholder="/home/usuario/Imagenes/mi-wallpaper.jpg"
+							:placeholder="t('views.appearanceWallpaper.pathPlaceholder')"
 							class="w-full rounded-corner border border-ui-border bg-ui-surface/40 px-3 py-2 text-sm outline-none focus:border-primary"
 						/>
-						<p class="mt-2 text-xs text-tx-muted">Tambien puedes arrastrar una imagen al window para cargar su path.</p>
+						<p class="mt-2 text-xs text-tx-muted">{{ t('views.appearanceWallpaper.dragHint') }}</p>
 					</div>
 
 					<div v-if="selectedWallpaperPath" class="mt-4 rounded-corner border border-ui-border bg-ui-surface/30 p-3">
-						<p class="mb-2 text-xs uppercase tracking-[0.16em] text-tx-muted">Preview</p>
+						<p class="mb-2 text-xs uppercase tracking-[0.16em] text-tx-muted">{{ t('views.appearanceWallpaper.preview') }}</p>
 						<div class="group relative flex h-40 w-full items-center justify-center overflow-hidden rounded-corner border-2 border-dashed border-[var(--primary-color,#0084ff)]/30 bg-ui-surface/80 transition-colors hover:border-[var(--primary-color,#0084ff)]/50 hover:bg-[var(--primary-color,#0084ff)]/5">
-							<img :src="wallpaperPreviewUrl" alt="Wallpaper seleccionado" class="pointer-events-none absolute inset-0 h-full w-full object-cover" />
-							
+							<img :src="wallpaperPreviewUrl" :alt="t('views.appearanceWallpaper.selectedAlt')" class="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+
 							<div class="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors hover:bg-black/20">
 								<div class="pointer-events-none text-center">
-									<span class="mb-2 block text-sm text-white">📂 Arrastra una imagen aquí para cambiar</span>
+									<span class="mb-2 block text-sm text-white">📂 {{ t('views.appearanceWallpaper.dropToChange') }}</span>
 									<span class="text-xs text-white/70">{{ selectedWallpaperPath.split('/').pop() }}</span>
 								</div>
 							</div>
@@ -202,11 +205,11 @@ onUnmounted(() => {
 						<p class="mt-2 break-all text-xs text-tx-muted">{{ selectedWallpaperPath }}</p>
 					</div>
 					<div v-else class="mt-4 rounded-corner border border-ui-border bg-ui-surface/30 p-3">
-						<p class="mb-2 text-xs uppercase tracking-[0.16em] text-tx-muted">Preview</p>
+						<p class="mb-2 text-xs uppercase tracking-[0.16em] text-tx-muted">{{ t('views.appearanceWallpaper.preview') }}</p>
 						<div class="group relative flex h-40 w-full items-center justify-center overflow-hidden rounded-corner border-2 border-dashed border-[var(--primary-color,#0084ff)]/30 bg-ui-surface/80 transition-colors hover:border-[var(--primary-color,#0084ff)]/50 hover:bg-[var(--primary-color,#0084ff)]/5">
 							<div class="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors hover:bg-black/20">
 								<div class="pointer-events-none text-center">
-									<span class="mb-2 block text-sm text-white">📂 Arrastra una imagen aquí</span>
+									<span class="mb-2 block text-sm text-white">📂 {{ t('views.appearanceWallpaper.dropHere') }}</span>
 								</div>
 							</div>
 						</div>

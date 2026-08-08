@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted } from 'vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import { useReactiveIcon } from '@/composables/useReactiveIcon';
@@ -15,6 +16,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
+const { t } = useI18n();
 const { get, setEnabled, load } = useWayfirePlugins();
 const [iconSrc] = useReactiveIcon(() => props.icon ?? 'application-x-addon');
 
@@ -23,9 +25,13 @@ onMounted(load);
 const plugin = computed(() => get(props.pluginId));
 const isEnabled = computed(() => plugin.value?.enabled ?? false);
 const isRequired = computed(() => plugin.value?.required ?? false);
-// Falls back to the registry so each view only has to name the plugin.
-const heading = computed(() => props.title ?? plugin.value?.label ?? props.pluginId);
-const summary = computed(() => props.description ?? plugin.value?.description ?? '');
+// Falls back to the locale entry keyed by plugin id, so each view only has to
+// name the plugin.
+const heading = computed(() => props.title ?? t(`wayfire.plugins.${props.pluginId}.label`));
+const summary = computed(
+	() => props.description ?? t(`wayfire.plugins.${props.pluginId}.description`)
+);
+const requiredReason = computed(() => t(`wayfire.plugins.${props.pluginId}.requiredReason`));
 
 function handleToggle(value: boolean) {
 	void setEnabled(props.pluginId, value);
@@ -46,25 +52,22 @@ function handleToggle(value: boolean) {
 			<span
 				v-if="isRequired"
 				class="shrink-0 rounded-full border border-ui-border bg-ui-surface/70 px-2 py-0.5 text-[11px] font-medium text-tx-muted"
-				:title="plugin?.required_reason ?? ''"
+				:title="requiredReason"
 			>
-				Requerido
+				{{ t('common.required') }}
 			</span>
 			<SwitchToggle v-else :is-on="isEnabled" @toggle="handleToggle" />
 		</header>
 
-		<p
-			v-if="isRequired && plugin?.required_reason"
-			class="px-4 pb-3 text-[11px] leading-relaxed text-tx-muted"
-		>
-			{{ plugin.required_reason }}
+		<p v-if="isRequired" class="px-4 pb-3 text-[11px] leading-relaxed text-tx-muted">
+			{{ requiredReason }}
 		</p>
 
 		<div v-if="isEnabled || isRequired" class="border-t border-ui-border p-4">
 			<slot />
 		</div>
 		<p v-else class="border-t border-ui-border px-4 py-3 text-xs text-tx-muted">
-			Activá el plugin para configurar sus opciones.
+			{{ t('wayfire.plugins.enableToConfigure') }}
 		</p>
 	</article>
 </template>

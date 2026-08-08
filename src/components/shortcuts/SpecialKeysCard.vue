@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, type Ref } from 'vue';
 import { useReactiveSymbol } from '@/composables/useReactiveIcon';
 import { SPECIAL_KEYS, type SpecialKeyDef } from '@/config/specialKeys';
@@ -15,6 +16,8 @@ const emit = defineEmits<{
 	editCustom: [index: number];
 }>();
 
+const { t } = useI18n();
+
 const iconRefs: Record<string, Ref<string>> = {};
 for (const sk of SPECIAL_KEYS) {
 	const [icon] = useReactiveSymbol(() => sk.icon);
@@ -30,7 +33,9 @@ interface SpecialKeyEntry {
 
 const entries = computed<SpecialKeyEntry[]>(() => {
 	const map = new Map<string, number>();
-	props.shortcuts.forEach((s, i) => map.set(s.keys, i));
+	props.shortcuts.forEach((s, i) => {
+		map.set(s.keys, i);
+	});
 
 	return SPECIAL_KEYS.map((def) => {
 		const idx = map.get(def.keyToken);
@@ -39,7 +44,7 @@ const entries = computed<SpecialKeyEntry[]>(() => {
 			def,
 			exists,
 			index: idx ?? -1,
-			shortcut: exists ? props.shortcuts[idx!] : null,
+			shortcut: idx !== undefined ? (props.shortcuts[idx] ?? null) : null,
 		};
 	});
 });
@@ -60,10 +65,9 @@ const handleEdit = (entry: SpecialKeyEntry) => {
 
 <template>
 	<div class="rounded-corner border border-ui-border bg-ui-surface/40 p-4">
-		<h3 class="mb-4 text-lg font-medium text-tx-primary">Teclas especiales</h3>
+		<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.shortcuts.specialKeys.title') }}</h3>
 		<p class="mb-4 text-sm text-tx-muted">
-			Teclas multimedia, volumen, brillo y cámara. Los valores por defecto se usan si no hay una
-			asignación personalizada.
+			{{ t('views.shortcuts.specialKeys.description') }}
 		</p>
 
 		<div class="grid gap-2">
@@ -76,12 +80,14 @@ const handleEdit = (entry: SpecialKeyEntry) => {
 					<img
 						v-if="iconRefs[entry.def.keyToken]?.value"
 						:src="iconRefs[entry.def.keyToken].value"
-						:alt="entry.def.label"
+						:alt="t(`shortcutKeys.${entry.def.keyToken}.label`)"
 						class="h-5 w-5 shrink-0"
 					/>
 					<div class="min-w-0">
 						<div class="flex items-center gap-2">
-							<span class="text-sm font-medium text-tx-primary">{{ entry.def.label }}</span>
+							<span class="text-sm font-medium text-tx-primary">
+							{{ t(`shortcutKeys.${entry.def.keyToken}.label`) }}
+						</span>
 							<span
 								class="rounded-full border px-2 py-0.5 text-[10px] font-mono font-semibold uppercase"
 								:class="entry.exists
@@ -96,7 +102,14 @@ const handleEdit = (entry: SpecialKeyEntry) => {
 								{{ entry.shortcut.target }}
 							</template>
 							<template v-else>
-								<span class="italic">Por defecto: {{ entry.def.defaultTarget || 'sin comando' }}</span>
+								<span class="italic">
+									{{
+										t('views.shortcuts.specialKeys.default').replace(
+											'{0}',
+											entry.def.defaultTarget || t('views.shortcuts.specialKeys.noCommand')
+										)
+									}}
+								</span>
 							</template>
 						</p>
 					</div>
@@ -107,7 +120,7 @@ const handleEdit = (entry: SpecialKeyEntry) => {
 					class="shrink-0 rounded-corner border border-ui-border bg-ui-surface/70 px-2.5 py-1.5 text-xs font-medium text-tx-primary transition-colors hover:bg-ui-surface"
 					@click="handleEdit(entry)"
 				>
-					{{ entry.exists ? 'Editar' : 'Asignar' }}
+					{{ entry.exists ? t('common.edit') : t('views.shortcuts.specialKeys.assign') }}
 				</button>
 			</div>
 		</div>

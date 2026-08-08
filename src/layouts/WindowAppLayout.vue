@@ -1,5 +1,6 @@
 <script lang="ts" setup>
-import { ref, watch } from 'vue';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import SidebarComponent from '@/components/sidebar/SidebarComponent.vue';
 import TopBarComponent from '@/components/topbar/TopBarComponent.vue';
@@ -8,6 +9,8 @@ import { SidebarCategory } from '@/types/sidebar';
 
 const route = useRoute();
 const router = useRouter();
+
+const { t } = useI18n();
 
 const selectedSection = ref((route.name as string) || 'home');
 
@@ -28,87 +31,151 @@ watch(
 
 const [appIcon] = useReactiveIcon('preferences');
 
-const sidebarCategories: SidebarCategory[] = [
+const sidebarCategories = computed<SidebarCategory[]>(() => [
 	{
 		id: 'general',
-		title: 'General',
+		title: t('sidebar.general'),
 		items: [
-			{ id: 'home', label: 'Inicio', icon: 'home' },
-			{ id: 'shortcuts', label: 'Shortcuts', icon: 'preferences-desktop-keyboard' },
+			{ id: 'home', label: t('sidebar.items.home'), icon: 'home' },
+			{
+				id: 'shortcuts',
+				label: t('sidebar.items.shortcuts'),
+				icon: 'preferences-desktop-keyboard',
+			},
 		],
 	},
 	{
 		id: 'appearance',
-		title: 'Apariencia',
+		title: t('sidebar.appearance'),
 		items: [
-			{ id: 'appearance-theme', label: 'Tema', icon: 'preferences-theme' },
-			{ id: 'appearance-fonts', label: 'Fuentes', icon: 'preferences-desktop-font' },
-			{ id: 'appearance-icon-packs', label: 'Iconos', icon: 'preferences-desktop-icons' },
-			{ id: 'appearance-wallpaper', label: 'Fondos', icon: 'preferences-wallpaper' },
-			{ id: 'appearance-desktop', label: 'Escritorio', icon: 'preferences-desktop-display' },
+			{
+				id: 'appearance-theme',
+				label: t('sidebar.items.appearanceTheme'),
+				icon: 'preferences-theme',
+			},
+			{
+				id: 'appearance-fonts',
+				label: t('sidebar.items.appearanceFonts'),
+				icon: 'preferences-desktop-font',
+			},
+			{
+				id: 'appearance-icon-packs',
+				label: t('sidebar.items.appearanceIconPacks'),
+				icon: 'preferences-desktop-icons',
+			},
+			{
+				id: 'appearance-wallpaper',
+				label: t('sidebar.items.appearanceWallpaper'),
+				icon: 'preferences-wallpaper',
+			},
+			{
+				id: 'appearance-desktop',
+				label: t('sidebar.items.appearanceDesktop'),
+				icon: 'preferences-desktop-display',
+			},
 		],
 	},
 	{
 		id: 'multimedia',
-		title: 'Multimedia',
+		title: t('sidebar.multimedia'),
 		items: [
-			{ id: 'multimedia-audio', label: 'Audio salida', icon: 'audio-speakers-symbolic' },
+			{
+				id: 'multimedia-audio',
+				label: t('sidebar.items.multimediaAudio'),
+				icon: 'audio-speakers-symbolic',
+			},
 			{
 				id: 'multimedia-audio-input',
-				label: 'Audio entrada',
+				label: t('sidebar.items.multimediaAudioInput'),
 				icon: 'audio-input-microphone-symbolic',
 			},
 		],
 	},
 	{
 		id: 'windows',
-		title: 'Ventanas',
+		title: t('sidebar.windows'),
 		items: [
-			{ id: 'wayfire-input', label: 'Teclado y Ratón', icon: 'preferences-desktop-keyboard' },
-			{ id: 'wayfire-windows', label: 'Gestión de Ventanas', icon: 'preferences-system-windows' },
-			{ id: 'wayfire-workspaces', label: 'Espacios de trabajo', icon: 'video-display' },
-			{ id: 'wayfire-appearance', label: 'Apariencia WM', icon: 'preferences-desktop-theme' },
-			{ id: 'wayfire-effects', label: 'Efectos', icon: 'preferences-desktop-effects' },
-			{ id: 'wayfire-autostart', label: 'Autoinicio', icon: 'system-run' },
-			{ id: 'wayfire-plugins', label: 'Plugins', icon: 'application-x-addon' },
+			{
+				id: 'wayfire-input',
+				label: t('sidebar.items.wayfireInput'),
+				icon: 'preferences-desktop-keyboard',
+			},
+			{
+				id: 'wayfire-windows',
+				label: t('sidebar.items.wayfireWindows'),
+				icon: 'preferences-system-windows',
+			},
+			{
+				id: 'wayfire-workspaces',
+				label: t('sidebar.items.wayfireWorkspaces'),
+				icon: 'video-display',
+			},
+			{
+				id: 'wayfire-appearance',
+				label: t('sidebar.items.wayfireAppearance'),
+				icon: 'preferences-desktop-theme',
+			},
+			{
+				id: 'wayfire-effects',
+				label: t('sidebar.items.wayfireEffects'),
+				icon: 'preferences-desktop-effects',
+			},
+			{ id: 'wayfire-autostart', label: t('sidebar.items.wayfireAutostart'), icon: 'system-run' },
+			{
+				id: 'wayfire-plugins',
+				label: t('sidebar.items.wayfirePlugins'),
+				icon: 'application-x-addon',
+			},
 		],
 	},
 	{
 		id: 'system',
-		title: 'Sistema',
+		title: t('sidebar.system'),
 		items: [
-			{ id: 'users', label: 'Usuarios', icon: 'system-users' },
-			{ id: 'language-keyboard', label: 'Idioma y Teclado', icon: 'preferences-desktop-locale' },
-			{ id: 'datetime', label: 'Fecha y hora', icon: 'preferences-system-time' },
-			{ id: 'brightness', label: 'Brillo y luz nocturna', icon: 'display-brightness' },
-			{ id: 'power', label: 'Energía', icon: 'battery' },
-			{ id: 'monitors', label: 'Pantallas', icon: 'video-display' },
+			{ id: 'users', label: t('sidebar.items.users'), icon: 'system-users' },
+			{
+				id: 'language-keyboard',
+				label: t('sidebar.items.languageKeyboard'),
+				icon: 'preferences-desktop-locale',
+			},
+			{ id: 'datetime', label: t('sidebar.items.datetime'), icon: 'preferences-system-time' },
+			{ id: 'brightness', label: t('sidebar.items.brightness'), icon: 'display-brightness' },
+			{ id: 'power', label: t('sidebar.items.power'), icon: 'battery' },
+			{ id: 'monitors', label: t('sidebar.items.monitors'), icon: 'video-display' },
 		],
 	},
 	{
 		id: 'network',
-		title: 'Conectividad',
+		title: t('sidebar.network'),
 		items: [
-			{ id: 'network-wifi', label: 'Wi-Fi', icon: 'network-wireless' },
-			{ id: 'network-bluetooth', label: 'Bluetooth', icon: 'preferences-bluetooth' },
-			{ id: 'network-vpn', label: 'VPN', icon: 'preferences-system-network-vpn' },
+			{ id: 'network-wifi', label: t('sidebar.items.networkWifi'), icon: 'network-wireless' },
+			{
+				id: 'network-bluetooth',
+				label: t('sidebar.items.networkBluetooth'),
+				icon: 'preferences-bluetooth',
+			},
+			{
+				id: 'network-vpn',
+				label: t('sidebar.items.networkVpn'),
+				icon: 'preferences-system-network-vpn',
+			},
 		],
 	},
-];
+]);
 </script>
 <template>
   <div
     class="h-screen w-screen bg-ui-bg/80 rounded-corner-window flex flex-col border border-ui-border overflow-hidden">
     <TopBarComponent>
-      <div><img :src="appIcon" class="w-8 h-8" alt="Icono de la aplicación"></div>
-      <div class="text-lg font-semibold">Centro de Control</div>
+      <div><img :src="appIcon" class="w-8 h-8" :alt="t('views.app.iconAlt')"></div>
+      <div class="text-lg font-semibold">{{ t('views.app.title') }}</div>
       <div></div>
     </TopBarComponent>
     <div class="relative flex flex-1 overflow-hidden p-1">
       <SidebarComponent
         v-model="selectedSection"
-        title="Centro de Control"
-        subtitle="Ajustes principales"
+        :title="t('views.app.title')"
+        :subtitle="t('views.app.subtitle')"
         :categories="sidebarCategories"
       />
 

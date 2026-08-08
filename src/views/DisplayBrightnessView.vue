@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
@@ -29,16 +30,18 @@ interface NightLight {
 	longitude: string;
 }
 
+const { t } = useI18n();
+
 const backlights = ref<BacklightDevice[]>([]);
 const nightLight = ref<NightLight | null>(null);
 const error = ref('');
 const success = ref('');
 const savingNight = ref(false);
 
-const modes = [
-	{ label: 'Horario fijo', value: 'manual' },
-	{ label: 'Según ubicación (amanecer/atardecer)', value: 'location' },
-];
+const modes = computed(() => [
+	{ label: t('views.brightness.modeManual'), value: 'manual' },
+	{ label: t('views.brightness.modeLocation'), value: 'location' },
+]);
 
 const hasBacklight = computed(() => backlights.value.length > 0);
 const isLocationMode = computed(() => nightLight.value?.mode === 'location');
@@ -87,7 +90,7 @@ async function saveNightLight() {
 		nightLight.value = await invoke<NightLight>('set_night_light', {
 			config: nightLight.value,
 		});
-		flash('Luz nocturna actualizada');
+		flash(t('views.brightness.nightLightUpdated'));
 	} catch (err) {
 		error.value = String(err);
 		await loadAll();
@@ -106,16 +109,16 @@ function toggleNightLight(value: boolean) {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			section="Sistema"
-			title="Brillo y luz nocturna"
-			description="Brillo de la pantalla y temperatura de color según la hora."
+			:section="t('sidebar.system')"
+			:title="t('views.brightness.title')"
+			:description="t('views.brightness.description')"
 		/>
 
 		<AlertMessage v-if="error" tone="error" :message="error" />
 		<AlertMessage v-if="success" tone="success" :message="success" />
 
 		<SectionCard>
-			<h3 class="text-base font-medium">Brillo</h3>
+			<h3 class="text-base font-medium">{{ t('views.brightness.brightness') }}</h3>
 
 			<template v-if="hasBacklight">
 				<div v-for="device in backlights" :key="device.name" class="mt-3">
@@ -136,17 +139,16 @@ function toggleNightLight(value: boolean) {
 				</div>
 			</template>
 			<p v-else class="mt-1 text-sm text-tx-muted">
-				Este equipo no expone ningún control de brillo por software (habitual en monitores de
-				escritorio: usá los botones del monitor).
+				{{ t('views.brightness.noBacklight') }}
 			</p>
 		</SectionCard>
 
 		<SectionCard v-if="nightLight">
 			<div class="flex items-start gap-3">
 				<div class="min-w-0 flex-1">
-					<h3 class="text-base font-medium">Luz nocturna</h3>
+					<h3 class="text-base font-medium">{{ t('views.brightness.nightLight') }}</h3>
 					<p class="mt-0.5 text-sm text-tx-muted">
-						Reduce la luz azul de la pantalla durante la noche.
+						{{ t('views.brightness.nightLightDescription') }}
 					</p>
 				</div>
 				<SwitchToggle
@@ -159,12 +161,12 @@ function toggleNightLight(value: boolean) {
 			<AlertMessage
 				v-if="!nightLight.available"
 				tone="warning"
-				message="wlsunset no está instalado; la luz nocturna no puede activarse."
+				:message="t('views.brightness.wlsunsetMissing')"
 				class="mt-3"
 			/>
 
 			<div class="mt-4 grid gap-4 sm:grid-cols-2">
-				<FormGroup label="Temperatura nocturna">
+				<FormGroup :label="t('views.brightness.nightTemp')">
 					<div class="flex items-center gap-3">
 						<RangeSlider
 							v-model="nightLight.night_temp"
@@ -177,7 +179,7 @@ function toggleNightLight(value: boolean) {
 						</span>
 					</div>
 				</FormGroup>
-				<FormGroup label="Temperatura diurna">
+				<FormGroup :label="t('views.brightness.dayTemp')">
 					<div class="flex items-center gap-3">
 						<RangeSlider v-model="nightLight.day_temp" :min="1000" :max="10000" :step="100" />
 						<span class="w-16 shrink-0 text-right text-sm tabular-nums text-tx-muted">
@@ -187,23 +189,23 @@ function toggleNightLight(value: boolean) {
 				</FormGroup>
 			</div>
 
-			<FormGroup label="Programación" class="mt-4">
+			<FormGroup :label="t('views.brightness.schedule')" class="mt-4">
 				<SelectInput v-model="nightLight.mode" :options="modes" />
 			</FormGroup>
 
 			<div v-if="isLocationMode" class="mt-4 grid gap-4 sm:grid-cols-2">
-				<FormGroup label="Latitud">
+				<FormGroup :label="t('views.brightness.latitude')">
 					<TextInput v-model="nightLight.latitude" placeholder="-34.60" />
 				</FormGroup>
-				<FormGroup label="Longitud">
+				<FormGroup :label="t('views.brightness.longitude')">
 					<TextInput v-model="nightLight.longitude" placeholder="-58.38" />
 				</FormGroup>
 			</div>
 			<div v-else class="mt-4 grid gap-4 sm:grid-cols-2">
-				<FormGroup label="Empieza el día">
+				<FormGroup :label="t('views.brightness.dayStarts')">
 					<TextInput v-model="nightLight.start" type="time" />
 				</FormGroup>
-				<FormGroup label="Empieza la noche">
+				<FormGroup :label="t('views.brightness.nightStarts')">
 					<TextInput v-model="nightLight.stop" type="time" />
 				</FormGroup>
 			</div>
@@ -215,7 +217,7 @@ function toggleNightLight(value: boolean) {
 					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
 					@click="saveNightLight"
 				>
-					{{ savingNight ? 'Guardando…' : 'Guardar cambios' }}
+					{{ savingNight ? t('common.saving') : t('common.save') }}
 				</button>
 			</div>
 		</SectionCard>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { listen } from '@tauri-apps/api/event';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, nextTick, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
@@ -24,12 +25,14 @@ import {
 	type WiFiConnectionConfig,
 } from '@/services/network.service';
 
+const { t } = useI18n();
+
 const wifiEnabled = ref(true);
 const wifiAvailable = ref(true);
 const loading = ref(false);
 const availableNetworks: Ref<NetworkInfo[]> = ref([]);
-const wifiStatus = ref('Verificando...');
-const ethernetStatus = ref('Verificando...');
+const wifiStatus = ref(t('views.networkWifi.status.checking'));
+const ethernetStatus = ref(t('views.networkWifi.status.checking'));
 const isConnecting = ref(false);
 const isRefreshing = ref(false);
 const selectedNetwork = ref<NetworkInfo | null>(null);
@@ -52,31 +55,31 @@ const currentConnectedNetwork = computed(
 );
 
 const getNetworkName = (network: NetworkInfo): string => {
-	return network.ssid || network.name || 'Red sin nombre';
+	return network.ssid || network.name || t('views.networkWifi.unnamedNetwork');
 };
 
 const getNetworkSecurity = (network: NetworkInfo): string => {
-	return network.security_type || 'Abierta';
+	return network.security_type || t('views.networkWifi.openSecurity');
 };
 
 const updateEthernetStatus = (state: NetworkInfo | null) => {
 	if (!state) {
-		ethernetStatus.value = 'Desconocido';
+		ethernetStatus.value = t('views.networkWifi.status.unknown');
 		return;
 	}
 
 	const isEthernet = state.connection_type?.toLowerCase() === 'ethernet';
 	if (isEthernet && state.is_connected) {
-		ethernetStatus.value = 'Conectado';
+		ethernetStatus.value = t('views.networkWifi.status.connected');
 		return;
 	}
 
 	if (isEthernet && !state.is_connected) {
-		ethernetStatus.value = 'Desconectado';
+		ethernetStatus.value = t('views.networkWifi.status.disconnected');
 		return;
 	}
 
-	ethernetStatus.value = 'Sin enlace activo';
+	ethernetStatus.value = t('views.networkWifi.status.noLink');
 };
 
 const formatBytesPerSecond = (bytes: number): string => {
@@ -115,7 +118,7 @@ const refreshEthernetStatus = async () => {
 		updateEthernetStatus(state);
 	} catch (statusError) {
 		console.error('Error fetching ethernet status:', statusError);
-		ethernetStatus.value = 'Desconocido';
+		ethernetStatus.value = t('views.networkWifi.status.unknown');
 	}
 };
 
@@ -128,7 +131,7 @@ const refreshNetworks = async () => {
 		await updateCurrentIcon();
 		await refreshNetworkTelemetry();
 	} catch (scanError) {
-		error.value = `Error actualizando redes: ${String(scanError)}`;
+		error.value = t('views.networkWifi.errors.refresh').replace('{0}', String(scanError));
 	} finally {
 		loading.value = false;
 		isRefreshing.value = false;
@@ -145,7 +148,7 @@ const triggerRescan = async () => {
 		await updateCurrentIcon();
 		await refreshNetworkTelemetry();
 	} catch (scanError) {
-		error.value = `Error escaneando redes: ${String(scanError)}`;
+		error.value = t('views.networkWifi.errors.scan').replace('{0}', String(scanError));
 	} finally {
 		loading.value = false;
 		isRefreshing.value = false;
@@ -161,7 +164,9 @@ const checkWirelessStatus = async () => {
 		if (available) {
 			const enabled = await getWirelessEnabled();
 			wifiEnabled.value = enabled;
-			wifiStatus.value = enabled ? 'Encendido' : 'Apagado';
+			wifiStatus.value = enabled
+				? t('views.networkWifi.status.on')
+				: t('views.networkWifi.status.off');
 
 			if (enabled) {
 				await refreshNetworks();
@@ -172,7 +177,7 @@ const checkWirelessStatus = async () => {
 				await updateCurrentIcon();
 			}
 		} else {
-			wifiStatus.value = 'Hardware no disponible';
+			wifiStatus.value = t('views.networkWifi.status.noHardware');
 			wifiEnabled.value = false;
 			availableNetworks.value = [];
 			networkStats.value = null;
@@ -180,7 +185,10 @@ const checkWirelessStatus = async () => {
 			await updateCurrentIcon();
 		}
 	} catch (wirelessError) {
-		error.value = `Error verificando estado wireless: ${String(wirelessError)}`;
+		error.value = t('views.networkWifi.errors.wirelessStatus').replace(
+			'{0}',
+			String(wirelessError)
+		);
 	}
 };
 
@@ -193,7 +201,9 @@ const toggleWifi = async () => {
 		await setWirelessEnabled(newState);
 
 		wifiEnabled.value = newState;
-		wifiStatus.value = newState ? 'Encendido' : 'Apagado';
+		wifiStatus.value = newState
+			? t('views.networkWifi.status.on')
+			: t('views.networkWifi.status.off');
 
 		if (newState) {
 			await refreshNetworks();
@@ -204,7 +214,7 @@ const toggleWifi = async () => {
 			await updateCurrentIcon();
 		}
 	} catch (toggleError) {
-		error.value = `Error alternando Wi-Fi: ${String(toggleError)}`;
+		error.value = t('views.networkWifi.errors.toggle').replace('{0}', String(toggleError));
 	}
 };
 
@@ -239,7 +249,7 @@ const connectToSelectedNetwork = async (password: string) => {
 		await refreshNetworks();
 		await refreshEthernetStatus();
 	} catch (connectError) {
-		error.value = `Error al conectar: ${String(connectError)}`;
+		error.value = t('views.networkWifi.errors.connect').replace('{0}', String(connectError));
 	} finally {
 		isConnecting.value = false;
 	}
@@ -277,21 +287,21 @@ onUnmounted(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			section="Conectividad"
-			title="Wi-Fi"
-			description="Administra redes inalámbricas, estado del adaptador y conexión activa."
+			:section="t('sidebar.network')"
+			:title="t('views.networkWifi.title')"
+			:description="t('views.networkWifi.description')"
 		>
 			<template #actions>
 				<div class="flex items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2">
 					<div class="flex items-center gap-2">
-						<img v-if="currentNetworkIcon" :src="currentNetworkIcon" alt="Red actual" class="h-5 w-5" />
+						<img v-if="currentNetworkIcon" :src="currentNetworkIcon" :alt="t('views.networkWifi.currentNetworkAlt')" class="h-5 w-5" />
 						<span class="text-sm font-medium">
 							{{
 								currentConnectedNetwork
-									? `Conectado a ${getNetworkName(currentConnectedNetwork)}`
+									? t('views.networkWifi.connectedTo').replace('{0}', getNetworkName(currentConnectedNetwork))
 									: wifiEnabled
-										? 'Sin conexión activa'
-										: 'Wi-Fi desactivado'
+										? t('views.networkWifi.noActiveConnection')
+										: t('views.networkWifi.wifiDisabled')
 							}}
 						</span>
 					</div>
@@ -305,13 +315,13 @@ onUnmounted(() => {
 		<div class="grid gap-4 xl:grid-cols-3">
 			<SectionCard class="xl:col-span-2">
 				<div class="mb-4 flex items-center justify-between">
-					<h3 class="text-lg font-medium text-tx-primary">Redes Disponibles</h3>
+					<h3 class="text-lg font-medium text-tx-primary">{{ t('views.networkWifi.availableNetworks') }}</h3>
 					<button
 						class="flex items-center justify-center rounded p-1.5 transition-colors hover:bg-ui-surface border-transparent border hover:border-ui-border"
 						:class="isRefreshing || !wifiEnabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'"
 						@click="triggerRescan"
 						:disabled="isRefreshing || !wifiEnabled"
-						title="Escanear redes"
+						:title="t('views.networkWifi.scanTooltip')"
 					>
 						<svg class="h-4 w-4 text-tx-muted" :class="{ 'animate-spin text-primary': isRefreshing }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -319,10 +329,10 @@ onUnmounted(() => {
 					</button>
 				</div>
 
-				<EmptyStateBox v-if="!wifiAvailable" message="No se detectó hardware inalámbrico disponible" />
-				<EmptyStateBox v-else-if="!wifiEnabled" message="Activa Wi-Fi para escanear redes" />
-				<EmptyStateBox v-else-if="loading" message="Buscando redes disponibles..." />
-				<EmptyStateBox v-else-if="availableNetworks.length === 0" message="No se encontraron redes Wi-Fi" />
+				<EmptyStateBox v-if="!wifiAvailable" :message="t('views.networkWifi.emptyNoHardware')" />
+				<EmptyStateBox v-else-if="!wifiEnabled" :message="t('views.networkWifi.emptyDisabled')" />
+				<EmptyStateBox v-else-if="loading" :message="t('views.networkWifi.emptySearching')" />
+				<EmptyStateBox v-else-if="availableNetworks.length === 0" :message="t('views.networkWifi.emptyNoNetworks')" />
 
 				<ul v-else class="flex max-h-[55vh] flex-col gap-2 overflow-y-auto pr-1">
 					<li
@@ -350,13 +360,13 @@ onUnmounted(() => {
 								v-if="network.is_connected"
 								class="rounded border border-status-success/30 bg-status-success/10 px-2 py-0.5 text-xs font-semibold text-status-success"
 							>
-								Conectado
+								{{ t('views.networkWifi.status.connected') }}
 							</span>
 							<span
 								v-else
 								class="rounded border border-ui-border px-2 py-0.5 text-xs text-tx-muted group-hover:border-primary/40 group-hover:text-primary"
 							>
-								Conectar
+								{{ t('views.networkWifi.connect') }}
 							</span>
 						</div>
 					</li>
@@ -364,21 +374,21 @@ onUnmounted(() => {
 			</SectionCard>
 
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">Estado de Red</h3>
+				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.networkWifi.networkStatus') }}</h3>
 				<div class="space-y-3">
 					<StatTile label="Wi-Fi" :value="wifiStatus" />
 					<StatTile label="Ethernet" :value="ethernetStatus" />
 					<StatTile
-						label="Interfaz activa"
-						:value="networkStats?.interface || 'Sin interfaz detectada'"
-						:hint="networkInterfaces.length ? networkInterfaces.join(', ') : 'Sin interfaces reportadas'"
+						:label="t('views.networkWifi.activeInterface')"
+						:value="networkStats?.interface || t('views.networkWifi.noInterface')"
+						:hint="networkInterfaces.length ? networkInterfaces.join(', ') : t('views.networkWifi.noInterfacesReported')"
 					/>
 					<StatTile
-						label="Descarga"
+						:label="t('views.networkWifi.download')"
 						:value="formatBytesPerSecond(networkStats?.download_speed || 0)"
 					/>
 					<StatTile
-						label="Subida"
+						:label="t('views.networkWifi.upload')"
 						:value="formatBytesPerSecond(networkStats?.upload_speed || 0)"
 					/>
 				</div>
@@ -390,13 +400,15 @@ onUnmounted(() => {
 			class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
 		>
 			<div class="w-full max-w-md rounded-corner border border-ui-border bg-ui-bg p-4 shadow-xl">
-				<h2 class="text-lg font-semibold text-tx-primary">Conectar a {{ getNetworkName(selectedNetwork) }}</h2>
-				<p class="mt-1 text-sm text-tx-muted">Ingresa la contraseña de la red para establecer la conexión.</p>
+				<h2 class="text-lg font-semibold text-tx-primary">
+					{{ t('views.networkWifi.dialog.title').replace('{0}', getNetworkName(selectedNetwork)) }}
+				</h2>
+				<p class="mt-1 text-sm text-tx-muted">{{ t('views.networkWifi.dialog.description') }}</p>
 
 				<TextInput
 					v-model="wifiPassword"
 					type="password"
-					placeholder="Contraseña"
+					:placeholder="t('views.networkWifi.dialog.passwordPlaceholder')"
 					class="mt-4"
 					@keyup.enter="confirmConnect"
 				/>
@@ -407,14 +419,14 @@ onUnmounted(() => {
 						@click="showPasswordDialog = false"
 						:disabled="isConnecting"
 					>
-						Cancelar
+						{{ t('common.cancel') }}
 					</button>
 					<button
 						class="rounded-corner border border-primary/20 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15"
 						@click="confirmConnect"
 						:disabled="isConnecting"
 					>
-						{{ isConnecting ? 'Conectando...' : 'Conectar' }}
+						{{ isConnecting ? t('views.networkWifi.connecting') : t('views.networkWifi.connect') }}
 					</button>
 				</div>
 			</div>

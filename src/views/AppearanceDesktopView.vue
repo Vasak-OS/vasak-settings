@@ -5,6 +5,7 @@ import {
 	type VSKConfig,
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import type { Store } from 'pinia';
 import { computed, onMounted, type Ref, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
@@ -14,6 +15,8 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+
+const { t } = useI18n();
 
 const configStore = ref<any>(null);
 const loading = ref(true);
@@ -42,7 +45,7 @@ onMounted(async () => {
 			iconSize.value = Number(vskConfig.value.desktop.iconsize ?? 64);
 		}
 	} catch (err) {
-		error.value = `Error cargando configuración del escritorio: ${err}`;
+		error.value = t('views.appearanceDesktop.errorLoading').replace('{0}', String(err));
 	} finally {
 		loading.value = false;
 	}
@@ -55,7 +58,7 @@ const saveConfig = async () => {
 
 	try {
 		if (iconSize.value < 24 || iconSize.value > 128) {
-			throw new Error('El tamaño del icono debe estar entre 24 y 128');
+			throw new Error(t('views.appearanceDesktop.invalidIconSize'));
 		}
 
 		if (vskConfig.value) {
@@ -68,13 +71,13 @@ const saveConfig = async () => {
 
 			await writeConfig(vskConfig.value);
 
-			successMessage.value = 'Configuración del escritorio guardada exitosamente';
+			successMessage.value = t('views.appearanceDesktop.saved');
 			setTimeout(() => {
 				successMessage.value = '';
 			}, 3000);
 		}
 	} catch (err) {
-		error.value = `Error guardando configuración: ${err}`;
+		error.value = t('views.appearanceDesktop.errorSaving').replace('{0}', String(err));
 	} finally {
 		saving.value = false;
 	}
@@ -88,9 +91,9 @@ const isFormValid = computed(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4">
 		<PageHeader
-			section="Apariencia"
-			title="Archivos del Escritorio"
-			description="Ajusta la visibilidad y el tamaño de los iconos en el fondo de escritorio."
+			:section="t('sidebar.appearance')"
+			:title="t('views.appearanceDesktop.title')"
+			:description="t('views.appearanceDesktop.description')"
 		>
 			<template #actions>
 				<button
@@ -100,12 +103,12 @@ const isFormValid = computed(() => {
 					:disabled="!isFormValid || saving"
 					@click="saveConfig"
 				>
-					{{ saving ? 'Guardando...' : 'Aplicar Cambios' }}
+					{{ saving ? t('common.saving') : t('views.appearanceDesktop.applyChanges') }}
 				</button>
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" message="Cargando configuración..." padding="lg" />
+		<EmptyStateBox v-if="loading" :message="t('views.appearanceDesktop.loading')" padding="lg" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
 			<AlertMessage v-if="error" :message="error" tone="error" />
@@ -114,37 +117,37 @@ const isFormValid = computed(() => {
 
 			<div class="grid gap-4 xl:grid-cols-2">
 				<SectionCard>
-					<h3 class="mb-4 text-lg font-medium text-tx-primary">Archivos</h3>
+					<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.appearanceDesktop.files') }}</h3>
 					<div class="flex flex-col gap-5">
 						<div class="flex items-center justify-between">
-							<label class="text-sm font-medium text-tx-primary">Mostrar Archivos</label>
+							<label class="text-sm font-medium text-tx-primary">{{ t('views.appearanceDesktop.showFiles') }}</label>
 							<div class="flex items-center gap-3">
 								<SwitchToggle
 									:is-on="showFiles"
 									@toggle="val => (showFiles = val)"
 								/>
-								<span class="w-20 text-xs text-tx-muted">{{ showFiles ? "Activado" : "Desactivado" }}</span>
+								<span class="w-20 text-xs text-tx-muted">{{ showFiles ? t('views.appearanceDesktop.enabled') : t('views.appearanceDesktop.disabled') }}</span>
 							</div>
 						</div>
 
 						<div class="flex items-center justify-between">
-							<label class="text-sm font-medium text-tx-primary">Mostrar Archivos Ocultos</label>
+							<label class="text-sm font-medium text-tx-primary">{{ t('views.appearanceDesktop.showHiddenFiles') }}</label>
 							<div class="flex items-center gap-3">
 								<SwitchToggle
 									:is-on="showHiddenFiles"
 									:disabled="!showFiles"
 									@toggle="val => (showHiddenFiles = val)"
 								/>
-								<span class="w-20 text-xs text-tx-muted">{{ showHiddenFiles ? "Activado" : "Desactivado" }}</span>
+								<span class="w-20 text-xs text-tx-muted">{{ showHiddenFiles ? t('views.appearanceDesktop.enabled') : t('views.appearanceDesktop.disabled') }}</span>
 							</div>
 						</div>
 					</div>
 				</SectionCard>
 
 				<SectionCard>
-					<h3 class="mb-4 text-lg font-medium text-tx-primary">Dimensiones</h3>
+					<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.appearanceDesktop.dimensions') }}</h3>
 					<div class="flex flex-col gap-5">
-						<FormGroup label="Tamaño de Icono" html-for="icon-size" :label-class="'flex justify-between w-full'">
+						<FormGroup :label="t('views.appearanceDesktop.iconSize')" html-for="icon-size" :label-class="'flex justify-between w-full'">
 							<template #default>
 								<div class="flex items-center gap-3">
 									<span class="text-xs text-tx-muted w-8">24px</span>

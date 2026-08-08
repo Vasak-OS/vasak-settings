@@ -10,6 +10,7 @@ import {
 	stopScan,
 	toggleBluetooth,
 } from '@vasakgroup/plugin-bluetooth-manager';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import BluetoothDeviceCard from '@/components/cards/BluetoothDeviceCard.vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
@@ -17,6 +18,8 @@ import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+
+const { t } = useI18n();
 
 // --- Estado ---
 const connectedDevices: Ref<any[]> = ref([]);
@@ -42,7 +45,7 @@ const toggleBT = async () => {
 		await new Promise((r) => setTimeout(r, 600));
 		await refreshDevices();
 	} catch (err) {
-		error.value = `Error alternando Bluetooth: ${err}`;
+		error.value = t('views.networkBluetooth.errors.toggle').replace('{0}', String(err));
 	} finally {
 		isTogglingBluetooth.value = false;
 	}
@@ -94,7 +97,7 @@ const scanDevices = async () => {
 		try {
 			await stopScan(defaultAdapter.value.path);
 		} catch {}
-		error.value = `Error buscando dispositivos: ${err}`;
+		error.value = t('views.networkBluetooth.errors.scan').replace('{0}', String(err));
 	} finally {
 		isScanning.value = false;
 	}
@@ -104,7 +107,9 @@ const connect = async (device: any) => {
 	try {
 		await connectDevice(device.path);
 	} catch (err) {
-		error.value = `Error conectando a ${device.alias || device.name}: ${err}`;
+		error.value = t('views.networkBluetooth.errors.connect')
+			.replace('{0}', String(device.alias || device.name))
+			.replace('{1}', String(err));
 	}
 };
 
@@ -112,7 +117,7 @@ const disconnect = async (device: any) => {
 	try {
 		await disconnectDevice(device.path);
 	} catch (err) {
-		error.value = `Error desconectando: ${err}`;
+		error.value = t('views.networkBluetooth.errors.disconnect').replace('{0}', String(err));
 	}
 };
 
@@ -145,13 +150,13 @@ onUnmounted(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			section="Conectividad"
-			title="Bluetooth"
-			description="Empareja y administra tus dispositivos inalámbricos."
+			:section="t('sidebar.network')"
+			:title="t('views.networkBluetooth.title')"
+			:description="t('views.networkBluetooth.description')"
 		>
 			<template #actions>
 				<div class="flex items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2">
-					<span class="text-sm font-medium">{{ isBluetoothOn ? 'Encendido' : 'Apagado' }}</span>
+					<span class="text-sm font-medium">{{ isBluetoothOn ? t('views.networkBluetooth.on') : t('views.networkBluetooth.off') }}</span>
 					<SwitchToggle
 						:is-on="isBluetoothOn"
 						:disabled="isTogglingBluetooth"
@@ -171,13 +176,13 @@ onUnmounted(() => {
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
 					</svg>
 				</div>
-				<p class="text-base font-medium text-tx-primary">Bluetooth está apagado</p>
-				<p class="text-sm mt-1">Habilita el chip Bluetooth para buscar dispositivos.</p>
+				<p class="text-base font-medium text-tx-primary">{{ t('views.networkBluetooth.offTitle') }}</p>
+				<p class="text-sm mt-1">{{ t('views.networkBluetooth.offHint') }}</p>
 			</div>
 		</div>
 
 		<!-- Estado Cargando -->
-		<EmptyStateBox v-else-if="loading || isTogglingBluetooth" message="Sincronizando estado del dispositivo de radio..." padding="lg" />
+		<EmptyStateBox v-else-if="loading || isTogglingBluetooth" :message="t('views.networkBluetooth.syncing')" padding="lg" />
 
 		<!-- Estado Listando Dispositivos -->
 		<template v-else>
@@ -185,19 +190,19 @@ onUnmounted(() => {
 				<!-- Conectados -->
 				<SectionCard>
 					<h3 class="mb-4 text-lg font-medium text-tx-primary flex items-center justify-between">
-						Dispositivos Conectados
+						{{ t('views.networkBluetooth.connectedDevices') }}
 						<span class="text-xs text-tx-muted rounded bg-ui-surface/50 px-2 py-0.5 border border-ui-border">
 							{{ connectedDevices.length }}
 						</span>
 					</h3>
 					
-					<EmptyStateBox v-if="connectedDevices.length === 0" message="No hay dispositivos conectados" />
+					<EmptyStateBox v-if="connectedDevices.length === 0" :message="t('views.networkBluetooth.emptyConnected')" />
 					
 					<ul v-else class="flex flex-col gap-1">
 						<li v-for="dev in connectedDevices" :key="dev.path">
 							<BluetoothDeviceCard
 								:device="dev"
-								action-label="Desconectar"
+								:action-label="t('views.networkBluetooth.disconnect')"
 								connected
 								@action="disconnect(dev)"
 							/>
@@ -208,14 +213,14 @@ onUnmounted(() => {
 				<!-- Disponibles -->
 				<SectionCard>
 					<div class="mb-4 flex items-center justify-between">
-						<h3 class="text-lg font-medium text-tx-primary">Disponibles</h3>
+						<h3 class="text-lg font-medium text-tx-primary">{{ t('views.networkBluetooth.availableDevices') }}</h3>
 						
 						<button
 							class="flex items-center justify-center rounded p-1.5 transition-colors hover:bg-ui-surface border-transparent border hover:border-ui-border"
 							:class="isScanning ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'"
 							@click="scanDevices"
 							:disabled="isScanning"
-							title="Escanear"
+							:title="t('views.networkBluetooth.scanTooltip')"
 						>
 							<svg class="h-4 w-4 text-tx-muted" :class="{ 'animate-spin text-primary': isScanning }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -223,13 +228,13 @@ onUnmounted(() => {
 						</button>
 					</div>
 
-					<EmptyStateBox v-if="availableDevices.length === 0" message="No se encontraron dispositivos en el área" />
+					<EmptyStateBox v-if="availableDevices.length === 0" :message="t('views.networkBluetooth.emptyAvailable')" />
 					
 					<ul v-else class="flex flex-col gap-1 max-h-[50vh] overflow-y-auto pr-1">
 						<li v-for="dev in availableDevices" :key="dev.path">
 							<BluetoothDeviceCard
 								:device="dev"
-								action-label="Conectar"
+								:action-label="t('views.networkBluetooth.connect')"
 								@action="connect(dev)"
 							/>
 						</li>

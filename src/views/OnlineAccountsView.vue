@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { computed, onMounted, reactive, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import { useReactiveSymbol } from '@/composables/useReactiveIcon';
 import {
+	type AccountInfo,
 	listAccounts,
 	registerNewAccount,
 	removeAccount,
-	type AccountInfo,
 } from '@/services/accounts.service';
 
 type ProviderKind = 'google' | 'proton' | 'nextcloud' | 'custom';
@@ -21,7 +22,9 @@ interface ProviderDef {
 	icon: string;
 }
 
-const PROVIDERS: ProviderDef[] = [
+const { t } = useI18n();
+
+const PROVIDERS = computed<ProviderDef[]>(() => [
 	{
 		kind: 'google',
 		label: 'Google',
@@ -42,11 +45,11 @@ const PROVIDERS: ProviderDef[] = [
 	},
 	{
 		kind: 'custom',
-		label: 'Servidor personalizado',
+		label: t('views.onlineAccounts.customProvider'),
 		description: 'IMAP / SMTP / CardDAV / CalDAV',
 		icon: 'computer-symbolic',
 	},
-];
+]);
 
 const errors = ref('');
 const success = ref('');
@@ -104,49 +107,49 @@ const validateCustomForm = (): boolean => {
 	let valid = true;
 
 	if (!customForm.displayName.trim()) {
-		customFormErrors.displayName = 'El nombre es obligatorio';
+		customFormErrors.displayName = t('views.onlineAccounts.errors.nameRequired');
 		valid = false;
 	} else {
 		customFormErrors.displayName = '';
 	}
 
 	if (!customForm.imapServer.trim()) {
-		customFormErrors.imapServer = 'El servidor IMAP es obligatorio';
+		customFormErrors.imapServer = t('views.onlineAccounts.errors.imapServerRequired');
 		valid = false;
 	} else {
 		customFormErrors.imapServer = '';
 	}
 
 	if (!customForm.imapPort || customForm.imapPort < 1 || customForm.imapPort > 65535) {
-		customFormErrors.imapPort = 'Puerto inválido (1-65535)';
+		customFormErrors.imapPort = t('views.onlineAccounts.errors.invalidPort');
 		valid = false;
 	} else {
 		customFormErrors.imapPort = '';
 	}
 
 	if (!customForm.smtpServer.trim()) {
-		customFormErrors.smtpServer = 'El servidor SMTP es obligatorio';
+		customFormErrors.smtpServer = t('views.onlineAccounts.errors.smtpServerRequired');
 		valid = false;
 	} else {
 		customFormErrors.smtpServer = '';
 	}
 
 	if (!customForm.smtpPort || customForm.smtpPort < 1 || customForm.smtpPort > 65535) {
-		customFormErrors.smtpPort = 'Puerto inválido (1-65535)';
+		customFormErrors.smtpPort = t('views.onlineAccounts.errors.invalidPort');
 		valid = false;
 	} else {
 		customFormErrors.smtpPort = '';
 	}
 
 	if (!customForm.username.trim()) {
-		customFormErrors.username = 'El usuario es obligatorio';
+		customFormErrors.username = t('views.onlineAccounts.errors.usernameRequired');
 		valid = false;
 	} else {
 		customFormErrors.username = '';
 	}
 
 	if (!customForm.password) {
-		customFormErrors.password = 'La contraseña es obligatoria';
+		customFormErrors.password = t('views.onlineAccounts.errors.passwordRequired');
 		valid = false;
 	} else {
 		customFormErrors.password = '';
@@ -160,7 +163,7 @@ const fetchAccounts = async () => {
 		errors.value = '';
 		accounts.value = await listAccounts();
 	} catch (err) {
-		errors.value = `Error al cargar cuentas: ${err}`;
+		errors.value = t('views.onlineAccounts.errors.loadAccounts').replace('{0}', String(err));
 	}
 };
 
@@ -229,13 +232,13 @@ const startGoogleOAuth = async () => {
 				scope: GOOGLE_SCOPES,
 				token_type: 'Bearer',
 			},
-			token,
+			token
 		);
 
-		success.value = 'Cuenta de Google agregada correctamente';
+		success.value = t('views.onlineAccounts.googleAdded');
 		await fetchAccounts();
 	} catch (err) {
-		errors.value = `Error en autenticación Google: ${err}`;
+		errors.value = t('views.onlineAccounts.errors.googleAuth').replace('{0}', String(err));
 	} finally {
 		loading.value = false;
 	}
@@ -249,10 +252,12 @@ const registerWellKnown = async (provider: ProviderKind) => {
 	try {
 		const label = provider === 'proton' ? 'Proton' : 'Nextcloud';
 		await registerNewAccount(provider, { display_name: label }, '');
-		success.value = `Cuenta de ${provider === 'proton' ? 'Proton' : 'Nextcloud'} registrada.`;
+		success.value = t('views.onlineAccounts.providerRegistered').replace('{0}', label);
 		await fetchAccounts();
 	} catch (err) {
-		errors.value = `Error al registrar ${provider}: ${err}`;
+		errors.value = t('views.onlineAccounts.errors.registerProvider')
+			.replace('{0}', provider)
+			.replace('{1}', String(err));
 	} finally {
 		loading.value = false;
 	}
@@ -276,15 +281,15 @@ const submitCustomProvider = async () => {
 				smtp_port: customForm.smtpPort,
 				username: customForm.username,
 			},
-			customForm.password,
+			customForm.password
 		);
 
-		success.value = 'Cuenta personalizada agregada correctamente';
+		success.value = t('views.onlineAccounts.customAdded');
 		showCustomForm.value = false;
 		resetCustomForm();
 		await fetchAccounts();
 	} catch (err) {
-		errors.value = `Error al registrar cuenta personalizada: ${err}`;
+		errors.value = t('views.onlineAccounts.errors.registerCustom').replace('{0}', String(err));
 	} finally {
 		loading.value = false;
 	}
@@ -313,10 +318,13 @@ const deleteAccount = async (account: AccountInfo) => {
 	try {
 		errors.value = '';
 		await removeAccount(account.id);
-		success.value = `Cuenta de ${account.display_name || account.provider} eliminada.`;
+		success.value = t('views.onlineAccounts.accountRemoved').replace(
+			'{0}',
+			account.display_name || account.provider
+		);
 		await fetchAccounts();
 	} catch (err) {
-		errors.value = `Error al eliminar cuenta: ${err}`;
+		errors.value = t('views.onlineAccounts.errors.deleteAccount').replace('{0}', String(err));
 	}
 };
 
@@ -334,16 +342,16 @@ onMounted(async () => {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			section="Sistema"
-			title="Cuentas en Línea"
-			description="Conecta tus servicios de correo, calendario y contactos."
+			:section="t('sidebar.system')"
+			:title="t('views.onlineAccounts.title')"
+			:description="t('views.onlineAccounts.description')"
 		/>
 
 		<AlertMessage v-if="errors" :message="errors" tone="error" />
 		<AlertMessage v-if="success" :message="success" tone="success" />
 
 		<SectionCard>
-			<h3 class="mb-4 text-lg font-medium text-tx-primary">Proveedores</h3>
+			<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.onlineAccounts.providers') }}</h3>
 
 			<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
 				<button
@@ -367,7 +375,7 @@ onMounted(async () => {
 		</SectionCard>
 
 		<SectionCard v-if="accounts.length > 0">
-			<h3 class="mb-4 text-lg font-medium text-tx-primary">Cuentas vinculadas</h3>
+			<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.onlineAccounts.linkedAccounts') }}</h3>
 
 			<ul class="flex flex-col gap-2">
 				<li
@@ -388,7 +396,7 @@ onMounted(async () => {
 						class="rounded-corner border border-ui-border px-3 py-1.5 text-xs text-tx-muted transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
 						@click="deleteAccount(account)"
 					>
-						Eliminar
+						{{ t('common.delete') }}
 					</button>
 				</li>
 			</ul>
@@ -399,18 +407,18 @@ onMounted(async () => {
 			class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
 		>
 			<div class="w-full max-w-lg rounded-corner border border-ui-border bg-ui-bg p-5 shadow-xl">
-				<h2 class="text-lg font-semibold text-tx-primary">Servidor personalizado</h2>
+				<h2 class="text-lg font-semibold text-tx-primary">{{ t('views.onlineAccounts.customProvider') }}</h2>
 				<p class="mt-1 text-sm text-tx-muted">
-					Configura manualmente los datos de tu servidor de correo y sincronización.
+					{{ t('views.onlineAccounts.customDialogDescription') }}
 				</p>
 
 				<div class="mt-4 space-y-3">
 					<div>
-						<label class="block text-xs font-medium text-tx-muted">Nombre para mostrar</label>
+						<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.displayName') }}</label>
 						<input
 							v-model="customForm.displayName"
 							type="text"
-							placeholder="Mi cuenta personal"
+							:placeholder="t('views.onlineAccounts.displayNamePlaceholder')"
 							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm outline-none"
 							:class="customFormErrors.displayName ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 						/>
@@ -421,7 +429,7 @@ onMounted(async () => {
 
 					<div class="grid grid-cols-3 gap-2">
 						<div class="col-span-2">
-							<label class="block text-xs font-medium text-tx-muted">Servidor IMAP</label>
+							<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.imapServer') }}</label>
 							<input
 								v-model="customForm.imapServer"
 								type="text"
@@ -434,7 +442,7 @@ onMounted(async () => {
 							</span>
 						</div>
 						<div>
-							<label class="block text-xs font-medium text-tx-muted">Puerto</label>
+							<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.port') }}</label>
 							<input
 								v-model.number="customForm.imapPort"
 								type="number"
@@ -450,7 +458,7 @@ onMounted(async () => {
 
 					<div class="grid grid-cols-3 gap-2">
 						<div class="col-span-2">
-							<label class="block text-xs font-medium text-tx-muted">Servidor SMTP</label>
+							<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.smtpServer') }}</label>
 							<input
 								v-model="customForm.smtpServer"
 								type="text"
@@ -463,7 +471,7 @@ onMounted(async () => {
 							</span>
 						</div>
 						<div>
-							<label class="block text-xs font-medium text-tx-muted">Puerto</label>
+							<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.port') }}</label>
 							<input
 								v-model.number="customForm.smtpPort"
 								type="number"
@@ -478,11 +486,11 @@ onMounted(async () => {
 					</div>
 
 					<div>
-						<label class="block text-xs font-medium text-tx-muted">Nombre de usuario</label>
+						<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.username') }}</label>
 						<input
 							v-model="customForm.username"
 							type="text"
-							placeholder="usuario@example.com"
+							:placeholder="t('views.onlineAccounts.usernamePlaceholder')"
 							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm outline-none"
 							:class="customFormErrors.username ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 						/>
@@ -492,11 +500,11 @@ onMounted(async () => {
 					</div>
 
 					<div>
-						<label class="block text-xs font-medium text-tx-muted">Contraseña</label>
+						<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.password') }}</label>
 						<input
 							v-model="customForm.password"
 							type="password"
-							placeholder="Contraseña de aplicación"
+							:placeholder="t('views.onlineAccounts.passwordPlaceholder')"
 							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm outline-none"
 							:class="customFormErrors.password ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 						/>
@@ -512,14 +520,14 @@ onMounted(async () => {
 						:disabled="loading"
 						@click="cancelCustomForm"
 					>
-						Cancelar
+						{{ t('common.cancel') }}
 					</button>
 					<button
 						class="rounded-corner border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/15"
 						:disabled="loading || !isCustomValid"
 						@click="submitCustomProvider"
 					>
-						{{ loading ? 'Guardando...' : 'Agregar cuenta' }}
+						{{ loading ? t('common.saving') : t('views.onlineAccounts.addAccount') }}
 					</button>
 				</div>
 			</div>

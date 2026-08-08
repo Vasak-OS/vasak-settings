@@ -6,6 +6,7 @@ import {
 	type VSKConfig,
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import type { Store } from 'pinia';
 import { computed, onMounted, type Ref, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
@@ -20,6 +21,8 @@ interface IconPackPreview {
 	path: string;
 	icons: string[];
 }
+
+const { t } = useI18n();
 
 const configStore = ref<any>(null);
 const iconPacks = ref<string[]>([]);
@@ -56,7 +59,7 @@ onMounted(async () => {
 		// Cargar previsualizaciones para todos los packs visibles
 		await Promise.all(iconPacks.value.map((packName) => loadPackPreview(packName)));
 	} catch (err) {
-		error.value = `Error cargando configuración: ${err}`;
+		error.value = t('views.appearanceIconPacks.errorLoading').replace('{0}', String(err));
 		console.error(err);
 	} finally {
 		loading.value = false;
@@ -92,7 +95,7 @@ const saveConfig = async () => {
 
 	try {
 		if (!vskConfig.value) {
-			throw new Error('Configuración no cargada');
+			throw new Error(t('views.appearanceIconPacks.configNotLoaded'));
 		}
 
 		// Actualizar los packs en la configuración
@@ -105,12 +108,12 @@ const saveConfig = async () => {
 		// Guardar configuración
 		await writeConfig(vskConfig.value);
 
-		successMessage.value = 'Packs de iconos guardados exitosamente';
+		successMessage.value = t('views.appearanceIconPacks.saved');
 		setTimeout(() => {
 			successMessage.value = '';
 		}, 3000);
 	} catch (err) {
-		error.value = `Error guardando configuración: ${err}`;
+		error.value = t('views.appearanceIconPacks.errorSaving').replace('{0}', String(err));
 		console.error(err);
 	} finally {
 		saving.value = false;
@@ -136,9 +139,9 @@ const isChanged = computed(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4">
 		<PageHeader
-			section="Apariencia"
-			title="Packs de Iconos"
-			description="Personaliza los iconos del sistema para modo claro y oscuro."
+			:section="t('sidebar.appearance')"
+			:title="t('views.appearanceIconPacks.title')"
+			:description="t('views.appearanceIconPacks.description')"
 		>
 			<template #actions>
 				<button
@@ -148,12 +151,12 @@ const isChanged = computed(() => {
 					:disabled="!isFormValid || saving || !isChanged"
 					@click="saveConfig"
 				>
-					{{ saving ? 'Guardando...' : 'Aplicar Cambios' }}
+					{{ saving ? t('common.saving') : t('views.appearanceIconPacks.applyChanges') }}
 				</button>
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" message="Cargando packs de iconos..." padding="lg" />
+		<EmptyStateBox v-if="loading" :message="t('views.appearanceIconPacks.loading')" padding="lg" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
 			<AlertMessage v-if="error" :message="error" tone="error" />
@@ -162,8 +165,8 @@ const isChanged = computed(() => {
 
 			<!-- Modo Oscuro -->
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">Modo Oscuro</h3>
-				<FormGroup label="Selecciona un pack de iconos" html-for="dark-pack" :label-class="'flex justify-between w-full'">
+				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.appearanceIconPacks.darkMode') }}</h3>
+				<FormGroup :label="t('views.appearanceIconPacks.selectPack')" html-for="dark-pack" :label-class="'flex justify-between w-full'">
 					<div class="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
 						<div
 							v-for="pack in iconPacks"
@@ -184,7 +187,7 @@ const isChanged = computed(() => {
 										v-for="(icon, idx) in (getPackPreview(pack)?.icons || []).slice(0, 4)"
 										:key="`${pack}-icon-${idx}`"
 										:src="convertFileSrc(icon)"
-										:alt="`${pack} icon ${idx}`"
+										:alt="t('views.appearanceIconPacks.iconAlt').replace('{0}', pack).replace('{1}', String(idx))"
 										class="w-8 h-8 rounded opacity-80 hover:opacity-100 transition-opacity"
 										@error="(e) => (e.target as HTMLImageElement).style.display = 'none'"
 									/>
@@ -204,8 +207,8 @@ const isChanged = computed(() => {
 
 			<!-- Modo Claro -->
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">Modo Claro</h3>
-				<FormGroup label="Selecciona un pack de iconos" html-for="light-pack" :label-class="'flex justify-between w-full'">
+				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.appearanceIconPacks.lightMode') }}</h3>
+				<FormGroup :label="t('views.appearanceIconPacks.selectPack')" html-for="light-pack" :label-class="'flex justify-between w-full'">
 					<div class="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
 						<div
 							v-for="pack in iconPacks"
@@ -226,7 +229,7 @@ const isChanged = computed(() => {
 										v-for="(icon, idx) in (getPackPreview(pack)?.icons || []).slice(0, 4)"
 										:key="`${pack}-light-icon-${idx}`"
 										:src="convertFileSrc(icon)"
-										:alt="`${pack} icon ${idx}`"
+										:alt="t('views.appearanceIconPacks.iconAlt').replace('{0}', pack).replace('{1}', String(idx))"
 										class="w-8 h-8 rounded opacity-80 hover:opacity-100 transition-opacity"
 										@error="(e) => (e.target as HTMLImageElement).style.display = 'none'"
 									/>
@@ -242,7 +245,7 @@ const isChanged = computed(() => {
 									v-if="selectedLightPack === pack"
 									class="text-xs text-primary font-medium text-center"
 								>
-									✓ Seleccionado
+									✓ {{ t('views.appearanceIconPacks.selected') }}
 								</div>
 							</div>
 						</div>
@@ -252,18 +255,19 @@ const isChanged = computed(() => {
 
 			<!-- Información -->
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">Información</h3>
+				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.appearanceIconPacks.info') }}</h3>
 				<div class="text-sm text-tx-muted space-y-2">
 					<p>
-						<span class="font-medium text-tx-primary">Modo Oscuro:</span> Se aplicará automáticamente cuando
-						actives el modo oscuro en el sistema.
+						<span class="font-medium text-tx-primary">{{ t('views.appearanceIconPacks.darkMode') }}:</span>
+						{{ t('views.appearanceIconPacks.infoDark') }}
 					</p>
 					<p>
-						<span class="font-medium text-tx-primary">Modo Claro:</span> Se aplicará automáticamente cuando
-						desactives el modo oscuro en el sistema.
+						<span class="font-medium text-tx-primary">{{ t('views.appearanceIconPacks.lightMode') }}:</span>
+						{{ t('views.appearanceIconPacks.infoLight') }}
 					</p>
 					<p class="mt-4">
-						Los packs de iconos se cargan de <code class="text-xs">/usr/share/icons</code> y
+						{{ t('views.appearanceIconPacks.infoPaths') }} <code class="text-xs">/usr/share/icons</code>
+						{{ t('views.appearanceIconPacks.infoPathsSeparator') }}
 						<code class="text-xs">~/.local/share/icons</code>
 					</p>
 				</div>

@@ -1,3 +1,4 @@
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { onUnmounted, type Ref, ref } from 'vue';
 import {
 	readWayfireSection,
@@ -11,6 +12,7 @@ import {
  * off, which preserves keys no UI exposes.
  */
 export function useWayfireSection(section: string, exclusive = false) {
+	const { t } = useI18n();
 	const values = ref<Record<string, string>>({}) as Ref<Record<string, string>>;
 	const loading = ref(false);
 	const saving = ref(false);
@@ -31,7 +33,7 @@ export function useWayfireSection(section: string, exclusive = false) {
 		try {
 			values.value = await readWayfireSection(section);
 		} catch (e) {
-			error.value = `Error cargando sección [${section}]: ${e}`;
+			error.value = `${t('common.loadSectionError').replace('{0}', section)}: ${e}`;
 		} finally {
 			loading.value = false;
 		}
@@ -43,7 +45,7 @@ export function useWayfireSection(section: string, exclusive = false) {
 		try {
 			const write = exclusive ? replaceWayfireSection : writeWayfireSection;
 			await write(section, values.value);
-			success.value = 'Configuración guardada correctamente';
+			success.value = t('common.saved');
 			if (successTimer !== null) {
 				clearTimeout(successTimer);
 			}
@@ -52,7 +54,7 @@ export function useWayfireSection(section: string, exclusive = false) {
 				successTimer = null;
 			}, 3000);
 		} catch (e) {
-			error.value = `Error guardando sección [${section}]: ${e}`;
+			error.value = `${t('common.saveSectionError').replace('{0}', section)}: ${e}`;
 		} finally {
 			saving.value = false;
 		}

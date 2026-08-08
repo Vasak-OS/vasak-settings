@@ -1,5 +1,11 @@
-import { ref, onUnmounted, type Ref } from 'vue';
-import { getBatteryInfo, getPowerProfiles, getActivePowerProfile, setPowerProfile, type BatteryInfo } from '@/services/battery.service';
+import { onUnmounted, type Ref, ref } from 'vue';
+import {
+	type BatteryInfo,
+	getActivePowerProfile,
+	getBatteryInfo,
+	getPowerProfiles,
+	setPowerProfile,
+} from '@/services/battery.service';
 
 const EMPTY: BatteryInfo = {
 	has_battery: false,
@@ -68,10 +74,7 @@ export function usePowerProfiles() {
 
 	async function load() {
 		try {
-			const [p, a] = await Promise.all([
-				getPowerProfiles(),
-				getActivePowerProfile(),
-			]);
+			const [p, a] = await Promise.all([getPowerProfiles(), getActivePowerProfile()]);
 			profiles.value = p;
 			active.value = a;
 			error.value = '';

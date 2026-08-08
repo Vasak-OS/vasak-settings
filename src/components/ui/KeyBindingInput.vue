@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onBeforeUnmount } from 'vue';
+import { computed, onBeforeUnmount, ref } from 'vue';
 
 interface Props {
 	modelValue: string;
@@ -94,7 +94,7 @@ function captureBinding(event: KeyboardEvent) {
 		parts.push(token);
 	}
 
-	const newParts = parts.filter(p => !pressedKeys.value.includes(p));
+	const newParts = parts.filter((p) => !pressedKeys.value.includes(p));
 	for (const p of newParts) {
 		pressedKeys.value.push(p);
 	}

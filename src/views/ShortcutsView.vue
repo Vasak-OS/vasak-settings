@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, ref } from 'vue';
 import ShortcutDeleteModal from '@/components/shortcuts/ShortcutDeleteModal.vue';
 import ShortcutEditorModal from '@/components/shortcuts/ShortcutEditorModal.vue';
@@ -8,12 +9,10 @@ import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import { SPECIAL_KEYS, type SpecialKeyDef } from '@/config/specialKeys';
-import {
-	getShortcuts,
-	normalizeShortcutKeys,
-	saveShortcuts,
-} from '@/services/shortcuts.service';
+import { getShortcuts, normalizeShortcutKeys, saveShortcuts } from '@/services/shortcuts.service';
 import type { ShortcutRule } from '@/types/shortcuts';
+
+const { t } = useI18n();
 
 const loading = ref(true);
 const saving = ref(false);
@@ -49,7 +48,7 @@ const loadShortcuts = async () => {
 		const loaded = await getShortcuts();
 		shortcuts.value = Array.isArray(loaded) ? loaded : [];
 	} catch (loadError) {
-		error.value = `Error cargando shortcuts: ${loadError}`;
+		error.value = t('views.shortcuts.loadError').replace('{0}', String(loadError));
 	} finally {
 		loading.value = false;
 	}
@@ -61,12 +60,12 @@ const persistShortcuts = async () => {
 
 	try {
 		shortcuts.value = await saveShortcuts(shortcuts.value);
-		successMessage.value = 'Shortcuts guardados correctamente';
+		successMessage.value = t('views.shortcuts.savedOk');
 		window.setTimeout(() => {
 			successMessage.value = '';
 		}, 3000);
 	} catch (saveError) {
-		error.value = `Error guardando shortcuts: ${saveError}`;
+		error.value = t('views.shortcuts.saveError').replace('{0}', String(saveError));
 		throw saveError;
 	} finally {
 		saving.value = false;
@@ -160,7 +159,7 @@ const resetSpecialDefaults = async () => {
 	}
 
 	if (toAdd.length === 0) {
-		successMessage.value = 'Todos los valores por defecto ya están asignados';
+		successMessage.value = t('views.shortcuts.defaultsAlreadySet');
 		window.setTimeout(() => (successMessage.value = ''), 3000);
 		return;
 	}
@@ -175,9 +174,9 @@ onMounted(loadShortcuts);
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			section="General"
-			title="Shortcuts"
-			description="Crea, edita y elimina atajos del daemon de forma simple."
+			:section="t('sidebar.general')"
+			:title="t('views.shortcuts.title')"
+			:description="t('views.shortcuts.description')"
 		>
 			<template #actions>
 				<button
@@ -186,12 +185,12 @@ onMounted(loadShortcuts);
 					:disabled="loading || saving"
 					@click="openCreateModal"
 				>
-					Nuevo shortcut
+					{{ t('views.shortcuts.new') }}
 				</button>
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" message="Cargando shortcuts..." padding="lg" />
+		<EmptyStateBox v-if="loading" :message="t('views.shortcuts.loading')" padding="lg" />
 
 		<div v-else class="flex flex-col gap-4">
 			<AlertMessage v-if="error" :message="error" tone="error" />
@@ -201,14 +200,14 @@ onMounted(loadShortcuts);
 				<div class="flex flex-col gap-4">
 					<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 						<div>
-							<h3 class="text-lg font-medium text-tx-primary">Atajos configurados</h3>
-							<p class="text-sm text-tx-muted">Los cambios se guardan automáticamente en el archivo del daemon.</p>
+							<h3 class="text-lg font-medium text-tx-primary">{{ t('views.shortcuts.listTitle') }}</h3>
+							<p class="text-sm text-tx-muted">{{ t('views.shortcuts.listHint') }}</p>
 						</div>
 
 						<input
 							v-model="searchQuery"
 							type="text"
-							placeholder="Buscar por tecla, acción o comando"
+							:placeholder="t('views.shortcuts.searchPlaceholder')"
 							class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary outline-none transition-colors placeholder:text-tx-muted/70 focus:border-primary sm:max-w-sm"
 						/>
 					</div>
@@ -240,21 +239,21 @@ onMounted(loadShortcuts);
 										class="rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-2 text-sm font-medium text-tx-primary transition-colors hover:bg-ui-surface"
 										@click="openEditModal(item.index)"
 									>
-										Editar
+										{{ t('common.edit') }}
 									</button>
 									<button
 										type="button"
 										class="rounded-corner border border-status-danger/30 bg-status-danger/10 px-3 py-2 text-sm font-medium text-status-danger transition-colors hover:bg-status-danger/20"
 										@click="openDeleteModal(item.shortcut, item.index)"
 									>
-										Eliminar
+										{{ t('common.delete') }}
 									</button>
 								</div>
 							</div>
 						</div>
 					</div>
 
-					<EmptyStateBox v-else message="No hay shortcuts configurados" padding="md" />
+					<EmptyStateBox v-else :message="t('views.shortcuts.empty')" padding="md" />
 				</div>
 			</SectionCard>
 
@@ -270,7 +269,7 @@ onMounted(loadShortcuts);
 				:disabled="saving"
 				@click="resetSpecialDefaults"
 			>
-				Restablecer valores por defecto
+				{{ t('views.shortcuts.resetDefaults') }}
 			</button>
 		</div>
 

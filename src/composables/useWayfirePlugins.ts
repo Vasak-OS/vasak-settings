@@ -1,13 +1,12 @@
 import { invoke } from '@tauri-apps/api/core';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, ref } from 'vue';
 
 export interface WayfirePlugin {
 	id: string;
-	label: string;
-	description: string;
+	/** Locale key suffix under `wayfire.plugins.categories`. */
 	category: string;
 	required: boolean;
-	required_reason: string | null;
 	enabled: boolean;
 	unknown: boolean;
 }
@@ -38,6 +37,8 @@ async function fetchPlugins(): Promise<void> {
 }
 
 export function useWayfirePlugins() {
+	const { t } = useI18n();
+
 	/** Loads once per session; concurrent callers await the same request. */
 	async function load(force = false): Promise<void> {
 		if (loaded && !force) return;
@@ -63,7 +64,7 @@ export function useWayfirePlugins() {
 		const plugin = get(id);
 
 		if (plugin?.required && !enabled) {
-			error.value = plugin.required_reason ?? 'Este plugin no puede desactivarse.';
+			error.value = t('wayfire.plugins.cannotDisable');
 			return false;
 		}
 
@@ -92,7 +93,7 @@ export function useWayfirePlugins() {
 		}
 
 		// Most-used first, the specialised ones last.
-		const order = ['Ventanas', 'Espacios de trabajo', 'Efectos', 'Sistema', 'Otros'];
+		const order = ['windows', 'workspaces', 'effects', 'system', 'other'];
 
 		return Array.from(groups.entries())
 			.sort(([a], [b]) => {

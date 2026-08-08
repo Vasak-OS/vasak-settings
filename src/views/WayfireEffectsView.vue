@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
@@ -12,6 +13,8 @@ import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import TextInput from '@/components/ui/TextInput.vue';
 import { useWayfirePlugins } from '@/composables/useWayfirePlugins';
 import { useWayfireSection } from '@/composables/useWayfireSection';
+
+const { t } = useI18n();
 
 const blur = useWayfireSection('blur');
 const wobbly = useWayfireSection('wobbly');
@@ -38,18 +41,18 @@ const sectionError = computed(() => {
 	);
 });
 
-const blurMethods = [
-	{ label: 'Kawase (recomendado)', value: 'kawase' },
-	{ label: 'Box', value: 'box' },
-	{ label: 'Gaussian', value: 'gaussian' },
-	{ label: 'Bokeh', value: 'bokeh' },
-];
+const blurMethods = computed(() => [
+	{ label: t('views.wayfireEffects.blurMethods.kawase'), value: 'kawase' },
+	{ label: t('views.wayfireEffects.blurMethods.box'), value: 'box' },
+	{ label: t('views.wayfireEffects.blurMethods.gaussian'), value: 'gaussian' },
+	{ label: t('views.wayfireEffects.blurMethods.bokeh'), value: 'bokeh' },
+]);
 
-const backgroundModes = [
-	{ label: 'Simple', value: 'simple' },
-	{ label: 'Skydome', value: 'skydome' },
-	{ label: 'Cubemap', value: 'cubemap' },
-];
+const backgroundModes = computed(() => [
+	{ label: t('views.wayfireEffects.backgroundModes.simple'), value: 'simple' },
+	{ label: t('views.wayfireEffects.backgroundModes.skydome'), value: 'skydome' },
+	{ label: t('views.wayfireEffects.backgroundModes.cubemap'), value: 'cubemap' },
+]);
 
 onMounted(async () => {
 	await Promise.all([
@@ -101,9 +104,9 @@ async function saveAll() {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			section="Ventanas"
-			title="Efectos"
-			description="Efectos visuales del gestor de ventanas. Activá solo los que uses: cada efecto apagado es trabajo que la GPU no hace."
+			:section="t('sidebar.windows')"
+			:title="t('views.wayfireEffects.title')"
+			:description="t('views.wayfireEffects.description')"
 		/>
 
 		<AlertMessage v-if="sectionError" tone="error" :message="sectionError" />
@@ -112,14 +115,14 @@ async function saveAll() {
 			<!-- Los más usados primero -->
 			<PluginSection plugin-id="blur" icon="applications-graphics">
 				<div class="grid gap-4 sm:grid-cols-2">
-					<FormGroup label="Método">
+					<FormGroup :label="t('views.wayfireEffects.method')">
 						<SelectInput
 							:modelValue="blur.getVal('method', 'kawase')"
 							:options="blurMethods"
 							@update:modelValue="blur.setVal('method', $event)"
 						/>
 					</FormGroup>
-					<FormGroup label="Saturación">
+					<FormGroup :label="t('views.wayfireEffects.saturation')">
 						<RangeSlider
 							:modelValue="blur.getFloat('saturation', 1.0)"
 							:min="0" :max="3" :step="0.1"
@@ -130,9 +133,9 @@ async function saveAll() {
 				</div>
 
 				<details class="mt-4 border-t border-ui-border pt-3">
-					<summary class="cursor-pointer text-xs font-medium text-tx-muted">Opciones avanzadas</summary>
+					<summary class="cursor-pointer text-xs font-medium text-tx-muted">{{ t('common.advancedOptions') }}</summary>
 					<div class="mt-3 grid gap-4 sm:grid-cols-3">
-						<FormGroup label="Aplicar a">
+						<FormGroup :label="t('views.wayfireEffects.applyTo')">
 							<TextInput
 								mono
 								:model-value="blur.getVal('blur_by_default', 'all')"
@@ -140,14 +143,14 @@ async function saveAll() {
 								@update:model-value="blur.setVal('blur_by_default', $event)"
 							/>
 						</FormGroup>
-						<FormGroup label="Offset">
+						<FormGroup :label="t('views.wayfireEffects.offset')">
 							<NumberInput
 								:model-value="blur.getFloat('offset', 1.7)"
 								:min="0" :max="20" :step="0.1"
 								@update:model-value="blur.setVal('offset', $event)"
 							/>
 						</FormGroup>
-						<FormGroup label="Iteraciones">
+						<FormGroup :label="t('views.wayfireEffects.iterations')">
 							<NumberInput
 								:model-value="blur.getInt('iterations', 2)"
 								:min="1" :max="20"
@@ -159,7 +162,7 @@ async function saveAll() {
 			</PluginSection>
 
 			<PluginSection plugin-id="zoom" icon="zoom-in">
-				<FormGroup label="Modificador">
+				<FormGroup :label="t('views.wayfireEffects.modifier')">
 					<KeyBindingInput
 						:modelValue="zoom.getVal('modifier', '<super>')"
 						@update:modelValue="zoom.setVal('modifier', $event)"
@@ -169,21 +172,21 @@ async function saveAll() {
 
 			<PluginSection plugin-id="wobbly" icon="preferences-desktop-effects">
 				<div class="grid gap-4 sm:grid-cols-3">
-					<FormGroup label="Fricción">
+					<FormGroup :label="t('views.wayfireEffects.friction')">
 						<NumberInput
 							:model-value="wobbly.getFloat('friction', 3.0)"
 							:min="0" :max="20" :step="0.5"
 							@update:model-value="wobbly.setVal('friction', $event)"
 						/>
 					</FormGroup>
-					<FormGroup label="Constante de resorte">
+					<FormGroup :label="t('views.wayfireEffects.springK')">
 						<NumberInput
 							:model-value="wobbly.getFloat('spring_k', 8.0)"
 							:min="0" :max="20" :step="0.5"
 							@update:model-value="wobbly.setVal('spring_k', $event)"
 						/>
 					</FormGroup>
-					<FormGroup label="Resolución de grid">
+					<FormGroup :label="t('views.wayfireEffects.gridResolution')">
 						<NumberInput
 							:model-value="wobbly.getInt('grid_resolution', 6)"
 							:min="2" :max="20"
@@ -194,7 +197,7 @@ async function saveAll() {
 			</PluginSection>
 
 			<PluginSection plugin-id="alpha" icon="video-display">
-				<FormGroup label="Modificador">
+				<FormGroup :label="t('views.wayfireEffects.modifier')">
 					<KeyBindingInput
 						:modelValue="alpha.getVal('modifier', '<super> <alt>')"
 						@update:modelValue="alpha.setVal('modifier', $event)"
@@ -203,7 +206,7 @@ async function saveAll() {
 			</PluginSection>
 
 			<PluginSection plugin-id="invert" icon="preferences-desktop-display">
-				<FormGroup label="Alternar">
+				<FormGroup :label="t('views.wayfireEffects.toggle')">
 					<KeyBindingInput
 						:modelValue="invert.getVal('toggle', '<super> KEY_I')"
 						@update:modelValue="invert.setVal('toggle', $event)"
@@ -213,20 +216,20 @@ async function saveAll() {
 
 			<PluginSection plugin-id="fisheye" icon="preferences-desktop-effects">
 				<div class="grid gap-4 sm:grid-cols-3">
-					<FormGroup label="Alternar">
+					<FormGroup :label="t('views.wayfireEffects.toggle')">
 						<KeyBindingInput
 							:modelValue="fisheye.getVal('toggle', '<super> <ctrl> KEY_F')"
 							@update:modelValue="fisheye.setVal('toggle', $event)"
 						/>
 					</FormGroup>
-					<FormGroup label="Radio (px)">
+					<FormGroup :label="t('views.wayfireEffects.radius')">
 						<NumberInput
 							:model-value="fisheye.getInt('radius', 450)"
 							:min="50" :max="2000"
 							@update:model-value="fisheye.setVal('radius', $event)"
 						/>
 					</FormGroup>
-					<FormGroup label="Zoom">
+					<FormGroup :label="t('views.wayfireEffects.zoom')">
 						<NumberInput
 							:model-value="fisheye.getFloat('zoom', 7.0)"
 							:min="1" :max="20" :step="0.5"
@@ -238,13 +241,13 @@ async function saveAll() {
 
 			<PluginSection plugin-id="cube" icon="applications-other">
 				<div class="grid gap-4 sm:grid-cols-2">
-					<FormGroup label="Activar">
+					<FormGroup :label="t('views.wayfireEffects.activate')">
 						<KeyBindingInput
 							:modelValue="cube.getVal('activate', '<ctrl> <alt> BTN_LEFT')"
 							@update:modelValue="cube.setVal('activate', $event)"
 						/>
 					</FormGroup>
-					<FormGroup label="Zoom">
+					<FormGroup :label="t('views.wayfireEffects.zoom')">
 						<RangeSlider
 							:modelValue="cube.getFloat('zoom', 0.1)"
 							:min="0" :max="1" :step="0.05"
@@ -252,13 +255,13 @@ async function saveAll() {
 						/>
 						<span class="text-xs text-tx-muted">{{ cube.getFloat('zoom', 0.1).toFixed(2) }}</span>
 					</FormGroup>
-					<FormGroup label="Iluminación">
+					<FormGroup :label="t('views.wayfireEffects.light')">
 						<SwitchToggle
 							:isOn="cube.getBool('light', true)"
 							@toggle="cube.setBool('light', $event)"
 						/>
 					</FormGroup>
-					<FormGroup label="Modo de fondo">
+					<FormGroup :label="t('views.wayfireEffects.backgroundMode')">
 						<SelectInput
 							:modelValue="cube.getVal('background_mode', 'simple')"
 							:options="backgroundModes"
@@ -269,7 +272,7 @@ async function saveAll() {
 			</PluginSection>
 
 			<PluginSection plugin-id="wrot" icon="object-rotate-right">
-				<FormGroup label="Activar">
+				<FormGroup :label="t('views.wayfireEffects.activate')">
 					<KeyBindingInput
 						:modelValue="wrot.getVal('activate', '<super> <ctrl> BTN_RIGHT')"
 						@update:modelValue="wrot.setVal('activate', $event)"
@@ -282,7 +285,7 @@ async function saveAll() {
 					type="submit"
 					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white hover:opacity-90"
 				>
-					Guardar cambios
+					{{ t('common.save') }}
 				</button>
 			</div>
 		</form>

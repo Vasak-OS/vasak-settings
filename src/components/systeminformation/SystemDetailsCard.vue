@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import InfoRow from '@/components/ui/InfoRow.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import type { GpuInfo, SystemDetails } from '@/types/system';
@@ -15,6 +16,8 @@ const formatUptime = (seconds: number) => {
 	if (days > 0) return `${days}d ${hours}h`;
 	return `${hours}h`;
 };
+
+const { t } = useI18n();
 </script>
 
 <template>
@@ -36,7 +39,7 @@ const formatUptime = (seconds: number) => {
 				<p class="font-medium">{{ gpu.vendor }}</p>
 				<p class="text-tx-muted">{{ gpu.model }}</p>
 			</div>
-			<p v-else class="mt-3 text-sm text-tx-muted">No se detecto GPU compatible.</p>
+			<p v-else class="mt-3 text-sm text-tx-muted">{{ t('views.home.noGpu') }}</p>
 		</SectionCard>
 	</div>
 </template>

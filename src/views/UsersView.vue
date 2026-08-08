@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
@@ -19,6 +20,8 @@ interface UserAccount {
 	shell: string;
 	is_current: boolean;
 }
+
+const { t } = useI18n();
 
 const users = ref<UserAccount[]>([]);
 const error = ref('');
@@ -102,7 +105,7 @@ async function createUser() {
 			admin: draft.admin,
 			password: draft.password,
 		},
-		`Cuenta «${draft.username.trim()}» creada`
+		t('views.users.created').replace('{0}', draft.username.trim())
 	);
 
 	if (ok) {
@@ -119,7 +122,7 @@ async function changePassword(user: UserAccount) {
 	const ok = await run(
 		'set_user_password',
 		{ uid: user.uid, password: draft.password },
-		`Contraseña de «${user.username}» actualizada`
+		t('views.users.passwordUpdated').replace('{0}', user.username)
 	);
 
 	if (ok) {
@@ -129,14 +132,14 @@ async function changePassword(user: UserAccount) {
 
 function renameUser(user: UserAccount, realName: string) {
 	if (realName === user.real_name) return;
-	void run('set_user_real_name', { uid: user.uid, realName }, 'Nombre actualizado');
+	void run('set_user_real_name', { uid: user.uid, realName }, t('views.users.nameUpdated'));
 }
 
 function toggleAdmin(user: UserAccount, value: boolean) {
 	void run(
 		'set_user_admin',
 		{ uid: user.uid, admin: value },
-		value ? 'Ahora es administrador' : 'Ahora es cuenta estándar'
+		value ? t('views.users.nowAdmin') : t('views.users.nowStandard')
 	);
 }
 
@@ -144,7 +147,7 @@ function toggleLocked(user: UserAccount, value: boolean) {
 	void run(
 		'set_user_locked',
 		{ uid: user.uid, locked: value },
-		value ? 'Cuenta bloqueada' : 'Cuenta desbloqueada'
+		value ? t('views.users.accountLocked') : t('views.users.accountUnlocked')
 	);
 }
 
@@ -155,7 +158,7 @@ async function confirmDelete() {
 	const ok = await run(
 		'delete_user',
 		{ uid: target.uid, removeFiles: deleteFiles.value },
-		`Cuenta «${target.username}» eliminada`
+		t('views.users.deleted').replace('{0}', target.username)
 	);
 
 	if (ok) {
@@ -174,9 +177,9 @@ function canDemote(user: UserAccount): boolean {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			section="Sistema"
-			title="Usuarios"
-			description="Cuentas del equipo, contraseñas y permisos de administración."
+			:section="t('sidebar.system')"
+			:title="t('views.users.title')"
+			:description="t('views.users.description')"
 		>
 			<template #actions>
 				<button
@@ -184,7 +187,7 @@ function canDemote(user: UserAccount): boolean {
 					class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
 					@click="showCreate = !showCreate"
 				>
-					{{ showCreate ? 'Cancelar' : 'Añadir usuario' }}
+					{{ showCreate ? t('common.cancel') : t('views.users.addUser') }}
 				</button>
 			</template>
 		</PageHeader>
@@ -193,30 +196,30 @@ function canDemote(user: UserAccount): boolean {
 		<AlertMessage v-if="success" tone="success" :message="success" />
 
 		<SectionCard v-if="showCreate">
-			<h3 class="text-base font-medium">Nueva cuenta</h3>
+			<h3 class="text-base font-medium">{{ t('views.users.newAccount') }}</h3>
 			<div class="mt-3 grid gap-4 sm:grid-cols-2">
-				<FormGroup label="Nombre de usuario">
+				<FormGroup :label="t('views.users.username')">
 					<TextInput
 						v-model="newUser.username"
 						autocomplete="off"
-						placeholder="maria"
+						:placeholder="t('views.users.usernamePlaceholder')"
 					/>
 				</FormGroup>
-				<FormGroup label="Nombre completo">
+				<FormGroup :label="t('views.users.fullName')">
 					<TextInput
 						v-model="newUser.realName"
 						autocomplete="off"
-						placeholder="María Pérez"
+						:placeholder="t('views.users.fullNamePlaceholder')"
 					/>
 				</FormGroup>
-				<FormGroup :label="`Contraseña (mínimo ${MIN_PASSWORD})`">
+				<FormGroup :label="t('views.users.passwordMin').replace('{0}', String(MIN_PASSWORD))">
 					<TextInput
 						v-model="newUser.password"
 						type="password"
 						autocomplete="new-password"
 					/>
 				</FormGroup>
-				<FormGroup label="Repetir contraseña">
+				<FormGroup :label="t('views.users.repeatPassword')">
 					<TextInput
 						v-model="newUser.confirm"
 						type="password"
@@ -229,7 +232,7 @@ function canDemote(user: UserAccount): boolean {
 			<div class="mt-4 flex items-center justify-between gap-3">
 				<div class="flex items-center gap-3">
 					<SwitchToggle :is-on="newUser.admin" @toggle="newUser.admin = $event" />
-					<span class="text-sm text-tx-primary">Administrador</span>
+					<span class="text-sm text-tx-primary">{{ t('views.users.admin') }}</span>
 				</div>
 				<button
 					type="button"
@@ -237,7 +240,7 @@ function canDemote(user: UserAccount): boolean {
 					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
 					@click="createUser"
 				>
-					Crear cuenta
+					{{ t('views.users.createAccount') }}
 				</button>
 			</div>
 		</SectionCard>
@@ -256,19 +259,19 @@ function canDemote(user: UserAccount): boolean {
 							v-if="user.is_admin"
 							class="rounded-full border border-ui-border bg-primary/15 px-2 py-0.5 text-[11px] font-medium"
 						>
-							Administrador
+							{{ t('views.users.admin') }}
 						</span>
 						<span
 							v-if="user.is_current"
 							class="rounded-full border border-ui-border bg-ui-surface/70 px-2 py-0.5 text-[11px] text-tx-muted"
 						>
-							Tu cuenta
+							{{ t('views.users.yourAccount') }}
 						</span>
 						<span
 							v-if="user.locked"
 							class="rounded-full border border-status-danger/30 bg-status-danger/10 px-2 py-0.5 text-[11px] text-status-danger"
 						>
-							Bloqueada
+							{{ t('views.users.lockedBadge') }}
 						</span>
 					</div>
 					<p class="mt-0.5 text-xs text-tx-muted">{{ user.home_directory }}</p>
@@ -279,13 +282,13 @@ function canDemote(user: UserAccount): boolean {
 					class="shrink-0 rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-1.5 text-xs font-medium hover:bg-ui-surface"
 					@click="expanded = expanded === user.uid ? null : user.uid"
 				>
-					{{ expanded === user.uid ? 'Cerrar' : 'Editar' }}
+					{{ expanded === user.uid ? t('common.close') : t('common.edit') }}
 				</button>
 			</div>
 
 			<div v-if="expanded === user.uid" class="mt-4 border-t border-ui-border pt-4">
 				<div class="grid gap-4 sm:grid-cols-2">
-					<FormGroup label="Nombre completo">
+					<FormGroup :label="t('views.users.fullName')">
 						<TextInput
 							lazy
 							:model-value="user.real_name"
@@ -300,15 +303,15 @@ function canDemote(user: UserAccount): boolean {
 
 				<div class="mt-4 flex items-start gap-3">
 					<div class="min-w-0 flex-1">
-						<h4 class="text-sm font-medium">Administrador</h4>
+						<h4 class="text-sm font-medium">{{ t('views.users.admin') }}</h4>
 						<p class="text-xs text-tx-muted">
 							<template v-if="user.is_current">
-								No podés cambiar los permisos de tu propia cuenta.
+								{{ t('views.users.adminOwnAccount') }}
 							</template>
 							<template v-else-if="user.is_admin && adminCount <= 1">
-								Es el único administrador del equipo.
+								{{ t('views.users.adminOnlyOne') }}
 							</template>
-							<template v-else>Puede instalar software y cambiar ajustes del sistema.</template>
+							<template v-else>{{ t('views.users.adminExplanation') }}</template>
 						</p>
 					</div>
 					<SwitchToggle
@@ -320,8 +323,8 @@ function canDemote(user: UserAccount): boolean {
 
 				<div class="mt-4 flex items-start gap-3">
 					<div class="min-w-0 flex-1">
-						<h4 class="text-sm font-medium">Cuenta bloqueada</h4>
-						<p class="text-xs text-tx-muted">Impide iniciar sesión sin borrar nada.</p>
+						<h4 class="text-sm font-medium">{{ t('views.users.lockedTitle') }}</h4>
+						<p class="text-xs text-tx-muted">{{ t('views.users.lockedDescription') }}</p>
 					</div>
 					<SwitchToggle
 						:is-on="user.locked"
@@ -331,16 +334,16 @@ function canDemote(user: UserAccount): boolean {
 				</div>
 
 				<div class="mt-4 border-t border-ui-border pt-4">
-					<h4 class="text-sm font-medium">Cambiar contraseña</h4>
+					<h4 class="text-sm font-medium">{{ t('views.users.changePassword') }}</h4>
 					<div class="mt-2 grid gap-4 sm:grid-cols-2">
-						<FormGroup :label="`Nueva (mínimo ${MIN_PASSWORD})`">
+						<FormGroup :label="t('views.users.newPasswordMin').replace('{0}', String(MIN_PASSWORD))">
 							<TextInput
 								v-model="draftFor(user.uid).password"
 								type="password"
 								autocomplete="new-password"
 							/>
 						</FormGroup>
-						<FormGroup label="Repetir">
+						<FormGroup :label="t('views.users.repeat')">
 							<TextInput
 								v-model="draftFor(user.uid).confirm"
 								type="password"
@@ -359,7 +362,7 @@ function canDemote(user: UserAccount): boolean {
 							class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
 							@click="changePassword(user)"
 						>
-							Cambiar contraseña
+							{{ t('views.users.changePassword') }}
 						</button>
 					</div>
 				</div>
@@ -371,7 +374,7 @@ function canDemote(user: UserAccount): boolean {
 						class="rounded-corner border border-status-danger/30 bg-status-danger/10 px-4 py-2 text-sm font-medium text-status-danger hover:bg-status-danger/20 disabled:opacity-50"
 						@click="deleteTarget = user"
 					>
-						Eliminar cuenta
+						{{ t('views.users.deleteAccount') }}
 					</button>
 				</div>
 			</div>
@@ -379,13 +382,13 @@ function canDemote(user: UserAccount): boolean {
 
 		<SectionCard v-if="deleteTarget">
 			<h3 class="text-base font-medium text-status-danger">
-				Eliminar «{{ deleteTarget.username }}»
+				{{ t('views.users.deleteTitle').replace('{0}', deleteTarget.username) }}
 			</h3>
-			<p class="mt-1 text-sm text-tx-muted">Esta acción no se puede deshacer.</p>
+			<p class="mt-1 text-sm text-tx-muted">{{ t('views.users.deleteWarning') }}</p>
 
 			<label class="mt-3 flex items-center gap-2 text-sm">
 				<input v-model="deleteFiles" type="checkbox" />
-				Borrar también su carpeta personal ({{ deleteTarget.home_directory }})
+				{{ t('views.users.deleteHome').replace('{0}', deleteTarget.home_directory) }}
 			</label>
 
 			<div class="mt-4 flex justify-end gap-2">
@@ -394,7 +397,7 @@ function canDemote(user: UserAccount): boolean {
 					class="rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface"
 					@click="deleteTarget = null"
 				>
-					Cancelar
+					{{ t('common.cancel') }}
 				</button>
 				<button
 					type="button"
@@ -402,7 +405,7 @@ function canDemote(user: UserAccount): boolean {
 					class="rounded-corner bg-status-danger px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
 					@click="confirmDelete"
 				>
-					Eliminar
+					{{ t('common.delete') }}
 				</button>
 			</div>
 		</SectionCard>

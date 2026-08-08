@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import CpuMemoryCard from '@/components/systeminformation/CpuMemoryCard.vue';
 import DisksCard from '@/components/systeminformation/DisksCard.vue';
@@ -13,6 +14,8 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import { getSystemInfo } from '@/services/system.service';
 import type { SystemInfo } from '@/types/system';
 
+const { t, locale } = useI18n();
+
 const refreshIntervalMs = 30000;
 let refreshTimer: number | null = null;
 
@@ -22,7 +25,7 @@ const errorMessage = ref('');
 const lastUpdatedAt = ref<Date | null>(null);
 
 const formatNumber = (value: number, digits = 0) =>
-	new Intl.NumberFormat('es-AR', {
+	new Intl.NumberFormat(locale.value, {
 		maximumFractionDigits: digits,
 		minimumFractionDigits: digits,
 	}).format(value);
@@ -32,9 +35,9 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 const formatPercent = (value: number) => `${formatNumber(value, 1)}%`;
 
 const formatLastUpdatedAt = (value: Date | null) => {
-	if (value === null) return 'Sin actualizaciones';
+	if (value === null) return t('views.home.noUpdates');
 
-	return new Intl.DateTimeFormat('es-AR', {
+	return new Intl.DateTimeFormat(locale.value, {
 		hour: '2-digit',
 		minute: '2-digit',
 		second: '2-digit',
@@ -56,18 +59,22 @@ const metrics = computed<SystemMetricItem[]>(() => {
 
 	return [
 		{
-			label: 'CPU',
+			label: t('views.home.metrics.cpu'),
 			value: formatPercent(systemInfo.value.cpu.usage),
 			hint: systemInfo.value.cpu.model,
 		},
 		{
-			label: 'Memoria',
+			label: t('views.home.metrics.memory'),
 			value: formatPercent(systemInfo.value.memory.usage_percent),
 			hint: `${formatGb(systemInfo.value.memory.used_gb)} / ${formatGb(systemInfo.value.memory.total_gb)}`,
 		},
-		{ label: 'Discos', value: String(systemInfo.value.disks.length), hint: 'montajes detectados' },
 		{
-			label: 'Uptime',
+			label: t('views.home.metrics.disks'),
+			value: String(systemInfo.value.disks.length),
+			hint: t('views.home.metrics.disksHint'),
+		},
+		{
+			label: t('views.home.metrics.uptime'),
 			value: formatUptime(systemInfo.value.system.uptime_seconds),
 			hint: systemInfo.value.system.hostname,
 		},
@@ -86,8 +93,7 @@ const loadSystemInfo = async (showLoading = false) => {
 		errorMessage.value = '';
 	} catch (error) {
 		if (!systemInfo.value) {
-			errorMessage.value =
-				error instanceof Error ? error.message : 'No se pudo obtener la informacion del sistema';
+			errorMessage.value = error instanceof Error ? error.message : t('views.home.loadError');
 		}
 	} finally {
 		if (showLoading) {
@@ -112,13 +118,13 @@ onUnmounted(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4">
 		<PageHeader
-			section="Centro de control"
-			title="Estado del sistema"
-			description="Resumen rapido de recursos, hardware y entorno actual."
+			:section="t('views.home.section')"
+			:title="t('views.home.title')"
+			:description="t('views.home.description')"
 		>
 			<template #actions>
 				<span class="rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-2 text-xs text-tx-muted">
-					Ultima actualizacion: {{ formatLastUpdatedAt(lastUpdatedAt) }}
+					{{ t('views.home.lastUpdated').replace('{0}', formatLastUpdatedAt(lastUpdatedAt)) }}
 				</span>
 
 				<button
@@ -126,12 +132,12 @@ onUnmounted(() => {
 					class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-2 text-sm font-medium hover:bg-ui-surface"
 					@click="loadSystemInfo(false)"
 				>
-					Actualizar
+					{{ t('views.home.refresh') }}
 				</button>
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" message="Cargando informacion del sistema..." padding="lg" />
+		<EmptyStateBox v-if="loading" :message="t('views.home.loading')" padding="lg" />
 
 		<AlertMessage v-else-if="errorMessage" :message="errorMessage" tone="error" />
 

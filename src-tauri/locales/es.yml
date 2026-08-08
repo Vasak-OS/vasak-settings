@@ -17,6 +17,8 @@ common:
   saved: Configuración guardada correctamente
   name: Nombre
   current: actual
+  loadSectionError: "Error cargando sección [{0}]"
+  saveSectionError: "Error guardando sección [{0}]"
 
 sidebar:
   general: General
@@ -61,6 +63,8 @@ wayfire:
       system: Sistema
       other: Otros
     unknownDescription: Plugin activado manualmente en wayfire.ini.
+    cannotDisable: Este plugin es necesario para que VasakOS funcione y no puede desactivarse.
+    enableToConfigure: Activá el plugin para configurar sus opciones.
     autostart:
       label: Autoinicio
       description: Ejecuta la sesión al arrancar el compositor.
@@ -68,7 +72,7 @@ wayfire:
     command:
       label: Atajos de teclado
       description: Ejecuta comandos con combinaciones de teclas.
-      requiredReason: Wayfire gestiona todos los atajos de VasakOS: terminal, archivos, menú, volumen y brillo.
+      requiredReason: "Wayfire gestiona todos los atajos de VasakOS: terminal, archivos, menú, volumen y brillo."
     ipc:
       label: IPC
       description: Canal de control externo del compositor.
@@ -167,3 +171,757 @@ wayfire:
     wrot:
       label: Rotar ventanas
       description: Gira una ventana con el ratón.
+
+views:
+  wayfirePlugins:
+    title: Plugins del compositor
+    description: 'Activá solo lo que uses: cada plugin apagado es memoria y trabajo que Wayfire no hace.'
+    activeCount: '{0} activos.'
+  home:
+    noGpu: No se detecto GPU compatible.
+    section: Centro de control
+    title: Estado del sistema
+    description: Resumen rapido de recursos, hardware y entorno actual.
+    lastUpdated: "Ultima actualizacion: {0}"
+    noUpdates: Sin actualizaciones
+    refresh: Actualizar
+    loading: Cargando informacion del sistema...
+    loadError: No se pudo obtener la informacion del sistema
+    metrics:
+      cpu: CPU
+      memory: Memoria
+      disks: Discos
+      disksHint: montajes detectados
+      uptime: Uptime
+  shortcuts:
+    title: Shortcuts
+    description: Crea, edita y elimina atajos del daemon de forma simple.
+    new: Nuevo shortcut
+    loading: Cargando shortcuts...
+    listTitle: Atajos configurados
+    listHint: Los cambios se guardan automáticamente en el archivo del daemon.
+    searchPlaceholder: Buscar por tecla, acción o comando
+    empty: No hay shortcuts configurados
+    resetDefaults: Restablecer valores por defecto
+    savedOk: Shortcuts guardados correctamente
+    defaultsAlreadySet: Todos los valores por defecto ya están asignados
+    loadError: "Error cargando shortcuts: {0}"
+    saveError: "Error guardando shortcuts: {0}"
+    editor:
+      createTitle: Nuevo shortcut
+      editTitle: Editar shortcut
+      createDescription: Define la combinación de teclas y el comando que se ejecutará.
+      editDescription: Ajusta la combinación, la acción o el comando asociado.
+      keysLabel: Combinación
+      keysPlaceholder: Presiona la combinación
+      keysHint: "Presiona la combinación directamente. Ejemplo: mantén"
+      keysHintJoin: y pulsa
+      clear: Limpiar
+      actionLabel: Acción
+      targetLabel: Target / comando
+      normalizeNote: La combinación se normaliza automáticamente para que el orden de las teclas no importe.
+      submitCreate: Agregar shortcut
+      errorKeys: Debes indicar una combinación de teclas
+      errorAction: Debes indicar una acción
+      errorTarget: Debes indicar un target o comando
+    deleteModal:
+      title: Eliminar shortcut
+      description: Esta acción no se puede deshacer.
+      question: ¿Seguro que quieres eliminar este shortcut?
+      hint: Se quitará de la configuración del daemon.
+      actionLabel: "Acción:"
+    specialKeys:
+      title: Teclas especiales
+      description: Teclas multimedia, volumen, brillo y cámara. Los valores por defecto se usan si no hay una asignación personalizada.
+      default: "Por defecto: {0}"
+      noCommand: sin comando
+      assign: Asignar
+  appearanceTheme:
+    title: Tema y UI
+    description: Personaliza colores, formas, temas del escritorio y el scheme visual de VasakOS.
+    applyChanges: Aplicar Cambios
+    loading: Cargando configuración...
+    errorLoading: 'Error cargando configuración: {0}'
+    errorSaving: 'Error guardando configuración: {0}'
+    saved: Configuración guardada exitosamente
+    invalidRadius: Border radius debe estar entre 1 y 20
+    schemeRequired: Debes seleccionar un scheme
+    baseStyles: Estilos Base
+    borderRadius: Border Radius
+    primaryColor: Color Primario
+    darkMode: Modo Oscuro
+    enabled: Activado
+    disabled: Desactivado
+    systemThemes: Temas del Sistema
+    gtkTheme: Tema GTK
+    cursorTheme: Tema de Cursor
+    schemeSection: Scheme de VasakOS
+    schemeHintPrefix: Selecciona el
+    schemeHintSuffix: que define la paleta clara y oscura del sistema.
+    schemeIdLabel: Scheme ID
+    dark: Oscuro
+    light: Claro
+    schemeInfo: Información del scheme
+    author: Autor
+    path: Ruta
+    notSpecified: No especificado
+    noSchemes: No se encontraron schemes disponibles
+    colors:
+      background: Fondo
+      surface: Superficie
+      border: Borde
+      primary: Primario
+      secondary: Secundario
+      text: Texto
+      textMuted: Texto suave
+      onPrimary: Sobre primario
+      terminalBackground: Terminal fondo
+      terminalForeground: Terminal texto
+
+  appearanceFonts:
+    title: Fuentes
+    description: Busca fuentes del sistema y asígnalas al terminal, a los títulos y a las aplicaciones.
+    applyChanges: Aplicar Cambios
+    loading: Cargando fuentes del sistema...
+    errorLoading: 'Error cargando fuentes del sistema: {0}'
+    errorSaving: 'Error guardando fuentes: {0}'
+    saved: Fuentes guardadas exitosamente
+    configNotLoaded: No se pudo cargar la configuración actual
+    targets:
+      terminal: Terminal
+      title: Títulos
+      apps: Aplicaciones
+    activeTarget: Objetivo activo
+    searchFont: Buscar fuente
+    searchPlaceholder: Buscar por nombre, ruta o postscript
+    currentSelections: Selecciones actuales
+    noFontAssigned: Sin fuente asignada
+    library: Biblioteca de fuentes
+    libraryHint: Haz clic en una tarjeta para asignarla al objetivo activo.
+    noPostscript: Sin postscript
+    mono: Mono
+    proportional: Proporcional
+    preview: Vista previa
+    previewText: The quick brown fox jumps over the lazy dog
+    weight: peso {0}
+
+  appearanceIconPacks:
+    title: Packs de Iconos
+    description: Personaliza los iconos del sistema para modo claro y oscuro.
+    applyChanges: Aplicar Cambios
+    loading: Cargando packs de iconos...
+    errorLoading: 'Error cargando configuración: {0}'
+    errorSaving: 'Error guardando configuración: {0}'
+    saved: Packs de iconos guardados exitosamente
+    configNotLoaded: Configuración no cargada
+    darkMode: Modo Oscuro
+    lightMode: Modo Claro
+    selectPack: Selecciona un pack de iconos
+    selected: Seleccionado
+    iconAlt: '{0} icon {1}'
+    info: Información
+    infoDark: Se aplicará automáticamente cuando actives el modo oscuro en el sistema.
+    infoLight: Se aplicará automáticamente cuando desactives el modo oscuro en el sistema.
+    infoPaths: Los packs de iconos se cargan de
+    infoPathsSeparator: 'y'
+
+  appearanceWallpaper:
+    title: Wallpaper
+    description: Selecciona un fondo oficial o define una ruta completa personalizada.
+    saveWallpaper: Guardar Wallpaper
+    loading: Cargando wallpapers...
+    errorLoading: 'Error cargando wallpapers: {0}'
+    errorSaving: 'Error guardando wallpaper: {0}'
+    saved: Wallpaper guardado correctamente
+    invalidImage: El archivo arrastrado no es una imagen valida
+    officialTitle: Wallpapers Oficiales
+    optionsCount: '{0} opciones'
+    noWallpapers: No se encontraron wallpapers en /usr/share/backgrounds/vasakos.
+    customPathTitle: Ruta Personalizada
+    customPathHint: Define un path absoluto. Siempre se guarda el path completo.
+    fullPath: Path completo
+    pathPlaceholder: /home/usuario/Imagenes/mi-wallpaper.jpg
+    dragHint: Tambien puedes arrastrar una imagen al window para cargar su path.
+    preview: Preview
+    selectedAlt: Wallpaper seleccionado
+    dropToChange: Arrastra una imagen aquí para cambiar
+    dropHere: Arrastra una imagen aquí
+
+  appearanceDesktop:
+    title: Archivos del Escritorio
+    description: Ajusta la visibilidad y el tamaño de los iconos en el fondo de escritorio.
+    applyChanges: Aplicar Cambios
+    loading: Cargando configuración...
+    errorLoading: 'Error cargando configuración del escritorio: {0}'
+    errorSaving: 'Error guardando configuración: {0}'
+    saved: Configuración del escritorio guardada exitosamente
+    invalidIconSize: El tamaño del icono debe estar entre 24 y 128
+    files: Archivos
+    showFiles: Mostrar Archivos
+    showHiddenFiles: Mostrar Archivos Ocultos
+    enabled: Activado
+    disabled: Desactivado
+    dimensions: Dimensiones
+    iconSize: Tamaño de Icono
+  wayfireInput:
+    title: Teclado y Ratón
+    description: 'Configuración de entrada: teclado, ratón, touchpad y cursor.'
+    keyboard: Teclado
+    mouse: Ratón
+    touchpad: Touchpad
+    cursor: Cursor
+    repeatDelay: Delay de repetición (ms)
+    repeatRate: Velocidad de repetición (car/s)
+    numlock: NumLock al inicio
+    leftHanded: Modo zurdo
+    middleEmulation: Emulación de botón central
+    accelProfile: Perfil de aceleración
+    cursorSpeed: Velocidad del cursor
+    mouseNaturalScroll: Desplazamiento natural (invertido)
+    tapToClick: Tocar para hacer clic
+    clickMethod: Método de clic
+    scrollMethod: Método de desplazamiento
+    naturalScroll: Desplazamiento natural
+    disableWhileTyping: Desactivar al escribir
+    disableWithMouse: Desactivar con ratón conectado
+    tapAndDrag: Tocar y arrastrar
+    cursorTheme: Tema de cursor
+    cursorSize: Tamaño del cursor
+    accelProfiles:
+      default: Por defecto
+      none: Ninguno
+      adaptive: Adaptativo
+      flat: Plano
+    clickMethods:
+      default: Por defecto
+      none: Ninguno
+      buttonAreas: Áreas de botón
+      clickfinger: Click con dedos
+    scrollMethods:
+      default: Por defecto
+      none: Ninguno
+      twoFinger: Dos dedos
+      edge: Borde
+      onButtonDown: Botón presionado
+
+  wayfireWindows:
+    title: Ventanas
+    description: 'Comportamiento de ventanas: movimiento, redimensión, grid y acciones.'
+    general: General
+    closeWindow: Cerrar ventana
+    decorationOwner: Quién dibuja la decoración
+    moveActivate: Activar movimiento
+    snapEdges: Snap a bordes
+    snapThreshold: Umbral de snap (px)
+    resizeActivate: Activar redimensión
+    gridDuration: Duración de animación (ms)
+    switcherNext: Siguiente ventana
+    switcherPrev: Ventana anterior
+    switcherSpeed: Duración de la animación (ms)
+    thumbnailScale: Escala de las miniaturas
+    fastActivate: Activar
+    fastActivateBackward: Activar hacia atrás
+    inactiveAlpha: Opacidad de las inactivas
+    placeMode: Dónde aparecen las ventanas nuevas
+    rulesHint: 'Una regla por línea, con la sintaxis de Wayfire. Ejemplo:'
+    noRules: Sin reglas definidas
+    addRule: + Añadir regla
+    decorationModes:
+      client: La aplicación (cliente)
+      server: El compositor (servidor)
+    placeModes:
+      center: Centrada
+      cascade: En cascada
+      random: Al azar
+      maximize: Maximizada
+    gridSlots:
+      topLeft: Arriba izquierda
+      top: Arriba centro
+      topRight: Arriba derecha
+      left: Izquierda
+      center: Centro / Maximizar
+      right: Derecha
+      bottomLeft: Abajo izquierda
+      bottom: Abajo centro
+      bottomRight: Abajo derecha
+      restore: Restaurar
+    winActions:
+      fullscreen: Pantalla completa
+      alwaysOnTop: Siempre encima
+      sticky: Sticky (todas las áreas)
+      maximize: Maximizar
+      minimize: Minimizar
+      showDesktop: Mostrar escritorio
+      sendToBack: Enviar al fondo
+
+  wayfireWorkspaces:
+    directions:
+      left: Izquierda
+      down: Abajo
+      up: Arriba
+      right: Derecha
+    title: Espacios de trabajo
+    description: Configuración de áreas de trabajo virtuales.
+    gridTitle: Cuadrícula de escritorios
+    gridHint: Los escritorios se organizan en una grilla.
+    gridSummary: '{0} × {1} = {2} escritorios'
+    columns: Columnas
+    rows: Filas
+    duration: Duración de animación (ms)
+    wraparound: Wrap around
+    switchShortcuts: 'Atajos: cambiar espacio'
+    moveWithShortcuts: 'Atajos: mover ventana conmigo'
+    expoToggle: Alternar vista general
+    selectByNumber: Seleccionar espacio por número
+    workspace: Espacio {0}
+    nextOutput: Ir a la siguiente pantalla
+    nextOutputWithWin: Llevar la ventana a la siguiente pantalla
+
+  wayfireAppearance:
+    title: Apariencia del Gestor de Ventanas
+    description: Decoración de ventanas y animaciones.
+    decorationHint: 'Barra de título, bordes y botones. Los colores van en RGBA hexadecimal (#RRGGBBAA).'
+    animateHint: Cómo aparecen y desaparecen las ventanas.
+    titleFont: Fuente del título
+    titleHeight: Altura del título (px)
+    borderSize: Tamaño del borde (px)
+    buttonOrder: Orden de botones
+    activeColor: Color activo (RGBA)
+    inactiveColor: Color inactivo (RGBA)
+    borderRadius: Radio de borde (px)
+    ignoreViews: Ignorar decoración en
+    openAnimation: Animación de apertura
+    closeAnimation: Animación de cierre
+    duration: Duración (ms)
+    animations:
+      none: Ninguna
+      zoom: Zoom
+      fade: Fade
+      fire: Fuego
+
+  wayfireEffects:
+    title: Efectos
+    description: 'Efectos visuales del gestor de ventanas. Activá solo los que uses: cada efecto apagado es trabajo que la GPU no hace.'
+    method: Método
+    saturation: Saturación
+    applyTo: Aplicar a
+    offset: Offset
+    iterations: Iteraciones
+    modifier: Modificador
+    friction: Fricción
+    springK: Constante de resorte
+    gridResolution: Resolución de grid
+    toggle: Alternar
+    radius: Radio (px)
+    zoom: Zoom
+    activate: Activar
+    light: Iluminación
+    backgroundMode: Modo de fondo
+    blurMethods:
+      kawase: Kawase (recomendado)
+      box: Box
+      gaussian: Gaussian
+      bokeh: Bokeh
+    backgroundModes:
+      simple: Simple
+      skydome: Skydome
+      cubemap: Cubemap
+
+  wayfireAutostart:
+    title: Autoinicio
+    description: Comandos que Wayfire ejecuta al iniciar la sesión.
+    sectionTitle: Comandos de inicio
+    hint: El nombre solo identifica la entrada; se ejecutan al iniciar sesión.
+    namePlaceholder: nombre
+    commandPlaceholder: 'Ej: nm-applet'
+    empty: No hay comandos de inicio configurados
+    addCommand: + Añadir comando
+    protected:
+      '0_env': Publica el entorno de la sesión (uwsm finalize). Sin esto systemd y D-Bus no ven la sesión gráfica.
+      desktop: 'Lanza vasak-desktop: el panel, el menú y el escritorio.'
+  users:
+    title: Usuarios
+    description: Cuentas del equipo, contraseñas y permisos de administración.
+    addUser: Añadir usuario
+    newAccount: Nueva cuenta
+    username: Nombre de usuario
+    usernamePlaceholder: maria
+    fullName: Nombre completo
+    fullNamePlaceholder: María Pérez
+    passwordMin: Contraseña (mínimo {0})
+    repeatPassword: Repetir contraseña
+    admin: Administrador
+    createAccount: Crear cuenta
+    yourAccount: Tu cuenta
+    lockedBadge: Bloqueada
+    adminOwnAccount: No podés cambiar los permisos de tu propia cuenta.
+    adminOnlyOne: Es el único administrador del equipo.
+    adminExplanation: Puede instalar software y cambiar ajustes del sistema.
+    lockedTitle: Cuenta bloqueada
+    lockedDescription: Impide iniciar sesión sin borrar nada.
+    changePassword: Cambiar contraseña
+    newPasswordMin: Nueva (mínimo {0})
+    repeat: Repetir
+    deleteAccount: Eliminar cuenta
+    deleteTitle: Eliminar «{0}»
+    deleteWarning: Esta acción no se puede deshacer.
+    deleteHome: Borrar también su carpeta personal ({0})
+    created: Cuenta «{0}» creada
+    passwordUpdated: Contraseña de «{0}» actualizada
+    nameUpdated: Nombre actualizado
+    nowAdmin: Ahora es administrador
+    nowStandard: Ahora es cuenta estándar
+    accountLocked: Cuenta bloqueada
+    accountUnlocked: Cuenta desbloqueada
+    deleted: Cuenta «{0}» eliminada
+
+  datetime:
+    title: Fecha y hora
+    description: Zona horaria y sincronización del reloj del sistema.
+    noNtpService: No hay ningún servicio de hora en red instalado.
+    manualClock: La hora se ajusta manualmente.
+    synchronized: Reloj sincronizado con la red.
+    synchronizing: Sincronizando con la red…
+    automaticTime: Hora automática
+    automaticTimeDescription: Sincroniza el reloj con servidores de hora en red.
+    automaticOn: Hora automática activada
+    manualOn: Hora manual activada
+    timezone: Zona horaria
+    currentLabel: "Actual:"
+    searchZone: Buscar zona
+    searchZonePlaceholder: "Ej: Buenos_Aires, Madrid, UTC"
+    timezoneSet: "Zona horaria: {0}"
+    manualAdjust: Ajustar manualmente
+    manualAdjustDescription: Solo disponible con la hora automática desactivada.
+    date: Fecha
+    time: Hora
+    invalidDateTime: Fecha u hora inválida
+    timeUpdated: Hora actualizada
+    localRtc: Reloj de hardware en hora local
+    localRtcDescription: Actívalo solo si compartís el equipo con Windows. En cualquier
+      otro caso el reloj debe estar en UTC.
+    rtcUpdated: Reloj de hardware actualizado
+
+  brightness:
+    title: Brillo y luz nocturna
+    description: Brillo de la pantalla y temperatura de color según la hora.
+    brightness: Brillo
+    noBacklight: "Este equipo no expone ningún control de brillo por software (habitual
+      en monitores de escritorio: usá los botones del monitor)."
+    nightLight: Luz nocturna
+    nightLightDescription: Reduce la luz azul de la pantalla durante la noche.
+    nightLightUpdated: Luz nocturna actualizada
+    wlsunsetMissing: wlsunset no está instalado; la luz nocturna no puede activarse.
+    nightTemp: Temperatura nocturna
+    dayTemp: Temperatura diurna
+    schedule: Programación
+    modeManual: Horario fijo
+    modeLocation: Según ubicación (amanecer/atardecer)
+    latitude: Latitud
+    longitude: Longitud
+    dayStarts: Empieza el día
+    nightStarts: Empieza la noche
+
+  power:
+    status:
+      Charging: Cargando
+      Discharging: Descargando
+      FullyCharged: Cargada
+      Empty: Vacía
+      NotCharging: Sin cargar
+      Unknown: Desconocido
+    title: Energía
+    description: Estado de la batería y perfiles de energía.
+    battery: Batería
+    noBattery: No se detectó una batería en este equipo.
+    health: Salud de la batería
+    timeRemaining: Tiempo restante
+    consumption: Consumo
+    cycles: Ciclos
+    technology: Tecnología
+    model: Modelo
+    profiles: Perfiles de energía
+    profilesDescription: Cambia el modo de rendimiento del sistema.
+    loadingProfiles: Cargando perfiles...
+    noProfiles: No hay perfiles de energía disponibles. ¿Está instalado power-profiles-daemon?
+    profilePerformance: Rendimiento
+    profileBalanced: Balanceado
+    profilePowerSaver: Ahorro de energía
+    idleLock: Bloqueo por inactividad
+    idleLockDescription: Bloquea la pantalla cuando dejás el equipo sin usar.
+    saved: Configuración guardada
+    swayidleMissing: swayidle no está instalado; el bloqueo por inactividad no puede
+      activarse.
+    legacyConfig: Se detectó la configuración antigua en wayfire.ini. Al guardar acá
+      se migra a systemd y se elimina de allí.
+    lockScreen: Bloquear la pantalla
+    lockScreenDescription: Tras un rato sin actividad.
+    lockMinutes: Minutos hasta bloquear
+    screenOff: Apagar la pantalla
+    screenOffDescription: Ahorra energía apagando la retroiluminación.
+    wlopmMissing: Requiere wlopm, que no está instalado.
+    screenOffMinutes: Minutos hasta apagar
+    lockBeforeSleep: Bloquear al suspender
+    lockBeforeSleepDescription: Pide la contraseña al volver de la suspensión.
+
+  monitors:
+    title: Pantallas
+    description: Administra la configuración de tus monitores y pantallas.
+    loading: Cargando monitores...
+    emptyState: No se detectaron pantallas conectadas.
+    dragHint: Arrastra los monitores para acomodarlos
+    disconnected: Desconectado
+    new: Nuevo
+    primary: Principal
+    setPrimary: Establecer como principal
+    resolution: Resolución
+    refreshRate: Frecuencia
+    position: Posición (x, y)
+    scale: Escala
+    rotation: Rotación
+    transformNormal: Normal
+    transformFlipped: Reflejado
+    transformFlipped90: Reflejado 90°
+    transformFlipped180: Reflejado 180°
+    transformFlipped270: Reflejado 270°
+    save: Guardar
+    saveAll: Guardar todos los cambios
+    connectHint: Conecta el monitor para configurarlo.
+    savedFor: Configuración guardada para {0}
+    savedAll: Configuración de pantallas guardada correctamente
+    detectError: "Error detectando monitores: {0}"
+    saveError: "Error guardando {0}: {1}"
+    saveAllError: "Error guardando configuración: {0}"
+
+  languageKeyboard:
+    title: Idioma y Teclado
+    description: Configura el idioma del sistema y la distribución del teclado.
+    systemLanguage: Idioma del sistema
+    systemLanguageDescription: Establece el idioma principal del sistema. Requiere
+      reinicio de sesión para aplicar completamente.
+    language: Idioma
+    keyboardLayout: Distribución del teclado
+    keyboardLayoutDescription: Seleccioná la distribución principal y una secundaria
+      opcional para cambiar entre ellas.
+    primaryLayout: Layout principal
+    secondaryLayout: Segundo layout (opcional)
+    variant: Variante (opcional)
+    none: Ninguna
+    noVariant: Sin variante
+    saveLayout: Guardar distribución
+    localeSaved: Idioma del sistema actualizado.
+    layoutSaved: Distribución del teclado actualizada.
+    loadError: "Error cargando configuración: {0}"
+    localeError: "Error guardando idioma: {0}"
+    layoutError: "Error guardando distribución: {0}"
+  app:
+    title: Centro de Control
+    subtitle: Ajustes principales
+    iconAlt: Icono de la aplicación
+  networkWifi:
+    title: Wi-Fi
+    description: Administra redes inalámbricas, estado del adaptador y conexión activa.
+    currentNetworkAlt: Red actual
+    connectedTo: Conectado a {0}
+    noActiveConnection: Sin conexión activa
+    wifiDisabled: Wi-Fi desactivado
+    availableNetworks: Redes Disponibles
+    scanTooltip: Escanear redes
+    emptyNoHardware: No se detectó hardware inalámbrico disponible
+    emptyDisabled: Activa Wi-Fi para escanear redes
+    emptySearching: Buscando redes disponibles...
+    emptyNoNetworks: No se encontraron redes Wi-Fi
+    connect: Conectar
+    connecting: Conectando...
+    unnamedNetwork: Red sin nombre
+    openSecurity: Abierta
+    networkStatus: Estado de Red
+    activeInterface: Interfaz activa
+    noInterface: Sin interfaz detectada
+    noInterfacesReported: Sin interfaces reportadas
+    download: Descarga
+    upload: Subida
+    status:
+      checking: Verificando...
+      unknown: Desconocido
+      connected: Conectado
+      disconnected: Desconectado
+      noLink: Sin enlace activo
+      "on": Encendido
+      "off": Apagado
+      noHardware: Hardware no disponible
+    errors:
+      refresh: 'Error actualizando redes: {0}'
+      scan: 'Error escaneando redes: {0}'
+      wirelessStatus: 'Error verificando estado wireless: {0}'
+      toggle: 'Error alternando Wi-Fi: {0}'
+      connect: 'Error al conectar: {0}'
+    dialog:
+      title: Conectar a {0}
+      description: Ingresa la contraseña de la red para establecer la conexión.
+      passwordPlaceholder: Contraseña
+  networkBluetooth:
+    title: Bluetooth
+    description: Empareja y administra tus dispositivos inalámbricos.
+    "on": Encendido
+    "off": Apagado
+    offTitle: Bluetooth está apagado
+    offHint: Habilita el chip Bluetooth para buscar dispositivos.
+    syncing: Sincronizando estado del dispositivo de radio...
+    connectedDevices: Dispositivos Conectados
+    availableDevices: Disponibles
+    emptyConnected: No hay dispositivos conectados
+    emptyAvailable: No se encontraron dispositivos en el área
+    scanTooltip: Escanear
+    connect: Conectar
+    disconnect: Desconectar
+    errors:
+      toggle: 'Error alternando Bluetooth: {0}'
+      scan: 'Error buscando dispositivos: {0}'
+      connect: 'Error conectando a {0}: {1}'
+      disconnect: 'Error desconectando: {0}'
+  networkVpn:
+    noActiveConnection: Sin conexión activa
+    title: VPN
+    description: Gestiona perfiles VPN, estado del túnel y operaciones de conexión.
+    newProfile: Nuevo perfil
+    refresh: Actualizar estado
+    refreshing: Actualizando...
+    currentStatus: Estado Actual
+    readingStatus: Leyendo estado de red...
+    quickConnect: Conexión rápida
+    availableProfiles: 'Perfiles disponibles:'
+    tunnelState: 'Estado del túnel:'
+    disconnectActive: Desconectar VPN activa
+    disconnecting: Desconectando...
+    profiles: Perfiles VPN
+    profileCount: '{0} perfiles'
+    emptyProfiles: No hay perfiles VPN configurados. Crea uno para comenzar.
+    confirmDelete: "Eliminar perfil VPN '{0}'?"
+    state:
+      disconnected: Desconectada
+      connecting: Conectando
+      connected: Conectada
+      disconnecting: Desconectando
+      failed: Fallida
+      unknown: Desconocido
+    errors:
+      unknown: Error desconocido (sin detalle del backend)
+      status: 'Error obteniendo estado VPN: {0}'
+      connect: 'Error conectando VPN: {0}'
+      disconnect: 'Error desconectando VPN: {0}'
+      delete: 'Error eliminando perfil VPN: {0}'
+      save: 'Error guardando perfil VPN: {0}'
+    dialog:
+      createTitle: Crear perfil VPN
+      editTitle: Editar perfil VPN
+      description: Configura los datos principales del perfil VPN.
+      profileName: Nombre del perfil
+      vpnType: Tipo VPN
+      username: Usuario
+      settingsJson: Settings JSON (objeto string/string)
+      secretsJson: Secrets JSON (objeto string/string)
+      autoconnect: Autoconectar este perfil
+      saveProfile: Guardar perfil
+      errors:
+        nameRequired: El nombre del perfil es obligatorio
+        save: Error al guardar el perfil
+        invalidJson: '{0} debe ser un JSON válido'
+        notKeyValue: '{0} debe ser un objeto clave/valor'
+        valueNotString: "{0}: el valor de '{1}' debe ser string"
+  onlineAccounts:
+    title: Cuentas en Línea
+    description: Conecta tus servicios de correo, calendario y contactos.
+    providers: Proveedores
+    customProvider: Servidor personalizado
+    linkedAccounts: Cuentas vinculadas
+    customDialogDescription: Configura manualmente los datos de tu servidor de correo y sincronización.
+    displayName: Nombre para mostrar
+    displayNamePlaceholder: Mi cuenta personal
+    imapServer: Servidor IMAP
+    smtpServer: Servidor SMTP
+    port: Puerto
+    username: Nombre de usuario
+    usernamePlaceholder: usuario@example.com
+    password: Contraseña
+    passwordPlaceholder: Contraseña de aplicación
+    addAccount: Agregar cuenta
+    googleAdded: Cuenta de Google agregada correctamente
+    customAdded: Cuenta personalizada agregada correctamente
+    providerRegistered: Cuenta de {0} registrada.
+    accountRemoved: Cuenta de {0} eliminada.
+    errors:
+      nameRequired: El nombre es obligatorio
+      imapServerRequired: El servidor IMAP es obligatorio
+      smtpServerRequired: El servidor SMTP es obligatorio
+      invalidPort: Puerto inválido (1-65535)
+      usernameRequired: El usuario es obligatorio
+      passwordRequired: La contraseña es obligatoria
+      loadAccounts: 'Error al cargar cuentas: {0}'
+      googleAuth: 'Error en autenticación Google: {0}'
+      registerProvider: 'Error al registrar {0}: {1}'
+      registerCustom: 'Error al registrar cuenta personalizada: {0}'
+      deleteAccount: 'Error al eliminar cuenta: {0}'
+  multimediaAudio:
+    title: Audio de Salida
+    description: Administra parlantes y volumen de reproducción del sistema.
+    statusLabel: Estado
+    muted: SILENCIADO
+    active: ACTIVO
+    masterVolume: Volumen Maestro
+    muteTooltip: Silenciar Audio
+    volumeAlt: Volumen
+    outputDevices: Salida de Audio
+    loadingDevices: Cargando tarjetas de sonido...
+    emptyDevices: No hay dispositivos de audio disponibles
+    level: 'Nivel:'
+    defaultBadge: Activo
+  multimediaAudioInput:
+    title: Audio de Entrada
+    description: Administra micrófonos y nivel de captura del sistema.
+    statusLabel: Estado
+    muted: MICRÓFONO SILENCIADO
+    active: MICRÓFONO ACTIVO
+    inputLevel: Nivel de Entrada
+    muteTooltip: Silenciar micrófono
+    inputAlt: Entrada
+    inputDevices: Entrada de Audio
+    loadingDevices: Cargando micrófonos...
+    emptyDevices: No hay dispositivos de entrada disponibles
+    level: 'Nivel:'
+    defaultBadge: Activo
+
+shortcutKeys:
+  KEY_VOLUMEUP:
+    label: Subir volumen
+    description: Aumenta el volumen del audio del sistema
+  KEY_VOLUMEDOWN:
+    label: Bajar volumen
+    description: Reduce el volumen del audio del sistema
+  KEY_MUTE:
+    label: Silenciar audio
+    description: Activa o desactiva el silencio del audio
+  KEY_MICMUTE:
+    label: Silenciar micrófono
+    description: Activa o desactiva el silencio del micrófono
+  KEY_CAMERA:
+    label: Alternar cámara
+    description: Enciende o apaga la cámara integrada
+  KEY_BRIGHTNESSUP:
+    label: Subir brillo
+    description: Aumenta el brillo de la pantalla
+  KEY_BRIGHTNESSDOWN:
+    label: Bajar brillo
+    description: Reduce el brillo de la pantalla
+  KEY_PLAYPAUSE:
+    label: Reproducir / Pausar
+    description: Reproduce o pausa el reproductor multimedia activo
+  KEY_STOPCD:
+    label: Detener reproducción
+    description: Detiene la reproducción multimedia
+  KEY_PREVIOUSSONG:
+    label: Canción anterior
+    description: Salta a la canción o pista anterior
+  KEY_NEXTSONG:
+    label: Canción siguiente
+    description: Salta a la canción o pista siguiente

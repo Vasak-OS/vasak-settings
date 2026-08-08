@@ -11,7 +11,7 @@ export interface AccountInfo {
 export const registerNewAccount = (
 	provider: string,
 	metadata: Record<string, unknown>,
-	secret: string,
+	secret: string
 ): Promise<void> => {
 	return invoke<void>('register_new_account', {
 		provider,
@@ -32,16 +32,10 @@ export const accountManagerPing = (): Promise<string> => {
 	return invoke<string>('account_manager_ping');
 };
 
-export const getAccountData = (
-	accountId: string,
-	capability: string,
-): Promise<string> => {
+export const getAccountData = (accountId: string, capability: string): Promise<string> => {
 	return invoke<string>('get_account_data', { accountId, capability });
 };
 
-export const getAccessToken = (
-	accountId: string,
-	capability: string,
-): Promise<string> => {
+export const getAccessToken = (accountId: string, capability: string): Promise<string> => {
 	return invoke<string>('get_access_token', { accountId, capability });
 };

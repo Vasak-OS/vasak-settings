@@ -1,0 +1,927 @@
+_version: 1
+
+common:
+  save: Save changes
+  saving: Saving…
+  cancel: Cancel
+  delete: Delete
+  add: Add
+  edit: Edit
+  close: Close
+  create: Create
+  apply: Apply
+  loading: Loading…
+  required: Required
+  advancedOptions: Advanced options
+  noResults: No results
+  saved: Settings saved successfully
+  name: Name
+  current: current
+  loadSectionError: "Error loading section [{0}]"
+  saveSectionError: "Error saving section [{0}]"
+
+sidebar:
+  general: General
+  appearance: Appearance
+  multimedia: Multimedia
+  windows: Windows
+  system: System
+  network: Connectivity
+  items:
+    home: Home
+    shortcuts: Shortcuts
+    appearanceTheme: Theme
+    appearanceFonts: Fonts
+    appearanceIconPacks: Icons
+    appearanceWallpaper: Wallpapers
+    appearanceDesktop: Desktop
+    multimediaAudio: Audio output
+    multimediaAudioInput: Audio input
+    wayfireInput: Keyboard and Mouse
+    wayfireWindows: Window Management
+    wayfireWorkspaces: Workspaces
+    wayfireAppearance: WM Appearance
+    wayfireEffects: Effects
+    wayfireAutostart: Autostart
+    wayfirePlugins: Plugins
+    users: Users
+    languageKeyboard: Language and Keyboard
+    datetime: Date and time
+    brightness: Brightness and night light
+    power: Power
+    monitors: Displays
+    networkWifi: Wi-Fi
+    networkBluetooth: Bluetooth
+    networkVpn: VPN
+
+wayfire:
+  plugins:
+    categories:
+      windows: Windows
+      workspaces: Workspaces
+      effects: Effects
+      system: System
+      other: Other
+    unknownDescription: Plugin enabled manually in wayfire.ini.
+    cannotDisable: This plugin is required for VasakOS to work and cannot be disabled.
+    enableToConfigure: Enable the plugin to configure its options.
+    autostart:
+      label: Autostart
+      description: Runs the session when the compositor starts.
+      requiredReason: Launches vasak-desktop and publishes the session environment (uwsm finalize).
+    command:
+      label: Keyboard shortcuts
+      description: Runs commands with key combinations.
+      requiredReason: "Wayfire handles every VasakOS shortcut: terminal, files, menu, volume and brightness."
+    ipc:
+      label: IPC
+      description: External control channel of the compositor.
+      requiredReason: vasak-desktop talks to Wayfire over IPC.
+    ipc-rules:
+      label: IPC rules
+      description: Allows querying and changing windows over IPC.
+      requiredReason: Required for vasak-desktop to read and adjust window properties.
+    stipc:
+      label: Testing IPC
+      description: Extension of the IPC channel.
+      requiredReason: Complements ipc for desktop integration.
+    foreign-toplevel:
+      label: Window list
+      description: Publishes open windows to the desktop.
+      requiredReason: Without this the vasak-desktop taskbar stays empty.
+    wayfire-shell:
+      label: Panel integration
+      description: Protocol for the panel and the menu.
+      requiredReason: Provides support for the vasak-desktop panel.
+    gtk-shell:
+      label: GTK integration
+      description: Support for the gtk-shell protocol.
+      requiredReason: Required for GTK applications to integrate with the desktop.
+    session-lock:
+      label: Session lock
+      description: Allows locking the screen.
+      requiredReason: It is the compositor side of screen locking.
+    idle:
+      label: Idle
+      description: Detects when the computer is idle.
+      requiredReason: Without this the automatic idle lock never fires.
+    shortcuts-inhibit:
+      label: Inhibit shortcuts
+      description: Lets apps such as remote desktops capture every key.
+    move:
+      label: Move windows
+      description: Drag windows with the mouse.
+    resize:
+      label: Resize windows
+      description: Change the size with the mouse.
+    grid:
+      label: Grid snapping
+      description: Place windows in halves and corners.
+    place:
+      label: Automatic placement
+      description: Decides where new windows appear.
+    decoration:
+      label: Window decoration
+      description: Title bar and borders drawn by the compositor.
+    wm-actions:
+      label: Window actions
+      description: Fullscreen, always on top, sticky and minimize.
+    window-rules:
+      label: Window rules
+      description: Applies automatic rules per application.
+    switcher:
+      label: Window switcher
+      description: Alt+Tab with animation.
+    fast-switcher:
+      label: Fast switcher
+      description: Cycles between windows without animation.
+    vswitch:
+      label: Switch desktop
+      description: Move between workspaces.
+    expo:
+      label: Overview
+      description: Shows every workspace at once.
+    oswitch:
+      label: Switch display
+      description: Jump between monitors.
+    animate:
+      label: Animations
+      description: Animates opening and closing windows.
+    blur:
+      label: Blur
+      description: Blurs whatever is behind the windows.
+    zoom:
+      label: Magnifier
+      description: Zooms the screen with the mouse wheel.
+    wobbly:
+      label: Wobbly windows
+      description: Windows deform as you move them.
+    cube:
+      label: Desktop cube
+      description: Shows the desktops on a 3D cube.
+    alpha:
+      label: Transparency
+      description: Adjusts the opacity of a window.
+    invert:
+      label: Invert colors
+      description: Inverts the colors of the screen.
+    fisheye:
+      label: Fisheye
+      description: Circular magnifying lens.
+    wrot:
+      label: Rotate windows
+      description: Rotates a window with the mouse.
+
+views:
+  wayfirePlugins:
+    title: Compositor plugins
+    description: 'Enable only what you use: every plugin turned off is memory and work Wayfire does not spend.'
+    activeCount: '{0} active.'
+  home:
+    noGpu: No compatible GPU detected.
+    section: Control center
+    title: System status
+    description: Quick summary of resources, hardware and current environment.
+    lastUpdated: "Last updated: {0}"
+    noUpdates: No updates
+    refresh: Refresh
+    loading: Loading system information...
+    loadError: Could not get the system information
+    metrics:
+      cpu: CPU
+      memory: Memory
+      disks: Disks
+      disksHint: mounts detected
+      uptime: Uptime
+  shortcuts:
+    title: Shortcuts
+    description: Create, edit and delete daemon shortcuts easily.
+    new: New shortcut
+    loading: Loading shortcuts...
+    listTitle: Configured shortcuts
+    listHint: Changes are saved automatically to the daemon file.
+    searchPlaceholder: Search by key, action or command
+    empty: No shortcuts configured
+    resetDefaults: Restore default values
+    savedOk: Shortcuts saved successfully
+    defaultsAlreadySet: All default values are already assigned
+    loadError: "Error loading shortcuts: {0}"
+    saveError: "Error saving shortcuts: {0}"
+    editor:
+      createTitle: New shortcut
+      editTitle: Edit shortcut
+      createDescription: Define the key combination and the command to run.
+      editDescription: Adjust the combination, the action or the associated command.
+      keysLabel: Combination
+      keysPlaceholder: Press the combination
+      keysHint: "Press the combination directly. Example: hold"
+      keysHintJoin: and press
+      clear: Clear
+      actionLabel: Action
+      targetLabel: Target / command
+      normalizeNote: The combination is normalized automatically so key order does not matter.
+      submitCreate: Add shortcut
+      errorKeys: You must enter a key combination
+      errorAction: You must enter an action
+      errorTarget: You must enter a target or command
+    deleteModal:
+      title: Delete shortcut
+      description: This action cannot be undone.
+      question: Are you sure you want to delete this shortcut?
+      hint: It will be removed from the daemon configuration.
+      actionLabel: "Action:"
+    specialKeys:
+      title: Special keys
+      description: Media, volume, brightness and camera keys. Default values are used when there is no custom assignment.
+      default: "Default: {0}"
+      noCommand: no command
+      assign: Assign
+  appearanceTheme:
+    title: Theme and UI
+    description: Customize colors, shapes, desktop themes and the VasakOS visual scheme.
+    applyChanges: Apply Changes
+    loading: Loading settings...
+    errorLoading: 'Error loading settings: {0}'
+    errorSaving: 'Error saving settings: {0}'
+    saved: Settings saved successfully
+    invalidRadius: Border radius must be between 1 and 20
+    schemeRequired: You must select a scheme
+    baseStyles: Base Styles
+    borderRadius: Border Radius
+    primaryColor: Primary Color
+    darkMode: Dark Mode
+    enabled: Enabled
+    disabled: Disabled
+    systemThemes: System Themes
+    gtkTheme: GTK Theme
+    cursorTheme: Cursor Theme
+    schemeSection: VasakOS Scheme
+    schemeHintPrefix: Select the
+    schemeHintSuffix: that defines the light and dark palette of the system.
+    schemeIdLabel: Scheme ID
+    dark: Dark
+    light: Light
+    schemeInfo: Scheme information
+    author: Author
+    path: Path
+    notSpecified: Not specified
+    noSchemes: No available schemes were found
+    colors:
+      background: Background
+      surface: Surface
+      border: Border
+      primary: Primary
+      secondary: Secondary
+      text: Text
+      textMuted: Muted text
+      onPrimary: On primary
+      terminalBackground: Terminal background
+      terminalForeground: Terminal text
+
+  appearanceFonts:
+    title: Fonts
+    description: Search system fonts and assign them to the terminal, titles and applications.
+    applyChanges: Apply Changes
+    loading: Loading system fonts...
+    errorLoading: 'Error loading system fonts: {0}'
+    errorSaving: 'Error saving fonts: {0}'
+    saved: Fonts saved successfully
+    configNotLoaded: Could not load the current settings
+    targets:
+      terminal: Terminal
+      title: Titles
+      apps: Applications
+    activeTarget: Active target
+    searchFont: Search font
+    searchPlaceholder: Search by name, path or postscript
+    currentSelections: Current selections
+    noFontAssigned: No font assigned
+    library: Font library
+    libraryHint: Click a card to assign it to the active target.
+    noPostscript: No postscript
+    mono: Mono
+    proportional: Proportional
+    preview: Preview
+    previewText: The quick brown fox jumps over the lazy dog
+    weight: weight {0}
+
+  appearanceIconPacks:
+    title: Icon Packs
+    description: Customize the system icons for light and dark mode.
+    applyChanges: Apply Changes
+    loading: Loading icon packs...
+    errorLoading: 'Error loading settings: {0}'
+    errorSaving: 'Error saving settings: {0}'
+    saved: Icon packs saved successfully
+    configNotLoaded: Settings not loaded
+    darkMode: Dark Mode
+    lightMode: Light Mode
+    selectPack: Select an icon pack
+    selected: Selected
+    iconAlt: '{0} icon {1}'
+    info: Information
+    infoDark: It will be applied automatically when you enable dark mode on the system.
+    infoLight: It will be applied automatically when you disable dark mode on the system.
+    infoPaths: Icon packs are loaded from
+    infoPathsSeparator: 'and'
+
+  appearanceWallpaper:
+    title: Wallpaper
+    description: Pick an official wallpaper or set a full custom path.
+    saveWallpaper: Save Wallpaper
+    loading: Loading wallpapers...
+    errorLoading: 'Error loading wallpapers: {0}'
+    errorSaving: 'Error saving wallpaper: {0}'
+    saved: Wallpaper saved successfully
+    invalidImage: The dropped file is not a valid image
+    officialTitle: Official Wallpapers
+    optionsCount: '{0} options'
+    noWallpapers: No wallpapers were found in /usr/share/backgrounds/vasakos.
+    customPathTitle: Custom Path
+    customPathHint: Set an absolute path. The full path is always saved.
+    fullPath: Full path
+    pathPlaceholder: /home/user/Pictures/my-wallpaper.jpg
+    dragHint: You can also drag an image onto the window to load its path.
+    preview: Preview
+    selectedAlt: Selected wallpaper
+    dropToChange: Drag an image here to change it
+    dropHere: Drag an image here
+
+  appearanceDesktop:
+    title: Desktop Files
+    description: Adjust the visibility and size of the icons on the desktop background.
+    applyChanges: Apply Changes
+    loading: Loading settings...
+    errorLoading: 'Error loading desktop settings: {0}'
+    errorSaving: 'Error saving settings: {0}'
+    saved: Desktop settings saved successfully
+    invalidIconSize: The icon size must be between 24 and 128
+    files: Files
+    showFiles: Show Files
+    showHiddenFiles: Show Hidden Files
+    enabled: Enabled
+    disabled: Disabled
+    dimensions: Dimensions
+    iconSize: Icon Size
+  wayfireInput:
+    title: Keyboard and Mouse
+    description: 'Input settings: keyboard, mouse, touchpad and cursor.'
+    keyboard: Keyboard
+    mouse: Mouse
+    touchpad: Touchpad
+    cursor: Cursor
+    repeatDelay: Repeat delay (ms)
+    repeatRate: Repeat rate (char/s)
+    numlock: NumLock at startup
+    leftHanded: Left-handed mode
+    middleEmulation: Middle button emulation
+    accelProfile: Acceleration profile
+    cursorSpeed: Cursor speed
+    mouseNaturalScroll: Natural scrolling (inverted)
+    tapToClick: Tap to click
+    clickMethod: Click method
+    scrollMethod: Scroll method
+    naturalScroll: Natural scrolling
+    disableWhileTyping: Disable while typing
+    disableWithMouse: Disable with mouse connected
+    tapAndDrag: Tap and drag
+    cursorTheme: Cursor theme
+    cursorSize: Cursor size
+    accelProfiles:
+      default: Default
+      none: None
+      adaptive: Adaptive
+      flat: Flat
+    clickMethods:
+      default: Default
+      none: None
+      buttonAreas: Button areas
+      clickfinger: Clickfinger
+    scrollMethods:
+      default: Default
+      none: None
+      twoFinger: Two fingers
+      edge: Edge
+      onButtonDown: Button held down
+
+  wayfireWindows:
+    title: Windows
+    description: 'Window behavior: move, resize, grid and actions.'
+    general: General
+    closeWindow: Close window
+    decorationOwner: Who draws the decoration
+    moveActivate: Activate move
+    snapEdges: Snap to edges
+    snapThreshold: Snap threshold (px)
+    resizeActivate: Activate resize
+    gridDuration: Animation duration (ms)
+    switcherNext: Next window
+    switcherPrev: Previous window
+    switcherSpeed: Animation duration (ms)
+    thumbnailScale: Thumbnail scale
+    fastActivate: Activate
+    fastActivateBackward: Activate backwards
+    inactiveAlpha: Opacity of inactive ones
+    placeMode: Where new windows appear
+    rulesHint: 'One rule per line, using Wayfire syntax. Example:'
+    noRules: No rules defined
+    addRule: + Add rule
+    decorationModes:
+      client: The application (client)
+      server: The compositor (server)
+    placeModes:
+      center: Centered
+      cascade: Cascading
+      random: Random
+      maximize: Maximized
+    gridSlots:
+      topLeft: Top left
+      top: Top center
+      topRight: Top right
+      left: Left
+      center: Center / Maximize
+      right: Right
+      bottomLeft: Bottom left
+      bottom: Bottom center
+      bottomRight: Bottom right
+      restore: Restore
+    winActions:
+      fullscreen: Fullscreen
+      alwaysOnTop: Always on top
+      sticky: Sticky (all areas)
+      maximize: Maximize
+      minimize: Minimize
+      showDesktop: Show desktop
+      sendToBack: Send to back
+
+  wayfireWorkspaces:
+    directions:
+      left: Left
+      down: Down
+      up: Up
+      right: Right
+    title: Workspaces
+    description: Settings for virtual work areas.
+    gridTitle: Desktop grid
+    gridHint: Desktops are arranged in a grid.
+    gridSummary: '{0} × {1} = {2} desktops'
+    columns: Columns
+    rows: Rows
+    duration: Animation duration (ms)
+    wraparound: Wrap around
+    switchShortcuts: 'Shortcuts: switch workspace'
+    moveWithShortcuts: 'Shortcuts: move window with me'
+    expoToggle: Toggle overview
+    selectByNumber: Select workspace by number
+    workspace: Workspace {0}
+    nextOutput: Go to the next display
+    nextOutputWithWin: Move the window to the next display
+
+  wayfireAppearance:
+    title: Window Manager Appearance
+    description: Window decoration and animations.
+    decorationHint: 'Title bar, borders and buttons. Colors use hexadecimal RGBA (#RRGGBBAA).'
+    animateHint: How windows appear and disappear.
+    titleFont: Title font
+    titleHeight: Title height (px)
+    borderSize: Border size (px)
+    buttonOrder: Button order
+    activeColor: Active color (RGBA)
+    inactiveColor: Inactive color (RGBA)
+    borderRadius: Border radius (px)
+    ignoreViews: Ignore decoration on
+    openAnimation: Open animation
+    closeAnimation: Close animation
+    duration: Duration (ms)
+    animations:
+      none: None
+      zoom: Zoom
+      fade: Fade
+      fire: Fire
+
+  wayfireEffects:
+    title: Effects
+    description: 'Visual effects of the window manager. Enable only what you use: every effect turned off is work the GPU does not do.'
+    method: Method
+    saturation: Saturation
+    applyTo: Apply to
+    offset: Offset
+    iterations: Iterations
+    modifier: Modifier
+    friction: Friction
+    springK: Spring constant
+    gridResolution: Grid resolution
+    toggle: Toggle
+    radius: Radius (px)
+    zoom: Zoom
+    activate: Activate
+    light: Lighting
+    backgroundMode: Background mode
+    blurMethods:
+      kawase: Kawase (recommended)
+      box: Box
+      gaussian: Gaussian
+      bokeh: Bokeh
+    backgroundModes:
+      simple: Simple
+      skydome: Skydome
+      cubemap: Cubemap
+
+  wayfireAutostart:
+    title: Autostart
+    description: Commands Wayfire runs when the session starts.
+    sectionTitle: Startup commands
+    hint: The name only identifies the entry; they run when the session starts.
+    namePlaceholder: name
+    commandPlaceholder: 'Ex: nm-applet'
+    empty: No startup commands configured
+    addCommand: + Add command
+    protected:
+      '0_env': Publishes the session environment (uwsm finalize). Without this systemd and D-Bus do not see the graphical session.
+      desktop: 'Launches vasak-desktop: the panel, the menu and the desktop.'
+  users:
+    title: Users
+    description: Accounts on this computer, passwords and administration permissions.
+    addUser: Add user
+    newAccount: New account
+    username: User name
+    usernamePlaceholder: maria
+    fullName: Full name
+    fullNamePlaceholder: María Pérez
+    passwordMin: Password (minimum {0})
+    repeatPassword: Repeat password
+    admin: Administrator
+    createAccount: Create account
+    yourAccount: Your account
+    lockedBadge: Locked
+    adminOwnAccount: You cannot change the permissions of your own account.
+    adminOnlyOne: This is the only administrator on the computer.
+    adminExplanation: Can install software and change system settings.
+    lockedTitle: Locked account
+    lockedDescription: Prevents signing in without deleting anything.
+    changePassword: Change password
+    newPasswordMin: New (minimum {0})
+    repeat: Repeat
+    deleteAccount: Delete account
+    deleteTitle: Delete “{0}”
+    deleteWarning: This action cannot be undone.
+    deleteHome: Also delete their home folder ({0})
+    created: Account “{0}” created
+    passwordUpdated: Password for “{0}” updated
+    nameUpdated: Name updated
+    nowAdmin: Now an administrator
+    nowStandard: Now a standard account
+    accountLocked: Account locked
+    accountUnlocked: Account unlocked
+    deleted: Account “{0}” deleted
+
+  datetime:
+    title: Date and time
+    description: Time zone and system clock synchronization.
+    noNtpService: No network time service is installed.
+    manualClock: The time is set manually.
+    synchronized: Clock synchronized with the network.
+    synchronizing: Synchronizing with the network…
+    automaticTime: Automatic time
+    automaticTimeDescription: Synchronizes the clock with network time servers.
+    automaticOn: Automatic time enabled
+    manualOn: Manual time enabled
+    timezone: Time zone
+    currentLabel: "Current:"
+    searchZone: Search zone
+    searchZonePlaceholder: "Ex: Buenos_Aires, Madrid, UTC"
+    timezoneSet: "Time zone: {0}"
+    manualAdjust: Set manually
+    manualAdjustDescription: Only available with automatic time turned off.
+    date: Date
+    time: Time
+    invalidDateTime: Invalid date or time
+    timeUpdated: Time updated
+    localRtc: Hardware clock in local time
+    localRtcDescription: Enable it only if you share this computer with Windows. In any
+      other case the clock must be in UTC.
+    rtcUpdated: Hardware clock updated
+
+  brightness:
+    title: Brightness and night light
+    description: Screen brightness and color temperature by time of day.
+    brightness: Brightness
+    noBacklight: "This computer exposes no software brightness control (common
+      on desktop monitors: use the buttons on the monitor)."
+    nightLight: Night light
+    nightLightDescription: Reduces the blue light of the screen at night.
+    nightLightUpdated: Night light updated
+    wlsunsetMissing: wlsunset is not installed; night light cannot be enabled.
+    nightTemp: Night temperature
+    dayTemp: Day temperature
+    schedule: Schedule
+    modeManual: Fixed schedule
+    modeLocation: By location (sunrise/sunset)
+    latitude: Latitude
+    longitude: Longitude
+    dayStarts: Day starts
+    nightStarts: Night starts
+
+  power:
+    status:
+      Charging: Charging
+      Discharging: Discharging
+      FullyCharged: Fully charged
+      Empty: Empty
+      NotCharging: Not charging
+      Unknown: Unknown
+    title: Power
+    description: Battery status and power profiles.
+    battery: Battery
+    noBattery: No battery was detected on this computer.
+    health: Battery health
+    timeRemaining: Time remaining
+    consumption: Consumption
+    cycles: Cycles
+    technology: Technology
+    model: Model
+    profiles: Power profiles
+    profilesDescription: Changes the performance mode of the system.
+    loadingProfiles: Loading profiles...
+    noProfiles: No power profiles available. Is power-profiles-daemon installed?
+    profilePerformance: Performance
+    profileBalanced: Balanced
+    profilePowerSaver: Power saver
+    idleLock: Idle lock
+    idleLockDescription: Locks the screen when you leave the computer unused.
+    saved: Settings saved
+    swayidleMissing: swayidle is not installed; the idle lock cannot be
+      enabled.
+    legacyConfig: The old configuration was detected in wayfire.ini. Saving here
+      migrates it to systemd and removes it from there.
+    lockScreen: Lock the screen
+    lockScreenDescription: After a while without activity.
+    lockMinutes: Minutes until lock
+    screenOff: Turn off the screen
+    screenOffDescription: Saves power by turning off the backlight.
+    wlopmMissing: Requires wlopm, which is not installed.
+    screenOffMinutes: Minutes until off
+    lockBeforeSleep: Lock on suspend
+    lockBeforeSleepDescription: Asks for the password when resuming from suspend.
+
+  monitors:
+    title: Displays
+    description: Manage the settings of your monitors and displays.
+    loading: Loading monitors...
+    emptyState: No connected displays were detected.
+    dragHint: Drag the monitors to arrange them
+    disconnected: Disconnected
+    new: New
+    primary: Primary
+    setPrimary: Set as primary
+    resolution: Resolution
+    refreshRate: Refresh rate
+    position: Position (x, y)
+    scale: Scale
+    rotation: Rotation
+    transformNormal: Normal
+    transformFlipped: Flipped
+    transformFlipped90: Flipped 90°
+    transformFlipped180: Flipped 180°
+    transformFlipped270: Flipped 270°
+    save: Save
+    saveAll: Save all changes
+    connectHint: Connect the monitor to configure it.
+    savedFor: Settings saved for {0}
+    savedAll: Display settings saved successfully
+    detectError: "Error detecting monitors: {0}"
+    saveError: "Error saving {0}: {1}"
+    saveAllError: "Error saving settings: {0}"
+
+  languageKeyboard:
+    title: Language and Keyboard
+    description: Set the system language and the keyboard layout.
+    systemLanguage: System language
+    systemLanguageDescription: Sets the main language of the system. Requires
+      signing out to apply completely.
+    language: Language
+    keyboardLayout: Keyboard layout
+    keyboardLayoutDescription: Select the main layout and an optional secondary one
+      to switch between them.
+    primaryLayout: Main layout
+    secondaryLayout: Second layout (optional)
+    variant: Variant (optional)
+    none: None
+    noVariant: No variant
+    saveLayout: Save layout
+    localeSaved: System language updated.
+    layoutSaved: Keyboard layout updated.
+    loadError: "Error loading settings: {0}"
+    localeError: "Error saving language: {0}"
+    layoutError: "Error saving layout: {0}"
+  app:
+    title: Control Center
+    subtitle: Main settings
+    iconAlt: Application icon
+  networkWifi:
+    title: Wi-Fi
+    description: Manage wireless networks, adapter status and the active connection.
+    currentNetworkAlt: Current network
+    connectedTo: Connected to {0}
+    noActiveConnection: No active connection
+    wifiDisabled: Wi-Fi disabled
+    availableNetworks: Available Networks
+    scanTooltip: Scan networks
+    emptyNoHardware: No wireless hardware was detected
+    emptyDisabled: Turn on Wi-Fi to scan networks
+    emptySearching: Searching for available networks...
+    emptyNoNetworks: No Wi-Fi networks were found
+    connect: Connect
+    connecting: Connecting...
+    unnamedNetwork: Unnamed network
+    openSecurity: Open
+    networkStatus: Network Status
+    activeInterface: Active interface
+    noInterface: No interface detected
+    noInterfacesReported: No interfaces reported
+    download: Download
+    upload: Upload
+    status:
+      checking: Checking...
+      unknown: Unknown
+      connected: Connected
+      disconnected: Disconnected
+      noLink: No active link
+      "on": "On"
+      "off": "Off"
+      noHardware: Hardware not available
+    errors:
+      refresh: 'Error refreshing networks: {0}'
+      scan: 'Error scanning networks: {0}'
+      wirelessStatus: 'Error checking wireless status: {0}'
+      toggle: 'Error toggling Wi-Fi: {0}'
+      connect: 'Error connecting: {0}'
+    dialog:
+      title: Connect to {0}
+      description: Enter the network password to establish the connection.
+      passwordPlaceholder: Password
+  networkBluetooth:
+    title: Bluetooth
+    description: Pair and manage your wireless devices.
+    "on": "On"
+    "off": "Off"
+    offTitle: Bluetooth is off
+    offHint: Enable the Bluetooth chip to search for devices.
+    syncing: Syncing radio device status...
+    connectedDevices: Connected Devices
+    availableDevices: Available
+    emptyConnected: No connected devices
+    emptyAvailable: No devices were found nearby
+    scanTooltip: Scan
+    connect: Connect
+    disconnect: Disconnect
+    errors:
+      toggle: 'Error toggling Bluetooth: {0}'
+      scan: 'Error searching for devices: {0}'
+      connect: 'Error connecting to {0}: {1}'
+      disconnect: 'Error disconnecting: {0}'
+  networkVpn:
+    noActiveConnection: No active connection
+    title: VPN
+    description: Manage VPN profiles, tunnel status and connection operations.
+    newProfile: New profile
+    refresh: Refresh status
+    refreshing: Refreshing...
+    currentStatus: Current Status
+    readingStatus: Reading network status...
+    quickConnect: Quick connect
+    availableProfiles: 'Available profiles:'
+    tunnelState: 'Tunnel state:'
+    disconnectActive: Disconnect active VPN
+    disconnecting: Disconnecting...
+    profiles: VPN Profiles
+    profileCount: '{0} profiles'
+    emptyProfiles: No VPN profiles configured. Create one to get started.
+    confirmDelete: "Delete VPN profile '{0}'?"
+    state:
+      disconnected: Disconnected
+      connecting: Connecting
+      connected: Connected
+      disconnecting: Disconnecting
+      failed: Failed
+      unknown: Unknown
+    errors:
+      unknown: Unknown error (no detail from the backend)
+      status: 'Error getting VPN status: {0}'
+      connect: 'Error connecting VPN: {0}'
+      disconnect: 'Error disconnecting VPN: {0}'
+      delete: 'Error deleting VPN profile: {0}'
+      save: 'Error saving VPN profile: {0}'
+    dialog:
+      createTitle: Create VPN profile
+      editTitle: Edit VPN profile
+      description: Set the main data of the VPN profile.
+      profileName: Profile name
+      vpnType: VPN type
+      username: User
+      settingsJson: Settings JSON (string/string object)
+      secretsJson: Secrets JSON (string/string object)
+      autoconnect: Auto-connect this profile
+      saveProfile: Save profile
+      errors:
+        nameRequired: The profile name is required
+        save: Error saving the profile
+        invalidJson: '{0} must be valid JSON'
+        notKeyValue: '{0} must be a key/value object'
+        valueNotString: "{0}: the value of '{1}' must be a string"
+  onlineAccounts:
+    title: Online Accounts
+    description: Connect your mail, calendar and contacts services.
+    providers: Providers
+    customProvider: Custom server
+    linkedAccounts: Linked accounts
+    customDialogDescription: Set up your mail and sync server details manually.
+    displayName: Display name
+    displayNamePlaceholder: My personal account
+    imapServer: IMAP server
+    smtpServer: SMTP server
+    port: Port
+    username: User name
+    usernamePlaceholder: user@example.com
+    password: Password
+    passwordPlaceholder: App password
+    addAccount: Add account
+    googleAdded: Google account added successfully
+    customAdded: Custom account added successfully
+    providerRegistered: "{0} account registered."
+    accountRemoved: "{0} account removed."
+    errors:
+      nameRequired: The name is required
+      imapServerRequired: The IMAP server is required
+      smtpServerRequired: The SMTP server is required
+      invalidPort: Invalid port (1-65535)
+      usernameRequired: The user is required
+      passwordRequired: The password is required
+      loadAccounts: 'Error loading accounts: {0}'
+      googleAuth: 'Error in Google authentication: {0}'
+      registerProvider: 'Error registering {0}: {1}'
+      registerCustom: 'Error registering custom account: {0}'
+      deleteAccount: 'Error deleting account: {0}'
+  multimediaAudio:
+    title: Output Audio
+    description: Manage speakers and system playback volume.
+    statusLabel: Status
+    muted: MUTED
+    active: ACTIVE
+    masterVolume: Master Volume
+    muteTooltip: Mute Audio
+    volumeAlt: Volume
+    outputDevices: Audio Output
+    loadingDevices: Loading sound cards...
+    emptyDevices: No audio devices available
+    level: 'Level:'
+    defaultBadge: Active
+  multimediaAudioInput:
+    title: Input Audio
+    description: Manage microphones and system capture level.
+    statusLabel: Status
+    muted: MICROPHONE MUTED
+    active: MICROPHONE ACTIVE
+    inputLevel: Input Level
+    muteTooltip: Mute microphone
+    inputAlt: Input
+    inputDevices: Audio Input
+    loadingDevices: Loading microphones...
+    emptyDevices: No input devices available
+    level: 'Level:'
+    defaultBadge: Active
+
+shortcutKeys:
+  KEY_VOLUMEUP:
+    label: Volume up
+    description: Increases the system audio volume
+  KEY_VOLUMEDOWN:
+    label: Volume down
+    description: Lowers the system audio volume
+  KEY_MUTE:
+    label: Mute audio
+    description: Turns audio mute on or off
+  KEY_MICMUTE:
+    label: Mute microphone
+    description: Turns microphone mute on or off
+  KEY_CAMERA:
+    label: Toggle camera
+    description: Turns the built-in camera on or off
+  KEY_BRIGHTNESSUP:
+    label: Brightness up
+    description: Increases the screen brightness
+  KEY_BRIGHTNESSDOWN:
+    label: Brightness down
+    description: Lowers the screen brightness
+  KEY_PLAYPAUSE:
+    label: Play / Pause
+    description: Plays or pauses the active media player
+  KEY_STOPCD:
+    label: Stop playback
+    description: Stops media playback
+  KEY_PREVIOUSSONG:
+    label: Previous track
+    description: Skips to the previous song or track
+  KEY_NEXTSONG:
+    label: Next track
+    description: Skips to the next song or track

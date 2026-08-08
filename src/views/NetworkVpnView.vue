@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { listen } from '@tauri-apps/api/event';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
@@ -23,6 +24,8 @@ import {
 	type VpnUpdateInput,
 } from '@/services/network.service';
 
+const { t } = useI18n();
+
 const vpnProfiles = ref<VpnProfile[]>([]);
 const vpnStatus = ref<VpnStatus | null>(null);
 const loading = ref(true);
@@ -40,18 +43,18 @@ const activeProfile = computed(() => {
 
 const vpnStateLabel = computed(() => {
 	const state = vpnStatus.value?.state;
-	if (!state) return 'Desconocido';
+	if (!state) return t('views.networkVpn.state.unknown');
 
 	const labels: Record<VpnConnectionState, string> = {
-		disconnected: 'Desconectada',
-		connecting: 'Conectando',
-		connected: 'Conectada',
-		disconnecting: 'Desconectando',
-		failed: 'Fallida',
-		unknown: 'Desconocido',
+		disconnected: t('views.networkVpn.state.disconnected'),
+		connecting: t('views.networkVpn.state.connecting'),
+		connected: t('views.networkVpn.state.connected'),
+		disconnecting: t('views.networkVpn.state.disconnecting'),
+		failed: t('views.networkVpn.state.failed'),
+		unknown: t('views.networkVpn.state.unknown'),
 	};
 
-	return labels[state] ?? 'Desconocido';
+	return labels[state] ?? t('views.networkVpn.state.unknown');
 });
 
 const hasActiveVpn = computed(() => vpnStatus.value?.state === 'connected');
@@ -114,7 +117,7 @@ const errorMessage = (err: unknown): string => {
 		}
 	}
 
-	return 'Error desconocido (sin detalle del backend)';
+	return t('views.networkVpn.errors.unknown');
 };
 
 const refreshVpnData = async () => {
@@ -125,7 +128,7 @@ const refreshVpnData = async () => {
 		vpnProfiles.value = profiles;
 		vpnStatus.value = status;
 	} catch (stateError) {
-		error.value = `Error obteniendo estado VPN: ${errorMessage(stateError)}`;
+		error.value = t('views.networkVpn.errors.status').replace('{0}', errorMessage(stateError));
 	} finally {
 		loading.value = false;
 	}
@@ -138,7 +141,7 @@ const connectProfile = async (uuid: string) => {
 		await connectVpn(uuid);
 		await refreshVpnData();
 	} catch (connectError) {
-		error.value = `Error conectando VPN: ${errorMessage(connectError)}`;
+		error.value = t('views.networkVpn.errors.connect').replace('{0}', errorMessage(connectError));
 	} finally {
 		actionProfileUuid.value = null;
 	}
@@ -151,21 +154,24 @@ const disconnectProfile = async (uuid?: string) => {
 		await disconnectVpn(uuid);
 		await refreshVpnData();
 	} catch (disconnectError) {
-		error.value = `Error desconectando VPN: ${errorMessage(disconnectError)}`;
+		error.value = t('views.networkVpn.errors.disconnect').replace(
+			'{0}',
+			errorMessage(disconnectError)
+		);
 	} finally {
 		actionProfileUuid.value = null;
 	}
 };
 
 const removeProfile = async (profile: VpnProfile) => {
-	if (!confirm(`Eliminar perfil VPN '${profile.id}'?`)) return;
+	if (!confirm(t('views.networkVpn.confirmDelete').replace('{0}', profile.id))) return;
 	actionProfileUuid.value = profile.uuid;
 	error.value = '';
 	try {
 		await deleteVpnProfile(profile.uuid);
 		await refreshVpnData();
 	} catch (deleteError) {
-		error.value = `Error eliminando perfil VPN: ${errorMessage(deleteError)}`;
+		error.value = t('views.networkVpn.errors.delete').replace('{0}', errorMessage(deleteError));
 	} finally {
 		actionProfileUuid.value = null;
 	}
@@ -182,7 +188,7 @@ const handleProfileSubmit = async (input: VpnCreateInput | VpnUpdateInput) => {
 		showProfileDialog.value = false;
 		await refreshVpnData();
 	} catch (submitError) {
-		error.value = `Error guardando perfil VPN: ${errorMessage(submitError)}`;
+		error.value = t('views.networkVpn.errors.save').replace('{0}', errorMessage(submitError));
 	}
 };
 
@@ -211,9 +217,9 @@ onUnmounted(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			section="Conectividad"
-			title="VPN"
-			description="Gestiona perfiles VPN, estado del túnel y operaciones de conexión."
+			:section="t('sidebar.network')"
+			:title="t('views.networkVpn.title')"
+			:description="t('views.networkVpn.description')"
 		>
 			<template #actions>
 				<div class="flex gap-2">
@@ -221,14 +227,14 @@ onUnmounted(() => {
 						class="rounded-corner border border-primary/20 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15"
 						@click="showProfileDialog = true"
 					>
-						Nuevo perfil
+						{{ t('views.networkVpn.newProfile') }}
 					</button>
 					<button
 						class="rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-1.5 text-sm text-tx-muted transition-colors hover:bg-ui-surface"
 						@click="refreshVpnData"
 						:disabled="loading"
 					>
-						{{ loading ? 'Actualizando...' : 'Actualizar estado' }}
+						{{ loading ? t('views.networkVpn.refreshing') : t('views.networkVpn.refresh') }}
 					</button>
 				</div>
 			</template>
@@ -238,9 +244,9 @@ onUnmounted(() => {
 
 		<div class="grid gap-4 xl:grid-cols-3">
 			<SectionCard class="xl:col-span-2">
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">Estado Actual</h3>
+				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.networkVpn.currentStatus') }}</h3>
 
-				<EmptyStateBox v-if="loading" message="Leyendo estado de red..." />
+				<EmptyStateBox v-if="loading" :message="t('views.networkVpn.readingStatus')" />
 
 				<VpnStatusPanel
 					v-else
@@ -251,11 +257,11 @@ onUnmounted(() => {
 			</SectionCard>
 
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">Conexión rápida</h3>
+				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.networkVpn.quickConnect') }}</h3>
 				<div class="space-y-2 text-sm text-tx-muted">
-					<p>Perfiles disponibles: {{ vpnProfiles.length }}</p>
+					<p>{{ t('views.networkVpn.availableProfiles') }} {{ vpnProfiles.length }}</p>
 					<p>
-						Estado del túnel:
+						{{ t('views.networkVpn.tunnelState') }}
 						<span class="font-medium text-tx-primary">{{ vpnStateLabel }}</span>
 					</p>
 					<button
@@ -263,7 +269,7 @@ onUnmounted(() => {
 						@click="disconnectProfile()"
 						:disabled="!hasActiveVpn || actionProfileUuid === '__active__'"
 					>
-						{{ actionProfileUuid === '__active__' ? 'Desconectando...' : 'Desconectar VPN activa' }}
+						{{ actionProfileUuid === '__active__' ? t('views.networkVpn.disconnecting') : t('views.networkVpn.disconnectActive') }}
 					</button>
 				</div>
 			</SectionCard>
@@ -271,15 +277,15 @@ onUnmounted(() => {
 
 		<SectionCard>
 			<div class="mb-4 flex items-center justify-between">
-				<h3 class="text-lg font-medium text-tx-primary">Perfiles VPN</h3>
+				<h3 class="text-lg font-medium text-tx-primary">{{ t('views.networkVpn.profiles') }}</h3>
 				<span class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-					{{ vpnProfiles.length }} perfiles
+					{{ t('views.networkVpn.profileCount').replace('{0}', String(vpnProfiles.length)) }}
 				</span>
 			</div>
 
 			<EmptyStateBox
 				v-if="!loading && vpnProfiles.length === 0"
-				message="No hay perfiles VPN configurados. Crea uno para comenzar."
+				:message="t('views.networkVpn.emptyProfiles')"
 			/>
 
 			<ul v-else class="space-y-2">

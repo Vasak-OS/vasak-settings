@@ -6,292 +6,62 @@ use crate::logger::log_debug;
 const CORE_SECTION: &str = "core";
 const PLUGINS_KEY: &str = "plugins";
 
-/// Static metadata for every plugin the settings app knows about.
+/// Identity of every plugin the settings app knows about.
 ///
-/// `required` marks the plugins VasakOS itself depends on: without them the
-/// desktop shell, the keybindings or the lock screen stop working, so the UI
-/// must not offer a switch for them at all.
+/// Only what the backend is authoritative about lives here: the wayfire plugin
+/// name, the group it belongs to, and whether VasakOS depends on it. All the
+/// display text is in the locale files, keyed by `id`.
+///
+/// `required` marks the plugins the desktop shell, the keybindings or the lock
+/// screen need, so the UI must not offer a switch for them at all.
 struct PluginSpec {
 	id: &'static str,
-	label: &'static str,
-	description: &'static str,
+	/// Locale key under `wayfire.plugins.categories`.
 	category: &'static str,
 	required: bool,
-	/// Shown instead of the switch, so the user understands why it is fixed.
-	required_reason: Option<&'static str>,
 }
 
 const PLUGINS: &[PluginSpec] = &[
-	// ── Sistema (los que sostienen el escritorio) ────────────────────────────
-	PluginSpec {
-		id: "autostart",
-		label: "Autoinicio",
-		description: "Ejecuta la sesión al arrancar el compositor.",
-		category: "Sistema",
-		required: true,
-		required_reason: Some("Lanza vasak-desktop y publica el entorno de la sesión (uwsm finalize)."),
-	},
-	PluginSpec {
-		id: "command",
-		label: "Atajos de teclado",
-		description: "Ejecuta comandos con combinaciones de teclas.",
-		category: "Sistema",
-		required: true,
-		required_reason: Some("Wayfire gestiona todos los atajos de VasakOS: terminal, archivos, menú, volumen y brillo."),
-	},
-	PluginSpec {
-		id: "ipc",
-		label: "IPC",
-		description: "Canal de control externo del compositor.",
-		category: "Sistema",
-		required: true,
-		required_reason: Some("vasak-desktop se comunica con Wayfire por IPC."),
-	},
-	PluginSpec {
-		id: "ipc-rules",
-		label: "Reglas IPC",
-		description: "Permite consultar y modificar ventanas por IPC.",
-		category: "Sistema",
-		required: true,
-		required_reason: Some("Necesario para que vasak-desktop lea y ajuste propiedades de las ventanas."),
-	},
-	PluginSpec {
-		id: "stipc",
-		label: "IPC de pruebas",
-		description: "Extensión del canal IPC.",
-		category: "Sistema",
-		required: true,
-		required_reason: Some("Complementa a ipc para la integración del escritorio."),
-	},
-	PluginSpec {
-		id: "foreign-toplevel",
-		label: "Lista de ventanas",
-		description: "Publica las ventanas abiertas al escritorio.",
-		category: "Sistema",
-		required: true,
-		required_reason: Some("Sin esto la barra de tareas de vasak-desktop queda vacía."),
-	},
-	PluginSpec {
-		id: "wayfire-shell",
-		label: "Integración del panel",
-		description: "Protocolo del panel y el menú.",
-		category: "Sistema",
-		required: true,
-		required_reason: Some("Da soporte al panel de vasak-desktop."),
-	},
-	PluginSpec {
-		id: "gtk-shell",
-		label: "Integración GTK",
-		description: "Soporte del protocolo gtk-shell.",
-		category: "Sistema",
-		required: true,
-		required_reason: Some("Necesario para que las aplicaciones GTK se integren con el escritorio."),
-	},
-	PluginSpec {
-		id: "session-lock",
-		label: "Bloqueo de sesión",
-		description: "Permite bloquear la pantalla.",
-		category: "Sistema",
-		required: true,
-		required_reason: Some("Es el lado del compositor del bloqueo de pantalla."),
-	},
-	PluginSpec {
-		id: "idle",
-		label: "Inactividad",
-		description: "Detecta cuándo el equipo está inactivo.",
-		category: "Sistema",
-		required: true,
-		required_reason: Some("Sin esto el bloqueo automático por inactividad no se dispara."),
-	},
-	PluginSpec {
-		id: "shortcuts-inhibit",
-		label: "Inhibir atajos",
-		description: "Deja que aplicaciones como escritorios remotos capturen todas las teclas.",
-		category: "Sistema",
-		required: false,
-		required_reason: None,
-	},
-	// ── Ventanas ─────────────────────────────────────────────────────────────
-	PluginSpec {
-		id: "move",
-		label: "Mover ventanas",
-		description: "Arrastrar ventanas con el ratón.",
-		category: "Ventanas",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "resize",
-		label: "Redimensionar ventanas",
-		description: "Cambiar el tamaño con el ratón.",
-		category: "Ventanas",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "grid",
-		label: "Anclado en cuadrícula",
-		description: "Colocar ventanas en mitades y esquinas.",
-		category: "Ventanas",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "place",
-		label: "Colocación automática",
-		description: "Decide dónde aparecen las ventanas nuevas.",
-		category: "Ventanas",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "decoration",
-		label: "Decoración de ventanas",
-		description: "Barra de título y bordes dibujados por el compositor.",
-		category: "Ventanas",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "wm-actions",
-		label: "Acciones de ventana",
-		description: "Pantalla completa, siempre encima, fijar y minimizar.",
-		category: "Ventanas",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "window-rules",
-		label: "Reglas de ventana",
-		description: "Aplica reglas automáticas según la aplicación.",
-		category: "Ventanas",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "switcher",
-		label: "Cambiador de ventanas",
-		description: "Alt+Tab con animación.",
-		category: "Ventanas",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "fast-switcher",
-		label: "Cambiador rápido",
-		description: "Alterna entre ventanas sin animación.",
-		category: "Ventanas",
-		required: false,
-		required_reason: None,
-	},
-	// ── Espacios de trabajo ──────────────────────────────────────────────────
-	PluginSpec {
-		id: "vswitch",
-		label: "Cambiar de escritorio",
-		description: "Moverse entre espacios de trabajo.",
-		category: "Espacios de trabajo",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "expo",
-		label: "Vista general",
-		description: "Muestra todos los espacios de trabajo a la vez.",
-		category: "Espacios de trabajo",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "oswitch",
-		label: "Cambiar de pantalla",
-		description: "Saltar entre monitores.",
-		category: "Espacios de trabajo",
-		required: false,
-		required_reason: None,
-	},
-	// ── Efectos ──────────────────────────────────────────────────────────────
-	PluginSpec {
-		id: "animate",
-		label: "Animaciones",
-		description: "Anima la apertura y el cierre de ventanas.",
-		category: "Efectos",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "blur",
-		label: "Desenfoque",
-		description: "Desenfoca lo que hay detrás de las ventanas.",
-		category: "Efectos",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "zoom",
-		label: "Lupa",
-		description: "Amplía la pantalla con la rueda del ratón.",
-		category: "Efectos",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "wobbly",
-		label: "Ventanas gelatinosas",
-		description: "Las ventanas se deforman al moverlas.",
-		category: "Efectos",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "cube",
-		label: "Cubo de escritorios",
-		description: "Muestra los escritorios sobre un cubo 3D.",
-		category: "Efectos",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "alpha",
-		label: "Transparencia",
-		description: "Ajusta la opacidad de una ventana.",
-		category: "Efectos",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "invert",
-		label: "Invertir colores",
-		description: "Invierte los colores de la pantalla.",
-		category: "Efectos",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "fisheye",
-		label: "Ojo de pez",
-		description: "Lente de aumento circular.",
-		category: "Efectos",
-		required: false,
-		required_reason: None,
-	},
-	PluginSpec {
-		id: "wrot",
-		label: "Rotar ventanas",
-		description: "Gira una ventana con el ratón.",
-		category: "Efectos",
-		required: false,
-		required_reason: None,
-	},
+	PluginSpec { id: "autostart", category: "system", required: true },
+	PluginSpec { id: "command", category: "system", required: true },
+	PluginSpec { id: "ipc", category: "system", required: true },
+	PluginSpec { id: "ipc-rules", category: "system", required: true },
+	PluginSpec { id: "stipc", category: "system", required: true },
+	PluginSpec { id: "foreign-toplevel", category: "system", required: true },
+	PluginSpec { id: "wayfire-shell", category: "system", required: true },
+	PluginSpec { id: "gtk-shell", category: "system", required: true },
+	PluginSpec { id: "session-lock", category: "system", required: true },
+	PluginSpec { id: "idle", category: "system", required: true },
+	PluginSpec { id: "shortcuts-inhibit", category: "system", required: false },
+	PluginSpec { id: "move", category: "windows", required: false },
+	PluginSpec { id: "resize", category: "windows", required: false },
+	PluginSpec { id: "grid", category: "windows", required: false },
+	PluginSpec { id: "place", category: "windows", required: false },
+	PluginSpec { id: "decoration", category: "windows", required: false },
+	PluginSpec { id: "wm-actions", category: "windows", required: false },
+	PluginSpec { id: "window-rules", category: "windows", required: false },
+	PluginSpec { id: "switcher", category: "windows", required: false },
+	PluginSpec { id: "fast-switcher", category: "windows", required: false },
+	PluginSpec { id: "vswitch", category: "workspaces", required: false },
+	PluginSpec { id: "expo", category: "workspaces", required: false },
+	PluginSpec { id: "oswitch", category: "workspaces", required: false },
+	PluginSpec { id: "animate", category: "effects", required: false },
+	PluginSpec { id: "blur", category: "effects", required: false },
+	PluginSpec { id: "zoom", category: "effects", required: false },
+	PluginSpec { id: "wobbly", category: "effects", required: false },
+	PluginSpec { id: "cube", category: "effects", required: false },
+	PluginSpec { id: "alpha", category: "effects", required: false },
+	PluginSpec { id: "invert", category: "effects", required: false },
+	PluginSpec { id: "fisheye", category: "effects", required: false },
+	PluginSpec { id: "wrot", category: "effects", required: false },
 ];
 
 #[derive(Serialize)]
 pub struct WayfirePlugin {
 	pub id: String,
-	pub label: String,
-	pub description: String,
+	/// Locale key suffix; the frontend resolves the label and description.
 	pub category: String,
 	pub required: bool,
-	pub required_reason: Option<String>,
 	pub enabled: bool,
 	/// True when the plugin is active but the settings app has no metadata for
 	/// it (hand-edited wayfire.ini) — shown so toggling never silently drops it.
@@ -356,11 +126,8 @@ pub async fn get_wayfire_plugins() -> Result<Vec<WayfirePlugin>, String> {
 		.iter()
 		.map(|spec| WayfirePlugin {
 			id: spec.id.to_string(),
-			label: spec.label.to_string(),
-			description: spec.description.to_string(),
 			category: spec.category.to_string(),
 			required: spec.required,
-			required_reason: spec.required_reason.map(str::to_string),
 			enabled: enabled.iter().any(|item| item == spec.id),
 			unknown: false,
 		})
@@ -370,11 +137,8 @@ pub async fn get_wayfire_plugins() -> Result<Vec<WayfirePlugin>, String> {
 		if spec_for(&id).is_none() {
 			plugins.push(WayfirePlugin {
 				id: id.clone(),
-				label: id.clone(),
-				description: "Plugin activado manualmente en wayfire.ini.".to_string(),
-				category: "Otros".to_string(),
+				category: "other".to_string(),
 				required: false,
-				required_reason: None,
 				enabled: true,
 				unknown: true,
 			});

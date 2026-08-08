@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { listen } from '@tauri-apps/api/event';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, onUnmounted, type Ref, ref, watch } from 'vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
@@ -15,6 +16,8 @@ import {
 	toggleAudioInputMute,
 } from '@/services/audio.service';
 import type { AudioDevice, VolumeInfo } from '@/types/audio';
+
+const { t } = useI18n();
 
 const inputVolumeInfo = ref<VolumeInfo>({
 	current: 0,
@@ -148,15 +151,15 @@ onUnmounted(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			section="Multimedia"
-			title="Audio de Entrada"
-			description="Administra micrófonos y nivel de captura del sistema."
+			:section="t('sidebar.multimedia')"
+			:title="t('views.multimediaAudioInput.title')"
+			:description="t('views.multimediaAudioInput.description')"
 		>
 			<template #actions>
 				<div class="flex flex-col items-center">
-					<p class="mb-2 text-xs uppercase tracking-[0.2em] text-tx-muted">Estado</p>
+					<p class="mb-2 text-xs uppercase tracking-[0.2em] text-tx-muted">{{ t('views.multimediaAudioInput.statusLabel') }}</p>
 					<StatusBadge
-						:text="inputVolumeInfo.is_muted ? 'MICRÓFONO SILENCIADO' : 'MICRÓFONO ACTIVO'"
+						:text="inputVolumeInfo.is_muted ? t('views.multimediaAudioInput.muted') : t('views.multimediaAudioInput.active')"
 						:tone="inputVolumeInfo.is_muted ? 'error' : 'success'"
 					/>
 				</div>
@@ -165,7 +168,7 @@ onUnmounted(() => {
 
 		<div class="mt-2 grid gap-6 xl:grid-cols-2">
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">Nivel de Entrada</h3>
+				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.multimediaAudioInput.inputLevel') }}</h3>
 				<div class="flex items-center gap-4 rounded-corner border border-ui-border bg-ui-surface/40 p-4">
 					<button
 						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner border transition-colors hover:bg-[var(--primary-color,#0084ff)] hover:text-white"
@@ -175,12 +178,12 @@ onUnmounted(() => {
 								: 'border-ui-border text-tx-primary'
 						"
 						@click="toggleInputMute"
-						title="Silenciar micrófono"
+						:title="t('views.multimediaAudioInput.muteTooltip')"
 					>
 						<img
 							v-if="inputVolumeIconContent"
 							:src="inputVolumeIconContent"
-							alt="Entrada"
+							:alt="t('views.multimediaAudioInput.inputAlt')"
 							class="h-6 w-6"
 							:class="{ 'opacity-60': inputVolumeInfo.is_muted }"
 						/>
@@ -213,7 +216,7 @@ onUnmounted(() => {
 
 			<SectionCard>
 				<h3 class="mb-4 flex items-center justify-between text-lg font-medium text-tx-primary">
-					Entrada de Audio
+					{{ t('views.multimediaAudioInput.inputDevices') }}
 					<button
 						@click="loadInputDevices"
 						class="rounded border border-transparent p-1 transition-colors hover:border-ui-border hover:bg-ui-surface"
@@ -230,8 +233,8 @@ onUnmounted(() => {
 					</button>
 				</h3>
 
-				<EmptyStateBox v-if="inputDevicesLoading" message="Cargando micrófonos..." />
-				<EmptyStateBox v-else-if="inputDevices.length === 0" message="No hay dispositivos de entrada disponibles" />
+				<EmptyStateBox v-if="inputDevicesLoading" :message="t('views.multimediaAudioInput.loadingDevices')" />
+				<EmptyStateBox v-else-if="inputDevices.length === 0" :message="t('views.multimediaAudioInput.emptyDevices')" />
 
 				<ul v-else class="flex max-h-[14rem] flex-col gap-2 overflow-y-auto pr-1">
 					<li
@@ -264,7 +267,7 @@ onUnmounted(() => {
 								{{ getDeviceName(device) }}
 							</span>
 							<span v-if="device.volume" class="mt-0.5 text-xs text-tx-muted">
-								Nivel: {{ Math.round(device.volume * 100) }}%
+								{{ t('views.multimediaAudioInput.level') }} {{ Math.round(device.volume * 100) }}%
 							</span>
 						</div>
 
@@ -272,7 +275,7 @@ onUnmounted(() => {
 							v-if="device.is_default"
 							class="rounded border border-[var(--primary-color,#0084ff)]/20 bg-[var(--primary-color,#0084ff)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--primary-color,#0084ff)]"
 						>
-							Activo
+							{{ t('views.multimediaAudioInput.defaultBadge') }}
 						</span>
 					</li>
 				</ul>

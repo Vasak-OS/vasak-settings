@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { listen } from '@tauri-apps/api/event';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, onUnmounted, type Ref, ref, watch } from 'vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
@@ -15,6 +16,8 @@ import {
 	toggleAudioMute,
 } from '@/services/audio.service';
 import type { AudioDevice, VolumeInfo } from '@/types/audio';
+
+const { t } = useI18n();
 
 // --- Estado Volumen ---
 const volumeInfo = ref<VolumeInfo>({
@@ -153,15 +156,15 @@ onUnmounted(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			section="Multimedia"
-			title="Audio de Salida"
-			description="Administra parlantes y volumen de reproducción del sistema."
+			:section="t('sidebar.multimedia')"
+			:title="t('views.multimediaAudio.title')"
+			:description="t('views.multimediaAudio.description')"
 		>
 			<template #actions>
 				<div class="flex flex-col items-center">
-					<p class="text-xs uppercase tracking-[0.2em] text-tx-muted mb-2">Estado</p>
+					<p class="text-xs uppercase tracking-[0.2em] text-tx-muted mb-2">{{ t('views.multimediaAudio.statusLabel') }}</p>
 					<StatusBadge
-						:text="volumeInfo.is_muted ? 'SILENCIADO' : 'ACTIVO'"
+						:text="volumeInfo.is_muted ? t('views.multimediaAudio.muted') : t('views.multimediaAudio.active')"
 						:tone="volumeInfo.is_muted ? 'error' : 'success'"
 					/>
 				</div>
@@ -171,15 +174,15 @@ onUnmounted(() => {
 		<div class="mt-2 grid gap-6 xl:grid-cols-2">
 			<!-- Slider Volumen -->
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">Volumen Maestro</h3>
+				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.multimediaAudio.masterVolume') }}</h3>
 				<div class="flex items-center gap-4 rounded-corner border border-ui-border bg-ui-surface/40 p-4">
 					<button 
 						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner bg-ui-surface transition-colors hover:bg-[var(--primary-color,#0084ff)] hover:text-white"
 						:class="volumeInfo.is_muted ? 'text-status-error border border-status-error/40' : 'text-tx-primary border border-ui-border'"
 						@click="toggleMute"
-						title="Silenciar Audio"
+						:title="t('views.multimediaAudio.muteTooltip')"
 					>
-						<img v-if="volumeIconContent" :src="volumeIconContent" alt="Volumen" class="h-6 w-6" :class="{'opacity-60': volumeInfo.is_muted}" />
+						<img v-if="volumeIconContent" :src="volumeIconContent" :alt="t('views.multimediaAudio.volumeAlt')" class="h-6 w-6" :class="{'opacity-60': volumeInfo.is_muted}" />
 					</button>
 
 					<div class="flex-1 px-2">
@@ -203,8 +206,8 @@ onUnmounted(() => {
 			<!-- Dispositivos Salida -->
 			<SectionCard>
 				<h3 class="mb-4 text-lg font-medium text-tx-primary flex items-center justify-between">
-					Salida de Audio
-					<button 
+					{{ t('views.multimediaAudio.outputDevices') }}
+					<button
 						@click="loadDevices" 
 						class="rounded p-1 transition-colors hover:bg-ui-surface border-transparent border hover:border-ui-border"
 						:class="{ 'animate-pulse': devicesLoading }"
@@ -215,8 +218,8 @@ onUnmounted(() => {
 					</button>
 				</h3>
 
-				<EmptyStateBox v-if="devicesLoading" message="Cargando tarjetas de sonido..." />
-				<EmptyStateBox v-else-if="devices.length === 0" message="No hay dispositivos de audio disponibles" />
+				<EmptyStateBox v-if="devicesLoading" :message="t('views.multimediaAudio.loadingDevices')" />
+				<EmptyStateBox v-else-if="devices.length === 0" :message="t('views.multimediaAudio.emptyDevices')" />
 				
 				<ul v-else class="flex flex-col gap-2 max-h-[14rem] overflow-y-auto pr-1">
 					<li 
@@ -242,13 +245,13 @@ onUnmounted(() => {
 								{{ getDeviceName(device) }}
 							</span>
 							<span class="text-xs text-tx-muted mt-0.5" v-if="device.volume">
-								Nivel: {{ Math.round(device.volume * 100) }}%
+								{{ t('views.multimediaAudio.level') }} {{ Math.round(device.volume * 100) }}%
 							</span>
 						</div>
 
 						<!-- Badge Default -->
 						<span v-if="device.is_default" class="rounded bg-[var(--primary-color,#0084ff)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--primary-color,#0084ff)] border border-[var(--primary-color,#0084ff)]/20">
-							Activo
+							{{ t('views.multimediaAudio.defaultBadge') }}
 						</span>
 					</li>
 				</ul>

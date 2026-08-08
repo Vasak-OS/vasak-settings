@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, ref } from 'vue';
 import TextInput from '@/components/ui/TextInput.vue';
 import type { VpnCreateInput, VpnType, VpnUpdateInput } from '@/services/network.service';
@@ -19,6 +20,8 @@ export interface Emits {
 
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
+
+const { t } = useI18n();
 
 // Form fields
 const profileId = ref('');
@@ -49,7 +52,11 @@ const vpnTypes: Array<{ value: VpnType; label: string }> = [
 	{ value: 'generic', label: 'Generic' },
 ];
 
-const dialogTitle = computed(() => (props.editingUuid ? 'Editar perfil VPN' : 'Crear perfil VPN'));
+const dialogTitle = computed(() =>
+	props.editingUuid
+		? t('views.networkVpn.dialog.editTitle')
+		: t('views.networkVpn.dialog.createTitle')
+);
 
 const resetForm = () => {
 	profileId.value = props.initialId || '';
@@ -74,17 +81,19 @@ const parseStringMap = (raw: string, label: string): Record<string, string> | un
 	try {
 		parsed = JSON.parse(raw);
 	} catch {
-		throw new Error(`${label} debe ser un JSON válido`);
+		throw new Error(t('views.networkVpn.dialog.errors.invalidJson').replace('{0}', label));
 	}
 
 	if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-		throw new Error(`${label} debe ser un objeto clave/valor`);
+		throw new Error(t('views.networkVpn.dialog.errors.notKeyValue').replace('{0}', label));
 	}
 
 	const out: Record<string, string> = {};
 	for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
 		if (typeof value !== 'string') {
-			throw new Error(`${label}: el valor de '${key}' debe ser string`);
+			throw new Error(
+				t('views.networkVpn.dialog.errors.valueNotString').replace('{0}', label).replace('{1}', key)
+			);
 		}
 		out[key] = value;
 	}
@@ -134,7 +143,7 @@ const buildUpdateInput = (uuid: string): VpnUpdateInput => {
 
 const handleSubmit = async () => {
 	if (!profileId.value.trim()) {
-		formError.value = 'El nombre del perfil es obligatorio';
+		formError.value = t('views.networkVpn.dialog.errors.nameRequired');
 		return;
 	}
 
@@ -149,7 +158,7 @@ const handleSubmit = async () => {
 		}
 	} catch (submitError) {
 		formError.value =
-			submitError instanceof Error ? submitError.message : 'Error al guardar el perfil';
+			submitError instanceof Error ? submitError.message : t('views.networkVpn.dialog.errors.save');
 	} finally {
 		isSubmitting.value = false;
 	}
@@ -165,7 +174,7 @@ const handleCancel = () => {
 	<div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
 		<div class="w-full max-w-2xl rounded-corner border border-ui-border bg-ui-bg p-4 shadow-xl">
 			<h2 class="text-lg font-semibold text-tx-primary">{{ dialogTitle }}</h2>
-			<p class="mt-1 text-sm text-tx-muted">Configura los datos principales del perfil VPN.</p>
+			<p class="mt-1 text-sm text-tx-muted">{{ t('views.networkVpn.dialog.description') }}</p>
 
 			<div v-if="formError" class="mt-3 rounded border border-status-danger/30 bg-status-danger/10 p-2 text-xs text-status-danger">
 				{{ formError }}
@@ -173,12 +182,12 @@ const handleCancel = () => {
 
 			<div class="mt-4 grid gap-3 md:grid-cols-2">
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-					Nombre del perfil
+					{{ t('views.networkVpn.dialog.profileName') }}
 					<TextInput v-model="profileId" class="mt-1" />
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-					Tipo VPN
+					{{ t('views.networkVpn.dialog.vpnType') }}
 					<select
 						v-model="profileType"
 						class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
@@ -195,7 +204,7 @@ const handleCancel = () => {
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-					Usuario
+					{{ t('views.networkVpn.dialog.username') }}
 					<TextInput v-model="profileUsername" class="mt-1" />
 				</label>
 
@@ -227,7 +236,7 @@ const handleCancel = () => {
 
 			<div class="mt-3 grid gap-3 md:grid-cols-2">
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-					Settings JSON (objeto string/string)
+					{{ t('views.networkVpn.dialog.settingsJson') }}
 					<textarea
 						v-model="profileSettingsJson"
 						rows="4"
@@ -237,7 +246,7 @@ const handleCancel = () => {
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-					Secrets JSON (objeto string/string)
+					{{ t('views.networkVpn.dialog.secretsJson') }}
 					<textarea
 						v-model="profileSecretsJson"
 						rows="4"
@@ -249,7 +258,7 @@ const handleCancel = () => {
 
 			<label class="mt-2 flex items-center gap-2 text-sm text-tx-muted">
 				<input v-model="profileAutoconnect" type="checkbox" />
-				Autoconectar este perfil
+				{{ t('views.networkVpn.dialog.autoconnect') }}
 			</label>
 
 			<div class="mt-4 flex justify-end gap-2">
@@ -258,14 +267,14 @@ const handleCancel = () => {
 					@click="handleCancel"
 					:disabled="isSubmitting"
 				>
-					Cancelar
+					{{ t('common.cancel') }}
 				</button>
 				<button
 					class="rounded-corner border border-primary/20 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
 					@click="handleSubmit"
 					:disabled="isSubmitting"
 				>
-					{{ isSubmitting ? 'Guardando...' : 'Guardar perfil' }}
+					{{ isSubmitting ? t('common.saving') : t('views.networkVpn.dialog.saveProfile') }}
 				</button>
 			</div>
 		</div>

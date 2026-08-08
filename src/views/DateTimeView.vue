@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
@@ -16,6 +17,8 @@ interface DateTimeInfo {
 	local_rtc: boolean;
 	time_usec: number;
 }
+
+const { t, locale } = useI18n();
 
 const info = ref<DateTimeInfo | null>(null);
 const timezones = ref<string[]>([]);
@@ -34,7 +37,7 @@ let clockTimer: number | null = null;
 const isAutomatic = computed(() => info.value?.ntp_enabled ?? false);
 
 const formattedNow = computed(() =>
-	new Intl.DateTimeFormat('es', {
+	new Intl.DateTimeFormat(locale.value, {
 		dateStyle: 'full',
 		timeStyle: 'medium',
 		timeZone: info.value?.timezone || undefined,
@@ -43,11 +46,11 @@ const formattedNow = computed(() =>
 
 const syncLabel = computed(() => {
 	if (!info.value) return '';
-	if (!info.value.can_ntp) return 'No hay ningún servicio de hora en red instalado.';
-	if (!info.value.ntp_enabled) return 'La hora se ajusta manualmente.';
+	if (!info.value.can_ntp) return t('views.datetime.noNtpService');
+	if (!info.value.ntp_enabled) return t('views.datetime.manualClock');
 	return info.value.ntp_synchronized
-		? 'Reloj sincronizado con la red.'
-		: 'Sincronizando con la red…';
+		? t('views.datetime.synchronized')
+		: t('views.datetime.synchronizing');
 });
 
 /** The full tz database is ~600 entries; filter before rendering the list. */
@@ -120,13 +123,17 @@ function toggleAutomatic(value: boolean) {
 	void run(
 		'set_ntp',
 		{ enabled: value },
-		value ? 'Hora automática activada' : 'Hora manual activada'
+		value ? t('views.datetime.automaticOn') : t('views.datetime.manualOn')
 	);
 }
 
 function applyTimezone(zone: string) {
 	if (!zone || zone === info.value?.timezone) return;
-	void run('set_timezone', { timezone: zone }, `Zona horaria: ${zone}`);
+	void run(
+		'set_timezone',
+		{ timezone: zone },
+		t('views.datetime.timezoneSet').replace('{0}', zone)
+	);
 }
 
 function applyManualTime() {
@@ -134,28 +141,28 @@ function applyManualTime() {
 
 	const stamp = new Date(`${manualDate.value}T${manualTime.value}`);
 	if (Number.isNaN(stamp.getTime())) {
-		error.value = 'Fecha u hora inválida';
+		error.value = t('views.datetime.invalidDateTime');
 		return;
 	}
 
 	void run(
 		'set_system_time',
 		{ unixSeconds: Math.floor(stamp.getTime() / 1000) },
-		'Hora actualizada'
+		t('views.datetime.timeUpdated')
 	);
 }
 
 function toggleLocalRtc(value: boolean) {
-	void run('set_local_rtc', { local: value }, 'Reloj de hardware actualizado');
+	void run('set_local_rtc', { local: value }, t('views.datetime.rtcUpdated'));
 }
 </script>
 
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			section="Sistema"
-			title="Fecha y hora"
-			description="Zona horaria y sincronización del reloj del sistema."
+			:section="t('sidebar.system')"
+			:title="t('views.datetime.title')"
+			:description="t('views.datetime.description')"
 		/>
 
 		<AlertMessage v-if="error" tone="error" :message="error" />
@@ -169,9 +176,9 @@ function toggleLocalRtc(value: boolean) {
 		<SectionCard>
 			<div class="flex items-start gap-3">
 				<div class="min-w-0 flex-1">
-					<h3 class="text-base font-medium">Hora automática</h3>
+					<h3 class="text-base font-medium">{{ t('views.datetime.automaticTime') }}</h3>
 					<p class="mt-0.5 text-sm text-tx-muted">
-						Sincroniza el reloj con servidores de hora en red.
+						{{ t('views.datetime.automaticTimeDescription') }}
 					</p>
 				</div>
 				<SwitchToggle
@@ -183,16 +190,16 @@ function toggleLocalRtc(value: boolean) {
 		</SectionCard>
 
 		<SectionCard>
-			<h3 class="text-base font-medium">Zona horaria</h3>
+			<h3 class="text-base font-medium">{{ t('views.datetime.timezone') }}</h3>
 			<p class="mt-0.5 mb-3 text-sm text-tx-muted">
-				Actual: <strong>{{ info?.timezone ?? '—' }}</strong>
+				{{ t('views.datetime.currentLabel') }} <strong>{{ info?.timezone ?? '—' }}</strong>
 			</p>
 
-			<FormGroup label="Buscar zona" html-for="tz-search">
+			<FormGroup :label="t('views.datetime.searchZone')" html-for="tz-search">
 				<TextInput
 					id="tz-search"
 					v-model="timezoneQuery"
-					placeholder="Ej: Buenos_Aires, Madrid, UTC"
+					:placeholder="t('views.datetime.searchZonePlaceholder')"
 				/>
 			</FormGroup>
 
@@ -206,23 +213,23 @@ function toggleLocalRtc(value: boolean) {
 						@click="applyTimezone(zone)"
 					>
 						<span>{{ zone }}</span>
-						<span v-if="zone === info?.timezone" class="text-xs text-tx-muted">actual</span>
+						<span v-if="zone === info?.timezone" class="text-xs text-tx-muted">{{ t('common.current') }}</span>
 					</button>
 				</li>
 				<li v-if="filteredTimezones.length === 0" class="px-3 py-4 text-center text-sm text-tx-muted">
-					Sin resultados
+					{{ t('common.noResults') }}
 				</li>
 			</ul>
 		</SectionCard>
 
 		<SectionCard>
-			<h3 class="text-base font-medium">Ajustar manualmente</h3>
+			<h3 class="text-base font-medium">{{ t('views.datetime.manualAdjust') }}</h3>
 			<p class="mt-0.5 mb-3 text-sm text-tx-muted">
-				Solo disponible con la hora automática desactivada.
+				{{ t('views.datetime.manualAdjustDescription') }}
 			</p>
 
 			<div class="grid gap-4 sm:grid-cols-3">
-				<FormGroup label="Fecha" html-for="manual-date">
+				<FormGroup :label="t('views.datetime.date')" html-for="manual-date">
 					<TextInput
 						id="manual-date"
 						v-model="manualDate"
@@ -230,7 +237,7 @@ function toggleLocalRtc(value: boolean) {
 						:disabled="isAutomatic || busy"
 					/>
 				</FormGroup>
-				<FormGroup label="Hora" html-for="manual-time">
+				<FormGroup :label="t('views.datetime.time')" html-for="manual-time">
 					<TextInput
 						id="manual-time"
 						v-model="manualTime"
@@ -245,7 +252,7 @@ function toggleLocalRtc(value: boolean) {
 						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
 						@click="applyManualTime"
 					>
-						Aplicar
+						{{ t('common.apply') }}
 					</button>
 				</div>
 			</div>
@@ -253,13 +260,12 @@ function toggleLocalRtc(value: boolean) {
 
 		<SectionCard>
 			<details>
-				<summary class="cursor-pointer text-sm font-medium text-tx-muted">Opciones avanzadas</summary>
+				<summary class="cursor-pointer text-sm font-medium text-tx-muted">{{ t('common.advancedOptions') }}</summary>
 				<div class="mt-3 flex items-start gap-3">
 					<div class="min-w-0 flex-1">
-						<h3 class="text-sm font-medium">Reloj de hardware en hora local</h3>
+						<h3 class="text-sm font-medium">{{ t('views.datetime.localRtc') }}</h3>
 						<p class="mt-0.5 text-xs text-tx-muted">
-							Actívalo solo si compartís el equipo con Windows. En cualquier otro caso el reloj
-							debe estar en UTC.
+							{{ t('views.datetime.localRtcDescription') }}
 						</p>
 					</div>
 					<SwitchToggle
