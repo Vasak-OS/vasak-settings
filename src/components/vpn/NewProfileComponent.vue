@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import TextInput from '@/components/ui/TextInput.vue';
 import type { VpnCreateInput, VpnType, VpnUpdateInput } from '@/services/network.service';
 
 export interface Props {
@@ -173,11 +174,7 @@ const handleCancel = () => {
 			<div class="mt-4 grid gap-3 md:grid-cols-2">
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
 					Nombre del perfil
-					<input
-						v-model="profileId"
-						type="text"
-						class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-					/>
+					<TextInput v-model="profileId" class="mt-1" />
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
@@ -194,65 +191,37 @@ const handleCancel = () => {
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
 					Gateway / Remote
-					<input
-						v-model="profileGateway"
-						type="text"
-						class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-					/>
+					<TextInput v-model="profileGateway" class="mt-1" />
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
 					Usuario
-					<input
-						v-model="profileUsername"
-						type="text"
-						class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-					/>
+					<TextInput v-model="profileUsername" class="mt-1" />
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
 					Password
-					<input
-						v-model="profilePassword"
-						type="password"
-						class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-					/>
+					<TextInput v-model="profilePassword" type="password" class="mt-1" />
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
 					CA cert path
-					<input
-						v-model="profileCaCertPath"
-						type="text"
-						class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-					/>
+					<TextInput v-model="profileCaCertPath" class="mt-1" />
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
 					User cert path
-					<input
-						v-model="profileUserCertPath"
-						type="text"
-						class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-					/>
+					<TextInput v-model="profileUserCertPath" class="mt-1" />
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
 					Private key path
-					<input
-						v-model="profilePrivateKeyPath"
-						type="text"
-						class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-					/>
+					<TextInput v-model="profilePrivateKeyPath" class="mt-1" />
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
 					Private key password
-					<input
-						v-model="profilePrivateKeyPassword"
-						type="password"
-						class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-					/>
+					<TextInput v-model="profilePrivateKeyPassword" type="password" class="mt-1" />
 				</label>
 			</div>
 

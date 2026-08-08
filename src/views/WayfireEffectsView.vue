@@ -3,11 +3,13 @@ import { computed, onMounted } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import KeyBindingInput from '@/components/ui/KeyBindingInput.vue';
+import NumberInput from '@/components/ui/NumberInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import PluginSection from '@/components/ui/PluginSection.vue';
 import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+import TextInput from '@/components/ui/TextInput.vue';
 import { useWayfirePlugins } from '@/composables/useWayfirePlugins';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 
@@ -131,28 +133,25 @@ async function saveAll() {
 					<summary class="cursor-pointer text-xs font-medium text-tx-muted">Opciones avanzadas</summary>
 					<div class="mt-3 grid gap-4 sm:grid-cols-3">
 						<FormGroup label="Aplicar a">
-							<input
-								type="text"
-								:value="blur.getVal('blur_by_default', 'all')"
-								@input="blur.setVal('blur_by_default', ($event.target as HTMLInputElement).value)"
+							<TextInput
+								mono
+								:model-value="blur.getVal('blur_by_default', 'all')"
 								placeholder="all, type is 'toplevel', etc."
-								class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm font-mono"
+								@update:model-value="blur.setVal('blur_by_default', $event)"
 							/>
 						</FormGroup>
 						<FormGroup label="Offset">
-							<input
-								type="number" min="0" max="20" step="0.1"
-								:value="blur.getFloat('offset', 1.7)"
-								@input="blur.setVal('offset', ($event.target as HTMLInputElement).value)"
-								class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+							<NumberInput
+								:model-value="blur.getFloat('offset', 1.7)"
+								:min="0" :max="20" :step="0.1"
+								@update:model-value="blur.setVal('offset', $event)"
 							/>
 						</FormGroup>
 						<FormGroup label="Iteraciones">
-							<input
-								type="number" min="1" max="20"
-								:value="blur.getInt('iterations', 2)"
-								@input="blur.setVal('iterations', ($event.target as HTMLInputElement).value)"
-								class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+							<NumberInput
+								:model-value="blur.getInt('iterations', 2)"
+								:min="1" :max="20"
+								@update:model-value="blur.setVal('iterations', $event)"
 							/>
 						</FormGroup>
 					</div>
@@ -171,27 +170,24 @@ async function saveAll() {
 			<PluginSection plugin-id="wobbly" icon="preferences-desktop-effects">
 				<div class="grid gap-4 sm:grid-cols-3">
 					<FormGroup label="Fricción">
-						<input
-							type="number" min="0" max="20" step="0.5"
-							:value="wobbly.getFloat('friction', 3.0)"
-							@input="wobbly.setVal('friction', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="wobbly.getFloat('friction', 3.0)"
+							:min="0" :max="20" :step="0.5"
+							@update:model-value="wobbly.setVal('friction', $event)"
 						/>
 					</FormGroup>
 					<FormGroup label="Constante de resorte">
-						<input
-							type="number" min="0" max="20" step="0.5"
-							:value="wobbly.getFloat('spring_k', 8.0)"
-							@input="wobbly.setVal('spring_k', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="wobbly.getFloat('spring_k', 8.0)"
+							:min="0" :max="20" :step="0.5"
+							@update:model-value="wobbly.setVal('spring_k', $event)"
 						/>
 					</FormGroup>
 					<FormGroup label="Resolución de grid">
-						<input
-							type="number" min="2" max="20"
-							:value="wobbly.getInt('grid_resolution', 6)"
-							@input="wobbly.setVal('grid_resolution', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="wobbly.getInt('grid_resolution', 6)"
+							:min="2" :max="20"
+							@update:model-value="wobbly.setVal('grid_resolution', $event)"
 						/>
 					</FormGroup>
 				</div>
@@ -224,19 +220,17 @@ async function saveAll() {
 						/>
 					</FormGroup>
 					<FormGroup label="Radio (px)">
-						<input
-							type="number" min="50" max="2000"
-							:value="fisheye.getInt('radius', 450)"
-							@input="fisheye.setVal('radius', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="fisheye.getInt('radius', 450)"
+							:min="50" :max="2000"
+							@update:model-value="fisheye.setVal('radius', $event)"
 						/>
 					</FormGroup>
 					<FormGroup label="Zoom">
-						<input
-							type="number" min="1" max="20" step="0.5"
-							:value="fisheye.getFloat('zoom', 7.0)"
-							@input="fisheye.setVal('zoom', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="fisheye.getFloat('zoom', 7.0)"
+							:min="1" :max="20" :step="0.5"
+							@update:model-value="fisheye.setVal('zoom', $event)"
 						/>
 					</FormGroup>
 				</div>

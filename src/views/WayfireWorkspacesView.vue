@@ -3,6 +3,7 @@ import { computed, onMounted } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import KeyBindingInput from '@/components/ui/KeyBindingInput.vue';
+import NumberInput from '@/components/ui/NumberInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import PluginSection from '@/components/ui/PluginSection.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
@@ -86,19 +87,17 @@ async function saveAll() {
 				</p>
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup label="Columnas">
-						<input
-							type="number" min="1" max="9"
-							:value="core.getInt('vwidth', 3)"
-							@input="core.setVal('vwidth', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="core.getInt('vwidth', 3)"
+							:min="1" :max="9"
+							@update:model-value="core.setVal('vwidth', $event)"
 						/>
 					</FormGroup>
 					<FormGroup label="Filas">
-						<input
-							type="number" min="1" max="9"
-							:value="core.getInt('vheight', 2)"
-							@input="core.setVal('vheight', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="core.getInt('vheight', 2)"
+							:min="1" :max="9"
+							@update:model-value="core.setVal('vheight', $event)"
 						/>
 					</FormGroup>
 				</div>
@@ -108,11 +107,10 @@ async function saveAll() {
 				<div class="mb-3">
 					<div class="grid gap-4 sm:grid-cols-2">
 						<FormGroup label="Duración de animación (ms)">
-							<input
-								type="number" min="0" max="2000" step="50"
-								:value="vswitch.getInt('duration', 300)"
-								@input="vswitch.setVal('duration', ($event.target as HTMLInputElement).value)"
-								class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+							<NumberInput
+								:model-value="vswitch.getInt('duration', 300)"
+								:min="0" :max="2000" :step="50"
+								@update:model-value="vswitch.setVal('duration', $event)"
 							/>
 						</FormGroup>
 						<FormGroup label="Wrap around">
@@ -154,11 +152,10 @@ async function saveAll() {
 						/>
 					</FormGroup>
 					<FormGroup label="Duración de animación (ms)">
-						<input
-							type="number" min="0" max="2000" step="50"
-							:value="expo.getInt('duration', 300)"
-							@input="expo.setVal('duration', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="expo.getInt('duration', 300)"
+							:min="0" :max="2000" :step="50"
+							@update:model-value="expo.setVal('duration', $event)"
 						/>
 					</FormGroup>
 				</div>

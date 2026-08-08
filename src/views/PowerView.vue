@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { onMounted, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
+import NumberInput from '@/components/ui/NumberInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import ProfileIcon from '@/components/ui/ProfileIcon.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
@@ -291,11 +292,7 @@ async function selectProfile(profile: string) {
 				<SwitchToggle :is-on="idle.lock_enabled" @toggle="idle.lock_enabled = $event" />
 			</div>
 			<FormGroup v-if="idle.lock_enabled" label="Minutos hasta bloquear" class="mt-2">
-				<input
-					v-model.number="idle.lock_minutes"
-					type="number" min="1" max="180"
-					class="w-32 rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-				/>
+				<NumberInput v-model="idle.lock_minutes" :min="1" :max="180" narrow />
 			</FormGroup>
 
 			<div class="mt-4 flex items-start gap-3">
@@ -313,11 +310,7 @@ async function selectProfile(profile: string) {
 				/>
 			</div>
 			<FormGroup v-if="idle.screen_off_enabled" label="Minutos hasta apagar" class="mt-2">
-				<input
-					v-model.number="idle.screen_off_minutes"
-					type="number" min="1" max="180"
-					class="w-32 rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-				/>
+				<NumberInput v-model="idle.screen_off_minutes" :min="1" :max="180" narrow />
 			</FormGroup>
 
 			<div class="mt-4 flex items-start gap-3">

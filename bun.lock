@@ -12,6 +12,7 @@
         "@vasakgroup/plugin-config-manager": "^2.2.6",
         "@vasakgroup/plugin-network-manager": "^2.1.3",
         "@vasakgroup/plugin-vicons": "^2.1.2",
+        "@vasakgroup/tauri-plugin-i18n": "^2.1.0",
         "path": "^0.12.7",
         "pinia": "^3.0.4",
         "url": "^0.11.4",
@@ -240,6 +241,8 @@
     "@vasakgroup/plugin-network-manager": ["@vasakgroup/plugin-network-manager@2.1.3", "", { "dependencies": { "@tauri-apps/api": "^2.11.0" } }, "sha512-2YByco4g8C1btB/ZxyTQ7iWjTujFZxMO1FtdUwvtIcYNC+3U9OS3dbhacdASEsbQsryx7fG5LiwzMD/4q0FPmw=="],
 
     "@vasakgroup/plugin-vicons": ["@vasakgroup/plugin-vicons@2.1.2", "", { "dependencies": { "@tauri-apps/api": "^2.11.0" } }, "sha512-c7szP8mDMweiUmzpyxZuqK7Sdc5i3gTG+QevqCvF96J2/VIVmWFRnAz02e+dCucbgNKV4yuKfQPrlEy1d/sBhg=="],
+
+    "@vasakgroup/tauri-plugin-i18n": ["@vasakgroup/tauri-plugin-i18n@2.1.0", "", { "dependencies": { "@tauri-apps/api": "^2.10.1" }, "peerDependencies": { "vue": "^3.0.0" }, "optionalPeers": ["vue"] }, "sha512-zeM7pJc5b4BERCvkbrBQhvmqxLmlzqmIAkCIdJNIioS5uZwbvZsGDcgC6XqFn22TvNsj0zceTf55PM2byEUNsg=="],
 
     "@vitejs/plugin-vue": ["@vitejs/plugin-vue@6.0.7", "", { "dependencies": { "@rolldown/pluginutils": "^1.0.1" }, "peerDependencies": { "vite": "^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0", "vue": "^3.2.25" } }, "sha512-km+p+XdSz9Sxm5rqUbqcSfZYaAniKxWBj1KURl+Jr7UaPvvX7BmaWMdP69I5rrFDeQGyxAG7NXdc57vz+snhWg=="],
 

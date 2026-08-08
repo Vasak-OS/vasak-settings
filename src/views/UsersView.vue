@@ -6,6 +6,7 @@ import FormGroup from '@/components/ui/FormGroup.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+import TextInput from '@/components/ui/TextInput.vue';
 
 interface UserAccount {
 	uid: number;
@@ -195,38 +196,32 @@ function canDemote(user: UserAccount): boolean {
 			<h3 class="text-base font-medium">Nueva cuenta</h3>
 			<div class="mt-3 grid gap-4 sm:grid-cols-2">
 				<FormGroup label="Nombre de usuario">
-					<input
+					<TextInput
 						v-model="newUser.username"
-						type="text"
 						autocomplete="off"
 						placeholder="maria"
-						class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
 					/>
 				</FormGroup>
 				<FormGroup label="Nombre completo">
-					<input
+					<TextInput
 						v-model="newUser.realName"
-						type="text"
 						autocomplete="off"
 						placeholder="María Pérez"
-						class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
 					/>
 				</FormGroup>
 				<FormGroup :label="`Contraseña (mínimo ${MIN_PASSWORD})`">
-					<input
+					<TextInput
 						v-model="newUser.password"
 						type="password"
 						autocomplete="new-password"
-						class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
 					/>
 				</FormGroup>
 				<FormGroup label="Repetir contraseña">
-					<input
+					<TextInput
 						v-model="newUser.confirm"
 						type="password"
 						autocomplete="new-password"
-						class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-						:class="{ '!border-status-danger': newUser.confirm && newUser.confirm !== newUser.password }"
+						:invalid="Boolean(newUser.confirm && newUser.confirm !== newUser.password)"
 					/>
 				</FormGroup>
 			</div>
@@ -291,21 +286,15 @@ function canDemote(user: UserAccount): boolean {
 			<div v-if="expanded === user.uid" class="mt-4 border-t border-ui-border pt-4">
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup label="Nombre completo">
-						<input
-							type="text"
-							:value="user.real_name"
+						<TextInput
+							lazy
+							:model-value="user.real_name"
 							:disabled="busy"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-							@change="renameUser(user, ($event.target as HTMLInputElement).value)"
+							@update:model-value="renameUser(user, $event)"
 						/>
 					</FormGroup>
 					<FormGroup label="Shell">
-						<input
-							type="text"
-							:value="user.shell"
-							readonly
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm opacity-60"
-						/>
+						<TextInput :model-value="user.shell" readonly />
 					</FormGroup>
 				</div>
 
@@ -345,19 +334,17 @@ function canDemote(user: UserAccount): boolean {
 					<h4 class="text-sm font-medium">Cambiar contraseña</h4>
 					<div class="mt-2 grid gap-4 sm:grid-cols-2">
 						<FormGroup :label="`Nueva (mínimo ${MIN_PASSWORD})`">
-							<input
+							<TextInput
 								v-model="draftFor(user.uid).password"
 								type="password"
 								autocomplete="new-password"
-								class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
 							/>
 						</FormGroup>
 						<FormGroup label="Repetir">
-							<input
+							<TextInput
 								v-model="draftFor(user.uid).confirm"
 								type="password"
 								autocomplete="new-password"
-								class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
 							/>
 						</FormGroup>
 					</div>

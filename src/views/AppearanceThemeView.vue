@@ -16,6 +16,7 @@ import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+import TextInput from '@/components/ui/TextInput.vue';
 import {
 	getCurrentSystemState,
 	getCursorThemes,
@@ -305,12 +306,12 @@ const isFormValid = computed(() => {
 									v-model="(vskConfig.style as any)['primarycolor']"
 									class="h-10 w-[50px] cursor-pointer rounded-corner border-2 border-ui-surface/10 bg-transparent p-0 transition-colors duration-200 hover:border-[var(--primary-color,#0084ff)]"
 								/>
-								<input
+								<TextInput
 									v-if="vskConfig"
-									type="text"
+									mono
+									class="flex-1"
 									v-model="(vskConfig.style as any)['primarycolor']"
 									placeholder="#0084FF"
-									class="flex-1 rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm font-mono text-tx-primary transition-all duration-200 focus:border-[var(--primary-color,#0084ff)] focus:bg-ui-surface/80 focus:outline-none"
 								/>
 							</div>
 						</FormGroup>

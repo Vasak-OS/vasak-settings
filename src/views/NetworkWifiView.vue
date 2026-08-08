@@ -7,6 +7,7 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import StatTile from '@/components/ui/StatTile.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+import TextInput from '@/components/ui/TextInput.vue';
 import { useReactiveSymbol } from '@/composables/useReactiveIcon';
 import {
 	connectToWifi,
@@ -392,11 +393,11 @@ onUnmounted(() => {
 				<h2 class="text-lg font-semibold text-tx-primary">Conectar a {{ getNetworkName(selectedNetwork) }}</h2>
 				<p class="mt-1 text-sm text-tx-muted">Ingresa la contraseña de la red para establecer la conexión.</p>
 
-				<input
+				<TextInput
 					v-model="wifiPassword"
 					type="password"
 					placeholder="Contraseña"
-					class="mt-4 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm outline-none focus:border-primary"
+					class="mt-4"
 					@keyup.enter="confirmConnect"
 				/>
 

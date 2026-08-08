@@ -40,6 +40,10 @@
     "bluetooth-manager:allow-stop-scan",
     "bluetooth-manager:allow-connect-device",
     "bluetooth-manager:allow-get-device-info",
-    "bluetooth-manager:allow-disconnect-device"
+    "bluetooth-manager:allow-disconnect-device",
+    "i18n:allow-load-translations",
+    "i18n:allow-get-available-locales",
+    "i18n:allow-get-locale",
+    "i18n:allow-set-locale"
   ]
 }

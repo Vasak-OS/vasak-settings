@@ -2,9 +2,11 @@
 import { onMounted } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
+import NumberInput from '@/components/ui/NumberInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import PluginSection from '@/components/ui/PluginSection.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
+import TextInput from '@/components/ui/TextInput.vue';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 
 const decoration = useWayfireSection('decoration');
@@ -63,68 +65,58 @@ async function saveAll() {
 			>
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup label="Fuente del título">
-						<input
-							type="text"
-							:value="decoration.getVal('font', 'sans-serif')"
-							@input="decoration.setVal('font', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<TextInput
+							:model-value="decoration.getVal('font', 'sans-serif')"
+							@update:model-value="decoration.setVal('font', $event)"
 						/>
 					</FormGroup>
 					<FormGroup label="Altura del título (px)">
-						<input
-							type="number" min="0" max="100"
-							:value="decoration.getInt('title_height', 30)"
-							@input="decoration.setVal('title_height', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="decoration.getInt('title_height', 30)"
+							:min="0" :max="100"
+							@update:model-value="decoration.setVal('title_height', $event)"
 						/>
 					</FormGroup>
 					<FormGroup label="Tamaño del borde (px)">
-						<input
-							type="number" min="0" max="100"
-							:value="decoration.getInt('border_size', 4)"
-							@input="decoration.setVal('border_size', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="decoration.getInt('border_size', 4)"
+							:min="0" :max="100"
+							@update:model-value="decoration.setVal('border_size', $event)"
 						/>
 					</FormGroup>
 					<FormGroup label="Orden de botones">
-						<input
-							type="text"
-							:value="decoration.getVal('button_order', 'minimize maximize close')"
-							@input="decoration.setVal('button_order', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<TextInput
+							:model-value="decoration.getVal('button_order', 'minimize maximize close')"
+							@update:model-value="decoration.setVal('button_order', $event)"
 						/>
 					</FormGroup>
 					<FormGroup label="Color activo (RGBA)">
-						<input
-							type="text"
-							:value="decoration.getVal('active_color', '#222222aa')"
-							@input="decoration.setVal('active_color', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm font-mono"
+						<TextInput
+							mono
+							:model-value="decoration.getVal('active_color', '#222222aa')"
+							@update:model-value="decoration.setVal('active_color', $event)"
 						/>
 					</FormGroup>
 					<FormGroup label="Color inactivo (RGBA)">
-						<input
-							type="text"
-							:value="decoration.getVal('inactive_color', '#333333dd')"
-							@input="decoration.setVal('inactive_color', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm font-mono"
+						<TextInput
+							mono
+							:model-value="decoration.getVal('inactive_color', '#333333dd')"
+							@update:model-value="decoration.setVal('inactive_color', $event)"
 						/>
 					</FormGroup>
 					<FormGroup label="Radio de borde (px)">
-						<input
-							type="number" min="0" max="50"
-							:value="decoration.getInt('border_radius', 0)"
-							@input="decoration.setVal('border_radius', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="decoration.getInt('border_radius', 0)"
+							:min="0" :max="50"
+							@update:model-value="decoration.setVal('border_radius', $event)"
 						/>
 					</FormGroup>
 					<FormGroup label="Ignorar decoración en">
-						<input
-							type="text"
-							:value="decoration.getVal('ignore_views', 'none')"
-							@input="decoration.setVal('ignore_views', ($event.target as HTMLInputElement).value)"
+						<TextInput
+							mono
+							:model-value="decoration.getVal('ignore_views', 'none')"
 							placeholder="none, type is 'toplevel', etc."
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm font-mono"
+							@update:model-value="decoration.setVal('ignore_views', $event)"
 						/>
 					</FormGroup>
 				</div>
@@ -151,11 +143,10 @@ async function saveAll() {
 						/>
 					</FormGroup>
 					<FormGroup label="Duración (ms)">
-						<input
-							type="number" min="0" max="2000" step="50"
-							:value="animate.getInt('duration', 500)"
-							@input="animate.setVal('duration', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="animate.getInt('duration', 500)"
+							:min="0" :max="2000" :step="50"
+							@update:model-value="animate.setVal('duration', $event)"
 						/>
 					</FormGroup>
 				</div>

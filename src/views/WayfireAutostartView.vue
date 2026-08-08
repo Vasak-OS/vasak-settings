@@ -3,6 +3,7 @@ import { computed, onMounted } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
+import TextInput from '@/components/ui/TextInput.vue';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 
 // The section is owned entirely by this view, so saving must also delete what
@@ -76,21 +77,23 @@ function renameApp(oldKey: string, rawKey: string) {
 				<div class="flex flex-col gap-3">
 					<div v-for="entry in entries" :key="entry.key" class="flex flex-col gap-1">
 						<div class="flex items-center gap-2">
-							<input
-								type="text"
-								:value="entry.key"
-								:readonly="entry.locked"
-								@change="renameApp(entry.key, ($event.target as HTMLInputElement).value)"
-								class="w-40 shrink-0 rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm read-only:opacity-60"
-								placeholder="nombre"
-							/>
-							<input
-								type="text"
-								:value="entry.value"
-								@input="autostart.setVal(entry.key, ($event.target as HTMLInputElement).value)"
-								class="flex-1 rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 font-mono text-sm"
-								placeholder="Ej: nm-applet"
-							/>
+							<div class="w-40 shrink-0">
+								<TextInput
+									:model-value="entry.key"
+									:readonly="entry.locked"
+									lazy
+									placeholder="nombre"
+									@update:model-value="renameApp(entry.key, $event)"
+								/>
+							</div>
+							<div class="flex-1">
+								<TextInput
+									:model-value="entry.value"
+									mono
+									placeholder="Ej: nm-applet"
+									@update:model-value="autostart.setVal(entry.key, $event)"
+								/>
+							</div>
 
 							<span
 								v-if="entry.locked"

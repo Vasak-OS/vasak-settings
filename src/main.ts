@@ -1,12 +1,15 @@
+import I18n from '@vasakgroup/tauri-plugin-i18n';
 import { createPinia } from 'pinia';
 import { createApp } from 'vue';
 import App from '@/App.vue';
 import { router } from '@/routes';
 import '@/assets/main.css';
 
+const i18n = I18n.getInstance();
 const app = createApp(App);
 const pinia = createPinia();
 
+i18n.load();
 app.use(pinia);
 app.use(router);
 

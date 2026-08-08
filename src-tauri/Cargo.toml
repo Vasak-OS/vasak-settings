@@ -27,6 +27,7 @@ tauri-plugin-vicons = "2"
 tauri-plugin-config-manager = "2"
 #tauri-plugin-config-manager = {path = "../../tauri-plugin-config-manager"}
 tauri-plugin-system-fonts = "2"
+tauri-plugin-i18n-vsk = "2.1.1"
 gtk = "0.18"
 glib = "0.18"
 base64 = "0.22"

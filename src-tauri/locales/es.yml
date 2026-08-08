@@ -1,0 +1,169 @@
+_version: 1
+
+common:
+  save: Guardar cambios
+  saving: Guardando…
+  cancel: Cancelar
+  delete: Eliminar
+  add: Añadir
+  edit: Editar
+  close: Cerrar
+  create: Crear
+  apply: Aplicar
+  loading: Cargando…
+  required: Requerido
+  advancedOptions: Opciones avanzadas
+  noResults: Sin resultados
+  saved: Configuración guardada correctamente
+  name: Nombre
+  current: actual
+
+sidebar:
+  general: General
+  appearance: Apariencia
+  multimedia: Multimedia
+  windows: Ventanas
+  system: Sistema
+  network: Conectividad
+  items:
+    home: Inicio
+    shortcuts: Atajos
+    appearanceTheme: Tema
+    appearanceFonts: Fuentes
+    appearanceIconPacks: Iconos
+    appearanceWallpaper: Fondos
+    appearanceDesktop: Escritorio
+    multimediaAudio: Audio salida
+    multimediaAudioInput: Audio entrada
+    wayfireInput: Teclado y Ratón
+    wayfireWindows: Gestión de Ventanas
+    wayfireWorkspaces: Espacios de trabajo
+    wayfireAppearance: Apariencia WM
+    wayfireEffects: Efectos
+    wayfireAutostart: Autoinicio
+    wayfirePlugins: Plugins
+    users: Usuarios
+    languageKeyboard: Idioma y Teclado
+    datetime: Fecha y hora
+    brightness: Brillo y luz nocturna
+    power: Energía
+    monitors: Pantallas
+    networkWifi: Wi-Fi
+    networkBluetooth: Bluetooth
+    networkVpn: VPN
+
+wayfire:
+  plugins:
+    categories:
+      windows: Ventanas
+      workspaces: Espacios de trabajo
+      effects: Efectos
+      system: Sistema
+      other: Otros
+    unknownDescription: Plugin activado manualmente en wayfire.ini.
+    autostart:
+      label: Autoinicio
+      description: Ejecuta la sesión al arrancar el compositor.
+      requiredReason: Lanza vasak-desktop y publica el entorno de la sesión (uwsm finalize).
+    command:
+      label: Atajos de teclado
+      description: Ejecuta comandos con combinaciones de teclas.
+      requiredReason: Wayfire gestiona todos los atajos de VasakOS: terminal, archivos, menú, volumen y brillo.
+    ipc:
+      label: IPC
+      description: Canal de control externo del compositor.
+      requiredReason: vasak-desktop se comunica con Wayfire por IPC.
+    ipc-rules:
+      label: Reglas IPC
+      description: Permite consultar y modificar ventanas por IPC.
+      requiredReason: Necesario para que vasak-desktop lea y ajuste propiedades de las ventanas.
+    stipc:
+      label: IPC de pruebas
+      description: Extensión del canal IPC.
+      requiredReason: Complementa a ipc para la integración del escritorio.
+    foreign-toplevel:
+      label: Lista de ventanas
+      description: Publica las ventanas abiertas al escritorio.
+      requiredReason: Sin esto la barra de tareas de vasak-desktop queda vacía.
+    wayfire-shell:
+      label: Integración del panel
+      description: Protocolo del panel y el menú.
+      requiredReason: Da soporte al panel de vasak-desktop.
+    gtk-shell:
+      label: Integración GTK
+      description: Soporte del protocolo gtk-shell.
+      requiredReason: Necesario para que las aplicaciones GTK se integren con el escritorio.
+    session-lock:
+      label: Bloqueo de sesión
+      description: Permite bloquear la pantalla.
+      requiredReason: Es el lado del compositor del bloqueo de pantalla.
+    idle:
+      label: Inactividad
+      description: Detecta cuándo el equipo está inactivo.
+      requiredReason: Sin esto el bloqueo automático por inactividad no se dispara.
+    shortcuts-inhibit:
+      label: Inhibir atajos
+      description: Deja que aplicaciones como escritorios remotos capturen todas las teclas.
+    move:
+      label: Mover ventanas
+      description: Arrastrar ventanas con el ratón.
+    resize:
+      label: Redimensionar ventanas
+      description: Cambiar el tamaño con el ratón.
+    grid:
+      label: Anclado en cuadrícula
+      description: Colocar ventanas en mitades y esquinas.
+    place:
+      label: Colocación automática
+      description: Decide dónde aparecen las ventanas nuevas.
+    decoration:
+      label: Decoración de ventanas
+      description: Barra de título y bordes dibujados por el compositor.
+    wm-actions:
+      label: Acciones de ventana
+      description: Pantalla completa, siempre encima, fijar y minimizar.
+    window-rules:
+      label: Reglas de ventana
+      description: Aplica reglas automáticas según la aplicación.
+    switcher:
+      label: Cambiador de ventanas
+      description: Alt+Tab con animación.
+    fast-switcher:
+      label: Cambiador rápido
+      description: Alterna entre ventanas sin animación.
+    vswitch:
+      label: Cambiar de escritorio
+      description: Moverse entre espacios de trabajo.
+    expo:
+      label: Vista general
+      description: Muestra todos los espacios de trabajo a la vez.
+    oswitch:
+      label: Cambiar de pantalla
+      description: Saltar entre monitores.
+    animate:
+      label: Animaciones
+      description: Anima la apertura y el cierre de ventanas.
+    blur:
+      label: Desenfoque
+      description: Desenfoca lo que hay detrás de las ventanas.
+    zoom:
+      label: Lupa
+      description: Amplía la pantalla con la rueda del ratón.
+    wobbly:
+      label: Ventanas gelatinosas
+      description: Las ventanas se deforman al moverlas.
+    cube:
+      label: Cubo de escritorios
+      description: Muestra los escritorios sobre un cubo 3D.
+    alpha:
+      label: Transparencia
+      description: Ajusta la opacidad de una ventana.
+    invert:
+      label: Invertir colores
+      description: Invierte los colores de la pantalla.
+    fisheye:
+      label: Ojo de pez
+      description: Lente de aumento circular.
+    wrot:
+      label: Rotar ventanas
+      description: Gira una ventana con el ratón.

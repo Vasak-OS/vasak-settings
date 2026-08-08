@@ -8,6 +8,7 @@ import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+import TextInput from '@/components/ui/TextInput.vue';
 
 interface BacklightDevice {
 	name: string;
@@ -192,36 +193,18 @@ function toggleNightLight(value: boolean) {
 
 			<div v-if="isLocationMode" class="mt-4 grid gap-4 sm:grid-cols-2">
 				<FormGroup label="Latitud">
-					<input
-						v-model="nightLight.latitude"
-						type="text"
-						placeholder="-34.60"
-						class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-					/>
+					<TextInput v-model="nightLight.latitude" placeholder="-34.60" />
 				</FormGroup>
 				<FormGroup label="Longitud">
-					<input
-						v-model="nightLight.longitude"
-						type="text"
-						placeholder="-58.38"
-						class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-					/>
+					<TextInput v-model="nightLight.longitude" placeholder="-58.38" />
 				</FormGroup>
 			</div>
 			<div v-else class="mt-4 grid gap-4 sm:grid-cols-2">
 				<FormGroup label="Empieza el día">
-					<input
-						v-model="nightLight.start"
-						type="time"
-						class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-					/>
+					<TextInput v-model="nightLight.start" type="time" />
 				</FormGroup>
 				<FormGroup label="Empieza la noche">
-					<input
-						v-model="nightLight.stop"
-						type="time"
-						class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
-					/>
+					<TextInput v-model="nightLight.stop" type="time" />
 				</FormGroup>
 			</div>
 

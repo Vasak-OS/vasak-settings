@@ -3,10 +3,12 @@ import { computed, onMounted, ref } from 'vue';
 import MonitorCanvas, { type CanvasMonitor } from '@/components/monitors/MonitorCanvas.vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
+import NumberInput from '@/components/ui/NumberInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+import TextInput from '@/components/ui/TextInput.vue';
 import {
 	type DetectedMonitor,
 	getDetectedMonitors,
@@ -390,13 +392,11 @@ async function saveAll() {
 								:options="getResOptions(monitor)"
 								@update:modelValue="(v: string) => onResolutionChange(monitor, v)"
 							/>
-							<input
+							<TextInput
 								v-else
-								type="text"
-								:value="parseMode(monitor.values.mode || '1920x1080@60').resolution"
-								@input="setVal(monitor, 'mode', ($event.target as HTMLInputElement).value)"
+								:model-value="parseMode(monitor.values.mode || '1920x1080@60').resolution"
 								placeholder="1920x1080"
-								class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+								@update:model-value="setVal(monitor, 'mode', $event)"
 							/>
 						</FormGroup>
 
@@ -407,31 +407,26 @@ async function saveAll() {
 								:options="getRefreshOptions(monitor)"
 								@update:modelValue="(v: string) => onRefreshChange(monitor, v)"
 							/>
-							<input
+							<TextInput
 								v-else
-								type="text"
-								:value="parseMode(monitor.values.mode || '1920x1080@60').refresh"
+								:model-value="parseMode(monitor.values.mode || '1920x1080@60').refresh"
 								placeholder="60"
-								class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
 							/>
 						</FormGroup>
 
 						<FormGroup label="Posición (x, y)">
-							<input
-								type="text"
-								:value="getVal(monitor, 'position', '0,0')"
-								@input="setVal(monitor, 'position', ($event.target as HTMLInputElement).value)"
+							<TextInput
+								:model-value="getVal(monitor, 'position', '0,0')"
 								placeholder="0,0"
-								class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+								@update:model-value="setVal(monitor, 'position', $event)"
 							/>
 						</FormGroup>
 
 						<FormGroup label="Escala">
-							<input
-								type="number" min="0.5" max="3" step="0.25"
-								:value="getVal(monitor, 'scale', '1')"
-								@input="setVal(monitor, 'scale', ($event.target as HTMLInputElement).value)"
-								class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+							<NumberInput
+								:model-value="Number(getVal(monitor, 'scale', '1'))"
+								:min="0.5" :max="3" :step="0.25"
+								@update:model-value="setVal(monitor, 'scale', String($event))"
 							/>
 						</FormGroup>
 

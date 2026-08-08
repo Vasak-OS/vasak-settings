@@ -2,10 +2,12 @@
 import { onMounted } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
+import NumberInput from '@/components/ui/NumberInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+import TextInput from '@/components/ui/TextInput.vue';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 
 const input = useWayfireSection('input');
@@ -75,19 +77,17 @@ onMounted(async () => {
 			<SectionCard title="Teclado">
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup label="Delay de repetición (ms)">
-						<input
-							type="number" min="100" max="2000" step="50"
-							:value="input.getInt('kb_repeat_delay', 400)"
-							@input="input.setVal('kb_repeat_delay', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="input.getInt('kb_repeat_delay', 400)"
+							:min="100" :max="2000" :step="50"
+							@update:model-value="input.setVal('kb_repeat_delay', $event)"
 						/>
 					</FormGroup>
 					<FormGroup label="Velocidad de repetición (car/s)">
-						<input
-							type="number" min="1" max="200" step="1"
-							:value="input.getInt('kb_repeat_rate', 40)"
-							@input="input.setVal('kb_repeat_rate', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="input.getInt('kb_repeat_rate', 40)"
+							:min="1" :max="200" :step="1"
+							@update:model-value="input.setVal('kb_repeat_rate', $event)"
 						/>
 					</FormGroup>
 					<FormGroup label="NumLock al inicio">
@@ -206,19 +206,16 @@ onMounted(async () => {
 			<SectionCard title="Cursor">
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup label="Tema de cursor">
-						<input
-							type="text"
-							:value="input.getVal('cursor_theme', 'default')"
-							@input="input.setVal('cursor_theme', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<TextInput
+							:model-value="input.getVal('cursor_theme', 'default')"
+							@update:model-value="input.setVal('cursor_theme', $event)"
 						/>
 					</FormGroup>
 					<FormGroup label="Tamaño del cursor">
-						<input
-							type="number" min="16" max="96" step="4"
-							:value="input.getInt('cursor_size', 24)"
-							@input="input.setVal('cursor_size', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="input.getInt('cursor_size', 24)"
+							:min="16" :max="96" :step="4"
+							@update:model-value="input.setVal('cursor_size', $event)"
 						/>
 					</FormGroup>
 				</div>

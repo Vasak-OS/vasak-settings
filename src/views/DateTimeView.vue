@@ -6,6 +6,7 @@ import FormGroup from '@/components/ui/FormGroup.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+import TextInput from '@/components/ui/TextInput.vue';
 
 interface DateTimeInfo {
 	timezone: string;
@@ -188,12 +189,10 @@ function toggleLocalRtc(value: boolean) {
 			</p>
 
 			<FormGroup label="Buscar zona" html-for="tz-search">
-				<input
+				<TextInput
 					id="tz-search"
 					v-model="timezoneQuery"
-					type="text"
 					placeholder="Ej: Buenos_Aires, Madrid, UTC"
-					class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
 				/>
 			</FormGroup>
 
@@ -224,21 +223,19 @@ function toggleLocalRtc(value: boolean) {
 
 			<div class="grid gap-4 sm:grid-cols-3">
 				<FormGroup label="Fecha" html-for="manual-date">
-					<input
+					<TextInput
 						id="manual-date"
 						v-model="manualDate"
 						type="date"
 						:disabled="isAutomatic || busy"
-						class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm disabled:opacity-50"
 					/>
 				</FormGroup>
 				<FormGroup label="Hora" html-for="manual-time">
-					<input
+					<TextInput
 						id="manual-time"
 						v-model="manualTime"
 						type="time"
 						:disabled="isAutomatic || busy"
-						class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm disabled:opacity-50"
 					/>
 				</FormGroup>
 				<div class="flex items-end">

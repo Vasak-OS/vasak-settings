@@ -3,11 +3,13 @@ import { onMounted } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import KeyBindingInput from '@/components/ui/KeyBindingInput.vue';
+import NumberInput from '@/components/ui/NumberInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import PluginSection from '@/components/ui/PluginSection.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+import TextInput from '@/components/ui/TextInput.vue';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 
 // [core] keys that belong here and had no UI: closing a window and who draws
@@ -172,11 +174,10 @@ async function saveAll() {
 						/>
 					</FormGroup>
 					<FormGroup label="Umbral de snap (px)">
-						<input
-							type="number" min="0" max="100"
-							:value="move.getInt('snap_threshold', 10)"
-							@input="move.setVal('snap_threshold', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="move.getInt('snap_threshold', 10)"
+							:min="0" :max="100"
+							@update:model-value="move.setVal('snap_threshold', $event)"
 						/>
 					</FormGroup>
 				</div>
@@ -196,11 +197,11 @@ async function saveAll() {
 			<PluginSection plugin-id="grid" icon="view-grid">
 				<div class="mb-3">
 					<label class="text-sm font-medium">Duración de animación (ms)</label>
-					<input
-						type="number" min="0" max="2000" step="50"
-						:value="grid.getInt('duration', 300)"
-						@input="grid.setVal('duration', ($event.target as HTMLInputElement).value)"
-						class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+					<NumberInput
+						class="mt-1"
+						:model-value="grid.getInt('duration', 300)"
+						:min="0" :max="2000" :step="50"
+						@update:model-value="grid.setVal('duration', $event)"
 					/>
 				</div>
 				<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -243,19 +244,17 @@ async function saveAll() {
 					<summary class="cursor-pointer text-xs font-medium text-tx-muted">Opciones avanzadas</summary>
 					<div class="mt-3 grid gap-4 sm:grid-cols-2">
 						<FormGroup label="Duración de la animación (ms)">
-							<input
-								type="number" min="0" max="3000" step="50"
-								:value="switcher.getInt('speed', 500)"
-								@input="switcher.setVal('speed', ($event.target as HTMLInputElement).value)"
-								class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+							<NumberInput
+								:model-value="switcher.getInt('speed', 500)"
+								:min="0" :max="3000" :step="50"
+								@update:model-value="switcher.setVal('speed', $event)"
 							/>
 						</FormGroup>
 						<FormGroup label="Escala de las miniaturas">
-							<input
-								type="number" min="0.1" max="3" step="0.1"
-								:value="switcher.getFloat('view_thumbnail_scale', 1)"
-								@input="switcher.setVal('view_thumbnail_scale', ($event.target as HTMLInputElement).value)"
-								class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+							<NumberInput
+								:model-value="switcher.getFloat('view_thumbnail_scale', 1)"
+								:min="0.1" :max="3" :step="0.1"
+								@update:model-value="switcher.setVal('view_thumbnail_scale', $event)"
 							/>
 						</FormGroup>
 					</div>
@@ -277,11 +276,10 @@ async function saveAll() {
 						/>
 					</FormGroup>
 					<FormGroup label="Opacidad de las inactivas">
-						<input
-							type="number" min="0" max="1" step="0.05"
-							:value="fastSwitcher.getFloat('inactive_alpha', 0.7)"
-							@input="fastSwitcher.setVal('inactive_alpha', ($event.target as HTMLInputElement).value)"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						<NumberInput
+							:model-value="fastSwitcher.getFloat('inactive_alpha', 0.7)"
+							:min="0" :max="1" :step="0.05"
+							@update:model-value="fastSwitcher.setVal('inactive_alpha', $event)"
 						/>
 					</FormGroup>
 				</div>
@@ -304,12 +302,12 @@ async function saveAll() {
 				</p>
 				<div class="flex flex-col gap-2">
 					<div v-for="(value, key) in windowRules.values.value" :key="key" class="flex items-center gap-2">
-						<input
-							type="text"
-							:value="value"
-							@input="windowRules.setVal(key as string, ($event.target as HTMLInputElement).value)"
-							class="flex-1 rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 font-mono text-sm"
+						<TextInput
+							mono
+							class="flex-1"
+							:model-value="value"
 							placeholder="on created if app_id is &quot;...&quot; then ..."
+							@update:model-value="windowRules.setVal(key as string, $event)"
 						/>
 						<button
 							type="button"
