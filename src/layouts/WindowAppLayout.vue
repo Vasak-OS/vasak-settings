@@ -77,6 +77,7 @@ const sidebarCategories: SidebarCategory[] = [
 		id: 'system',
 		title: 'Sistema',
 		items: [
+			{ id: 'users', label: 'Usuarios', icon: 'system-users' },
 			{ id: 'language-keyboard', label: 'Idioma y Teclado', icon: 'preferences-desktop-locale' },
 			{ id: 'datetime', label: 'Fecha y hora', icon: 'preferences-system-time' },
 			{ id: 'brightness', label: 'Brillo y luz nocturna', icon: 'display-brightness' },

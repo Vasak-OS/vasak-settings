@@ -93,6 +93,11 @@ const routes = [
 		component: () => import('@/views/WayfirePluginsView.vue'),
 	},
 	{
+		path: '/users',
+		name: 'users',
+		component: () => import('@/views/UsersView.vue'),
+	},
+	{
 		path: '/datetime',
 		name: 'datetime',
 		component: () => import('@/views/DateTimeView.vue'),
