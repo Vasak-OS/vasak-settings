@@ -44,6 +44,8 @@ pub fn run() {
             commands::display_power::set_backlight_percent,
             commands::display_power::get_night_light,
             commands::display_power::set_night_light,
+            commands::idle::get_idle_config,
+            commands::idle::set_idle_config,
             commands::users::list_users,
             commands::users::create_user,
             commands::users::delete_user,

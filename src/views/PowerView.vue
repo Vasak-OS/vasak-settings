@@ -1,27 +1,95 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import { useReactiveIcon } from '@/composables/useReactiveIcon';
-import { useBattery, usePowerProfiles } from '@/composables/useBattery';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
+import { invoke } from '@tauri-apps/api/core';
+import { onMounted, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
+import FormGroup from '@/components/ui/FormGroup.vue';
+import PageHeader from '@/components/ui/PageHeader.vue';
 import ProfileIcon from '@/components/ui/ProfileIcon.vue';
+import SectionCard from '@/components/ui/SectionCard.vue';
+import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+import { useBattery, usePowerProfiles } from '@/composables/useBattery';
+import { useReactiveIcon } from '@/composables/useReactiveIcon';
+
+interface IdleConfig {
+	enabled: boolean;
+	available: boolean;
+	can_screen_off: boolean;
+	lock_enabled: boolean;
+	lock_minutes: number;
+	screen_off_enabled: boolean;
+	screen_off_minutes: number;
+	lock_before_sleep: boolean;
+	legacy_found: boolean;
+}
+
+const idle = ref<IdleConfig | null>(null);
+const idleError = ref('');
+const idleSaved = ref(false);
+const savingIdle = ref(false);
+
+async function loadIdle() {
+	try {
+		idle.value = await invoke<IdleConfig>('get_idle_config');
+		idleError.value = '';
+	} catch (err) {
+		idleError.value = String(err);
+	}
+}
+
+async function saveIdle() {
+	if (!idle.value) return;
+
+	savingIdle.value = true;
+	idleError.value = '';
+
+	try {
+		idle.value = await invoke<IdleConfig>('set_idle_config', { config: idle.value });
+		idleSaved.value = true;
+		setTimeout(() => {
+			idleSaved.value = false;
+		}, 3000);
+	} catch (err) {
+		idleError.value = String(err);
+		await loadIdle();
+	} finally {
+		savingIdle.value = false;
+	}
+}
+
+function toggleIdle(value: boolean) {
+	if (!idle.value) return;
+	idle.value.enabled = value;
+	void saveIdle();
+}
 
 const { info, error, start: startPolling } = useBattery(5000);
-const { profiles, active, loading: profilesLoading, error: profilesError, load: loadProfiles, setActive } = usePowerProfiles();
+const {
+	profiles,
+	active,
+	loading: profilesLoading,
+	error: profilesError,
+	load: loadProfiles,
+	setActive,
+} = usePowerProfiles();
 
 const [batteryIcon] = useReactiveIcon(() => {
 	if (!info.value.has_battery) return 'battery';
 	const s = info.value.status;
 	if (s === 'Charging') return 'battery-charging';
 	if (s === 'FullyCharged') return 'battery-full';
-	if (s === 'Discharging') return info.value.percentage > 50 ? 'battery-good' : info.value.percentage > 20 ? 'battery-low' : 'battery-caution';
+	if (s === 'Discharging')
+		return info.value.percentage > 50
+			? 'battery-good'
+			: info.value.percentage > 20
+				? 'battery-low'
+				: 'battery-caution';
 	return 'battery';
 });
 
 onMounted(() => {
 	startPolling();
 	loadProfiles();
+	loadIdle();
 });
 
 function formatTime(seconds: number): string {
@@ -34,20 +102,29 @@ function formatTime(seconds: number): string {
 
 function getStatusColor(status: string): string {
 	switch (status) {
-		case 'Charging': return 'text-status-success';
-		case 'Discharging': return 'text-tx-primary';
-		case 'FullyCharged': return 'text-status-success';
-		case 'Empty': return 'text-status-error';
-		default: return 'text-tx-muted';
+		case 'Charging':
+			return 'text-status-success';
+		case 'Discharging':
+			return 'text-tx-primary';
+		case 'FullyCharged':
+			return 'text-status-success';
+		case 'Empty':
+			return 'text-status-error';
+		default:
+			return 'text-tx-muted';
 	}
 }
 
 function label(profile: string): string {
 	switch (profile) {
-		case 'performance': return 'Rendimiento';
-		case 'balanced': return 'Balanceado';
-		case 'power-saver': return 'Ahorro de energía';
-		default: return profile;
+		case 'performance':
+			return 'Rendimiento';
+		case 'balanced':
+			return 'Balanceado';
+		case 'power-saver':
+			return 'Ahorro de energía';
+		default:
+			return profile;
 	}
 }
 
@@ -173,6 +250,96 @@ async function selectProfile(profile: string) {
 						</button>
 					</div>
 				</div>
+			</div>
+		</SectionCard>
+
+		<SectionCard v-if="idle">
+			<div class="flex items-start gap-3">
+				<div class="min-w-0 flex-1">
+					<h3 class="text-base font-medium">Bloqueo por inactividad</h3>
+					<p class="mt-0.5 text-sm text-tx-muted">
+						Bloquea la pantalla cuando dejás el equipo sin usar.
+					</p>
+				</div>
+				<SwitchToggle
+					:is-on="idle.enabled"
+					:disabled="savingIdle || !idle.available"
+					@toggle="toggleIdle"
+				/>
+			</div>
+
+			<AlertMessage v-if="idleError" tone="error" :message="idleError" class="mt-3" />
+			<AlertMessage v-if="idleSaved" tone="success" message="Configuración guardada" class="mt-3" />
+			<AlertMessage
+				v-if="!idle.available"
+				tone="warning"
+				message="swayidle no está instalado; el bloqueo por inactividad no puede activarse."
+				class="mt-3"
+			/>
+			<AlertMessage
+				v-if="idle.legacy_found"
+				tone="info"
+				message="Se detectó la configuración antigua en wayfire.ini. Al guardar acá se migra a systemd y se elimina de allí."
+				class="mt-3"
+			/>
+
+			<div class="mt-4 flex items-start gap-3">
+				<div class="min-w-0 flex-1">
+					<h4 class="text-sm font-medium">Bloquear la pantalla</h4>
+					<p class="text-xs text-tx-muted">Tras un rato sin actividad.</p>
+				</div>
+				<SwitchToggle :is-on="idle.lock_enabled" @toggle="idle.lock_enabled = $event" />
+			</div>
+			<FormGroup v-if="idle.lock_enabled" label="Minutos hasta bloquear" class="mt-2">
+				<input
+					v-model.number="idle.lock_minutes"
+					type="number" min="1" max="180"
+					class="w-32 rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+				/>
+			</FormGroup>
+
+			<div class="mt-4 flex items-start gap-3">
+				<div class="min-w-0 flex-1">
+					<h4 class="text-sm font-medium">Apagar la pantalla</h4>
+					<p class="text-xs text-tx-muted">
+						<template v-if="idle.can_screen_off">Ahorra energía apagando la retroiluminación.</template>
+						<template v-else>Requiere wlopm, que no está instalado.</template>
+					</p>
+				</div>
+				<SwitchToggle
+					:is-on="idle.screen_off_enabled"
+					:disabled="!idle.can_screen_off"
+					@toggle="idle.screen_off_enabled = $event"
+				/>
+			</div>
+			<FormGroup v-if="idle.screen_off_enabled" label="Minutos hasta apagar" class="mt-2">
+				<input
+					v-model.number="idle.screen_off_minutes"
+					type="number" min="1" max="180"
+					class="w-32 rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+				/>
+			</FormGroup>
+
+			<div class="mt-4 flex items-start gap-3">
+				<div class="min-w-0 flex-1">
+					<h4 class="text-sm font-medium">Bloquear al suspender</h4>
+					<p class="text-xs text-tx-muted">Pide la contraseña al volver de la suspensión.</p>
+				</div>
+				<SwitchToggle
+					:is-on="idle.lock_before_sleep"
+					@toggle="idle.lock_before_sleep = $event"
+				/>
+			</div>
+
+			<div class="mt-4 flex justify-end">
+				<button
+					type="button"
+					:disabled="savingIdle || !idle.available"
+					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+					@click="saveIdle"
+				>
+					{{ savingIdle ? 'Guardando…' : 'Guardar cambios' }}
+				</button>
 			</div>
 		</SectionCard>
 	</div>
