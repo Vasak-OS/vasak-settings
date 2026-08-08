@@ -20,6 +20,29 @@ const decorationModes = [
 ];
 
 const grid = useWayfireSection('grid');
+const switcher = useWayfireSection('switcher');
+const fastSwitcher = useWayfireSection('fast-switcher');
+const place = useWayfireSection('place');
+const windowRules = useWayfireSection('window-rules', true);
+
+const placeModes = [
+	{ label: 'Centrada', value: 'center' },
+	{ label: 'En cascada', value: 'cascade' },
+	{ label: 'Al azar', value: 'random' },
+	{ label: 'Maximizada', value: 'maximize' },
+];
+
+function addRule() {
+	let index = 1;
+	while (`rule_${index}` in windowRules.values.value) {
+		index += 1;
+	}
+	windowRules.values.value[`rule_${index}`] = '';
+}
+
+function removeRule(key: string) {
+	delete windowRules.values.value[key];
+}
 const move = useWayfireSection('move');
 const resize = useWayfireSection('resize');
 const wmactions = useWayfireSection('wm-actions');
@@ -81,7 +104,17 @@ onMounted(async () => {
 });
 
 async function saveAll() {
-	await Promise.all([grid.save(), move.save(), resize.save(), wmactions.save(), core.save()]);
+	await Promise.all([
+		grid.save(),
+		move.save(),
+		resize.save(),
+		wmactions.save(),
+		core.save(),
+		switcher.save(),
+		fastSwitcher.save(),
+		place.save(),
+		windowRules.save(),
+	]);
 }
 </script>
 
@@ -189,6 +222,114 @@ async function saveAll() {
 						/>
 					</FormGroup>
 				</div>
+			</PluginSection>
+
+			<PluginSection plugin-id="switcher" icon="preferences-system-windows">
+				<div class="grid gap-4 sm:grid-cols-2">
+					<FormGroup label="Siguiente ventana">
+						<KeyBindingInput
+							:modelValue="switcher.getVal('next_view', '<alt> KEY_TAB')"
+							@update:modelValue="switcher.setVal('next_view', $event)"
+						/>
+					</FormGroup>
+					<FormGroup label="Ventana anterior">
+						<KeyBindingInput
+							:modelValue="switcher.getVal('prev_view', '<alt> <shift> KEY_TAB')"
+							@update:modelValue="switcher.setVal('prev_view', $event)"
+						/>
+					</FormGroup>
+				</div>
+				<details class="mt-4 border-t border-ui-border pt-3">
+					<summary class="cursor-pointer text-xs font-medium text-tx-muted">Opciones avanzadas</summary>
+					<div class="mt-3 grid gap-4 sm:grid-cols-2">
+						<FormGroup label="Duración de la animación (ms)">
+							<input
+								type="number" min="0" max="3000" step="50"
+								:value="switcher.getInt('speed', 500)"
+								@input="switcher.setVal('speed', ($event.target as HTMLInputElement).value)"
+								class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+							/>
+						</FormGroup>
+						<FormGroup label="Escala de las miniaturas">
+							<input
+								type="number" min="0.1" max="3" step="0.1"
+								:value="switcher.getFloat('view_thumbnail_scale', 1)"
+								@input="switcher.setVal('view_thumbnail_scale', ($event.target as HTMLInputElement).value)"
+								class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+							/>
+						</FormGroup>
+					</div>
+				</details>
+			</PluginSection>
+
+			<PluginSection plugin-id="fast-switcher" icon="preferences-system-windows">
+				<div class="grid gap-4 sm:grid-cols-3">
+					<FormGroup label="Activar">
+						<KeyBindingInput
+							:modelValue="fastSwitcher.getVal('activate', '<alt> KEY_ESC')"
+							@update:modelValue="fastSwitcher.setVal('activate', $event)"
+						/>
+					</FormGroup>
+					<FormGroup label="Activar hacia atrás">
+						<KeyBindingInput
+							:modelValue="fastSwitcher.getVal('activate_backward', '')"
+							@update:modelValue="fastSwitcher.setVal('activate_backward', $event)"
+						/>
+					</FormGroup>
+					<FormGroup label="Opacidad de las inactivas">
+						<input
+							type="number" min="0" max="1" step="0.05"
+							:value="fastSwitcher.getFloat('inactive_alpha', 0.7)"
+							@input="fastSwitcher.setVal('inactive_alpha', ($event.target as HTMLInputElement).value)"
+							class="w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						/>
+					</FormGroup>
+				</div>
+			</PluginSection>
+
+			<PluginSection plugin-id="place" icon="preferences-system-windows">
+				<FormGroup label="Dónde aparecen las ventanas nuevas">
+					<SelectInput
+						:modelValue="place.getVal('mode', 'center')"
+						:options="placeModes"
+						@update:modelValue="place.setVal('mode', $event)"
+					/>
+				</FormGroup>
+			</PluginSection>
+
+			<PluginSection plugin-id="window-rules" icon="preferences-system-windows">
+				<p class="mb-3 text-xs text-tx-muted">
+					Una regla por línea, con la sintaxis de Wayfire. Ejemplo:
+					<code>on created if app_id is "vasak-terminal" then set alpha 0.95</code>
+				</p>
+				<div class="flex flex-col gap-2">
+					<div v-for="(value, key) in windowRules.values.value" :key="key" class="flex items-center gap-2">
+						<input
+							type="text"
+							:value="value"
+							@input="windowRules.setVal(key as string, ($event.target as HTMLInputElement).value)"
+							class="flex-1 rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 font-mono text-sm"
+							placeholder="on created if app_id is &quot;...&quot; then ..."
+						/>
+						<button
+							type="button"
+							@click="removeRule(key as string)"
+							class="shrink-0 rounded-corner border border-status-danger/30 bg-status-danger/10 px-3 py-2 text-xs font-medium text-status-danger hover:bg-status-danger/20"
+						>
+							Eliminar
+						</button>
+					</div>
+					<p v-if="Object.keys(windowRules.values.value).length === 0" class="rounded-corner border border-dashed border-ui-border bg-ui-surface/30 p-3 text-center text-sm text-tx-muted">
+						Sin reglas definidas
+					</p>
+				</div>
+				<button
+					type="button"
+					@click="addRule"
+					class="mt-3 rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface"
+				>
+					+ Añadir regla
+				</button>
 			</PluginSection>
 
 			<div class="flex justify-end">

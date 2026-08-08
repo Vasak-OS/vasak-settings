@@ -11,10 +11,13 @@ import { useWayfireSection } from '@/composables/useWayfireSection';
 
 const vswitch = useWayfireSection('vswitch');
 const expo = useWayfireSection('expo');
+const oswitch = useWayfireSection('oswitch');
 // The workspace grid lives in [core], not in a plugin, and had no UI at all.
 const core = useWayfireSection('core');
 
-const isSaving = computed(() => vswitch.saving.value || expo.saving.value || core.saving.value);
+const isSaving = computed(
+	() => vswitch.saving.value || expo.saving.value || core.saving.value || oswitch.saving.value
+);
 
 const gridSummary = computed(() => {
 	const columns = core.getInt('vwidth', 3);
@@ -23,7 +26,7 @@ const gridSummary = computed(() => {
 });
 
 onMounted(async () => {
-	await Promise.all([vswitch.load(), expo.load(), core.load()]);
+	await Promise.all([vswitch.load(), expo.load(), core.load(), oswitch.load()]);
 	core.initDefaults({ vwidth: '3', vheight: '2' });
 	vswitch.initDefaults({
 		duration: '300',
@@ -50,11 +53,15 @@ onMounted(async () => {
 		select_workspace_8: '',
 		select_workspace_9: '',
 	});
+	oswitch.initDefaults({
+		next_output: '<super> KEY_O',
+		next_output_with_win: '<super> <shift> KEY_O',
+	});
 });
 
 async function saveAll() {
 	// [core] is merged, so saving here cannot disturb the plugin list.
-	await Promise.all([vswitch.save(), expo.save(), core.save()]);
+	await Promise.all([vswitch.save(), expo.save(), core.save(), oswitch.save()]);
 }
 </script>
 
@@ -162,6 +169,23 @@ async function saveAll() {
 						<KeyBindingInput
 							:modelValue="expo.getVal('select_workspace_' + n, '')"
 							@update:modelValue="expo.setVal('select_workspace_' + n, $event)"
+						/>
+					</FormGroup>
+				</div>
+			</PluginSection>
+
+			<PluginSection plugin-id="oswitch" icon="video-display">
+				<div class="grid gap-4 sm:grid-cols-2">
+					<FormGroup label="Ir a la siguiente pantalla">
+						<KeyBindingInput
+							:modelValue="oswitch.getVal('next_output', '<super> KEY_O')"
+							@update:modelValue="oswitch.setVal('next_output', $event)"
+						/>
+					</FormGroup>
+					<FormGroup label="Llevar la ventana a la siguiente pantalla">
+						<KeyBindingInput
+							:modelValue="oswitch.getVal('next_output_with_win', '<super> <shift> KEY_O')"
+							@update:modelValue="oswitch.setVal('next_output_with_win', $event)"
 						/>
 					</FormGroup>
 				</div>
