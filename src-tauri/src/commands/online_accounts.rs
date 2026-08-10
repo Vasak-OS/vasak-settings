@@ -41,18 +41,11 @@ pub enum CapabilityType {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AccessControlEntry {
-    pub binary_path: String,
-    pub allowed_capabilities: Vec<CapabilityType>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
     pub id: String,
     pub display_name: String,
     pub provider_type: String,
     pub capabilities: HashMap<CapabilityType, Value>,
-    pub acl: Vec<AccessControlEntry>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -210,7 +203,6 @@ pub async fn register_new_account(
             caps.insert(CapabilityType::Email, metadata.clone());
             caps
         },
-        acl: Vec::new(),
     };
 
     let account_id = db.add(account)?;
