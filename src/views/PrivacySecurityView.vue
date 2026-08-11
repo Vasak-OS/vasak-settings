@@ -16,16 +16,14 @@ const { t } = useI18n();
 /**
  * The resources a person can be shown, in the order they appear.
  *
- * Listed here rather than taken from what happens to be stored, so a screen
- * with one entry still shows every switch — otherwise you could only revoke
- * what had already been asked for, never grant something in advance.
+ * Only what the permission service actually enforces. The camera, the
+ * microphone and the screen are handed out by PipeWire and the desktop portal,
+ * which do not consult this policy — the service refuses those requests
+ * outright rather than storing an answer that changes nothing, so there is
+ * never anything here to show for them. A switch that looks like protection and
+ * is not is worse than no switch at all.
  */
 const RESOURCES = [
-	'camera',
-	'microphone',
-	'screen-capture',
-	'location',
-	'input-capture',
 	'account.email',
 	'account.calendar',
 	'account.contacts',
@@ -43,11 +41,6 @@ const RESOURCES = [
  * render raw.
  */
 const RESOURCE_LABEL: Record<string, string> = {
-	camera: 'camera',
-	microphone: 'microphone',
-	'screen-capture': 'screenCapture',
-	location: 'location',
-	'input-capture': 'inputCapture',
 	'account.email': 'accountEmail',
 	'account.calendar': 'accountCalendar',
 	'account.contacts': 'accountContacts',
@@ -59,17 +52,6 @@ const RESOURCE_LABEL: Record<string, string> = {
 const labelFor = (resource: string) =>
 	t(`views.privacy.resources.${RESOURCE_LABEL[resource] ?? resource}`);
 
-/**
- * Resources whose switch actually stops anything today.
- *
- * Online accounts are handed out by a service that asks before answering, so a
- * refusal there is enforced. The camera, the microphone and the screen are
- * handed out by PipeWire and the desktop portal, which do not consult this
- * policy yet — the decision is recorded, but a program that goes straight to
- * them is not stopped. Saying so next to each switch is the point: a control
- * that looks like protection and is not is worse than no control at all.
- */
-const isEnforced = (resource: string) => resource.startsWith('account.');
 
 const entries = ref<PermissionEntry[]>([]);
 const loading = ref(true);
@@ -189,12 +171,6 @@ onMounted(load);
 				>
 					<span class="min-w-0 text-sm text-tx-main">
 						{{ labelFor(resource) }}
-						<span
-							v-if="!isEnforced(resource)"
-							class="block text-xs text-status-warning"
-						>
-							{{ t('views.privacy.notEnforced') }}
-						</span>
 					</span>
 
 					<div class="flex shrink-0 gap-1">

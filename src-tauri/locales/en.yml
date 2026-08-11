@@ -832,25 +832,19 @@ views:
         valueNotString: "{0}: the value of '{1}' must be a string"
   privacy:
     title: Privacy and security
-    description: What each application may use, on your computer and in your accounts.
+    description: Which applications may use your online accounts.
     emptyDescription: >-
-      When an application wants to use the camera, the microphone, the screen or
-      one of your accounts, you will be asked, and the answer will show up here.
+      When an application wants to use one of your accounts, you will be asked,
+      and the answer will show up here.
     unverified: >-
       This program was not installed by the system, so we cannot guarantee it
       will still be the same program later on.
-    notEnforced: Your choice is saved, but it does not block access yet
     forget: Ask again
     allow: Allow
     deny: Don't allow
     note: >-
       Changing a permission asks for your password.
     resources:
-      camera: Camera
-      microphone: Microphone
-      screenCapture: See and record the screen
-      location: Location
-      inputCapture: Read the keyboard
       accountEmail: Account email
       accountCalendar: Calendar
       accountContacts: Contacts

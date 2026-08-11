@@ -832,26 +832,19 @@ views:
         valueNotString: "{0}: el valor de '{1}' debe ser string"
   privacy:
     title: Privacidad y seguridad
-    description: Qué puede usar cada aplicación de tu equipo y de tus cuentas.
+    description: Qué aplicaciones pueden usar tus cuentas en línea.
     emptyDescription: >-
-      Cuando una aplicación quiera usar la cámara, el micrófono, la pantalla o
-      alguna de tus cuentas, te lo vamos a preguntar y la respuesta va a
-      aparecer acá.
+      Cuando una aplicación quiera usar alguna de tus cuentas, te lo vamos a
+      preguntar y la respuesta va a aparecer acá.
     unverified: >-
       Este programa no está instalado por el sistema, así que no podemos
       garantizar que siga siendo el mismo más adelante.
-    notEnforced: Se guarda tu decisión, pero todavía no bloquea el acceso
     forget: Preguntar de nuevo
     allow: Permitir
     deny: No permitir
     note: >-
       Cambiar un permiso pide tu contraseña.
     resources:
-      camera: Cámara
-      microphone: Micrófono
-      screenCapture: Ver y grabar la pantalla
-      location: Ubicación
-      inputCapture: Leer el teclado
       accountEmail: Correo de tus cuentas
       accountCalendar: Calendario
       accountContacts: Contactos
