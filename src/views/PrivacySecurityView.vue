@@ -59,6 +59,18 @@ const RESOURCE_LABEL: Record<string, string> = {
 const labelFor = (resource: string) =>
 	t(`views.privacy.resources.${RESOURCE_LABEL[resource] ?? resource}`);
 
+/**
+ * Resources whose switch actually stops anything today.
+ *
+ * Online accounts are handed out by a service that asks before answering, so a
+ * refusal there is enforced. The camera, the microphone and the screen are
+ * handed out by PipeWire and the desktop portal, which do not consult this
+ * policy yet — the decision is recorded, but a program that goes straight to
+ * them is not stopped. Saying so next to each switch is the point: a control
+ * that looks like protection and is not is worse than no control at all.
+ */
+const isEnforced = (resource: string) => resource.startsWith('account.');
+
 const entries = ref<PermissionEntry[]>([]);
 const loading = ref(true);
 const errorMessage = ref('');
@@ -175,8 +187,14 @@ onMounted(load);
 					:key="resource"
 					class="flex items-center justify-between gap-3"
 				>
-					<span class="text-sm text-tx-main">
+					<span class="min-w-0 text-sm text-tx-main">
 						{{ labelFor(resource) }}
+						<span
+							v-if="!isEnforced(resource)"
+							class="block text-xs text-status-warning"
+						>
+							{{ t('views.privacy.notEnforced') }}
+						</span>
 					</span>
 
 					<div class="flex shrink-0 gap-1">

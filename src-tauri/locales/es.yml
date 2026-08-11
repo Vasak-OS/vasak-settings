@@ -840,13 +840,12 @@ views:
     unverified: >-
       Este programa no está instalado por el sistema, así que no podemos
       garantizar que siga siendo el mismo más adelante.
+    notEnforced: Se guarda tu decisión, pero todavía no bloquea el acceso
     forget: Preguntar de nuevo
     allow: Permitir
     deny: No permitir
     note: >-
-      Cambiar un permiso pide tu contraseña. La cámara, el micrófono y la
-      pantalla las entrega otro componente del sistema: por ahora la decisión
-      queda guardada, pero todavía no bloquea el acceso.
+      Cambiar un permiso pide tu contraseña.
     resources:
       camera: Cámara
       microphone: Micrófono

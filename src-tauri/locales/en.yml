@@ -839,13 +839,12 @@ views:
     unverified: >-
       This program was not installed by the system, so we cannot guarantee it
       will still be the same program later on.
+    notEnforced: Your choice is saved, but it does not block access yet
     forget: Ask again
     allow: Allow
     deny: Don't allow
     note: >-
-      Changing a permission asks for your password. The camera, microphone and
-      screen are handed out by another part of the system: for now the decision
-      is stored, but it does not block access yet.
+      Changing a permission asks for your password.
     resources:
       camera: Camera
       microphone: Microphone
