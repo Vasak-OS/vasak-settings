@@ -127,6 +127,11 @@ const routes = [
 		name: 'online-accounts',
 		component: () => import('@/views/OnlineAccountsView.vue'),
 	},
+	{
+		path: '/privacy-security',
+		name: 'privacy-security',
+		component: () => import('@/views/PrivacySecurityView.vue'),
+	},
 ];
 export const router = createRouter({
 	history: createMemoryHistory(),

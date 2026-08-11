@@ -50,6 +50,7 @@ sidebar:
     brightness: Brillo y luz nocturna
     power: Energía
     monitors: Pantallas
+    privacySecurity: Privacidad y seguridad
     networkWifi: Wi-Fi
     networkBluetooth: Bluetooth
     networkVpn: VPN
@@ -829,6 +830,35 @@ views:
         invalidJson: '{0} debe ser un JSON válido'
         notKeyValue: '{0} debe ser un objeto clave/valor'
         valueNotString: "{0}: el valor de '{1}' debe ser string"
+  privacy:
+    title: Privacidad y seguridad
+    description: Qué puede usar cada aplicación de tu equipo y de tus cuentas.
+    emptyDescription: >-
+      Cuando una aplicación quiera usar la cámara, el micrófono, la pantalla o
+      alguna de tus cuentas, te lo vamos a preguntar y la respuesta va a
+      aparecer acá.
+    unverified: >-
+      Este programa no está instalado por el sistema, así que no podemos
+      garantizar que siga siendo el mismo más adelante.
+    forget: Preguntar de nuevo
+    allow: Permitir
+    deny: No permitir
+    note: >-
+      Cambiar un permiso pide tu contraseña. La cámara, el micrófono y la
+      pantalla las entrega otro componente del sistema: por ahora la decisión
+      queda guardada, pero todavía no bloquea el acceso.
+    resources:
+      camera: Cámara
+      microphone: Micrófono
+      screenCapture: Ver y grabar la pantalla
+      location: Ubicación
+      inputCapture: Leer el teclado
+      accountEmail: Correo de tus cuentas
+      accountCalendar: Calendario
+      accountContacts: Contactos
+      accountChat: Mensajes
+      accountDrive: Archivos en la nube
+      accountTasks: Tareas
   onlineAccounts:
     title: Cuentas en Línea
     description: Conecta tus servicios de correo, calendario y contactos.

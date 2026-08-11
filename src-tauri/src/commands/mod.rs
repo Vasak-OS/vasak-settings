@@ -13,3 +13,4 @@ pub mod power_profiles;
 pub mod monitors;
 pub mod language;
 pub mod online_accounts;
+pub mod permissions;

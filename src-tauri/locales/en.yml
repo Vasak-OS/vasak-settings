@@ -50,6 +50,7 @@ sidebar:
     brightness: Brightness and night light
     power: Power
     monitors: Displays
+    privacySecurity: Privacy and security
     networkWifi: Wi-Fi
     networkBluetooth: Bluetooth
     networkVpn: VPN
@@ -829,6 +830,34 @@ views:
         invalidJson: '{0} must be valid JSON'
         notKeyValue: '{0} must be a key/value object'
         valueNotString: "{0}: the value of '{1}' must be a string"
+  privacy:
+    title: Privacy and security
+    description: What each application may use, on your computer and in your accounts.
+    emptyDescription: >-
+      When an application wants to use the camera, the microphone, the screen or
+      one of your accounts, you will be asked, and the answer will show up here.
+    unverified: >-
+      This program was not installed by the system, so we cannot guarantee it
+      will still be the same program later on.
+    forget: Ask again
+    allow: Allow
+    deny: Don't allow
+    note: >-
+      Changing a permission asks for your password. The camera, microphone and
+      screen are handed out by another part of the system: for now the decision
+      is stored, but it does not block access yet.
+    resources:
+      camera: Camera
+      microphone: Microphone
+      screenCapture: See and record the screen
+      location: Location
+      inputCapture: Read the keyboard
+      accountEmail: Account email
+      accountCalendar: Calendar
+      accountContacts: Contacts
+      accountChat: Messages
+      accountDrive: Cloud files
+      accountTasks: Tasks
   onlineAccounts:
     title: Online Accounts
     description: Connect your mail, calendar and contacts services.

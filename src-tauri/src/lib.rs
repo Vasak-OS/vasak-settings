@@ -121,6 +121,9 @@ pub fn run() {
             commands::online_accounts::remove_account,
             commands::online_accounts::start_google_oauth,
             commands::online_accounts::account_manager_ping,
+            commands::permissions::list_permissions,
+            commands::permissions::set_permission,
+            commands::permissions::forget_permission,
             commands::online_accounts::get_account_data,
             commands::online_accounts::get_access_token,
         ])
