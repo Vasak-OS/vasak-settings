@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -13,17 +12,21 @@ use crate::logger::log_debug;
 // D-Bus constants — coincide con el daemon vasak-accounts
 // ---------------------------------------------------------------------------
 
-const ACCOUNT_MANAGER_DEST: &str = "ar.net.vasak.os.AccountManager";
-const ACCOUNT_MANAGER_PATH: &str = "/ar/net/vasak/os/AccountManager";
-const ACCOUNT_MANAGER_IFACE: &str = "ar.net.vasak.os.AccountManager";
+const ACCOUNTS_SERVICE: &str = "ar.net.vasak.os.AccountManager";
+const ACCOUNTS_PATH: &str = "/ar/net/vasak/os/AccountManager";
+const ACCOUNTS_INTERFACE: &str = "ar.net.vasak.os.AccountManager";
 
-// ---------------------------------------------------------------------------
-// Storage constants — coincide con storage.rs del daemon
-// ---------------------------------------------------------------------------
-
-const KEYRING_SERVICE: &str = "vasakos-account-manager";
-const STORAGE_DIR_NAME: &str = "vasakos";
-const STORAGE_FILE_NAME: &str = "accounts.json";
+/// The account daemon lives on the **system** bus now: the tokens it hands out
+/// are in root-owned files, so it has to run somewhere a program running as the
+/// user cannot replace it.
+async fn account_manager() -> Result<Connection, String> {
+    Connection::system().await.map_err(|e| {
+        format!(
+            "No se pudo contactar al gestor de cuentas: {e}. \
+             Comprobá que vasak-accounts esté en ejecución."
+        )
+    })
+}
 
 // ---------------------------------------------------------------------------
 // Tipos compartidos (misma serialización que el daemon)
@@ -58,209 +61,128 @@ pub struct AccountInfo {
 }
 
 // ---------------------------------------------------------------------------
-// AccountDatabase — lee/escribe accounts.json (mismo formato que el daemon)
-// ---------------------------------------------------------------------------
-
-struct AccountDatabase {
-    path: PathBuf,
-    accounts: Vec<Account>,
-}
-
-impl AccountDatabase {
-    fn path() -> PathBuf {
-        dirs::config_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join(STORAGE_DIR_NAME)
-            .join(STORAGE_FILE_NAME)
-    }
-
-    fn new() -> Self {
-        let path = Self::path();
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent).ok();
-        }
-        AccountDatabase {
-            path,
-            accounts: Vec::new(),
-        }
-    }
-
-    fn load(&mut self) -> Result<(), String> {
-        if !self.path.exists() {
-            self.accounts.clear();
-            return Ok(());
-        }
-        let data = std::fs::read_to_string(&self.path)
-            .map_err(|e| format!("leer accounts.json: {e}"))?;
-        self.accounts = serde_json::from_str(&data)
-            .map_err(|e| format!("parsear accounts.json: {e}"))?;
-        Ok(())
-    }
-
-    fn save(&self) -> Result<(), String> {
-        let data = serde_json::to_string_pretty(&self.accounts)
-            .map_err(|e| format!("serializar accounts.json: {e}"))?;
-        std::fs::write(&self.path, data)
-            .map_err(|e| format!("escribir accounts.json: {e}"))?;
-        Ok(())
-    }
-
-    fn add(&mut self, account: Account) -> Result<String, String> {
-        let id = account.id.clone();
-        self.accounts.push(account);
-        self.save()?;
-        Ok(id)
-    }
-
-    fn all(&self) -> &[Account] {
-        &self.accounts
-    }
-
-    fn get(&self, id: &str) -> Option<&Account> {
-        self.accounts.iter().find(|a| a.id == id)
-    }
-
-    fn remove(&mut self, id: &str) -> Result<bool, String> {
-        let len = self.accounts.len();
-        self.accounts.retain(|a| a.id != id);
-        if self.accounts.len() != len {
-            self.save()?;
-            Ok(true)
-        } else {
-            Ok(false)
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Keyring helpers
-// ---------------------------------------------------------------------------
-
-fn store_token(account_id: &str, token: &str) -> Result<(), String> {
-    let entry = keyring::Entry::new(KEYRING_SERVICE, account_id)
-        .map_err(|e| format!("keyring entry: {e}"))?;
-    entry.set_password(token)
-        .map_err(|e| format!("keyring set_password: {e}"))?;
-    Ok(())
-}
-
-fn get_token(account_id: &str) -> Result<String, String> {
-    let entry = keyring::Entry::new(KEYRING_SERVICE, account_id)
-        .map_err(|e| format!("keyring entry: {e}"))?;
-    entry.get_password()
-        .map_err(|e| format!("keyring get_password: {e}"))
-}
-
-fn delete_token(account_id: &str) -> Result<(), String> {
-    let entry = keyring::Entry::new(KEYRING_SERVICE, account_id)
-        .map_err(|e| format!("keyring entry: {e}"))?;
-    entry.delete_credential()
-        .map_err(|e| format!("keyring delete: {e}"))
-}
-
-fn store_secret(account_id: &str, key: &str, secret: &str) -> Result<(), String> {
-    let label = format!("{account_id}:{key}");
-    let entry = keyring::Entry::new(KEYRING_SERVICE, &label)
-        .map_err(|e| format!("keyring entry: {e}"))?;
-    entry.set_password(secret)
-        .map_err(|e| format!("keyring set_password: {e}"))?;
-    Ok(())
-}
-
-fn delete_secret(account_id: &str, key: &str) -> Result<(), String> {
-    let label = format!("{account_id}:{key}");
-    let entry = keyring::Entry::new(KEYRING_SERVICE, &label)
-        .map_err(|e| format!("keyring entry: {e}"))?;
-    entry.delete_credential()
-        .map_err(|e| format!("keyring delete: {e}"))
-}
-
-// ---------------------------------------------------------------------------
 // Tauri commands
 // ---------------------------------------------------------------------------
 
-/// Crea una cuenta nueva escribiendo directamente en el almacenamiento
-/// compartido con el daemon (accounts.json + keyring).
+/// Creates an account through the account daemon.
+///
+/// The secret goes straight into root-owned storage and this process never
+/// keeps a copy — it used to write `accounts.json` itself and put the token in
+/// the user's keyring, which is exactly what let any program running as the
+/// user read it without ever being asked.
 #[tauri::command]
 pub async fn register_new_account(
     provider: String,
     metadata: serde_json::Value,
     secret: String,
 ) -> Result<(), String> {
-    let mut db = AccountDatabase::new();
-    db.load()?;
+    let display_name = metadata
+        .get("display_name")
+        .and_then(|v| v.as_str())
+        .unwrap_or(&provider)
+        .to_string();
 
-    let account = Account {
-        id: uuid::Uuid::new_v4().to_string(),
-        display_name: metadata
-            .get("display_name")
-            .and_then(|v| v.as_str())
-            .unwrap_or(&provider)
-            .to_string(),
-        provider_type: provider.clone(),
-        capabilities: {
-            let mut caps = HashMap::new();
-            caps.insert(CapabilityType::Email, metadata.clone());
-            caps
-        },
-    };
+    let capabilities = serde_json::json!({ "email": metadata });
+    let secrets = serde_json::json!({ "access": secret });
 
-    let account_id = db.add(account)?;
+    let connection = account_manager().await?;
+    let reply = connection
+        .call_method(
+            Some(ACCOUNTS_SERVICE),
+            ACCOUNTS_PATH,
+            Some(ACCOUNTS_INTERFACE),
+            "RegisterAccount",
+            &(
+                display_name.as_str(),
+                provider.as_str(),
+                capabilities.to_string().as_str(),
+                secrets.to_string().as_str(),
+            ),
+        )
+        .await
+        .map_err(|e| format!("No se pudo registrar la cuenta: {e}"))?;
 
-    store_token(&account_id, &secret)?;
+    let account_id: String = reply
+        .body()
+        .deserialize()
+        .map_err(|e| format!("Respuesta inválida del gestor de cuentas: {e}"))?;
 
     log_debug(&format!(
-        "Account registered (provider: {}, id: {})",
-        provider, account_id
+        "Account registered (provider: {provider}, id: {account_id})"
     ));
-
     Ok(())
 }
 
-/// Lista todas las cuentas desde accounts.json.
+/// Lists the accounts the daemon holds for this user. Metadata only — a token
+/// never travels through here.
 #[tauri::command]
 pub async fn list_accounts() -> Result<Vec<AccountInfo>, String> {
-    let mut db = AccountDatabase::new();
-    db.load()?;
+    let connection = account_manager().await?;
+    let reply = connection
+        .call_method(
+            Some(ACCOUNTS_SERVICE),
+            ACCOUNTS_PATH,
+            Some(ACCOUNTS_INTERFACE),
+            "ListAccounts",
+            &(),
+        )
+        .await
+        .map_err(|e| format!("No se pudieron leer las cuentas: {e}"))?;
 
-    let list = db
-        .all()
-        .iter()
-        .map(|a| {
-            let cap = a
+    let raw: String = reply
+        .body()
+        .deserialize()
+        .map_err(|e| format!("Respuesta inválida del gestor de cuentas: {e}"))?;
+
+    let accounts: Vec<Account> =
+        serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la lista: {e}"))?;
+
+    Ok(accounts
+        .into_iter()
+        .map(|account| {
+            let metadata = account
                 .capabilities
                 .get(&CapabilityType::Email)
                 .cloned()
-                .and_then(|v| serde_json::from_value(v).ok())
+                .and_then(|value| serde_json::from_value(value).ok())
                 .unwrap_or_default();
             AccountInfo {
-                id: a.id.clone(),
-                provider: a.provider_type.clone(),
-                display_name: a.display_name.clone(),
-                metadata: cap,
+                id: account.id,
+                provider: account.provider_type,
+                display_name: account.display_name,
+                metadata,
                 created_at: String::new(),
             }
         })
-        .collect();
-
-    Ok(list)
+        .collect())
 }
 
-/// Elimina una cuenta de accounts.json y del keyring.
+/// Removes an account. The daemon clears its secrets along with it, so nothing
+/// is left holding a live credential.
 #[tauri::command]
 pub async fn remove_account(account_id: String) -> Result<(), String> {
-    let mut db = AccountDatabase::new();
-    db.load()?;
+    let connection = account_manager().await?;
+    let reply = connection
+        .call_method(
+            Some(ACCOUNTS_SERVICE),
+            ACCOUNTS_PATH,
+            Some(ACCOUNTS_INTERFACE),
+            "RemoveAccount",
+            &(account_id.as_str(),),
+        )
+        .await
+        .map_err(|e| format!("No se pudo eliminar la cuenta: {e}"))?;
 
-    let removed = db.remove(&account_id)?;
+    let removed: bool = reply
+        .body()
+        .deserialize()
+        .map_err(|e| format!("Respuesta inválida del gestor de cuentas: {e}"))?;
+
     if !removed {
-        return Err(format!("Account '{}' not found", account_id));
+        return Err(format!("No se encontró la cuenta '{account_id}'"));
     }
 
-    delete_token(&account_id).ok();
-    delete_secret(&account_id, "refresh").ok();
-
-    log_debug(&format!("Account removed: {}", account_id));
+    log_debug(&format!("Account removed: {account_id}"));
     Ok(())
 }
 
@@ -369,16 +291,14 @@ pub async fn start_google_oauth(client_id: String, scopes: Vec<String>) -> Resul
 /// Proxy D-Bus hacia el método Ping del daemon.
 #[tauri::command]
 pub async fn account_manager_ping() -> Result<String, String> {
-    let conn = Connection::session()
-        .await
-        .map_err(|e| format!("D-Bus session bus: {e}"))?;
+    let conn = account_manager().await?;
 
     let proxy = zbus::ProxyBuilder::<zbus::Proxy<'_>>::new(&conn)
-        .destination(ACCOUNT_MANAGER_DEST)
+        .destination(ACCOUNTS_SERVICE)
         .map_err(|e| format!("destination: {e}"))?
-        .path(ACCOUNT_MANAGER_PATH)
+        .path(ACCOUNTS_PATH)
         .map_err(|e| format!("path: {e}"))?
-        .interface(ACCOUNT_MANAGER_IFACE)
+        .interface(ACCOUNTS_INTERFACE)
         .map_err(|e| format!("interface: {e}"))?
         .build()
         .await
@@ -401,16 +321,14 @@ pub async fn get_account_data(
     account_id: String,
     capability: String,
 ) -> Result<String, String> {
-    let conn = Connection::session()
-        .await
-        .map_err(|e| format!("D-Bus session bus: {e}"))?;
+    let conn = account_manager().await?;
 
     let proxy = zbus::ProxyBuilder::<zbus::Proxy<'_>>::new(&conn)
-        .destination(ACCOUNT_MANAGER_DEST)
+        .destination(ACCOUNTS_SERVICE)
         .map_err(|e| format!("destination: {e}"))?
-        .path(ACCOUNT_MANAGER_PATH)
+        .path(ACCOUNTS_PATH)
         .map_err(|e| format!("path: {e}"))?
-        .interface(ACCOUNT_MANAGER_IFACE)
+        .interface(ACCOUNTS_INTERFACE)
         .map_err(|e| format!("interface: {e}"))?
         .build()
         .await
@@ -433,16 +351,14 @@ pub async fn get_access_token(
     account_id: String,
     capability: String,
 ) -> Result<String, String> {
-    let conn = Connection::session()
-        .await
-        .map_err(|e| format!("D-Bus session bus: {e}"))?;
+    let conn = account_manager().await?;
 
     let proxy = zbus::ProxyBuilder::<zbus::Proxy<'_>>::new(&conn)
-        .destination(ACCOUNT_MANAGER_DEST)
+        .destination(ACCOUNTS_SERVICE)
         .map_err(|e| format!("destination: {e}"))?
-        .path(ACCOUNT_MANAGER_PATH)
+        .path(ACCOUNTS_PATH)
         .map_err(|e| format!("path: {e}"))?
-        .interface(ACCOUNT_MANAGER_IFACE)
+        .interface(ACCOUNTS_INTERFACE)
         .map_err(|e| format!("interface: {e}"))?
         .build()
         .await
