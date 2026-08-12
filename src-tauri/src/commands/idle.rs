@@ -7,7 +7,12 @@ use crate::commands::wayfire_ini::{parse_section, read_file, update_section, wri
 use crate::logger::{log_debug, log_error};
 
 const UNIT: &str = "vasak-idle.service";
-const LOCKER: &str = "/usr/bin/gtklock -s /usr/share/vasak/gtklock.css";
+/// vasak-lock renders the stylesheet and blurs the wallpaper with the theme in
+/// use, then execs gtklock: the unit only has to name it.
+const LOCKER: &str = "/usr/bin/vasak-lock";
+/// Before suspending, -d returns as soon as the screen is locked. Without it
+/// swayidle waits for the unlock and the machine never gets to sleep.
+const SLEEP_LOCKER: &str = "/usr/bin/vasak-lock -d";
 const AUTOSTART_SECTION: &str = "autostart";
 /// The key wayfire used to launch swayidle from, before this moved to systemd.
 const LEGACY_KEY: &str = "lock";
@@ -112,6 +117,13 @@ fn tokenize(line: &str) -> Vec<String> {
     tokens
 }
 
+/// True for any of the lockers VasakOS has shipped: units written before
+/// vasak-lock existed name gtklock directly, and reading them as "no lock
+/// configured" would silently turn the lock off on the next save.
+fn locks_the_screen(action: &str) -> bool {
+    action.contains("vasak-lock") || action.contains("gtklock")
+}
+
 /// Rebuilds the settings from a swayidle command line. Used both for the unit
 /// we generate and for the legacy wayfire.ini entry, which have the same shape.
 fn parse_swayidle(command: &str) -> IdleConfig {
@@ -134,7 +146,7 @@ fn parse_swayidle(command: &str) -> IdleConfig {
                     .unwrap_or(0);
                 let action = tokens.get(index + 2).cloned().unwrap_or_default();
 
-                if action.contains("gtklock") {
+                if locks_the_screen(&action) {
                     config.lock_enabled = true;
                     config.lock_minutes = (seconds / 60).max(1);
                 } else if action.contains("wlopm") {
@@ -147,7 +159,7 @@ fn parse_swayidle(command: &str) -> IdleConfig {
             "before-sleep" => {
                 if tokens
                     .get(index + 1)
-                    .is_some_and(|action| action.contains("gtklock"))
+                    .is_some_and(|action| locks_the_screen(action))
                 {
                     config.lock_before_sleep = true;
                 }
@@ -180,7 +192,7 @@ fn render_command(config: &IdleConfig) -> String {
     }
 
     if config.lock_before_sleep {
-        command.push_str(&format!(" before-sleep '{}'", LOCKER));
+        command.push_str(&format!(" before-sleep '{}'", SLEEP_LOCKER));
     }
 
     command
@@ -329,9 +341,22 @@ mod tests {
         };
 
         let command = render_command(&config);
-        assert!(command.contains("timeout 300 '/usr/bin/gtklock"));
+        assert!(command.contains("timeout 300 '/usr/bin/vasak-lock'"));
         assert!(!command.contains("wlopm"));
         assert!(!command.contains("before-sleep"));
+    }
+
+    /// Without -d swayidle waits for the unlock, so the machine would refuse to
+    /// suspend until somebody typed the password.
+    #[test]
+    fn the_before_sleep_lock_returns_once_the_screen_is_locked() {
+        let config = IdleConfig {
+            lock_enabled: false,
+            lock_before_sleep: true,
+            ..IdleConfig::default()
+        };
+
+        assert!(render_command(&config).contains("before-sleep '/usr/bin/vasak-lock -d'"));
     }
 
     #[test]
@@ -368,8 +393,9 @@ mod tests {
         assert!(parsed.lock_before_sleep);
     }
 
-    /// The exact line VasakOS shipped in wayfire.ini, so upgrading users keep
-    /// their timeout instead of silently getting the default back.
+    /// The exact line VasakOS shipped in wayfire.ini, and the one the units
+    /// written before vasak-lock still carry, so upgrading users keep their
+    /// timeout instead of silently getting the default back.
     #[test]
     fn understands_the_legacy_wayfire_entry() {
         let legacy = "swayidle -w timeout 300 'gtklock -s /usr/share/vasak/gtklock.css' \
