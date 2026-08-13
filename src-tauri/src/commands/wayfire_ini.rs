@@ -23,16 +23,38 @@ pub fn get_wayfire_path() -> Result<PathBuf, String> {
 	Ok(home.join(".config/wayfire.ini"))
 }
 
+/// Reads wayfire.ini, tolerating bytes that are not valid UTF-8.
+///
+/// `read_to_string` refuses the whole file over a single bad byte, and that is
+/// not a theoretical risk: a file whose head had been overwritten by something
+/// else left a comment cut in the middle of a multi-byte character, and with it
+/// every page in this application that touches wayfire.ini stopped loading *and*
+/// saving — the keyboard layout among them. Wayfire itself reads the file byte
+/// by byte and does not care, so refusing to is a way of being stricter than the
+/// compositor for no gain. The broken bytes become replacement characters,
+/// which only ever appear inside comments in practice.
 pub fn read_file() -> Result<String, String> {
 	let path = get_wayfire_path()?;
 	if !path.exists() {
 		return Ok(String::new());
 	}
-	fs::read_to_string(&path).map_err(|e| {
+
+	let bytes = fs::read(&path).map_err(|e| {
 		let msg = format!("Error leyendo wayfire.ini: {}", e);
 		log_error(&msg);
 		msg
-	})
+	})?;
+
+	match String::from_utf8(bytes) {
+		Ok(content) => Ok(content),
+		Err(error) => {
+			log_error(&format!(
+				"wayfire.ini tiene bytes inválidos en la posición {}; se leyó igual reemplazándolos",
+				error.utf8_error().valid_up_to()
+			));
+			Ok(String::from_utf8_lossy(error.as_bytes()).into_owned())
+		}
+	}
 }
 
 pub fn write_file(content: &str) -> Result<(), String> {

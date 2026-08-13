@@ -157,32 +157,129 @@ fn load_xkb_layout_descriptions() -> HashMap<String, String> {
 	descriptions
 }
 
+/// Names of the variants, from the XKB rules: "nodeadkeys" on its own says much
+/// less than "Spanish (no dead keys)". Entries there read `code  layout: name`,
+/// and the same code means different things under different layouts, so the
+/// layout is part of the key.
+fn load_xkb_variant_descriptions() -> HashMap<(String, String), String> {
+	let mut descriptions = HashMap::new();
+
+	let paths = [
+		"/usr/share/X11/xkb/rules/base.lst",
+		"/usr/share/X11/xkb/rules/evdev.lst",
+	];
+
+	for path in &paths {
+		let Ok(content) = std::fs::read_to_string(path) else {
+			continue;
+		};
+
+		let mut in_variant = false;
+		for line in content.lines() {
+			let trimmed = line.trim();
+
+			if trimmed.starts_with("! variant") {
+				in_variant = true;
+				continue;
+			}
+			if !in_variant {
+				continue;
+			}
+			if trimmed.starts_with('!') || trimmed.is_empty() {
+				in_variant = false;
+				continue;
+			}
+			if trimmed.starts_with('#') {
+				continue;
+			}
+
+			let Some((code, rest)) = trimmed.split_once(char::is_whitespace) else {
+				continue;
+			};
+			let Some((layout, name)) = rest.trim().split_once(':') else {
+				continue;
+			};
+
+			let name = name.trim();
+			if !name.is_empty() {
+				descriptions.insert(
+					(layout.trim().to_string(), code.trim().to_string()),
+					name.to_string(),
+				);
+			}
+		}
+
+		if !descriptions.is_empty() {
+			break;
+		}
+	}
+
+	descriptions
+}
+
+/// Variants of `layout`, or of every layout at once when it is empty.
+///
+/// Asking without a layout returns the 347 variants of all 99 layouts together,
+/// and picking one that belongs to another layout builds a combination XKB
+/// rejects: the keymap fails to load and the keyboard silently stays as it was,
+/// which looks exactly like the setting not being applied.
 #[tauri::command]
-pub async fn get_available_keyboard_variants() -> Result<Vec<KeyboardLayout>, String> {
-	let output = std::process::Command::new("localectl")
-		.args(["list-x11-keymap-variants"])
+pub async fn get_available_keyboard_variants(
+	layout: Option<String>,
+) -> Result<Vec<KeyboardLayout>, String> {
+	let layout = layout
+		.as_deref()
+		.map(str::trim)
+		.filter(|l| !l.is_empty())
+		.unwrap_or_default()
+		.to_string();
+
+	let mut command = std::process::Command::new("localectl");
+	command.arg("list-x11-keymap-variants");
+
+	if !layout.is_empty() {
+		command.arg(&layout);
+	}
+
+	let output = command
 		.output()
 		.map_err(|e| format!("Error ejecutando localectl: {}", e))?;
 
+	// A layout with no variants of its own is not an error, but localectl
+	// reports it as one ("Couldn't find any entries…", exit 1). The honest
+	// answer for the list is that it is empty.
 	if !output.status.success() {
 		let stderr = String::from_utf8_lossy(&output.stderr);
+		if stderr.contains("Couldn't find any entries") {
+			return Ok(Vec::new());
+		}
 		return Err(format!("localectl falló: {}", stderr));
 	}
 
 	let raw = String::from_utf8_lossy(&output.stdout).to_string();
+	let descriptions = load_xkb_variant_descriptions();
+
 	let variants: Vec<KeyboardLayout> = raw
 		.lines()
-		.map(|l| {
-			let code = l.trim().to_string();
+		.map(str::trim)
+		.filter(|code| !code.is_empty())
+		.map(|code| {
+			let description = descriptions
+				.get(&(layout.clone(), code.to_string()))
+				.cloned()
+				.unwrap_or_else(|| code.to_string());
 			KeyboardLayout {
-				description: code.to_uppercase(),
-				code: code.clone(),
+				code: code.to_string(),
+				description,
 			}
 		})
-		.filter(|l| !l.code.is_empty())
 		.collect();
 
-	log_debug(&format!("{} variantes de teclado disponibles", variants.len()));
+	log_debug(&format!(
+		"{} variantes de teclado disponibles para '{}'",
+		variants.len(),
+		layout
+	));
 	Ok(variants)
 }
 

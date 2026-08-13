@@ -66,17 +66,15 @@ async function loadData() {
 	loading.value = true;
 	error.value = '';
 	try {
-		const [locales, localeMap, layouts, variants, wayfire] = await Promise.all([
+		const [locales, localeMap, layouts, wayfire] = await Promise.all([
 			getAvailableLocales(),
 			getCurrentLocale(),
 			getAvailableKeyboardLayouts(),
-			getAvailableKeyboardVariants(),
 			getKeyboardLayoutsFromWayfire(),
 		]);
 		availableLocales.value = locales;
 		currentLocaleMap.value = localeMap;
 		availableLayouts.value = layouts;
-		availableVariants.value = variants;
 
 		const parts = wayfire[0]
 			.split(',')
@@ -85,10 +83,34 @@ async function loadData() {
 		layout1.value = parts[0] || '';
 		layout2.value = parts[1] || '';
 		layoutVariant.value = wayfire[1] || '';
+
+		await loadVariants();
 	} catch (e) {
 		error.value = t('views.languageKeyboard.loadError').replace('{0}', String(e));
 	} finally {
 		loading.value = false;
+	}
+}
+
+/** The variant belongs to the primary layout, so the list follows it. */
+async function loadVariants() {
+	if (!layout1.value) {
+		availableVariants.value = [];
+		return;
+	}
+
+	availableVariants.value = await getAvailableKeyboardVariants(layout1.value);
+}
+
+async function selectLayout1(value: string) {
+	layout1.value = value;
+	// A variant of the previous layout is meaningless under the new one, and
+	// applying the pair would leave XKB unable to build the keymap at all.
+	layoutVariant.value = '';
+	try {
+		await loadVariants();
+	} catch (e) {
+		error.value = t('views.languageKeyboard.loadError').replace('{0}', String(e));
 	}
 }
 
@@ -176,7 +198,7 @@ onMounted(loadData);
 						<SelectInput
 							:modelValue="layout1"
 							:options="layout1Options"
-							@update:modelValue="(v: string) => layout1 = v"
+							@update:modelValue="selectLayout1"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.languageKeyboard.secondaryLayout')">

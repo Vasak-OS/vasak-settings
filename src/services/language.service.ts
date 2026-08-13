@@ -21,8 +21,9 @@ export async function getAvailableKeyboardLayouts(): Promise<KeyboardLayout[]> {
 	return invoke<KeyboardLayout[]>('get_available_keyboard_layouts');
 }
 
-export async function getAvailableKeyboardVariants(): Promise<KeyboardLayout[]> {
-	return invoke<KeyboardLayout[]>('get_available_keyboard_variants');
+/** Variants belong to a layout: asking without one lists every layout's. */
+export async function getAvailableKeyboardVariants(layout: string): Promise<KeyboardLayout[]> {
+	return invoke<KeyboardLayout[]>('get_available_keyboard_variants', { layout });
 }
 
 export async function setKeyboardLayouts(layouts: string, variant: string): Promise<void> {
