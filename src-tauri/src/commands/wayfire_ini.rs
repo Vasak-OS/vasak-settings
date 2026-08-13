@@ -567,6 +567,22 @@ slot_c = <super> KEY_UP
 		assert_eq!(grid.get("type").map(String::as_str), Some("regular"));
 	}
 
+	/// The shipped wayfire.ini declares the keyboard keys with no value, so that
+	/// wayfire stops applying its hardcoded `us` and the system keymap gets
+	/// through. Saving a layout has to fill those in, not add a second copy of
+	/// the section further down the file.
+	#[test]
+	fn an_empty_key_is_filled_in_where_it_already_is() {
+		let file = "[input]\nxkb_layout =\nxkb_variant =\n\n[grid]\nduration = 300\n";
+
+		let updated = update_section(file, "input", &values(&[("xkb_layout", "es")]), false);
+		let input = parse_section(&updated, "input");
+
+		assert_eq!(input.get("xkb_layout").map(String::as_str), Some("es"));
+		assert_eq!(input.get("xkb_variant").map(String::as_str), Some(""));
+		assert_eq!(updated.matches("[input]").count(), 1, "{}", updated);
+	}
+
 	#[test]
 	fn prune_removes_keys_absent_from_the_payload() {
 		let updated = update_section(SAMPLE, "grid", &values(&[("duration", "150")]), true);
