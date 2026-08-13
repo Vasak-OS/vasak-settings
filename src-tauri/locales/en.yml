@@ -54,6 +54,7 @@ sidebar:
     networkWifi: Wi-Fi
     networkBluetooth: Bluetooth
     networkVpn: VPN
+    phoneDevices: Phones
 
 wayfire:
   plugins:
@@ -851,6 +852,21 @@ views:
       accountChat: Messages
       accountDrive: Cloud files
       accountTasks: Tasks
+  phoneDevices:
+    section: Network
+    title: Phones
+    description: The Android phones that have connected to this session.
+    trustNotice: "Forgetting a phone only removes it from this list: it does not revoke its access. For that, use \"Revoke USB debugging authorisations\" in the phone's developer options."
+    loading: Reading the list…
+    empty: No phone has connected yet. Plug one in over USB with debugging enabled.
+    firstSeen: "first seen on"
+    connected: Connected
+    disconnected: Disconnected
+    unauthorized: Not authorised
+    connecting: Connecting
+    rename: Rename
+    save: Save
+    forget: Forget
   onlineAccounts:
     title: Online Accounts
     description: Connect your mail, calendar and contacts services.

@@ -164,6 +164,11 @@ const sidebarCategories = computed<SidebarCategory[]>(() => [
 				label: t('sidebar.items.networkVpn'),
 				icon: 'preferences-system-network-vpn',
 			},
+			{
+				id: 'phone-devices',
+				label: t('sidebar.items.phoneDevices'),
+				icon: 'smartphone',
+			},
 		],
 	},
 ]);

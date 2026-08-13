@@ -54,6 +54,7 @@ sidebar:
     networkWifi: Wi-Fi
     networkBluetooth: Bluetooth
     networkVpn: VPN
+    phoneDevices: Teléfonos
 
 wayfire:
   plugins:
@@ -851,6 +852,21 @@ views:
       accountChat: Mensajes
       accountDrive: Archivos en la nube
       accountTasks: Tareas
+  phoneDevices:
+    section: Red
+    title: Teléfonos
+    description: Los teléfonos Android que ya se conectaron a esta sesión.
+    trustNotice: "Olvidar un teléfono sólo lo saca de esta lista: no revoca su acceso. Para eso, «Revocar autorizaciones de depuración USB» en las opciones de desarrollador del teléfono."
+    loading: Leyendo la lista…
+    empty: Todavía no se conectó ningún teléfono. Conectá uno por USB con la depuración activada.
+    firstSeen: "visto por primera vez el"
+    connected: Conectado
+    disconnected: Desconectado
+    unauthorized: Sin autorizar
+    connecting: Conectando
+    rename: Renombrar
+    save: Guardar
+    forget: Olvidar
   onlineAccounts:
     title: Cuentas en Línea
     description: Conecta tus servicios de correo, calendario y contactos.

@@ -124,6 +124,9 @@ pub fn run() {
             commands::permissions::list_permissions,
             commands::permissions::set_permission,
             commands::permissions::forget_permission,
+            commands::connect::connect_list_known_devices,
+            commands::connect::connect_set_alias,
+            commands::connect::connect_forget_device,
             commands::online_accounts::get_account_data,
             commands::online_accounts::get_access_token,
         ])

@@ -33,6 +33,11 @@ const routes = [
 		component: () => import('@/views/WallpaperView.vue'),
 	},
 	{
+		path: '/phone-devices',
+		name: 'phone-devices',
+		component: () => import('@/views/PhoneDevicesView.vue'),
+	},
+	{
 		path: '/network-wifi',
 		name: 'network-wifi',
 		component: () => import('@/views/NetworkWifiView.vue'),
