@@ -183,6 +183,14 @@ pub fn update_section(
 		insert_after = insert_after.max(entry.end);
 
 		match values.get(&entry.key) {
+			// Handing back the value that is already there is not an edit, and
+			// rewriting it is not free: the pages read a whole section and write
+			// the whole section back, so saving the Windows page used to collapse
+			// [core]'s twenty-six line plugin list — documented and one plugin per
+			// line — into a single line, every time, without changing a plugin.
+			Some(value) if value == &entry.value => {
+				handled.insert(entry.key.as_str());
+			}
 			Some(value) => {
 				handled.insert(entry.key.as_str());
 				rewritten.insert(entry.start, Some(render_entry(&entry.key, value)));
@@ -616,6 +624,27 @@ slot_c = <super> KEY_UP
 		let updated = remove_keys(SAMPLE, "grid", &["gap"]);
 		assert_eq!(updated, SAMPLE);
 		assert_eq!(remove_keys(SAMPLE, "wobbly", &["friction"]), SAMPLE);
+	}
+
+	/// The pages read a whole section and write the whole section back, so
+	/// almost every key in a save is being "written" with the value it already
+	/// has. Rewriting those is what flattened the plugin list.
+	#[test]
+	fn a_value_that_did_not_change_keeps_the_lines_it_was_on() {
+		let core = parse_section(SAMPLE, "core");
+		let updated = update_section(SAMPLE, "core", &core, false);
+
+		assert_eq!(updated, SAMPLE, "saving a section unchanged must be a no-op");
+		assert!(updated.contains("  animate \\"), "the plugin list keeps its shape");
+	}
+
+	#[test]
+	fn changing_one_key_leaves_the_others_alone() {
+		let mut core = parse_section(SAMPLE, "core");
+		core.insert("vwidth".to_string(), "4".to_string());
+		let updated = update_section(SAMPLE, "core", &core, false);
+
+		assert_eq!(updated, SAMPLE.replace("vwidth = 3", "vwidth = 4"));
 	}
 
 	#[test]
