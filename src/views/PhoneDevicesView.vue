@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
@@ -77,7 +78,17 @@ const stateLabel = (device: KnownDevice): string => {
 	return t('views.phoneDevices.connecting');
 };
 
-onMounted(load);
+let unlisten: UnlistenFn | undefined;
+
+onMounted(async () => {
+	await load();
+	// The daemon signals when a phone appears, changes state or goes away.
+	// Without this the screen kept showing whatever was true when it was opened,
+	// and plugging a phone in while it sat there did nothing at all.
+	unlisten = await listen('connect-devices-changed', load);
+});
+
+onBeforeUnmount(() => unlisten?.());
 </script>
 
 <template>

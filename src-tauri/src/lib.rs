@@ -130,6 +130,16 @@ pub fn run() {
             commands::online_accounts::get_account_data,
             commands::online_accounts::get_access_token,
         ])
+        .setup(|app| {
+            // The phone service publishes signals when a device appears or
+            // changes; without listening the Phones screen would only ever show
+            // what was true when it was opened.
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                commands::connect::watch_signals(handle).await;
+            });
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

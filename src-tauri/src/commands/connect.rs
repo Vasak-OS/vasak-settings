@@ -117,3 +117,53 @@ pub async fn connect_forget_device(serial: String) -> Result<bool, String> {
 
     reply.body().deserialize().map_err(|e| e.to_string())
 }
+
+/// Forwards the device service's signals to the window as Tauri events.
+///
+/// Without this the screen only reflected what was true when it was opened: a
+/// phone plugged in or unplugged while the window sat there changed nothing, and
+/// there was no way to find out short of closing and reopening Settings.
+///
+/// Polling was the alternative and it is the wrong one here. The daemon already
+/// learns the instant udev tells it, and a settings window left open all day
+/// would spend that day asking a question whose answer almost never changes.
+pub async fn watch_signals(app: tauri::AppHandle) {
+    use futures_util::StreamExt;
+    use tauri::Emitter;
+
+    let Ok(connection) = Connection::session().await else {
+        crate::logger::log_debug("vasak-connect: sin bus de sesión, no se escuchan señales");
+        return;
+    };
+
+    let rule = format!("type='signal',sender='{SERVICE}',path='{PATH}',interface='{SERVICE}'");
+
+    let Ok(proxy) = zbus::fdo::DBusProxy::new(&connection).await else {
+        return;
+    };
+    let Ok(parsed) = rule.as_str().try_into() else {
+        return;
+    };
+    if proxy.add_match_rule(parsed).await.is_err() {
+        crate::logger::log_debug("vasak-connect: no se pudo suscribir a las señales");
+        return;
+    }
+
+    tauri::async_runtime::spawn(async move {
+        let mut stream = zbus::MessageStream::from(connection);
+        while let Some(Ok(message)) = stream.next().await {
+            let header = message.header();
+            if header.interface().map(|i| i.as_str()) != Some(SERVICE) {
+                continue;
+            }
+            // The screen shows a list, not one device, so the payload does not
+            // matter: any of these means "read it again".
+            if matches!(
+                header.member().map(|m| m.as_str()),
+                Some("DeviceAdded") | Some("DeviceRemoved") | Some("DeviceChanged")
+            ) {
+                let _ = app.emit("connect-devices-changed", ());
+            }
+        }
+    });
+}
