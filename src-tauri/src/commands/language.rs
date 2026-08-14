@@ -9,6 +9,22 @@ pub struct KeyboardLayout {
 	pub description: String,
 }
 
+/// What the `[input]` section of wayfire.ini says about the keyboard.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct KeyboardSettings {
+	/// `xkb_layout`, verbatim: one code, or two separated by a comma.
+	pub layouts: String,
+	pub variant: String,
+	/// The `grp:` entry of `xkb_options`, if any: the shortcut that switches
+	/// between the layouts.
+	pub switch_option: String,
+}
+
+/// XKB options that switch between layouts all live under `grp:`. The rest of
+/// the catalogue (`caps:escape`, `compose:menu`…) has nothing to do with this
+/// page and must survive whatever it writes.
+const SWITCH_OPTION_PREFIX: &str = "grp:";
+
 #[tauri::command]
 pub async fn get_available_locales() -> Result<Vec<String>, String> {
 	let output = std::process::Command::new("localectl")
@@ -283,25 +299,328 @@ pub async fn get_available_keyboard_variants(
 	Ok(variants)
 }
 
-#[tauri::command]
-pub async fn set_keyboard_layouts(layouts: String, variant: String) -> Result<(), String> {
-	let mut values =
-		crate::commands::wayfire_ini::read_wayfire_section("input".to_string()).await?;
-	values.insert("xkb_layout".to_string(), layouts);
-	if !variant.is_empty() {
-		values.insert("xkb_variant".to_string(), variant);
-	} else {
-		values.remove("xkb_variant");
+/// Descriptions of the XKB options, from the same rules file the layouts and
+/// variants take theirs from. `grp:alt_shift_toggle` is a name; "Alt+Shift" is
+/// the thing the user is actually choosing.
+fn load_xkb_option_descriptions() -> HashMap<String, String> {
+	let mut descriptions = HashMap::new();
+
+	let paths = [
+		"/usr/share/X11/xkb/rules/base.lst",
+		"/usr/share/X11/xkb/rules/evdev.lst",
+	];
+
+	for path in &paths {
+		let Ok(content) = std::fs::read_to_string(path) else {
+			continue;
+		};
+
+		let mut in_option = false;
+		for line in content.lines() {
+			let trimmed = line.trim();
+
+			if trimmed.starts_with("! option") {
+				in_option = true;
+				continue;
+			}
+			if !in_option {
+				continue;
+			}
+			if trimmed.starts_with('!') || trimmed.is_empty() {
+				in_option = false;
+				continue;
+			}
+			if trimmed.starts_with('#') {
+				continue;
+			}
+
+			let Some((code, description)) = trimmed.split_once(char::is_whitespace) else {
+				continue;
+			};
+
+			let description = description.trim();
+			if !description.is_empty() {
+				descriptions.insert(code.trim().to_string(), description.to_string());
+			}
+		}
+
+		if !descriptions.is_empty() {
+			break;
+		}
 	}
 
-	crate::commands::wayfire_ini::write_wayfire_section("input".to_string(), values).await
+	descriptions
+}
+
+/// The shortcuts that switch between layouts, in the order they should be read:
+/// by what they say ("Alt+Shift"), not by the option name behind them.
+#[tauri::command]
+pub async fn get_available_keyboard_switch_options() -> Result<Vec<KeyboardLayout>, String> {
+	let output = std::process::Command::new("localectl")
+		.args(["list-x11-keymap-options"])
+		.output()
+		.map_err(|e| format!("Error ejecutando localectl: {}", e))?;
+
+	if !output.status.success() {
+		let stderr = String::from_utf8_lossy(&output.stderr);
+		return Err(format!("localectl falló: {}", stderr));
+	}
+
+	let raw = String::from_utf8_lossy(&output.stdout).to_string();
+	let descriptions = load_xkb_option_descriptions();
+
+	let mut options: Vec<KeyboardLayout> = raw
+		.lines()
+		.map(str::trim)
+		.filter(|code| code.starts_with(SWITCH_OPTION_PREFIX))
+		.map(|code| {
+			let description = descriptions
+				.get(code)
+				.cloned()
+				.unwrap_or_else(|| code.to_string());
+			KeyboardLayout {
+				code: code.to_string(),
+				description,
+			}
+		})
+		.collect();
+
+	options.sort_by(|a, b| {
+		a.description
+			.to_lowercase()
+			.cmp(&b.description.to_lowercase())
+	});
+
+	log_debug(&format!(
+		"{} atajos de cambio de distribución disponibles",
+		options.len()
+	));
+	Ok(options)
+}
+
+/// Writes `switch_option` into an `xkb_options` list, replacing the `grp:`
+/// entry that was there and keeping every unrelated option exactly as it was:
+/// the list is shared with settings this page never shows.
+fn merge_switch_option(existing: &str, switch_option: &str) -> String {
+	let mut options: Vec<&str> = existing
+		.split(',')
+		.map(str::trim)
+		.filter(|option| !option.is_empty() && !option.starts_with(SWITCH_OPTION_PREFIX))
+		.collect();
+
+	let switch_option = switch_option.trim();
+	if !switch_option.is_empty() {
+		options.push(switch_option);
+	}
+
+	options.join(",")
+}
+
+fn find_switch_option(options: &str) -> String {
+	options
+		.split(',')
+		.map(str::trim)
+		.find(|option| option.starts_with(SWITCH_OPTION_PREFIX))
+		.unwrap_or_default()
+		.to_string()
+}
+
+/// Puts the three keys this page owns into `[input]`, leaving the rest of
+/// wayfire.ini exactly as it was.
+fn apply_keyboard_settings(
+	content: &str,
+	layouts: &str,
+	variant: &str,
+	switch_option: &str,
+) -> String {
+	let existing = crate::commands::wayfire_ini::parse_section(content, "input");
+
+	// Only the managed keys go into the write; everything else in [input]
+	// (mouse settings, repeat rate…) stays on the line it is already on.
+	let mut values = HashMap::new();
+	let mut removals: Vec<&str> = Vec::new();
+
+	values.insert("xkb_layout".to_string(), layouts.to_string());
+
+	if variant.is_empty() {
+		removals.push("xkb_variant");
+	} else {
+		values.insert("xkb_variant".to_string(), variant.to_string());
+	}
+
+	// A switching shortcut with a single layout switches to nothing, and the
+	// control that sets it is only shown next to a second layout — so keeping
+	// it would leave the file holding something the UI can no longer clear.
+	let has_secondary = layouts
+		.split(',')
+		.filter(|layout| !layout.trim().is_empty())
+		.count()
+		> 1;
+	let switch_option = if has_secondary { switch_option } else { "" };
+
+	let options = merge_switch_option(
+		existing
+			.get("xkb_options")
+			.map(String::as_str)
+			.unwrap_or_default(),
+		switch_option,
+	);
+	if options.is_empty() {
+		removals.push("xkb_options");
+	} else {
+		values.insert("xkb_options".to_string(), options);
+	}
+
+	let content = crate::commands::wayfire_ini::update_section(content, "input", &values, false);
+	crate::commands::wayfire_ini::remove_keys(&content, "input", &removals)
 }
 
 #[tauri::command]
-pub async fn get_keyboard_layouts_from_wayfire() -> Result<(String, String), String> {
+pub async fn set_keyboard_layouts(
+	layouts: String,
+	variant: String,
+	switch_option: String,
+) -> Result<(), String> {
+	let content = crate::commands::wayfire_ini::read_file()?;
+	let updated = apply_keyboard_settings(&content, &layouts, &variant, &switch_option);
+	crate::commands::wayfire_ini::write_file(&updated)
+}
+
+#[tauri::command]
+pub async fn get_keyboard_layouts_from_wayfire() -> Result<KeyboardSettings, String> {
 	let section =
 		crate::commands::wayfire_ini::read_wayfire_section("input".to_string()).await?;
-	let layouts = section.get("xkb_layout").cloned().unwrap_or_default();
-	let variant = section.get("xkb_variant").cloned().unwrap_or_default();
-	Ok((layouts, variant))
+
+	Ok(KeyboardSettings {
+		layouts: section.get("xkb_layout").cloned().unwrap_or_default(),
+		variant: section.get("xkb_variant").cloned().unwrap_or_default(),
+		switch_option: find_switch_option(
+			section
+				.get("xkb_options")
+				.map(String::as_str)
+				.unwrap_or_default(),
+		),
+	})
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn merging_keeps_options_this_page_knows_nothing_about() {
+		assert_eq!(
+			merge_switch_option("caps:escape,grp:alt_shift_toggle", "grp:win_space_toggle"),
+			"caps:escape,grp:win_space_toggle"
+		);
+		assert_eq!(
+			merge_switch_option("compose:menu, caps:escape", "grp:caps_toggle"),
+			"compose:menu,caps:escape,grp:caps_toggle"
+		);
+	}
+
+	#[test]
+	fn clearing_the_shortcut_leaves_the_other_options_alone() {
+		assert_eq!(
+			merge_switch_option("grp:alt_shift_toggle,caps:escape", ""),
+			"caps:escape"
+		);
+		assert_eq!(merge_switch_option("grp:alt_shift_toggle", ""), "");
+		assert_eq!(merge_switch_option("", ""), "");
+	}
+
+	#[test]
+	fn the_shortcut_is_read_back_out_of_the_list() {
+		assert_eq!(
+			find_switch_option("caps:escape,grp:ctrl_shift_toggle"),
+			"grp:ctrl_shift_toggle"
+		);
+		assert_eq!(find_switch_option("caps:escape"), "");
+		assert_eq!(find_switch_option(""), "");
+	}
+
+	const INPUT_SECTION: &str = r#"[input]
+# Keyboard
+xkb_layout = es,us
+xkb_options = caps:escape
+mouse_accel_profile = flat
+
+[core]
+vwidth = 3
+"#;
+
+	fn input(content: &str) -> HashMap<String, String> {
+		crate::commands::wayfire_ini::parse_section(content, "input")
+	}
+
+	#[test]
+	fn the_shortcut_lands_next_to_the_options_already_there() {
+		let updated =
+			apply_keyboard_settings(INPUT_SECTION, "es,us", "", "grp:alt_shift_toggle");
+		let section = input(&updated);
+
+		assert_eq!(section.get("xkb_layout").map(String::as_str), Some("es,us"));
+		assert_eq!(
+			section.get("xkb_options").map(String::as_str),
+			Some("caps:escape,grp:alt_shift_toggle")
+		);
+		assert_eq!(
+			section.get("mouse_accel_profile").map(String::as_str),
+			Some("flat"),
+			"keys this page does not manage stay"
+		);
+		assert!(updated.contains("# Keyboard"), "comments survive");
+		assert_eq!(
+			crate::commands::wayfire_ini::parse_section(&updated, "core")
+				.get("vwidth")
+				.map(String::as_str),
+			Some("3")
+		);
+	}
+
+	#[test]
+	fn dropping_the_second_layout_drops_the_shortcut_with_it() {
+		let with_shortcut =
+			apply_keyboard_settings(INPUT_SECTION, "es,us", "", "grp:alt_shift_toggle");
+		let updated = apply_keyboard_settings(&with_shortcut, "es", "", "grp:alt_shift_toggle");
+		let section = input(&updated);
+
+		assert_eq!(section.get("xkb_layout").map(String::as_str), Some("es"));
+		assert_eq!(
+			section.get("xkb_options").map(String::as_str),
+			Some("caps:escape"),
+			"the unrelated option must not go down with it"
+		);
+	}
+
+	/// Removing a key means removing the line: leaving it out of the payload
+	/// only leaves the old value in place.
+	#[test]
+	fn clearing_everything_optional_leaves_no_stale_line() {
+		let full = apply_keyboard_settings(
+			"[input]\nxkb_variant = nodeadkeys\nxkb_options = grp:caps_toggle\n",
+			"es,us",
+			"nodeadkeys",
+			"grp:caps_toggle",
+		);
+		assert_eq!(
+			input(&full).get("xkb_variant").map(String::as_str),
+			Some("nodeadkeys")
+		);
+
+		let cleared = apply_keyboard_settings(&full, "es", "", "");
+		let section = input(&cleared);
+
+		assert!(!section.contains_key("xkb_variant"), "{:?}", section);
+		assert!(!section.contains_key("xkb_options"), "{:?}", section);
+		assert_eq!(section.get("xkb_layout").map(String::as_str), Some("es"));
+	}
+
+	#[test]
+	fn saving_the_same_settings_twice_is_stable() {
+		let once = apply_keyboard_settings(INPUT_SECTION, "es,us", "", "grp:win_space_toggle");
+		let twice = apply_keyboard_settings(&once, "es,us", "", "grp:win_space_toggle");
+
+		assert_eq!(once, twice, "the option list must not keep growing");
+	}
 }

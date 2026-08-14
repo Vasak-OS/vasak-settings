@@ -8,6 +8,7 @@ import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
 import {
 	getAvailableKeyboardLayouts,
+	getAvailableKeyboardSwitchOptions,
 	getAvailableKeyboardVariants,
 	getAvailableLocales,
 	getCurrentLocale,
@@ -16,6 +17,9 @@ import {
 	setKeyboardLayouts,
 	setSystemLocale,
 } from '@/services/language.service';
+
+/** What a second layout gets by default: the shortcut everyone knows. */
+const DEFAULT_SWITCH_OPTION = 'grp:alt_shift_toggle';
 
 const { t } = useI18n();
 
@@ -29,9 +33,11 @@ const currentLocaleMap = ref<Record<string, string>>({});
 
 const availableLayouts = ref<KeyboardLayout[]>([]);
 const availableVariants = ref<KeyboardLayout[]>([]);
+const availableSwitchOptions = ref<KeyboardLayout[]>([]);
 const layout1 = ref('');
 const layout2 = ref('');
 const layoutVariant = ref('');
+const switchOption = ref('');
 
 const currentLocale = computed(() => currentLocaleMap.value.LANG || '');
 
@@ -62,27 +68,43 @@ const variantOptions = computed(() => [
 	...availableVariants.value.map((l) => ({ label: l.description, value: l.code })),
 ]);
 
+const switchOptionChoices = computed(() => {
+	const known = availableSwitchOptions.value.map((o) => ({ label: o.description, value: o.code }));
+
+	// A shortcut already in wayfire.ini that this system's option list doesn't
+	// mention would otherwise show as an empty select, and saving would quietly
+	// throw it away.
+	if (switchOption.value && !known.some((o) => o.value === switchOption.value)) {
+		known.unshift({ label: switchOption.value, value: switchOption.value });
+	}
+
+	return [{ label: t('views.languageKeyboard.noSwitchShortcut'), value: '' }, ...known];
+});
+
 async function loadData() {
 	loading.value = true;
 	error.value = '';
 	try {
-		const [locales, localeMap, layouts, wayfire] = await Promise.all([
+		const [locales, localeMap, layouts, switchOptions, wayfire] = await Promise.all([
 			getAvailableLocales(),
 			getCurrentLocale(),
 			getAvailableKeyboardLayouts(),
+			getAvailableKeyboardSwitchOptions(),
 			getKeyboardLayoutsFromWayfire(),
 		]);
 		availableLocales.value = locales;
 		currentLocaleMap.value = localeMap;
 		availableLayouts.value = layouts;
+		availableSwitchOptions.value = switchOptions;
 
-		const parts = wayfire[0]
+		const parts = wayfire.layouts
 			.split(',')
 			.map((s) => s.trim())
 			.filter(Boolean);
 		layout1.value = parts[0] || '';
 		layout2.value = parts[1] || '';
-		layoutVariant.value = wayfire[1] || '';
+		layoutVariant.value = wayfire.variant;
+		switchOption.value = wayfire.switch_option;
 
 		await loadVariants();
 	} catch (e) {
@@ -114,6 +136,20 @@ async function selectLayout1(value: string) {
 	}
 }
 
+/**
+ * A second layout is useless without a way to reach it, so adding one comes
+ * with the usual shortcut already chosen; removing it drops the shortcut, which
+ * would otherwise stay in wayfire.ini with nothing to switch to.
+ */
+function selectLayout2(value: string) {
+	layout2.value = value;
+	if (!value) {
+		switchOption.value = '';
+	} else if (!switchOption.value) {
+		switchOption.value = DEFAULT_SWITCH_OPTION;
+	}
+}
+
 async function saveLocale() {
 	if (!currentLocale.value) return;
 	saving.value = true;
@@ -135,7 +171,7 @@ async function saveLayouts() {
 	error.value = '';
 	success.value = '';
 	try {
-		await setKeyboardLayouts(layouts, layoutVariant.value);
+		await setKeyboardLayouts(layouts, layoutVariant.value, switchOption.value);
 		success.value = t('views.languageKeyboard.layoutSaved');
 	} catch (e) {
 		error.value = t('views.languageKeyboard.layoutError').replace('{0}', String(e));
@@ -205,7 +241,7 @@ onMounted(loadData);
 						<SelectInput
 							:modelValue="layout2"
 							:options="layout2Options"
-							@update:modelValue="(v: string) => layout2 = v"
+							@update:modelValue="selectLayout2"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.languageKeyboard.variant')">
@@ -213,6 +249,13 @@ onMounted(loadData);
 							:modelValue="layoutVariant"
 							:options="variantOptions"
 							@update:modelValue="(v: string) => layoutVariant = v"
+						/>
+					</FormGroup>
+					<FormGroup v-if="layout2" :label="t('views.languageKeyboard.switchShortcut')">
+						<SelectInput
+							:modelValue="switchOption"
+							:options="switchOptionChoices"
+							@update:modelValue="(v: string) => switchOption = v"
 						/>
 					</FormGroup>
 				</div>

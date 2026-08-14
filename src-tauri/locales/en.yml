@@ -708,8 +708,10 @@ views:
     primaryLayout: Main layout
     secondaryLayout: Second layout (optional)
     variant: Variant (optional)
+    switchShortcut: Shortcut to switch layout
     none: None
     noVariant: No variant
+    noSwitchShortcut: No shortcut
     saveLayout: Save layout
     localeSaved: System language updated.
     layoutSaved: Keyboard layout updated.

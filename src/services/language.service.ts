@@ -5,6 +5,14 @@ export interface KeyboardLayout {
 	description: string;
 }
 
+export interface KeyboardSettings {
+	/** `xkb_layout`, verbatim: one code, or two separated by a comma. */
+	layouts: string;
+	variant: string;
+	/** The `grp:` entry of `xkb_options`, empty when there is none. */
+	switch_option: string;
+}
+
 export async function getAvailableLocales(): Promise<string[]> {
 	return invoke<string[]>('get_available_locales');
 }
@@ -26,10 +34,19 @@ export async function getAvailableKeyboardVariants(layout: string): Promise<Keyb
 	return invoke<KeyboardLayout[]>('get_available_keyboard_variants', { layout });
 }
 
-export async function setKeyboardLayouts(layouts: string, variant: string): Promise<void> {
-	return invoke('set_keyboard_layouts', { layouts, variant });
+/** The `grp:` XKB options: the shortcuts that switch between two layouts. */
+export async function getAvailableKeyboardSwitchOptions(): Promise<KeyboardLayout[]> {
+	return invoke<KeyboardLayout[]>('get_available_keyboard_switch_options');
 }
 
-export async function getKeyboardLayoutsFromWayfire(): Promise<[string, string]> {
-	return invoke<[string, string]>('get_keyboard_layouts_from_wayfire');
+export async function setKeyboardLayouts(
+	layouts: string,
+	variant: string,
+	switchOption: string
+): Promise<void> {
+	return invoke('set_keyboard_layouts', { layouts, variant, switchOption });
+}
+
+export async function getKeyboardLayoutsFromWayfire(): Promise<KeyboardSettings> {
+	return invoke<KeyboardSettings>('get_keyboard_layouts_from_wayfire');
 }

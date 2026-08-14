@@ -114,6 +114,7 @@ pub fn run() {
             commands::language::set_system_locale,
             commands::language::get_available_keyboard_layouts,
             commands::language::get_available_keyboard_variants,
+            commands::language::get_available_keyboard_switch_options,
             commands::language::set_keyboard_layouts,
             commands::language::get_keyboard_layouts_from_wayfire,
             commands::online_accounts::register_new_account,

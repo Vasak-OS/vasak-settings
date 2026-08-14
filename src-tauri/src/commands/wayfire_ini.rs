@@ -311,6 +311,49 @@ fn render_entry(key: &str, value: &str) -> String {
 	format!("{} = {}", key, value)
 }
 
+/// Deletes `keys` from the section, leaving every other line untouched.
+///
+/// Leaving a key out of the map given to [`update_section`] does *not* delete
+/// it: with `prune` off the entry stays exactly as it was, which is the right
+/// answer for keys the UI knows nothing about and the wrong one for a key the
+/// UI manages and wants gone (an unset keyboard variant, a switching shortcut
+/// that no longer has a second layout to switch to).
+pub fn remove_keys(content: &str, section: &str, keys: &[&str]) -> String {
+	if keys.is_empty() {
+		return content.to_string();
+	}
+
+	let lines: Vec<&str> = content.lines().collect();
+
+	let Some(span) = find_section(&lines, section) else {
+		return content.to_string();
+	};
+
+	let mut dropped: HashSet<usize> = HashSet::new();
+	for entry in &span.entries {
+		if keys.contains(&entry.key.as_str()) {
+			for line in entry.start..=entry.end {
+				dropped.insert(line);
+			}
+		}
+	}
+
+	if dropped.is_empty() {
+		return content.to_string();
+	}
+
+	let mut output = String::new();
+	for (index, line) in lines.iter().enumerate() {
+		if dropped.contains(&index) {
+			continue;
+		}
+		output.push_str(line);
+		output.push('\n');
+	}
+
+	output
+}
+
 /// Replaces `key` with pre-rendered text that may span several physical lines,
 /// so callers can keep wayfire's readable backslash-continued style for long
 /// values instead of collapsing them onto one line.
@@ -609,6 +652,31 @@ slot_c = <super> KEY_UP
 				.map(String::as_str),
 			Some("animate autostart blur ipc")
 		);
+	}
+
+	#[test]
+	fn remove_keys_drops_only_what_it_is_asked_for() {
+		let updated = remove_keys(SAMPLE, "grid", &["type", "slot_c"]);
+		let grid = parse_section(&updated, "grid");
+
+		assert_eq!(grid.get("duration").map(String::as_str), Some("150"));
+		assert!(!grid.contains_key("type"), "the key is gone: {:?}", grid);
+		assert!(!grid.contains_key("slot_c"));
+		assert!(updated.contains("# Core options"), "comments survive");
+		assert_eq!(
+			parse_section(&updated, "core")
+				.get("plugins")
+				.map(String::as_str),
+			Some("animate autostart blur ipc"),
+			"other sections are untouched"
+		);
+	}
+
+	#[test]
+	fn removing_an_absent_key_changes_nothing() {
+		let updated = remove_keys(SAMPLE, "grid", &["gap"]);
+		assert_eq!(updated, SAMPLE);
+		assert_eq!(remove_keys(SAMPLE, "wobbly", &["friction"]), SAMPLE);
 	}
 
 	#[test]

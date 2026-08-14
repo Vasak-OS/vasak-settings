@@ -708,8 +708,10 @@ views:
     primaryLayout: Layout principal
     secondaryLayout: Segundo layout (opcional)
     variant: Variante (opcional)
+    switchShortcut: Atajo para cambiar de layout
     none: Ninguna
     noVariant: Sin variante
+    noSwitchShortcut: Sin atajo
     saveLayout: Guardar distribución
     localeSaved: Idioma del sistema actualizado.
     layoutSaved: Distribución del teclado actualizada.
