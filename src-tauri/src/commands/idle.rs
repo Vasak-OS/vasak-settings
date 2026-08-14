@@ -3,7 +3,8 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
-use crate::commands::wayfire_ini::{parse_section, read_file, update_section, write_file};
+use crate::commands::wayfire_config::WayfireConfig;
+use crate::commands::wayfire_ini::{parse_section, update_section};
 use crate::logger::{log_debug, log_error};
 
 const UNIT: &str = "vasak-idle.service";
@@ -230,7 +231,7 @@ fn exec_start_of(unit: &str) -> Option<String> {
 
 /// The swayidle command wayfire used to launch, if it is still there.
 fn legacy_command() -> Option<String> {
-    let content = read_file().ok()?;
+    let content = WayfireConfig::global().content().ok()?;
     let value = parse_section(&content, AUTOSTART_SECTION)
         .get(LEGACY_KEY)
         .cloned()?;
@@ -240,18 +241,18 @@ fn legacy_command() -> Option<String> {
 
 /// Drops the legacy entry so the session doesn't end up running two swayidles.
 fn drop_legacy_entry() -> Result<(), String> {
-    let content = read_file()?;
-    let mut values = parse_section(&content, AUTOSTART_SECTION);
+    let removed = WayfireConfig::global().edit(|content| {
+        let mut values = parse_section(content, AUTOSTART_SECTION);
+        if values.remove(LEGACY_KEY).is_none() {
+            return content.to_string();
+        }
+        // Prune, so removing the key actually takes effect.
+        update_section(content, AUTOSTART_SECTION, &values, true)
+    })?;
 
-    if values.remove(LEGACY_KEY).is_none() {
-        return Ok(());
+    if removed {
+        log_debug("Entrada swayidle heredada eliminada de wayfire.ini");
     }
-
-    // Prune, so removing the key actually takes effect.
-    let updated = update_section(&content, AUTOSTART_SECTION, &values, true);
-    write_file(&updated)?;
-
-    log_debug("Entrada swayidle heredada eliminada de wayfire.ini");
     Ok(())
 }
 

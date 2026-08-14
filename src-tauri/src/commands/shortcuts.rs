@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
 
-use crate::logger::{log_debug, log_error, log_info};
+use crate::commands::wayfire_config::WayfireConfig;
+use crate::logger::log_debug;
 
 const CUSTOM_PREFIX: &str = "custom_";
 
@@ -16,25 +15,11 @@ pub struct ShortcutRule {
 
 #[tauri::command]
 pub async fn get_shortcuts() -> Result<Vec<ShortcutRule>, String> {
-	let path = get_wayfire_path()?;
-
-	if !path.exists() {
-		log_info("wayfire.ini no encontrado, devolviendo lista vacía");
-		return Ok(Vec::new());
-	}
-
-	let content = fs::read_to_string(&path).map_err(|error| {
-		log_error(&format!("Error leyendo wayfire.ini: {}", error));
-		format!("Error leyendo wayfire.ini: {}", error)
-	})?;
-
-	Ok(parse_shortcuts(&content))
+	Ok(parse_shortcuts(&WayfireConfig::global().content()?))
 }
 
 #[tauri::command]
 pub async fn save_shortcuts(shortcuts: Vec<ShortcutRule>) -> Result<Vec<ShortcutRule>, String> {
-	let path = get_wayfire_path()?;
-
 	let normalized: Vec<ShortcutRule> = shortcuts
 		.into_iter()
 		.map(|s| ShortcutRule {
@@ -44,43 +29,16 @@ pub async fn save_shortcuts(shortcuts: Vec<ShortcutRule>) -> Result<Vec<Shortcut
 		})
 		.collect();
 
-	let new_content = if path.exists() {
-		let content = fs::read_to_string(&path).map_err(|error| {
-			log_error(&format!("Error leyendo wayfire.ini: {}", error));
-			format!("Error leyendo wayfire.ini: {}", error)
-		})?;
-		update_command_section(&content, &normalized)
-	} else {
-		build_new_ini(&normalized)
-	};
-
-	if let Some(parent) = path.parent() {
-		fs::create_dir_all(parent).map_err(|error| {
-			log_error(&format!("Error creando directorio: {}", error));
-			format!("Error creando directorio: {}", error)
-		})?;
-	}
-
-	fs::write(&path, &new_content).map_err(|error| {
-		log_error(&format!("Error escribiendo wayfire.ini: {}", error));
-		format!("Error escribiendo wayfire.ini: {}", error)
+	WayfireConfig::global().edit(|content| {
+		if content.trim().is_empty() {
+			build_new_ini(&normalized)
+		} else {
+			update_command_section(content, &normalized)
+		}
 	})?;
 
-	log_debug(&format!("Shortcuts guardados en wayfire.ini ({})", path.display()));
+	log_debug("Shortcuts guardados en wayfire.ini");
 	Ok(normalized)
-}
-
-fn get_wayfire_path() -> Result<PathBuf, String> {
-	let home = std::env::var("HOME")
-		.map(PathBuf::from)
-		.ok()
-		.or_else(dirs::home_dir)
-		.ok_or_else(|| {
-			let msg = "No se pudo obtener el directorio home".to_string();
-			log_error(&msg);
-			msg
-		})?;
-	Ok(home.join(".config/wayfire.ini"))
 }
 
 fn parse_shortcuts(content: &str) -> Vec<ShortcutRule> {

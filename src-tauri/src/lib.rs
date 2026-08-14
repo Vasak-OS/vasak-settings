@@ -44,6 +44,12 @@ fn default_locale() -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|app| {
+            // So a wayfire.ini edited by hand, or by another tool, reaches the
+            // pages instead of being overwritten by what they still show.
+            commands::wayfire_config::watch(app.handle().clone());
+            Ok(())
+        })
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_config_manager::init())
         .plugin(tauri_plugin_system_fonts::init())

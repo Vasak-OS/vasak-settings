@@ -1,6 +1,8 @@
+import type { UnlistenFn } from '@tauri-apps/api/event';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { onUnmounted, type Ref, ref } from 'vue';
 import {
+	onWayfireConfigChanged,
 	readWayfireSection,
 	replaceWayfireSection,
 	writeWayfireSection,
@@ -19,12 +21,35 @@ export function useWayfireSection(section: string, exclusive = false) {
 	const error = ref('');
 	const success = ref('');
 	let successTimer: ReturnType<typeof setTimeout> | null = null;
+	/** What the file said the last time we read it or wrote it. */
+	let onDisk = '{}';
+
+	/**
+	 * wayfire.ini can change while a page is open — edited by hand, or written
+	 * by another part of this application. Following it here means every page
+	 * built on this composable picks the change up instead of sitting on a stale
+	 * copy and writing it back on the next save.
+	 *
+	 * Unless the user is in the middle of something: their unsaved edits are
+	 * worth more than being up to date, so a section with pending changes is
+	 * left alone.
+	 */
+	let unlisten: UnlistenFn | null = null;
+	onWayfireConfigChanged(() => {
+		if (JSON.stringify(values.value) === onDisk) {
+			void load();
+		}
+	}).then((stop) => {
+		unlisten = stop;
+	});
 
 	onUnmounted(() => {
 		if (successTimer !== null) {
 			clearTimeout(successTimer);
 			successTimer = null;
 		}
+		unlisten?.();
+		unlisten = null;
 	});
 
 	async function load() {
@@ -32,6 +57,7 @@ export function useWayfireSection(section: string, exclusive = false) {
 		error.value = '';
 		try {
 			values.value = await readWayfireSection(section);
+			onDisk = JSON.stringify(values.value);
 		} catch (e) {
 			error.value = `${t('common.loadSectionError').replace('{0}', section)}: ${e}`;
 		} finally {
@@ -45,6 +71,7 @@ export function useWayfireSection(section: string, exclusive = false) {
 		try {
 			const write = exclusive ? replaceWayfireSection : writeWayfireSection;
 			await write(section, values.value);
+			onDisk = JSON.stringify(values.value);
 			success.value = t('common.saved');
 			if (successTimer !== null) {
 				clearTimeout(successTimer);
@@ -60,12 +87,18 @@ export function useWayfireSection(section: string, exclusive = false) {
 		}
 	}
 
+	/**
+	 * Fills in the keys the section does not carry yet. That is part of loading,
+	 * not an edit by the user, so it goes into the snapshot too — otherwise
+	 * every page would look permanently unsaved and never follow the file.
+	 */
 	function initDefaults(defaults: Record<string, string>) {
 		for (const [key, val] of Object.entries(defaults)) {
 			if (!(key in values.value)) {
 				values.value[key] = val;
 			}
 		}
+		onDisk = JSON.stringify(values.value);
 	}
 
 	function getVal(key: string, defaultVal = ''): string {

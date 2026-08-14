@@ -1,6 +1,7 @@
 use serde::Serialize;
 
-use crate::commands::wayfire_ini::{parse_section, read_file, set_key_raw, write_file};
+use crate::commands::wayfire_config::WayfireConfig;
+use crate::commands::wayfire_ini::{parse_section, set_key_raw};
 use crate::logger::log_debug;
 
 const CORE_SECTION: &str = "core";
@@ -119,7 +120,7 @@ pub fn write_plugin_list(content: &str, plugins: &[String]) -> String {
 /// so a hand-edited config is shown rather than quietly discarded.
 #[tauri::command]
 pub async fn get_wayfire_plugins() -> Result<Vec<WayfirePlugin>, String> {
-	let content = read_file()?;
+	let content = WayfireConfig::global().content()?;
 	let enabled = enabled_plugins(&content);
 
 	let mut plugins: Vec<WayfirePlugin> = PLUGINS
@@ -162,22 +163,29 @@ pub async fn set_wayfire_plugin_enabled(
 		));
 	}
 
-	let content = read_file()?;
-	let mut current = enabled_plugins(&content);
-	let already = current.iter().any(|item| item == &plugin);
+	let config = WayfireConfig::global();
 
-	if enabled == already {
-		return Ok(current);
+	if enabled == enabled_plugins(&config.content()?).iter().any(|item| item == &plugin) {
+		return Ok(enabled_plugins(&config.content()?));
 	}
 
-	if enabled {
-		current.push(plugin.clone());
-	} else {
-		current.retain(|item| item != &plugin);
-	}
+	// The list is rebuilt inside the edit, from what is on disk at that
+	// instant, rather than from a copy read beforehand: toggling two plugins
+	// quickly used to mean the second one wrote a list that predated the first.
+	let mut current = Vec::new();
+	config.edit(|content| {
+		let mut list = enabled_plugins(content);
+		let already = list.iter().any(|item| item == &plugin);
 
-	let updated = write_plugin_list(&content, &current);
-	write_file(&updated)?;
+		if enabled && !already {
+			list.push(plugin.clone());
+		} else if !enabled && already {
+			list.retain(|item| item != &plugin);
+		}
+
+		current = list.clone();
+		write_plugin_list(content, &list)
+	})?;
 
 	log_debug(&format!(
 		"Plugin wayfire «{}» {}",

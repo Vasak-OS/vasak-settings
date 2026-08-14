@@ -481,15 +481,14 @@ pub async fn set_keyboard_layouts(
 	variant: String,
 	switch_option: String,
 ) -> Result<(), String> {
-	let content = crate::commands::wayfire_ini::read_file()?;
-	let updated = apply_keyboard_settings(&content, &layouts, &variant, &switch_option);
-	crate::commands::wayfire_ini::write_file(&updated)
+	crate::commands::wayfire_config::WayfireConfig::global()
+		.edit(|content| apply_keyboard_settings(content, &layouts, &variant, &switch_option))
+		.map(|_| ())
 }
 
 #[tauri::command]
 pub async fn get_keyboard_layouts_from_wayfire() -> Result<KeyboardSettings, String> {
-	let section =
-		crate::commands::wayfire_ini::read_wayfire_section("input".to_string()).await?;
+	let section = crate::commands::wayfire_config::WayfireConfig::global().section("input")?;
 
 	Ok(KeyboardSettings {
 		layouts: section.get("xkb_layout").cloned().unwrap_or_default(),

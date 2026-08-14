@@ -1,79 +1,13 @@
-use serde::{Deserialize, Serialize};
+//! The wayfire.ini *format*: parsing a section out of the text and putting one
+//! back into it, without touching a byte the caller did not ask about.
+//!
+//! Reading and writing the file is not here — that belongs to
+//! [`crate::commands::wayfire_config::WayfireConfig`], which owns it.
+
 use std::collections::{HashMap, HashSet};
-use std::fs;
-use std::path::PathBuf;
 
-use crate::logger::{log_debug, log_error};
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SectionData {
-	pub values: HashMap<String, String>,
-}
-
-pub fn get_wayfire_path() -> Result<PathBuf, String> {
-	let home = std::env::var("HOME")
-		.map(PathBuf::from)
-		.ok()
-		.or_else(dirs::home_dir)
-		.ok_or_else(|| {
-			let msg = "No se pudo obtener el directorio home".to_string();
-			log_error(&msg);
-			msg
-		})?;
-	Ok(home.join(".config/wayfire.ini"))
-}
-
-/// Reads wayfire.ini, tolerating bytes that are not valid UTF-8.
-///
-/// `read_to_string` refuses the whole file over a single bad byte, and that is
-/// not a theoretical risk: a file whose head had been overwritten by something
-/// else left a comment cut in the middle of a multi-byte character, and with it
-/// every page in this application that touches wayfire.ini stopped loading *and*
-/// saving — the keyboard layout among them. Wayfire itself reads the file byte
-/// by byte and does not care, so refusing to is a way of being stricter than the
-/// compositor for no gain. The broken bytes become replacement characters,
-/// which only ever appear inside comments in practice.
-pub fn read_file() -> Result<String, String> {
-	let path = get_wayfire_path()?;
-	if !path.exists() {
-		return Ok(String::new());
-	}
-
-	let bytes = fs::read(&path).map_err(|e| {
-		let msg = format!("Error leyendo wayfire.ini: {}", e);
-		log_error(&msg);
-		msg
-	})?;
-
-	match String::from_utf8(bytes) {
-		Ok(content) => Ok(content),
-		Err(error) => {
-			log_error(&format!(
-				"wayfire.ini tiene bytes inválidos en la posición {}; se leyó igual reemplazándolos",
-				error.utf8_error().valid_up_to()
-			));
-			Ok(String::from_utf8_lossy(error.as_bytes()).into_owned())
-		}
-	}
-}
-
-pub fn write_file(content: &str) -> Result<(), String> {
-	let path = get_wayfire_path()?;
-	if let Some(parent) = path.parent() {
-		fs::create_dir_all(parent).map_err(|e| {
-			let msg = format!("Error creando directorio: {}", e);
-			log_error(&msg);
-			msg
-		})?;
-	}
-	fs::write(&path, content).map_err(|e| {
-		let msg = format!("Error escribiendo wayfire.ini: {}", e);
-		log_error(&msg);
-		msg
-	})?;
-	log_debug(&format!("wayfire.ini actualizado ({})", path.display()));
-	Ok(())
-}
+use crate::commands::wayfire_config::WayfireConfig;
+use crate::logger::log_debug;
 
 fn is_header(trimmed: &str) -> bool {
 	trimmed.starts_with('[') && trimmed.ends_with(']')
@@ -434,11 +368,28 @@ fn append_section(content: &str, section: &str, values: &HashMap<String, String>
 	output
 }
 
+/// The section names in the file, in the order they appear.
+pub fn section_names(content: &str) -> Vec<String> {
+	let mut seen = HashSet::new();
+	let mut sections = Vec::new();
+
+	for line in content.lines() {
+		let trimmed = line.trim();
+		if is_header(trimmed) {
+			let name = header_name(trimmed).to_string();
+			if !name.is_empty() && seen.insert(name.clone()) {
+				sections.push(name);
+			}
+		}
+	}
+
+	sections
+}
+
 #[tauri::command]
 pub async fn read_wayfire_section(section: String) -> Result<HashMap<String, String>, String> {
 	log_debug(&format!("Leyendo sección [{}] de wayfire.ini", section));
-	let content = read_file()?;
-	Ok(parse_section(&content, &section))
+	WayfireConfig::global().section(&section)
 }
 
 /// Merges `values` into the section, preserving keys the UI doesn't manage.
@@ -448,9 +399,9 @@ pub async fn write_wayfire_section(
 	values: HashMap<String, String>,
 ) -> Result<(), String> {
 	log_debug(&format!("Escribiendo sección [{}] en wayfire.ini", section));
-	let content = read_file()?;
-	let new_content = update_section(&content, &section, &values, false);
-	write_file(&new_content)
+	WayfireConfig::global()
+		.edit(|content| update_section(content, &section, &values, false))
+		.map(|_| ())
 }
 
 /// Replaces the section outright: any key not in `values` is removed. Only for
@@ -461,26 +412,14 @@ pub async fn replace_wayfire_section(
 	values: HashMap<String, String>,
 ) -> Result<(), String> {
 	log_debug(&format!("Reemplazando sección [{}] en wayfire.ini", section));
-	let content = read_file()?;
-	let new_content = update_section(&content, &section, &values, true);
-	write_file(&new_content)
+	WayfireConfig::global()
+		.edit(|content| update_section(content, &section, &values, true))
+		.map(|_| ())
 }
 
 #[tauri::command]
 pub async fn get_all_wayfire_sections() -> Result<Vec<String>, String> {
-	let content = read_file()?;
-	let mut seen = HashSet::new();
-	let mut sections = Vec::new();
-	for line in content.lines() {
-		let trimmed = line.trim();
-		if is_header(trimmed) {
-			let name = header_name(trimmed).to_string();
-			if !name.is_empty() && seen.insert(name.clone()) {
-				sections.push(name);
-			}
-		}
-	}
-	Ok(sections)
+	Ok(section_names(&WayfireConfig::global().content()?))
 }
 
 #[cfg(test)]

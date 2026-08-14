@@ -6,6 +6,7 @@ pub mod datetime;
 pub mod display_power;
 pub mod idle;
 pub mod users;
+pub mod wayfire_config;
 pub mod wayfire_ini;
 pub mod wayfire_plugins;
 pub mod battery;

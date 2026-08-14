@@ -4843,6 +4843,7 @@ dependencies = [
  "futures-util",
  "glib",
  "gtk",
+ "notify",
  "once_cell",
  "open",
  "serde",
