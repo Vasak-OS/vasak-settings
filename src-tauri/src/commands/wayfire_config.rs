@@ -420,7 +420,7 @@ mod tests {
 	/// the old one cannot be caught in between.
 	#[test]
 	fn a_reader_never_catches_the_file_half_written() {
-		let (config, path) = seeded("atomic");
+		let (_config, path) = seeded("atomic");
 		let complete = fs::read_to_string(&path).unwrap().len();
 
 		let writer = {

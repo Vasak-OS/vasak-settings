@@ -671,14 +671,18 @@ views:
     description: Administra la configuración de tus monitores y pantallas.
     loading: Cargando monitores...
     emptyState: No se detectaron pantallas conectadas.
-    dragHint: Arrastra los monitores para acomodarlos
+    arrangement: Disposición
+    dragHint: >-
+      Arrastrá un monitor para ubicarlo pegado a otro. Se enganchan a propósito,
+      porque dos pantallas que no comparten un borde son dos pantallas entre las
+      que el puntero no puede pasar.
     disconnected: Desconectado
     new: Nuevo
     primary: Principal
     setPrimary: Establecer como principal
     resolution: Resolución
     refreshRate: Frecuencia
-    position: Posición (x, y)
+    positionLabel: Posición
     scale: Escala
     rotation: Rotación
     transformNormal: Normal
@@ -687,8 +691,13 @@ views:
     transformFlipped180: Reflejado 180°
     transformFlipped270: Reflejado 270°
     save: Guardar
-    saveAll: Guardar todos los cambios
+    saveAll: Aplicar disposición
     connectHint: Conecta el monitor para configurarlo.
+    brightness: Brillo
+    brightnessError: "No se pudo cambiar el brillo de {0}: {1}"
+    installWlrRandr: >-
+      wlr-randr no está instalado, así que los modos disponibles y la disposición
+      actual son solo una estimación. Instalalo para que la detección sea exacta.
     savedFor: Configuración guardada para {0}
     savedAll: Configuración de pantallas guardada correctamente
     detectError: "Error detectando monitores: {0}"

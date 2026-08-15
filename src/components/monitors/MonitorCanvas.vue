@@ -3,10 +3,12 @@ import { computed, type Ref, ref } from 'vue';
 
 export interface CanvasMonitor {
 	name: string;
+	/** Logical size — what the screen occupies in the layout, scale already applied. */
 	width: number;
 	height: number;
 	x: number;
 	y: number;
+	label: string;
 }
 
 interface Props {
@@ -20,8 +22,9 @@ const emit = defineEmits<{
 }>();
 
 const PADDING = 30;
-const MAX_RECT = 160;
-const SNAP = 10;
+const MAX_RECT = 200;
+/** In logical pixels: how close an edge has to come before it clicks into place. */
+const SNAP = 120;
 
 const dragging: Ref<{
 	name: string;
@@ -32,35 +35,24 @@ const dragging: Ref<{
 } | null> = ref(null);
 
 const snapLines: Ref<{ x1: number; y1: number; x2: number; y2: number }[]> = ref([]);
-const zoom = ref(1);
-
-const viewScale = computed(() => {
-	if (props.monitors.length === 0) return 1;
-	let maxDim = 0;
-	for (const m of props.monitors) {
-		maxDim = Math.max(maxDim, m.width, m.height);
-	}
-	return (MAX_RECT / maxDim) * zoom.value;
-});
 
 const bbox = computed(() => {
-	if (props.monitors.length === 0) return { minX: 0, minY: 0, w: 100, h: 100 };
-	let minX = Infinity;
-	let minY = Infinity;
-	let maxX = -Infinity;
-	let maxY = -Infinity;
-	for (const m of props.monitors) {
-		if (m.x < minX) minX = m.x;
-		if (m.y < minY) minY = m.y;
-		const rx = m.x + m.width;
-		const ry = m.y + m.height;
-		if (rx > maxX) maxX = rx;
-		if (ry > maxY) maxY = ry;
-	}
+	if (props.monitors.length === 0) return { minX: 0, minY: 0, w: 1920, h: 1080 };
+	const minX = Math.min(...props.monitors.map((m) => m.x));
+	const minY = Math.min(...props.monitors.map((m) => m.y));
+	const maxX = Math.max(...props.monitors.map((m) => m.x + m.width));
+	const maxY = Math.max(...props.monitors.map((m) => m.y + m.height));
 	return { minX, minY, w: maxX - minX, h: maxY - minY };
 });
 
-function toCanvas(m: CanvasMonitor) {
+/** One scale for the whole layout, so the rectangles keep their real proportions. */
+const viewScale = computed(() => {
+	const { w, h } = bbox.value;
+	if (w <= 0 || h <= 0) return 0.1;
+	return Math.min((MAX_RECT * 2.4) / w, (MAX_RECT * 1.2) / h);
+});
+
+function toCanvas(m: { x: number; y: number; width: number; height: number }) {
 	const s = viewScale.value;
 	return {
 		x: PADDING + (m.x - bbox.value.minX) * s,
@@ -88,95 +80,73 @@ const canvasDim = computed(() => {
 	};
 });
 
-function snapValue(val: number, targets: number[], threshold: number): number | null {
-	for (const t of targets) {
-		if (Math.abs(val - t) <= threshold) return t;
-	}
-	return null;
-}
-
-function computeSnap(
-	dragName: string,
-	origX: number,
-	origY: number,
-	dx: number,
-	dy: number
-): { x: number; y: number; lines: { x1: number; y1: number; x2: number; y2: number }[] } {
-	let newX = Math.round(origX + dx);
-	let newY = Math.round(origY + dy);
-
+/**
+ * Sticks the dragged screen to an edge of another one.
+ *
+ * Snapping is not decoration here: two screens that do not share an edge are
+ * two screens the pointer cannot travel between. The snap targets are the
+ * neighbours' edges *and* their aligned starts, so the usual arrangements —
+ * side by side, stacked, tops flush — all land exactly adjacent.
+ */
+function computeSnap(dragName: string, rawX: number, rawY: number) {
+	const me = props.monitors.find((m) => m.name === dragName);
+	const others = props.monitors.filter((m) => m.name !== dragName);
 	const lines: { x1: number; y1: number; x2: number; y2: number }[] = [];
 
-	const myMonitor = props.monitors.find((m) => m.name === dragName);
-	if (!myMonitor) return { x: newX, y: newY, lines };
-	const myW = myMonitor.width;
-	const myH = myMonitor.height;
+	if (!me || others.length === 0) return { x: rawX, y: rawY, lines };
 
-	const others = props.monitors.filter((m) => m.name !== dragName);
-	if (others.length === 0) return { x: newX, y: newY, lines };
+	let x = rawX;
+	let y = rawY;
+	let bestX: { value: number; distance: number } | null = null;
+	let bestY: { value: number; distance: number } | null = null;
 
-	const edgesX: number[] = [];
-	const edgesY: number[] = [];
-	const centersX: number[] = [];
-	const centersY: number[] = [];
+	const consider = (
+		best: { value: number; distance: number } | null,
+		candidate: number,
+		from: number
+	) => {
+		const distance = Math.abs(candidate - from);
+		if (distance > SNAP) return best;
+		return !best || distance < best.distance ? { value: candidate, distance } : best;
+	};
+
 	for (const o of others) {
-		edgesX.push(o.x, o.x + o.width);
-		edgesY.push(o.y, o.y + o.height);
-		centersX.push(o.x + o.width / 2);
-		centersY.push(o.y + o.height / 2);
+		// Sitting against the left or right edge, or lined up with it.
+		bestX = consider(bestX, o.x + o.width, x);
+		bestX = consider(bestX, o.x - me.width, x);
+		bestX = consider(bestX, o.x, x);
+		bestX = consider(bestX, o.x + o.width - me.width, x);
+
+		bestY = consider(bestY, o.y + o.height, y);
+		bestY = consider(bestY, o.y - me.height, y);
+		bestY = consider(bestY, o.y, y);
+		bestY = consider(bestY, o.y + o.height - me.height, y);
 	}
 
-	const cw = canvasDim.value.w;
-	const ch = canvasDim.value.h;
+	if (bestX) x = bestX.value;
+	if (bestY) y = bestY.value;
 
-	const vLine = (vx: number) => lines.push({ x1: vx, y1: 0, x2: vx, y2: ch });
-	const hLine = (hy: number) => lines.push({ x1: 0, y1: hy, x2: cw, y2: hy });
+	// Never leave it floating diagonally: one axis has to be a real edge join.
+	const joinsHorizontally = others.some((o) => x === o.x + o.width || x + me.width === o.x);
+	const joinsVertically = others.some((o) => y === o.y + o.height || y + me.height === o.y);
 
-	let snapped = false;
-
-	const snapL = snapValue(newX, edgesX, SNAP);
-	if (snapL !== null) {
-		newX = snapL;
-		snapped = true;
-		vLine(toCanvas({ ...myMonitor, x: snapL, y: 0 }).x);
+	if (!joinsHorizontally && !joinsVertically) {
+		const nearest = others.reduce((closest, o) =>
+			Math.hypot(o.x - x, o.y - y) < Math.hypot(closest.x - x, closest.y - y) ? o : closest
+		);
+		// Put it on whichever side of the nearest screen it is already leaning.
+		x =
+			x + me.width / 2 < nearest.x + nearest.width / 2
+				? nearest.x - me.width
+				: nearest.x + nearest.width;
+		y = nearest.y;
 	}
 
-	const snapR = snapValue(newX + myW, edgesX, SNAP);
-	if (snapR !== null) {
-		newX = snapR - myW;
-		snapped = true;
-		vLine(toCanvas({ ...myMonitor, x: newX + myW, y: 0 }).x);
-	}
+	const c = toCanvas({ x, y, width: me.width, height: me.height });
+	lines.push({ x1: c.x, y1: 0, x2: c.x, y2: canvasDim.value.h });
+	lines.push({ x1: 0, y1: c.y, x2: canvasDim.value.w, y2: c.y });
 
-	const snapT = snapValue(newY, edgesY, SNAP);
-	if (snapT !== null) {
-		newY = snapT;
-		snapped = true;
-		hLine(toCanvas({ ...myMonitor, x: 0, y: snapT }).y);
-	}
-
-	const snapB = snapValue(newY + myH, edgesY, SNAP);
-	if (snapB !== null) {
-		newY = snapB - myH;
-		snapped = true;
-		hLine(toCanvas({ ...myMonitor, x: 0, y: newY + myH }).y);
-	}
-
-	if (!snapped) {
-		const cx = snapValue(newX + myW / 2, centersX, SNAP);
-		if (cx !== null) {
-			newX = Math.round(cx - myW / 2);
-			vLine(toCanvas({ ...myMonitor, x: newX + myW / 2, y: 0 }).x);
-		}
-
-		const cy = snapValue(newY + myH / 2, centersY, SNAP);
-		if (cy !== null) {
-			newY = Math.round(cy - myH / 2);
-			hLine(toCanvas({ ...myMonitor, x: 0, y: newY + myH / 2 }).y);
-		}
-	}
-
-	return { x: newX, y: newY, lines };
+	return { x: Math.round(x), y: Math.round(y), lines };
 }
 
 function onPointerDown(e: PointerEvent, m: CanvasMonitor) {
@@ -193,17 +163,10 @@ function onPointerDown(e: PointerEvent, m: CanvasMonitor) {
 function onPointerMove(e: PointerEvent) {
 	if (!dragging.value) return;
 	const s = viewScale.value;
-	const dx = (e.clientX - dragging.value.startMX) / s;
-	const dy = (e.clientY - dragging.value.startMY) / s;
+	const x = dragging.value.origX + (e.clientX - dragging.value.startMX) / s;
+	const y = dragging.value.origY + (e.clientY - dragging.value.startMY) / s;
 
-	const result = computeSnap(
-		dragging.value.name,
-		dragging.value.origX,
-		dragging.value.origY,
-		dx,
-		dy
-	);
-
+	const result = computeSnap(dragging.value.name, x, y);
 	snapLines.value = result.lines;
 	emit('positionChange', dragging.value.name, result.x, result.y);
 }
@@ -212,35 +175,17 @@ function onPointerUp() {
 	dragging.value = null;
 	snapLines.value = [];
 }
-
-function onWheel(e: WheelEvent) {
-	e.preventDefault();
-	zoom.value = Math.max(0.2, Math.min(3, zoom.value + (e.deltaY > 0 ? -0.1 : 0.1)));
-}
 </script>
 
 <template>
 	<div
 		class="relative overflow-auto rounded-corner border border-ui-border bg-ui-bg/50"
 		style="width: 100%; height: 320px; touch-action: none"
-		@wheel.prevent="onWheel"
 		@pointermove="onPointerMove"
 		@pointerup="onPointerUp"
 		@pointercancel="onPointerUp"
 	>
-		<div
-			class="relative"
-			:style="{ width: canvasDim.w + 'px', height: canvasDim.h + 'px' }"
-		>
-			<svg class="pointer-events-none absolute inset-0 h-full w-full" style="opacity: 0.1">
-				<defs>
-					<pattern id="canvas-grid" :width="20 * zoom" :height="20 * zoom" patternUnits="userSpaceOnUse">
-						<path d="M 0 0 L 0 20 M 0 0 L 20 0" fill="none" stroke="currentColor" stroke-width="0.5" />
-					</pattern>
-				</defs>
-				<rect width="100%" height="100%" fill="url(#canvas-grid)" />
-			</svg>
-
+		<div class="relative" :style="{ width: canvasDim.w + 'px', height: canvasDim.h + 'px' }">
 			<svg class="pointer-events-none absolute inset-0 h-full w-full" style="overflow: visible">
 				<line
 					v-for="(l, i) in snapLines"
@@ -252,39 +197,27 @@ function onWheel(e: WheelEvent) {
 					stroke="var(--color-primary, #0084ff)"
 					stroke-width="2"
 					stroke-dasharray="6 3"
-					style="opacity: 0.7"
+					style="opacity: 0.6"
 				/>
 			</svg>
 
 			<div
 				v-for="m in props.monitors"
 				:key="m.name"
-				class="absolute flex cursor-grab select-none flex-col items-center justify-center rounded-lg border-2 text-center transition-shadow active:cursor-grabbing"
+				class="absolute flex cursor-grab select-none flex-col items-center justify-center overflow-hidden rounded-lg border-2 text-center transition-shadow active:cursor-grabbing"
 				:class="
-				dragging?.name === m.name
-					? 'border-primary shadow-lg shadow-primary/20'
-					: m.name === props.primaryName
-						? 'border-accent'
-						: 'border-ui-border hover:border-primary/50'
-			"
+					dragging?.name === m.name
+						? 'border-primary shadow-lg shadow-primary/20'
+						: m.name === props.primaryName
+							? 'border-accent'
+							: 'border-ui-border hover:border-primary/50'
+				"
 				:style="{ ...monitorStyle(m), background: 'var(--color-ui-surface)' }"
 				@pointerdown="(e) => onPointerDown(e, m)"
 			>
-				<span class="text-xs font-semibold leading-tight">{{ m.name }}</span>
-				<span class="mt-0.5 text-[10px] leading-tight text-tx-muted">{{ m.width }}x{{ m.height }}</span>
-				<span
-					v-if="m.name === props.primaryName"
-					class="mt-1 rounded bg-accent/20 px-1.5 py-0.5 text-[9px] font-medium text-accent"
-				>
-					Principal
-				</span>
+				<span class="px-1 text-xs font-semibold leading-tight">{{ m.name }}</span>
+				<span class="mt-0.5 px-1 text-[10px] leading-tight text-tx-muted">{{ m.label }}</span>
 			</div>
-		</div>
-
-		<div
-			class="pointer-events-none absolute bottom-2 right-2 rounded bg-ui-bg/80 px-2 py-1 text-[10px] text-tx-muted"
-		>
-			{{ Math.round(zoom * 100) }}%
 		</div>
 	</div>
 </template>

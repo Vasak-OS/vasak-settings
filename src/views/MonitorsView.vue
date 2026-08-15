@@ -9,26 +9,38 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
-import TextInput from '@/components/ui/TextInput.vue';
 import {
+	applyMonitorLayout,
+	type BrightnessKind,
 	type DetectedMonitor,
+	formatRefresh,
 	getDetectedMonitors,
+	getMonitorBrightness,
+	logicalSize,
 	type MonitorMode,
+	type MonitorSetting,
+	setMonitorBrightness,
 } from '@/services/monitors.service';
-import { writeWayfireSection } from '@/services/wayfire.service';
 
-interface EditableMonitor {
-	name: string;
+interface EditableMonitor extends MonitorSetting {
 	connected: boolean;
-	has_config: boolean;
-	values: Record<string, string>;
-	original: Record<string, string>;
-	allModes: MonitorMode[];
+	description: string;
+	modes: MonitorMode[];
+}
+
+interface Brightness {
+	kind: BrightnessKind;
+	handle: string;
+	percent: number;
 }
 
 const { t } = useI18n();
 
 const monitors = ref<EditableMonitor[]>([]);
+const original = ref('');
+const brightness = ref<Record<string, Brightness>>({});
+const ddcHint = ref('');
+const usingKernelFallback = ref(false);
 const loading = ref(true);
 const saving = ref(false);
 const error = ref('');
@@ -45,13 +57,110 @@ const transforms = computed(() => [
 	{ label: t('views.monitors.transformFlipped270'), value: 'flipped-270' },
 ]);
 
-const isDirty = computed(() =>
-	monitors.value.some((m) => JSON.stringify(m.values) !== JSON.stringify(m.original))
+const connected = computed(() => monitors.value.filter((m) => m.connected));
+const isDirty = computed(() => JSON.stringify(toSettings()) !== original.value);
+
+/**
+ * The screen at the origin. Wayfire has no "primary" flag: the one at 0,0 is
+ * where the layout starts, which is what the panel and new windows follow.
+ */
+const primaryName = computed(
+	() =>
+		connected.value.find((m) => m.enabled && m.position.x === 0 && m.position.y === 0)?.name ?? ''
 );
 
-function getUniqueResolutions(modes: MonitorMode[]): { label: string; value: string }[] {
+const canvasMonitors = computed<CanvasMonitor[]>(() =>
+	connected.value
+		.filter((m) => m.enabled)
+		.map((m) => {
+			const size = logicalSize(m.mode, m.scale, m.transform);
+			return {
+				name: m.name,
+				width: size.width,
+				height: size.height,
+				x: m.position.x,
+				y: m.position.y,
+				label: `${m.mode.width}x${m.mode.height}${m.scale !== 1 ? ` @${m.scale}x` : ''}`,
+			};
+		})
+);
+
+function toSettings(): MonitorSetting[] {
+	return monitors.value.map((m) => ({
+		name: m.name,
+		enabled: m.enabled,
+		mode: m.mode,
+		position: m.position,
+		scale: m.scale,
+		transform: m.transform,
+	}));
+}
+
+function fallbackMode(): MonitorMode {
+	return {
+		width: 1920,
+		height: 1080,
+		refresh_mhz: 60000,
+		is_preferred: true,
+		is_current: true,
+	};
+}
+
+function currentMode(monitor: DetectedMonitor): MonitorMode {
+	return (
+		monitor.modes.find((m) => m.is_current) ??
+		monitor.modes.find((m) => m.is_preferred) ??
+		monitor.modes[0] ??
+		fallbackMode()
+	);
+}
+
+async function load() {
+	loading.value = true;
+	error.value = '';
+	try {
+		const report = await getDetectedMonitors();
+		usingKernelFallback.value = report.source === 'Kernel';
+
+		monitors.value = report.monitors.map((m) => ({
+			name: m.name,
+			description: m.description,
+			connected: m.connected,
+			enabled: m.enabled,
+			modes: m.modes,
+			mode: currentMode(m),
+			position: { ...m.position },
+			scale: m.scale,
+			transform: m.transform,
+		}));
+
+		original.value = JSON.stringify(toSettings());
+		await loadBrightness();
+	} catch (e) {
+		error.value = t('views.monitors.detectError').replace('{0}', String(e));
+	} finally {
+		loading.value = false;
+	}
+}
+
+async function loadBrightness() {
+	try {
+		const report = await getMonitorBrightness(connected.value.map((m) => m.name));
+		ddcHint.value = report.ddc_hint ?? '';
+		brightness.value = Object.fromEntries(
+			report.monitors.map((entry) => [
+				entry.output,
+				{ kind: entry.kind, handle: entry.handle, percent: entry.percent },
+			])
+		);
+	} catch (e) {
+		ddcHint.value = String(e);
+	}
+}
+
+function resolutionOptions(monitor: EditableMonitor) {
 	const seen = new Set<string>();
-	return modes
+	return monitor.modes
 		.filter((m) => {
 			const key = `${m.width}x${m.height}`;
 			if (seen.has(key)) return false;
@@ -59,259 +168,102 @@ function getUniqueResolutions(modes: MonitorMode[]): { label: string; value: str
 			return true;
 		})
 		.sort((a, b) => b.width * b.height - a.width * a.height)
-		.map((m) => ({
-			label: `${m.width}x${m.height}`,
-			value: `${m.width}x${m.height}`,
-		}));
+		.map((m) => ({ label: `${m.width}x${m.height}`, value: `${m.width}x${m.height}` }));
 }
 
-function getRefreshRates(
-	modes: MonitorMode[],
-	resolution: string
-): { label: string; value: string }[] {
-	const [w, h] = resolution.split('x').map(Number);
-	return modes
-		.filter((m) => m.width === w && m.height === h)
-		.sort((a, b) => b.refresh - a.refresh)
-		.map((m) => ({
-			label: `${Math.round(m.refresh)} Hz`,
-			value: `${Math.round(m.refresh)}`,
-		}));
-}
-
-function parseMode(modeStr: string): { resolution: string; refresh: string } {
-	const parts = modeStr.split('@');
-	return {
-		resolution: parts[0] || '1920x1080',
-		refresh: parts[1] || '60',
-	};
-}
-
-function buildMode(resolution: string, refresh: string): string {
-	return `${resolution}@${refresh}`;
-}
-
-function findBestResolution(modes: MonitorMode[]): string {
-	const preferred = modes.find((m) => m.is_preferred);
-	if (preferred) return `${preferred.width}x${preferred.height}`;
-	const sorted = [...modes].sort((a, b) => b.width * b.height - a.width * a.height);
-	if (sorted.length > 0) return `${sorted[0].width}x${sorted[0].height}`;
-	return '1920x1080';
-}
-
-function findBestRefresh(modes: MonitorMode[], resolution: string): string {
-	const rates = getRefreshRates(modes, resolution);
-	if (rates.length > 0) {
-		// Prefer the highest refresh rate
-		const byRate = [...rates].sort((a, b) => Number(b.value) - Number(a.value));
-		return byRate[0].value;
-	}
-	return '60';
-}
-
-const primaryName = computed(() => {
-	const p = monitors.value.find((m) => m.connected && isPrimary(m));
-	return p?.name ?? '';
-});
-
-const canvasMonitors = computed<CanvasMonitor[]>(() =>
-	monitors.value
-		.filter((m) => m.connected)
-		.map((m) => {
-			const { resolution } = parseMode(m.values.mode || '1920x1080@60');
-			const parts = resolution.split('x');
-			const w = Number.parseInt(parts[0], 10) || 1920;
-			const h = Number.parseInt(parts[1], 10) || 1080;
-			const pos = (m.values.position || '0,0').split(',');
-			return {
-				name: m.name,
-				width: w,
-				height: h,
-				x: Number.parseInt(pos[0], 10) || 0,
-				y: Number.parseInt(pos[1], 10) || 0,
-			};
-		})
-);
-
-onMounted(async () => {
-	try {
-		const detected = await getDetectedMonitors();
-		monitors.value = detected.map((d: DetectedMonitor) => {
-			const cfg = d.wayfire_config ?? {};
-			const currentMode =
-				cfg.mode ||
-				findBestResolution(d.available_modes) +
-					'@' +
-					findBestRefresh(d.available_modes, findBestResolution(d.available_modes));
-
-			const values: Record<string, string> = {
-				mode: currentMode,
-				position: cfg.position || '0,0',
-				scale: cfg.scale || '1',
-				transform: cfg.transform || 'normal',
-				enable: cfg.enable ?? 'true',
-			};
-
-			return {
-				name: d.name,
-				connected: d.connected,
-				has_config: d.wayfire_config !== null,
-				values: { ...values },
-				original: { ...values },
-				allModes: d.available_modes,
-			};
-		});
-
-		// Auto-assign unique positions to overlapping monitors
-		const connected = monitors.value.filter((m) => m.connected);
-		const usedPositions = new Set<string>();
-		let col = 0;
-		let row = 0;
-		for (const m of connected) {
-			const pos = m.values.position || '0,0';
-			if (usedPositions.has(pos)) {
-				// Find the largest connected monitor to calculate offsets
-				let maxW = 1920;
-				for (const other of connected) {
-					const { resolution } = parseMode(other.values.mode || '1920x1080@60');
-					const parts = resolution.split('x');
-					const w = Number.parseInt(parts[0], 10) || 1920;
-					if (w > maxW) maxW = w;
-				}
-				// Assign a staggered position
-				col++;
-				if (col > 3) {
-					col = 0;
-					row++;
-				}
-				const offX = col * Math.round(maxW * 0.8);
-				const offY = row * 400;
-				m.values.position = `${offX},${offY}`;
-				m.original.position = m.values.position;
-			}
-			usedPositions.add(m.values.position);
-		}
-	} catch (e) {
-		error.value = t('views.monitors.detectError').replace('{0}', String(e));
-	} finally {
-		loading.value = false;
-	}
-});
-
-function getResOptions(monitor: EditableMonitor): { label: string; value: string }[] {
-	return getUniqueResolutions(monitor.allModes);
-}
-
-function getRefreshOptions(monitor: EditableMonitor): { label: string; value: string }[] {
-	const { resolution } = parseMode(monitor.values.mode || '1920x1080@60');
-	return getRefreshRates(monitor.allModes, resolution);
+/**
+ * The rates are keyed by the exact millihertz value, not by a rounded label:
+ * two entries can both read "60 Hz" and only one of them is a mode the screen
+ * has.
+ */
+function refreshOptions(monitor: EditableMonitor) {
+	return monitor.modes
+		.filter((m) => m.width === monitor.mode.width && m.height === monitor.mode.height)
+		.sort((a, b) => b.refresh_mhz - a.refresh_mhz)
+		.map((m) => ({ label: formatRefresh(m), value: String(m.refresh_mhz) }));
 }
 
 function onResolutionChange(monitor: EditableMonitor, resolution: string) {
-	const { refresh: oldRefresh } = parseMode(monitor.values.mode || '1920x1080@60');
-	// Keep the same refresh if available for new resolution, else pick best
-	const newRates = getRefreshRates(monitor.allModes, resolution);
-	const newRefresh = newRates.some((r) => r.value === oldRefresh)
-		? oldRefresh
-		: newRates.length > 0
-			? newRates[0].value
-			: '60';
-	monitor.values.mode = buildMode(resolution, newRefresh);
+	const [width, height] = resolution.split('x').map(Number);
+	const candidates = monitor.modes.filter((m) => m.width === width && m.height === height);
+	if (candidates.length === 0) return;
+
+	// Keep the rate if this resolution offers it, otherwise take its best.
+	const same = candidates.find((m) => m.refresh_mhz === monitor.mode.refresh_mhz);
+	monitor.mode =
+		same ?? candidates.reduce((best, m) => (m.refresh_mhz > best.refresh_mhz ? m : best));
 }
 
-function onRefreshChange(monitor: EditableMonitor, refresh: string) {
-	const { resolution } = parseMode(monitor.values.mode || '1920x1080@60');
-	monitor.values.mode = buildMode(resolution, refresh);
-}
-
-function setVal(monitor: EditableMonitor, key: string, value: string) {
-	monitor.values[key] = value;
-}
-
-function getVal(monitor: EditableMonitor, key: string, defaultVal = ''): string {
-	return monitor.values[key] ?? defaultVal;
-}
-
-const isPrimary = (monitor: EditableMonitor): boolean => {
-	if (!monitor.connected) return false;
-	const pos = monitor.values.position || '0,0';
-	return pos === '0,0';
-};
-
-function setPrimary(monitor: EditableMonitor) {
-	if (!monitor.connected || isPrimary(monitor)) return;
-
-	const { resolution } = parseMode(monitor.values.mode || '1920x1080@60');
-	const parts = resolution.split('x');
-	const myW = Number.parseInt(parts[0], 10) || 1920;
-
-	monitor.values.position = '0,0';
-
-	let offsetX = myW;
-	for (const m of monitors.value) {
-		if (m.connected && m.name !== monitor.name) {
-			const pos = m.values.position || '0,0';
-			const [x, y] = pos.split(',').map(Number);
-			if (x === 0 && y === 0) {
-				m.values.position = `${offsetX},0`;
-				const { resolution: r } = parseMode(m.values.mode || '1920x1080@60');
-				const p = r.split('x');
-				offsetX += Number.parseInt(p[0], 10) || 1920;
-			}
-		}
-	}
+function onRefreshChange(monitor: EditableMonitor, refreshMhz: string) {
+	const match = monitor.modes.find(
+		(m) =>
+			m.width === monitor.mode.width &&
+			m.height === monitor.mode.height &&
+			m.refresh_mhz === Number(refreshMhz)
+	);
+	if (match) monitor.mode = match;
 }
 
 function onCanvasPositionChange(name: string, x: number, y: number) {
-	const m = monitors.value.find((m) => m.name === name);
-	if (m) m.values.position = `${x},${y}`;
+	const monitor = monitors.value.find((m) => m.name === name);
+	if (monitor) monitor.position = { x, y };
 }
 
-async function saveMonitor(monitor: EditableMonitor) {
-	const section = `output:${monitor.name}`;
-	try {
-		await writeWayfireSection(section, monitor.values);
-		monitor.original = { ...monitor.values };
-		monitor.has_config = true;
-		success.value = t('views.monitors.savedFor').replace('{0}', monitor.name);
-		setTimeout(() => {
-			success.value = '';
-		}, 3000);
-	} catch (e) {
-		error.value = t('views.monitors.saveError')
-			.replace('{0}', monitor.name)
-			.replace('{1}', String(e));
-		setTimeout(() => {
-			error.value = '';
-		}, 5000);
+/**
+ * Puts a screen at the origin and slides the rest to keep the arrangement.
+ *
+ * The whole layout moves by the same amount, so making the 4K on the left the
+ * first screen does not shuffle anything around it — it just renumbers where
+ * zero is. That is what "the 4K on the left" needs, and what forcing 0,0 on one
+ * screen while shoving the others rightwards could never do.
+ */
+function makePrimary(monitor: EditableMonitor) {
+	const dx = monitor.position.x;
+	const dy = monitor.position.y;
+	if (dx === 0 && dy === 0) return;
+
+	for (const m of monitors.value) {
+		if (!m.enabled) continue;
+		m.position = { x: m.position.x - dx, y: m.position.y - dy };
 	}
 }
 
-async function saveAll() {
+async function onBrightnessChange(name: string, percent: number) {
+	const entry = brightness.value[name];
+	if (!entry) return;
+	entry.percent = percent;
+	try {
+		await setMonitorBrightness(entry.kind, entry.handle, percent);
+	} catch (e) {
+		error.value = t('views.monitors.brightnessError')
+			.replace('{0}', name)
+			.replace('{1}', String(e));
+	}
+}
+
+async function save() {
 	saving.value = true;
 	error.value = '';
+	success.value = '';
 	try {
-		await Promise.all(
-			monitors.value
-				.filter((m) => m.connected)
-				.map((m) => writeWayfireSection(`output:${m.name}`, m.values))
-		);
-		for (const m of monitors.value) {
-			if (m.connected) {
-				m.original = { ...m.values };
-				m.has_config = true;
-			}
+		const applied = await applyMonitorLayout(toSettings());
+		for (const setting of applied) {
+			const monitor = monitors.value.find((m) => m.name === setting.name);
+			if (monitor) monitor.position = setting.position;
 		}
+		original.value = JSON.stringify(toSettings());
 		success.value = t('views.monitors.savedAll');
 		setTimeout(() => {
 			success.value = '';
-		}, 3000);
+		}, 4000);
 	} catch (e) {
-		error.value = t('views.monitors.saveAllError').replace('{0}', String(e));
+		error.value = String(e);
 	} finally {
 		saving.value = false;
 	}
 }
+
+onMounted(load);
 </script>
 
 <template>
@@ -324,6 +276,11 @@ async function saveAll() {
 
 		<AlertMessage v-if="error" :message="error" tone="error" />
 		<AlertMessage v-if="success" :message="success" tone="success" />
+		<AlertMessage
+			v-if="usingKernelFallback"
+			:message="t('views.monitors.installWlrRandr')"
+			tone="warning"
+		/>
 
 		<div v-if="loading" class="py-8 text-center text-sm text-tx-muted">
 			{{ t('views.monitors.loading') }}
@@ -339,9 +296,8 @@ async function saveAll() {
 
 		<template v-else>
 			<SectionCard v-if="canvasMonitors.length > 0">
-				<h3 class="mb-3 text-sm font-medium text-tx-muted">
-					{{ t('views.monitors.dragHint') }}
-				</h3>
+				<h3 class="mb-1 text-sm font-medium">{{ t('views.monitors.arrangement') }}</h3>
+				<p class="mb-3 text-xs text-tx-muted">{{ t('views.monitors.dragHint') }}</p>
 				<MonitorCanvas
 					:monitors="canvasMonitors"
 					:primaryName="primaryName"
@@ -353,6 +309,9 @@ async function saveAll() {
 				<div class="mb-3 flex items-center justify-between">
 					<div class="flex items-center gap-2">
 						<h3 class="text-base font-medium">{{ monitor.name }}</h3>
+						<span v-if="monitor.description" class="text-xs text-tx-muted">
+							{{ monitor.description }}
+						</span>
 						<span
 							v-if="!monitor.connected"
 							class="rounded bg-status-warning/20 px-2 py-0.5 text-xs text-status-warning"
@@ -360,113 +319,112 @@ async function saveAll() {
 							{{ t('views.monitors.disconnected') }}
 						</span>
 						<span
-							v-else-if="!monitor.has_config"
-							class="rounded bg-status-info/20 px-2 py-0.5 text-xs text-status-info"
+							v-else-if="monitor.name === primaryName"
+							class="rounded bg-accent/20 px-2 py-0.5 text-xs text-accent"
 						>
-							{{ t('views.monitors.new') }}
+							{{ t('views.monitors.primary') }}
 						</span>
 					</div>
 					<SwitchToggle
 						v-if="monitor.connected"
-						:isOn="getVal(monitor, 'enable', 'true') !== 'false'"
-						@toggle="setVal(monitor, 'enable', $event ? 'true' : 'false')"
+						:isOn="monitor.enabled"
+						@toggle="monitor.enabled = $event"
 					/>
 				</div>
 
-				<template v-if="monitor.connected">
+				<template v-if="monitor.connected && monitor.enabled">
 					<div class="mb-3 flex items-center gap-2">
 						<button
+							v-if="monitor.name !== primaryName"
 							type="button"
-							class="rounded-corner border px-3 py-1 text-xs transition-colors"
-							:class="
-								isPrimary(monitor)
-									? 'border-accent/40 bg-accent/10 text-accent cursor-default'
-									: 'border-ui-border text-tx-muted hover:border-accent/40 hover:text-accent'
-							"
-							@click="setPrimary(monitor)"
+							class="rounded-corner border border-ui-border px-3 py-1 text-xs text-tx-muted transition-colors hover:border-accent/40 hover:text-accent"
+							@click="makePrimary(monitor)"
 						>
-							{{ isPrimary(monitor) ? t('views.monitors.primary') : t('views.monitors.setPrimary') }}
+							{{ t('views.monitors.setPrimary') }}
 						</button>
 					</div>
 
 					<div class="grid gap-4 sm:grid-cols-2">
 						<FormGroup :label="t('views.monitors.resolution')">
 							<SelectInput
-								v-if="getResOptions(monitor).length > 0"
-								:modelValue="parseMode(monitor.values.mode || '1920x1080@60').resolution"
-								:options="getResOptions(monitor)"
+								:modelValue="`${monitor.mode.width}x${monitor.mode.height}`"
+								:options="resolutionOptions(monitor)"
+								:disabled="resolutionOptions(monitor).length === 0"
 								@update:modelValue="(v: string) => onResolutionChange(monitor, v)"
-							/>
-							<TextInput
-								v-else
-								:model-value="parseMode(monitor.values.mode || '1920x1080@60').resolution"
-								placeholder="1920x1080"
-								@update:model-value="setVal(monitor, 'mode', $event)"
 							/>
 						</FormGroup>
 
 						<FormGroup :label="t('views.monitors.refreshRate')">
 							<SelectInput
-								v-if="getRefreshOptions(monitor).length > 0"
-								:modelValue="parseMode(monitor.values.mode || '1920x1080@60').refresh"
-								:options="getRefreshOptions(monitor)"
+								:modelValue="String(monitor.mode.refresh_mhz)"
+								:options="refreshOptions(monitor)"
+								:disabled="refreshOptions(monitor).length === 0"
 								@update:modelValue="(v: string) => onRefreshChange(monitor, v)"
-							/>
-							<TextInput
-								v-else
-								:model-value="parseMode(monitor.values.mode || '1920x1080@60').refresh"
-								placeholder="60"
-							/>
-						</FormGroup>
-
-						<FormGroup :label="t('views.monitors.position')">
-							<TextInput
-								:model-value="getVal(monitor, 'position', '0,0')"
-								placeholder="0,0"
-								@update:model-value="setVal(monitor, 'position', $event)"
 							/>
 						</FormGroup>
 
 						<FormGroup :label="t('views.monitors.scale')">
 							<NumberInput
-								:model-value="Number(getVal(monitor, 'scale', '1'))"
-								:min="0.5" :max="3" :step="0.25"
-								@update:model-value="setVal(monitor, 'scale', String($event))"
+								:model-value="monitor.scale"
+								:min="0.5"
+								:max="3"
+								:step="0.25"
+								@update:model-value="(v: number) => (monitor.scale = v)"
 							/>
 						</FormGroup>
 
 						<FormGroup :label="t('views.monitors.rotation')">
 							<SelectInput
-								:modelValue="getVal(monitor, 'transform', 'normal')"
+								:modelValue="monitor.transform"
 								:options="transforms"
-								@update:modelValue="(v: string) => setVal(monitor, 'transform', v)"
+								@update:modelValue="(v: string) => (monitor.transform = v)"
 							/>
+						</FormGroup>
+
+						<FormGroup
+							v-if="brightness[monitor.name]"
+							:label="t('views.monitors.brightness')"
+							customClass="sm:col-span-2"
+						>
+							<div class="flex items-center gap-3">
+								<input
+									type="range"
+									min="1"
+									max="100"
+									class="h-2 w-full cursor-pointer appearance-none rounded-full bg-ui-border accent-[var(--primary-color,#0084ff)]"
+									:value="brightness[monitor.name].percent"
+									@input="
+										onBrightnessChange(
+											monitor.name,
+											Number(($event.target as HTMLInputElement).value)
+										)
+									"
+								/>
+								<span class="w-12 text-right text-sm tabular-nums text-tx-muted">
+									{{ brightness[monitor.name].percent }}%
+								</span>
+							</div>
 						</FormGroup>
 					</div>
 
-					<div class="mt-4 flex justify-end">
-						<button
-							type="button"
-							:disabled="JSON.stringify(monitor.values) === JSON.stringify(monitor.original)"
-							class="rounded-corner bg-primary px-4 py-1.5 text-sm font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50 hover:enabled:opacity-90"
-							@click="saveMonitor(monitor)"
-						>
-							{{ monitor.has_config ? t('views.monitors.save') : t('common.add') }}
-						</button>
-					</div>
+					<p class="mt-3 text-xs text-tx-muted">
+						{{ t('views.monitors.positionLabel') }}: {{ monitor.position.x }},{{ monitor.position.y }}
+					</p>
 				</template>
 
-				<p v-else class="text-sm text-tx-muted">
+				<p v-else-if="!monitor.connected" class="text-sm text-tx-muted">
 					{{ t('views.monitors.connectHint') }}
 				</p>
 			</SectionCard>
 
-			<div v-if="monitors.some((m) => m.connected)" class="flex justify-end">
+			<AlertMessage v-if="ddcHint" :message="ddcHint" tone="info" />
+
+			<div v-if="connected.length > 0" class="flex justify-end">
 				<button
 					type="button"
 					:disabled="!isDirty || saving"
 					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50 hover:enabled:opacity-90"
-					@click="saveAll"
+					@click="save"
 				>
 					{{ saving ? t('common.saving') : t('views.monitors.saveAll') }}
 				</button>

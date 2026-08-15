@@ -671,14 +671,18 @@ views:
     description: Manage the settings of your monitors and displays.
     loading: Loading monitors...
     emptyState: No connected displays were detected.
-    dragHint: Drag the monitors to arrange them
+    arrangement: Arrangement
+    dragHint: >-
+      Drag a monitor to place it against another one. They snap together on
+      purpose, because two screens that do not share an edge are two screens
+      the pointer cannot travel between.
     disconnected: Disconnected
     new: New
     primary: Primary
     setPrimary: Set as primary
     resolution: Resolution
     refreshRate: Refresh rate
-    position: Position (x, y)
+    positionLabel: Position
     scale: Scale
     rotation: Rotation
     transformNormal: Normal
@@ -687,8 +691,13 @@ views:
     transformFlipped180: Flipped 180°
     transformFlipped270: Flipped 270°
     save: Save
-    saveAll: Save all changes
+    saveAll: Apply layout
     connectHint: Connect the monitor to configure it.
+    brightness: Brightness
+    brightnessError: "Could not change the brightness of {0}: {1}"
+    installWlrRandr: >-
+      wlr-randr is not installed, so the available modes and the current layout
+      can only be guessed. Install it for accurate detection.
     savedFor: Settings saved for {0}
     savedAll: Display settings saved successfully
     detectError: "Error detecting monitors: {0}"

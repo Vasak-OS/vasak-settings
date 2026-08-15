@@ -10,6 +10,7 @@ pub mod wayfire_config;
 pub mod wayfire_ini;
 pub mod wayfire_plugins;
 pub mod battery;
+pub mod brightness;
 pub mod power_profiles;
 pub mod monitors;
 pub mod language;

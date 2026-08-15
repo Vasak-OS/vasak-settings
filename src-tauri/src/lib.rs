@@ -44,12 +44,6 @@ fn default_locale() -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .setup(|app| {
-            // So a wayfire.ini edited by hand, or by another tool, reaches the
-            // pages instead of being overwritten by what they still show.
-            commands::wayfire_config::watch(app.handle().clone());
-            Ok(())
-        })
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_config_manager::init())
         .plugin(tauri_plugin_system_fonts::init())
@@ -115,6 +109,9 @@ pub fn run() {
             commands::audio::get_audio_input_devices,
             commands::audio::set_audio_input_device,
             commands::monitors::get_detected_monitors,
+            commands::monitors::apply_monitor_layout,
+            commands::brightness::get_monitor_brightness,
+            commands::brightness::set_monitor_brightness,
             commands::language::get_available_locales,
             commands::language::get_current_locale,
             commands::language::set_system_locale,
@@ -137,7 +134,13 @@ pub fn run() {
             commands::online_accounts::get_account_data,
             commands::online_accounts::get_access_token,
         ])
+        // One setup hook, not two: `Builder::setup` replaces whatever was
+        // registered before it, so a second call silently threw the first away.
         .setup(|app| {
+            // So a wayfire.ini edited by hand, or by another tool, reaches the
+            // pages instead of being overwritten by what they still show.
+            commands::wayfire_config::watch(app.handle().clone());
+
             // The phone service publishes signals when a device appears or
             // changes; without listening the Phones screen would only ever show
             // what was true when it was opened.

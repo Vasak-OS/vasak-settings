@@ -46,6 +46,17 @@ curl https://sh.rustup.rs -sSf | sh
 Para compilar apps Tauri en Linux se requieren librerias de WebKitGTK y GTK.
 Instala los paquetes equivalentes de tu distro antes de ejecutar la app.
 
+En tiempo de ejecucion, la pagina de Pantallas usa dos programas externos. La
+app funciona sin ellos, pero avisa y ofrece menos:
+
+| Paquete    | Para que | Sin el |
+| ---------- | -------- | ------ |
+| `wlr-randr` | Leer los modos de cada salida con su frecuencia exacta, y la posicion, escala y rotacion vigentes | Los modos salen de `/sys/class/drm/*/modes`, sin frecuencias, y la disposicion se lee solo del `wayfire.ini` |
+| `ddcutil`   | Brillo de los monitores externos por DDC/CI | Solo se puede ajustar el brillo del panel interno |
+
+`ddcutil` necesita ademas el modulo `i2c-dev` cargado y el usuario en el grupo
+`i2c`.
+
 ## Instalacion
 
 Desde la raiz de este proyecto:
