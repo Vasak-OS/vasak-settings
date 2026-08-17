@@ -4116,9 +4116,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-network-manager"
-version = "2.1.4"
+version = "2.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db462dfce65fcdbce33c8b47d2103b0350ed7cb8396b2b651cb6ff6bb3eba9a4"
+checksum = "c330cc11b071b46b302bcb2046a75be394d4987a9f41605c0877521470d83433"
 dependencies = [
  "env_logger",
  "log",
