@@ -8,12 +8,20 @@ use crate::commands::wayfire_ini::{parse_section, update_section};
 use crate::logger::{log_debug, log_error};
 
 const UNIT: &str = "vasak-idle.service";
-/// vasak-lock renders the stylesheet and blurs the wallpaper with the theme in
-/// use, then execs gtklock: the unit only has to name it.
-const LOCKER: &str = "/usr/bin/vasak-lock";
-/// Before suspending, -d returns as soon as the screen is locked. Without it
+/// The lock screen is the greeter's own interface over an open session, so it
+/// picks up the colours, the radius and the font from the configuration on its
+/// own — nothing to prepare before running it.
+///
+/// It goes through `systemd-run --scope` because a lock client must not live
+/// inside this unit's cgroup: saving this very page restarts the unit, and that
+/// would kill an active lock. A lock client that dies with the session locked
+/// leaves the compositor locked with nothing to type into.
+const LOCKER: &str =
+    "systemd-run --user --scope --collect --quiet /usr/bin/vasak-lock-screen";
+/// Before suspending, -d returns as soon as the screen is covered. Without it
 /// swayidle waits for the unlock and the machine never gets to sleep.
-const SLEEP_LOCKER: &str = "/usr/bin/vasak-lock -d";
+const SLEEP_LOCKER: &str =
+    "systemd-run --user --scope --collect --quiet /usr/bin/vasak-lock-screen -d";
 const AUTOSTART_SECTION: &str = "autostart";
 /// The key wayfire used to launch swayidle from, before this moved to systemd.
 const LEGACY_KEY: &str = "lock";
@@ -122,7 +130,7 @@ fn tokenize(line: &str) -> Vec<String> {
 /// vasak-lock existed name gtklock directly, and reading them as "no lock
 /// configured" would silently turn the lock off on the next save.
 fn locks_the_screen(action: &str) -> bool {
-    action.contains("vasak-lock") || action.contains("gtklock")
+    action.contains("vasak-lock-screen") || action.contains("vasak-lock") || action.contains("gtklock")
 }
 
 /// Rebuilds the settings from a swayidle command line. Used both for the unit
@@ -342,7 +350,8 @@ mod tests {
         };
 
         let command = render_command(&config);
-        assert!(command.contains("timeout 300 '/usr/bin/vasak-lock'"));
+        assert!(command.contains("timeout 300 '"));
+        assert!(command.contains("/usr/bin/vasak-lock-screen'"));
         assert!(!command.contains("wlopm"));
         assert!(!command.contains("before-sleep"));
     }
@@ -357,7 +366,9 @@ mod tests {
             ..IdleConfig::default()
         };
 
-        assert!(render_command(&config).contains("before-sleep '/usr/bin/vasak-lock -d'"));
+        let command = render_command(&config);
+        assert!(command.contains("before-sleep '"));
+        assert!(command.contains("/usr/bin/vasak-lock-screen -d'"));
     }
 
     #[test]
