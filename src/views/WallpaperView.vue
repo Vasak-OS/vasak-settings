@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { convertFileSrc } from '@tauri-apps/api/core';
+import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import {
 	readConfig,
@@ -13,7 +13,9 @@ import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
+import ProgressBar from '@/components/ui/ProgressBar.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
+import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import { getOfficialWallpapers } from '@/services/style.service';
 
 const { t } = useI18n();
@@ -28,6 +30,7 @@ const selectedWallpaperPath = ref('');
 
 const vskConfig: Ref<VSKConfig | null> = ref(null);
 const configStore = ref<any>(null);
+let unlistenProgress: (() => void) | null = null;
 let unlistenFileDrop: (() => void) | null = null;
 
 const wallpaperPreviewUrl = computed(() => {
@@ -48,15 +51,50 @@ const applyWallpaperPath = (path: string) => {
 
 const handleDropPath = (path: string) => {
 	const lowered = path.toLowerCase();
-	const valid = ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif', '.avif'];
+	// Los fondos también pueden ser videos, en los formatos que el escritorio
+	// sabe reproducir: mp4, webm y ogv. Un mkv o un mov quedan afuera a
+	// propósito —WebKit no los abre— y es mejor decirlo al soltarlos que
+	// dejar la pantalla negra después de guardar.
+	const valid = [
+		'.jpg',
+		'.jpeg',
+		'.png',
+		'.webp',
+		'.bmp',
+		'.gif',
+		'.avif',
+		'.mp4',
+		'.webm',
+		'.ogv',
+	];
 	if (!valid.some((ext) => lowered.endsWith(ext))) {
-		error.value = t('views.appearanceWallpaper.invalidImage');
+		error.value = t('views.appearanceWallpaper.invalidFile');
 		return;
 	}
 
 	applyWallpaperPath(path);
 	error.value = '';
 };
+
+/**
+ * Si el fondo es un video, pausarlo con batería.
+ *
+ * Un video de fondo mantiene la máquina trabajando todo el tiempo: medido,
+ * pasa de 4 % a 20 % de un núcleo. Con batería eso se nota, así que se puede
+ * congelar en un cuadro hasta que vuelva el cable. Por omisión sí, porque es
+ * lo que menos sorprende a quien no sabía que su fondo consumía.
+ */
+const pauseVideoOnBattery = ref(true);
+
+const selectedIsVideo = computed(() => {
+	const lowered = selectedWallpaperPath.value.toLowerCase();
+	return ['.mp4', '.webm', '.ogv'].some((ext) => lowered.endsWith(ext));
+});
+
+/** El avance de la optimización, para no dejar la ventana muda mientras recodifica. */
+const optimizing = ref(false);
+const optimizeProgress = ref(0);
+const optimizeDetail = ref('');
 
 const saveWallpaperConfig = async () => {
 	if (!vskConfig.value) return;
@@ -66,11 +104,37 @@ const saveWallpaperConfig = async () => {
 	successMessage.value = '';
 
 	try {
-		const finalPath = selectedWallpaperPath.value.trim();
+		let finalPath = selectedWallpaperPath.value.trim();
+
+		// Un video se prepara una vez, acá, y no en cada cuadro después: se
+		// baja a la resolución de la pantalla, se limita a 30 fps y se le saca
+		// el audio, que en un fondo no suena pero se decodifica igual. Si no
+		// hay nada que mejorar devuelve el original sin copiar nada.
+		if (finalPath && selectedIsVideo.value) {
+			optimizing.value = true;
+			optimizeProgress.value = 0;
+			optimizeDetail.value = '';
+
+			try {
+				const preparado = await invoke<{ path: string; optimized: boolean; detail: string }>(
+					'prepare_wallpaper_video',
+					{ path: finalPath }
+				);
+				finalPath = preparado.path;
+				optimizeDetail.value = preparado.detail;
+			} catch (err) {
+				// Que no se pueda optimizar no es motivo para no poder poner el
+				// fondo: se guarda el original y el escritorio lo reproduce igual.
+				optimizeDetail.value = String(err);
+			} finally {
+				optimizing.value = false;
+			}
+		}
 		vskConfig.value.desktop = {
 			...vskConfig.value.desktop,
 			wallpaper: finalPath ? [finalPath] : [],
-		};
+			pausevideoonbattery: pauseVideoOnBattery.value,
+		} as typeof vskConfig.value.desktop;
 
 		await writeConfig(vskConfig.value);
 		successMessage.value = t('views.appearanceWallpaper.saved');
@@ -94,8 +158,14 @@ onMounted(async () => {
 		await configStore.value.loadConfig();
 		vskConfig.value = await readConfig();
 		selectedWallpaperPath.value = vskConfig.value?.desktop?.wallpaper?.[0] ?? '';
+		pauseVideoOnBattery.value =
+			(vskConfig.value?.desktop as any)?.pausevideoonbattery ?? true;
 
 		officialWallpapers.value = await getOfficialWallpapers<string[]>();
+
+		unlistenProgress = await listen<number>('wallpaper-video-progress', (event) => {
+			optimizeProgress.value = event.payload ?? 0;
+		});
 
 		unlistenFileDrop = await listen<{ paths: string[] }>('tauri://drag-drop', (event) => {
 			const firstPath = event.payload.paths?.[0];
@@ -111,6 +181,10 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+	if (unlistenProgress) {
+		unlistenProgress();
+	}
+
 	if (unlistenFileDrop) {
 		unlistenFileDrop();
 	}
@@ -142,6 +216,34 @@ onUnmounted(() => {
 			<AlertMessage v-if="error" :message="error" tone="error" />
 
 			<AlertMessage v-if="successMessage" :message="successMessage" tone="success" />
+
+			<!-- Sólo aparece cuando hace falta: con una imagen de fondo, esto no
+			     significa nada y sería una opción más para leer y descartar. -->
+			<SectionCard v-if="selectedIsVideo">
+				<h2 class="text-lg font-semibold">{{ t('views.appearanceWallpaper.videoTitle') }}</h2>
+				<p class="mt-1 text-sm text-tx-muted">{{ t('views.appearanceWallpaper.videoPowerNote') }}</p>
+
+				<div v-if="optimizing" class="mt-4">
+					<p class="mb-2 text-sm text-tx-muted">
+						{{ t('views.appearanceWallpaper.optimizing') }}
+					</p>
+					<ProgressBar :value="optimizeProgress" :label="`${optimizeProgress}%`" />
+				</div>
+
+				<p v-else-if="optimizeDetail" class="mt-4 text-sm text-tx-muted">
+					{{ t('views.appearanceWallpaper.optimized').replace('{0}', optimizeDetail) }}
+				</p>
+
+				<div class="mt-4 flex items-center justify-between">
+					<label class="text-sm font-medium text-tx-primary">
+						{{ t('views.appearanceWallpaper.pauseOnBattery') }}
+					</label>
+					<SwitchToggle
+						:is-on="pauseVideoOnBattery"
+						@toggle="(val: boolean) => (pauseVideoOnBattery = val)"
+					/>
+				</div>
+			</SectionCard>
 
 			<div class="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
 				<SectionCard>

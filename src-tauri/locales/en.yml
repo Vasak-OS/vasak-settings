@@ -335,6 +335,12 @@ views:
     errorLoading: 'Error loading wallpapers: {0}'
     errorSaving: 'Error saving wallpaper: {0}'
     saved: Wallpaper saved successfully
+    invalidFile: The dropped file is not an image or a video the desktop can use
+    videoTitle: Moving wallpaper
+    videoPowerNote: A video wallpaper keeps the system working all the time and uses noticeably more power than an image.
+    pauseOnBattery: Pause it while on battery
+    optimizing: Optimising the video for your screen…
+    optimized: Optimised: {0}
     invalidImage: The dropped file is not a valid image
     officialTitle: Official Wallpapers
     optionsCount: '{0} options'

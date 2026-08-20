@@ -335,6 +335,12 @@ views:
     errorLoading: 'Error cargando wallpapers: {0}'
     errorSaving: 'Error guardando wallpaper: {0}'
     saved: Wallpaper guardado correctamente
+    invalidFile: El archivo arrastrado no es una imagen ni un video que el escritorio pueda usar
+    videoTitle: Fondo en movimiento
+    videoPowerNote: Un video de fondo mantiene el sistema trabajando todo el tiempo y consume bastante más que una imagen.
+    pauseOnBattery: Pausarlo cuando esté con batería
+    optimizing: Optimizando el video para tu pantalla…
+    optimized: Optimizado: {0}
     invalidImage: El archivo arrastrado no es una imagen valida
     officialTitle: Wallpapers Oficiales
     optionsCount: '{0} opciones'
