@@ -340,8 +340,7 @@ views:
     videoPowerNote: A video wallpaper keeps the system working all the time and uses noticeably more power than an image.
     pauseOnBattery: Pause it while on battery
     optimizing: Optimising the video for your screen…
-    optimized: Optimised: {0}
-    invalidImage: The dropped file is not a valid image
+    optimized: "Optimised: {0}"
     officialTitle: Official Wallpapers
     optionsCount: '{0} options'
     noWallpapers: No wallpapers were found in /usr/share/backgrounds/vasakos.

@@ -340,8 +340,7 @@ views:
     videoPowerNote: Un video de fondo mantiene el sistema trabajando todo el tiempo y consume bastante más que una imagen.
     pauseOnBattery: Pausarlo cuando esté con batería
     optimizing: Optimizando el video para tu pantalla…
-    optimized: Optimizado: {0}
-    invalidImage: El archivo arrastrado no es una imagen valida
+    optimized: "Optimizado: {0}"
     officialTitle: Wallpapers Oficiales
     optionsCount: '{0} opciones'
     noWallpapers: No se encontraron wallpapers en /usr/share/backgrounds/vasakos.
