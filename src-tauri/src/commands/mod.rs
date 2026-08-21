@@ -6,6 +6,7 @@ pub mod datetime;
 pub mod display_power;
 pub mod idle;
 pub mod users;
+pub mod wallpaper_video;
 pub mod wayfire_config;
 pub mod wayfire_ini;
 pub mod wayfire_plugins;
@@ -17,3 +18,4 @@ pub mod language;
 pub mod online_accounts;
 pub mod permissions;
 pub mod connect;
+

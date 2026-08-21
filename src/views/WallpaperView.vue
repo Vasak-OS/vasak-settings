@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { convertFileSrc } from '@tauri-apps/api/core';
+import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import {
 	readConfig,
@@ -13,7 +13,9 @@ import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
+import ProgressBar from '@/components/ui/ProgressBar.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
+import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import { getOfficialWallpapers } from '@/services/style.service';
 
 const { t } = useI18n();
@@ -28,12 +30,8 @@ const selectedWallpaperPath = ref('');
 
 const vskConfig: Ref<VSKConfig | null> = ref(null);
 const configStore = ref<any>(null);
+let unlistenProgress: (() => void) | null = null;
 let unlistenFileDrop: (() => void) | null = null;
-
-const wallpaperPreviewUrl = computed(() => {
-	if (!selectedWallpaperPath.value) return '';
-	return convertFileSrc(selectedWallpaperPath.value);
-});
 
 const getWallpaperLabel = (path: string) => {
 	const filename = path.split('/').pop() ?? path;
@@ -44,19 +42,80 @@ const isSelected = (path: string) => selectedWallpaperPath.value === path;
 
 const applyWallpaperPath = (path: string) => {
 	selectedWallpaperPath.value = path.trim();
+	void loadThumbnail(selectedWallpaperPath.value);
 };
 
 const handleDropPath = (path: string) => {
 	const lowered = path.toLowerCase();
-	const valid = ['.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif', '.avif'];
+	// Los fondos también pueden ser videos, en los formatos que el escritorio
+	// sabe reproducir: mp4, webm y ogv. Un mkv o un mov quedan afuera a
+	// propósito —WebKit no los abre— y es mejor decirlo al soltarlos que
+	// dejar la pantalla negra después de guardar.
+	const valid = [
+		'.jpg',
+		'.jpeg',
+		'.png',
+		'.webp',
+		'.bmp',
+		'.gif',
+		'.avif',
+		'.mp4',
+		'.webm',
+		'.ogv',
+	];
 	if (!valid.some((ext) => lowered.endsWith(ext))) {
-		error.value = t('views.appearanceWallpaper.invalidImage');
+		error.value = t('views.appearanceWallpaper.invalidFile');
 		return;
 	}
 
 	applyWallpaperPath(path);
 	error.value = '';
 };
+
+/**
+ * Si el fondo es un video, pausarlo con batería.
+ *
+ * Un video de fondo mantiene la máquina trabajando todo el tiempo: medido,
+ * pasa de 4 % a 20 % de un núcleo. Con batería eso se nota, así que se puede
+ * congelar en un cuadro hasta que vuelva el cable. Por omisión sí, porque es
+ * lo que menos sorprende a quien no sabía que su fondo consumía.
+ */
+const pauseVideoOnBattery = ref(true);
+
+const selectedIsVideo = computed(() => {
+	const lowered = selectedWallpaperPath.value.toLowerCase();
+	return ['.mp4', '.webm', '.ogv'].some((ext) => lowered.endsWith(ext));
+});
+
+/** El avance de la optimización, para no dejar la ventana muda mientras recodifica. */
+/**
+ * Miniaturas: ruta original → URL de la copia chica.
+ *
+ * Los fondos que trae el sistema son de 4K y 5K. Entregarle esos archivos al
+ * webview para dibujar recuadros de 200 píxeles hacía que la aplicación
+ * creciera hasta que el kernel la mataba: diez imágenes de esas, decodificadas,
+ * son más de medio giga, y WebKit guarda además copias escaladas.
+ */
+const thumbnails = ref<Record<string, string>>({});
+
+async function loadThumbnail(path: string) {
+	if (!path || thumbnails.value[path]) return;
+
+	try {
+		const miniatura = await invoke<string>('wallpaper_thumbnail', { path });
+		thumbnails.value = { ...thumbnails.value, [path]: convertFileSrc(miniatura) };
+	} catch {
+		// Sin miniatura se muestra el original: peor para la memoria, pero es
+		// mejor que un recuadro vacío.
+		thumbnails.value = { ...thumbnails.value, [path]: convertFileSrc(path) };
+	}
+}
+
+const thumbnailFor = (path: string) => thumbnails.value[path] ?? '';
+
+const optimizing = ref(false);
+const optimizeProgress = ref(0);
+const optimizeDetail = ref('');
 
 const saveWallpaperConfig = async () => {
 	if (!vskConfig.value) return;
@@ -66,11 +125,37 @@ const saveWallpaperConfig = async () => {
 	successMessage.value = '';
 
 	try {
-		const finalPath = selectedWallpaperPath.value.trim();
+		let finalPath = selectedWallpaperPath.value.trim();
+
+		// Un video se prepara una vez, acá, y no en cada cuadro después: se
+		// baja a la resolución de la pantalla, se limita a 30 fps y se le saca
+		// el audio, que en un fondo no suena pero se decodifica igual. Si no
+		// hay nada que mejorar devuelve el original sin copiar nada.
+		if (finalPath && selectedIsVideo.value) {
+			optimizing.value = true;
+			optimizeProgress.value = 0;
+			optimizeDetail.value = '';
+
+			try {
+				const preparado = await invoke<{ path: string; optimized: boolean; detail: string }>(
+					'prepare_wallpaper_video',
+					{ path: finalPath }
+				);
+				finalPath = preparado.path;
+				optimizeDetail.value = preparado.detail;
+			} catch (err) {
+				// Que no se pueda optimizar no es motivo para no poder poner el
+				// fondo: se guarda el original y el escritorio lo reproduce igual.
+				optimizeDetail.value = String(err);
+			} finally {
+				optimizing.value = false;
+			}
+		}
 		vskConfig.value.desktop = {
 			...vskConfig.value.desktop,
 			wallpaper: finalPath ? [finalPath] : [],
-		};
+			pausevideoonbattery: pauseVideoOnBattery.value,
+		} as typeof vskConfig.value.desktop;
 
 		await writeConfig(vskConfig.value);
 		successMessage.value = t('views.appearanceWallpaper.saved');
@@ -94,8 +179,21 @@ onMounted(async () => {
 		await configStore.value.loadConfig();
 		vskConfig.value = await readConfig();
 		selectedWallpaperPath.value = vskConfig.value?.desktop?.wallpaper?.[0] ?? '';
+		pauseVideoOnBattery.value =
+			(vskConfig.value?.desktop as any)?.pausevideoonbattery ?? true;
 
 		officialWallpapers.value = await getOfficialWallpapers<string[]>();
+
+		// De a una y en orden, para no lanzar diez ffmpeg a la vez.
+		for (const ruta of officialWallpapers.value) {
+			await loadThumbnail(ruta);
+		}
+
+		await loadThumbnail(selectedWallpaperPath.value);
+
+		unlistenProgress = await listen<number>('wallpaper-video-progress', (event) => {
+			optimizeProgress.value = event.payload ?? 0;
+		});
 
 		unlistenFileDrop = await listen<{ paths: string[] }>('tauri://drag-drop', (event) => {
 			const firstPath = event.payload.paths?.[0];
@@ -111,6 +209,10 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+	if (unlistenProgress) {
+		unlistenProgress();
+	}
+
 	if (unlistenFileDrop) {
 		unlistenFileDrop();
 	}
@@ -143,6 +245,34 @@ onUnmounted(() => {
 
 			<AlertMessage v-if="successMessage" :message="successMessage" tone="success" />
 
+			<!-- Sólo aparece cuando hace falta: con una imagen de fondo, esto no
+			     significa nada y sería una opción más para leer y descartar. -->
+			<SectionCard v-if="selectedIsVideo">
+				<h2 class="text-lg font-semibold">{{ t('views.appearanceWallpaper.videoTitle') }}</h2>
+				<p class="mt-1 text-sm text-tx-muted">{{ t('views.appearanceWallpaper.videoPowerNote') }}</p>
+
+				<div v-if="optimizing" class="mt-4">
+					<p class="mb-2 text-sm text-tx-muted">
+						{{ t('views.appearanceWallpaper.optimizing') }}
+					</p>
+					<ProgressBar :value="optimizeProgress" :label="`${optimizeProgress}%`" />
+				</div>
+
+				<p v-else-if="optimizeDetail" class="mt-4 text-sm text-tx-muted">
+					{{ t('views.appearanceWallpaper.optimized').replace('{0}', optimizeDetail) }}
+				</p>
+
+				<div class="mt-4 flex items-center justify-between">
+					<label class="text-sm font-medium text-tx-primary">
+						{{ t('views.appearanceWallpaper.pauseOnBattery') }}
+					</label>
+					<SwitchToggle
+						:is-on="pauseVideoOnBattery"
+						@toggle="(val: boolean) => (pauseVideoOnBattery = val)"
+					/>
+				</div>
+			</SectionCard>
+
 			<div class="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
 				<SectionCard>
 					<div class="flex items-center justify-between">
@@ -164,7 +294,9 @@ onUnmounted(() => {
 							@click="applyWallpaperPath(wallpaperPath)"
 						>
 							<div class="aspect-video w-full overflow-hidden bg-ui-surface/40">
-								<img :src="convertFileSrc(wallpaperPath)" :alt="getWallpaperLabel(wallpaperPath)" class="h-full w-full object-cover" loading="lazy" />
+								<img v-if="thumbnailFor(wallpaperPath)" :src="thumbnailFor(wallpaperPath)" :alt="getWallpaperLabel(wallpaperPath)" class="h-full w-full object-cover" loading="lazy" />
+							<!-- Mientras se genera: un recuadro, no un icono de imagen rota. -->
+							<div v-else class="h-full w-full animate-pulse bg-ui-surface/60"></div>
 							</div>
 							<div class="p-3">
 								<p class="truncate text-sm font-medium">{{ getWallpaperLabel(wallpaperPath) }}</p>
@@ -193,7 +325,12 @@ onUnmounted(() => {
 					<div v-if="selectedWallpaperPath" class="mt-4 rounded-corner border border-ui-border bg-ui-surface/30 p-3">
 						<p class="mb-2 text-xs uppercase tracking-[0.16em] text-tx-muted">{{ t('views.appearanceWallpaper.preview') }}</p>
 						<div class="group relative flex h-40 w-full items-center justify-center overflow-hidden rounded-corner border-2 border-dashed border-[var(--primary-color,#0084ff)]/30 bg-ui-surface/80 transition-colors hover:border-[var(--primary-color,#0084ff)]/50 hover:bg-[var(--primary-color,#0084ff)]/5">
-							<img :src="wallpaperPreviewUrl" :alt="t('views.appearanceWallpaper.selectedAlt')" class="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+							<!-- También la previsualización va por miniatura, y de un video
+							     muestra un cuadro. Un elemento multimedia apuntando al
+							     protocolo interno falla y reintenta, y cada intento entrega el
+							     archivo entero otra vez. -->
+							<img v-if="thumbnailFor(selectedWallpaperPath)" :src="thumbnailFor(selectedWallpaperPath)" :alt="t('views.appearanceWallpaper.selectedAlt')" class="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+							<div v-else class="absolute inset-0 animate-pulse bg-ui-surface/60"></div>
 
 							<div class="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors hover:bg-black/20">
 								<div class="pointer-events-none text-center">

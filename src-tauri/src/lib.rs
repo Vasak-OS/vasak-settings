@@ -109,6 +109,8 @@ pub fn run() {
             commands::audio::get_audio_input_devices,
             commands::audio::set_audio_input_device,
             commands::monitors::get_detected_monitors,
+            commands::wallpaper_video::prepare_wallpaper_video,
+            commands::wallpaper_video::wallpaper_thumbnail,
             commands::monitors::apply_monitor_layout,
             commands::brightness::get_monitor_brightness,
             commands::brightness::set_monitor_brightness,
