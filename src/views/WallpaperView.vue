@@ -33,11 +33,6 @@ const configStore = ref<any>(null);
 let unlistenProgress: (() => void) | null = null;
 let unlistenFileDrop: (() => void) | null = null;
 
-const wallpaperPreviewUrl = computed(() => {
-	if (!selectedWallpaperPath.value) return '';
-	return convertFileSrc(selectedWallpaperPath.value);
-});
-
 const getWallpaperLabel = (path: string) => {
 	const filename = path.split('/').pop() ?? path;
 	return filename.replace(/\.[^.]+$/, '');
@@ -47,6 +42,7 @@ const isSelected = (path: string) => selectedWallpaperPath.value === path;
 
 const applyWallpaperPath = (path: string) => {
 	selectedWallpaperPath.value = path.trim();
+	void loadThumbnail(selectedWallpaperPath.value);
 };
 
 const handleDropPath = (path: string) => {
@@ -92,6 +88,31 @@ const selectedIsVideo = computed(() => {
 });
 
 /** El avance de la optimización, para no dejar la ventana muda mientras recodifica. */
+/**
+ * Miniaturas: ruta original → URL de la copia chica.
+ *
+ * Los fondos que trae el sistema son de 4K y 5K. Entregarle esos archivos al
+ * webview para dibujar recuadros de 200 píxeles hacía que la aplicación
+ * creciera hasta que el kernel la mataba: diez imágenes de esas, decodificadas,
+ * son más de medio giga, y WebKit guarda además copias escaladas.
+ */
+const thumbnails = ref<Record<string, string>>({});
+
+async function loadThumbnail(path: string) {
+	if (!path || thumbnails.value[path]) return;
+
+	try {
+		const miniatura = await invoke<string>('wallpaper_thumbnail', { path });
+		thumbnails.value = { ...thumbnails.value, [path]: convertFileSrc(miniatura) };
+	} catch {
+		// Sin miniatura se muestra el original: peor para la memoria, pero es
+		// mejor que un recuadro vacío.
+		thumbnails.value = { ...thumbnails.value, [path]: convertFileSrc(path) };
+	}
+}
+
+const thumbnailFor = (path: string) => thumbnails.value[path] ?? '';
+
 const optimizing = ref(false);
 const optimizeProgress = ref(0);
 const optimizeDetail = ref('');
@@ -162,6 +183,13 @@ onMounted(async () => {
 			(vskConfig.value?.desktop as any)?.pausevideoonbattery ?? true;
 
 		officialWallpapers.value = await getOfficialWallpapers<string[]>();
+
+		// De a una y en orden, para no lanzar diez ffmpeg a la vez.
+		for (const ruta of officialWallpapers.value) {
+			await loadThumbnail(ruta);
+		}
+
+		await loadThumbnail(selectedWallpaperPath.value);
 
 		unlistenProgress = await listen<number>('wallpaper-video-progress', (event) => {
 			optimizeProgress.value = event.payload ?? 0;
@@ -266,7 +294,9 @@ onUnmounted(() => {
 							@click="applyWallpaperPath(wallpaperPath)"
 						>
 							<div class="aspect-video w-full overflow-hidden bg-ui-surface/40">
-								<img :src="convertFileSrc(wallpaperPath)" :alt="getWallpaperLabel(wallpaperPath)" class="h-full w-full object-cover" loading="lazy" />
+								<img v-if="thumbnailFor(wallpaperPath)" :src="thumbnailFor(wallpaperPath)" :alt="getWallpaperLabel(wallpaperPath)" class="h-full w-full object-cover" loading="lazy" />
+							<!-- Mientras se genera: un recuadro, no un icono de imagen rota. -->
+							<div v-else class="h-full w-full animate-pulse bg-ui-surface/60"></div>
 							</div>
 							<div class="p-3">
 								<p class="truncate text-sm font-medium">{{ getWallpaperLabel(wallpaperPath) }}</p>
@@ -295,7 +325,12 @@ onUnmounted(() => {
 					<div v-if="selectedWallpaperPath" class="mt-4 rounded-corner border border-ui-border bg-ui-surface/30 p-3">
 						<p class="mb-2 text-xs uppercase tracking-[0.16em] text-tx-muted">{{ t('views.appearanceWallpaper.preview') }}</p>
 						<div class="group relative flex h-40 w-full items-center justify-center overflow-hidden rounded-corner border-2 border-dashed border-[var(--primary-color,#0084ff)]/30 bg-ui-surface/80 transition-colors hover:border-[var(--primary-color,#0084ff)]/50 hover:bg-[var(--primary-color,#0084ff)]/5">
-							<img :src="wallpaperPreviewUrl" :alt="t('views.appearanceWallpaper.selectedAlt')" class="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+							<!-- También la previsualización va por miniatura, y de un video
+							     muestra un cuadro. Un elemento multimedia apuntando al
+							     protocolo interno falla y reintenta, y cada intento entrega el
+							     archivo entero otra vez. -->
+							<img v-if="thumbnailFor(selectedWallpaperPath)" :src="thumbnailFor(selectedWallpaperPath)" :alt="t('views.appearanceWallpaper.selectedAlt')" class="pointer-events-none absolute inset-0 h-full w-full object-cover" />
+							<div v-else class="absolute inset-0 animate-pulse bg-ui-surface/60"></div>
 
 							<div class="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors hover:bg-black/20">
 								<div class="pointer-events-none text-center">

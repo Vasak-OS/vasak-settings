@@ -224,6 +224,132 @@ async fn target_resolution() -> (u32, u32) {
     }
 }
 
+/// Una miniatura del fondo, sea imagen o video.
+///
+/// Los fondos que trae VasakOS son de 4K y 5K: decodificados en memoria, los
+/// diez de la grilla suman más de medio giga, y WebKit además guarda copias
+/// escaladas. Entregarle los archivos originales para dibujar recuadros de 200
+/// píxeles es lo que hacía que la aplicación creciera hasta que el kernel la
+/// mataba.
+///
+/// Con los videos hay una razón más: un elemento multimedia apuntando al
+/// protocolo interno de la aplicación falla —el reproductor de WebKit no sabe
+/// leer de un esquema propio— y **reintenta**, y en cada intento el protocolo
+/// entrega el archivo completo otra vez.
+///
+/// ffmpeg sirve para los dos casos: de un video saca un cuadro, de una imagen
+/// una copia escalada.
+#[tauri::command]
+pub async fn wallpaper_thumbnail(path: String) -> Result<String, String> {
+    let source = PathBuf::from(&path);
+    let metadata = std::fs::metadata(&source).map_err(|e| format!("{e}"))?;
+    let modified = metadata
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+
+    let dir = cache_dir().ok_or("no se pudo determinar la carpeta de caché")?;
+    std::fs::create_dir_all(&dir).map_err(|e| format!("{e}"))?;
+
+    let destino = dir.join(thumbnail_name(&source, metadata.len(), modified));
+
+    if destino.exists() {
+        return Ok(destino.to_string_lossy().into_owned());
+    }
+
+    let parcial = destino.with_extension("parcial.jpg");
+
+    // Una imagen y un video no se tratan igual. En un video conviene saltar un
+    // segundo, porque el primer cuadro de muchos es negro; en una imagen ese
+    // salto hace que ffmpeg escriba un archivo **vacío y devuelva éxito**, que
+    // es la peor forma de fallar: el chequeo de «terminó bien y el archivo
+    // existe» lo daba por bueno y la previsualización quedaba en blanco.
+    let salto: &[&str] = if es_video(&source) { &["-ss", "1"] } else { &[] };
+
+    if !extraer_cuadro(&path, &parcial, salto).await? && es_video(&source) {
+        // Un video más corto que el salto: se reintenta desde el principio.
+        extraer_cuadro(&path, &parcial, &[]).await?;
+    }
+
+    if !archivo_con_contenido(&parcial) {
+        let _ = std::fs::remove_file(&parcial);
+        return Err("no se pudo generar la miniatura".into());
+    }
+
+    std::fs::rename(&parcial, &destino).map_err(|e| format!("{e}"))?;
+    Ok(destino.to_string_lossy().into_owned())
+}
+
+/// Si el archivo es un video, por su extensión.
+///
+/// Alcanza con la extensión: lo único que decide es qué argumentos usar, y
+/// equivocarse cuesta un reintento, no una miniatura mal hecha.
+pub fn es_video(path: &Path) -> bool {
+    const VIDEOS: [&str; 6] = ["mp4", "webm", "ogv", "mkv", "mov", "avi"];
+
+    path.extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_ascii_lowercase())
+        .map(|e| VIDEOS.contains(&e.as_str()))
+        .unwrap_or(false)
+}
+
+/// Que el archivo exista no alcanza: ffmpeg puede dejar uno vacío y terminar
+/// bien. Un JPEG de menos de cien bytes no es una imagen.
+pub fn archivo_con_contenido(path: &Path) -> bool {
+    std::fs::metadata(path).map(|m| m.len() > 100).unwrap_or(false)
+}
+
+/// Corre ffmpeg una vez. Devuelve si dejó una miniatura de verdad.
+async fn extraer_cuadro(entrada: &str, salida: &Path, salto: &[&str]) -> Result<bool, String> {
+    let destino = salida.to_str().ok_or("ruta inválida")?;
+    let mut args: Vec<&str> = vec!["-hide_banner", "-nostdin", "-y"];
+    args.extend_from_slice(salto);
+    args.extend_from_slice(&[
+        "-i",
+        entrada,
+        "-frames:v",
+        "1",
+        "-vf",
+        ANCHO_FILTRO,
+        "-q:v",
+        "4",
+        destino,
+    ]);
+
+    let resultado = Command::new("ffmpeg")
+        .args(&args)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .await
+        .map_err(|e| format!("no se pudo ejecutar ffmpeg: {e}"))?;
+
+    Ok(resultado.status.success() && archivo_con_contenido(salida))
+}
+
+/// El ancho de las miniaturas. La grilla dibuja recuadros de unos 200 px, así
+/// que 480 alcanza para pantallas con escala y sigue siendo dos órdenes de
+/// magnitud menos memoria que un 5K.
+const ANCHO_MINIATURA: u32 = 480;
+const ANCHO_FILTRO: &str = "scale=480:-2";
+
+/// El nombre de la miniatura en la caché, con la misma idea que el del video: si
+/// el archivo cambia, la clave cambia y no se muestra una miniatura vieja.
+pub fn thumbnail_name(source: &Path, size: u64, modified_secs: u64) -> String {
+    use std::hash::{Hash, Hasher};
+
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    source.hash(&mut hasher);
+    size.hash(&mut hasher);
+    modified_secs.hash(&mut hasher);
+    "miniatura".hash(&mut hasher);
+
+    format!("miniatura-{:016x}.jpg", hasher.finish())
+}
+
 #[tauri::command]
 pub async fn prepare_wallpaper_video(app: AppHandle, path: String) -> Result<PreparedWallpaper, String> {
     let source = PathBuf::from(&path);
@@ -454,6 +580,55 @@ mod tests {
         assert_ne!(a, cache_key(ruta, 2000, 111, (1920, 1080)), "otro tamaño");
         assert_ne!(a, cache_key(ruta, 1000, 222, (1920, 1080)), "otra fecha");
         assert_ne!(a, cache_key(ruta, 1000, 111, (3840, 2160)), "otra pantalla");
+    }
+
+    /// Una imagen y un video no llevan los mismos argumentos, y confundirlos no
+    /// da un error: da un archivo vacío.
+    #[test]
+    fn distingue_imagen_de_video_por_la_extension() {
+        assert!(es_video(Path::new("/home/pato/fondo.mp4")));
+        assert!(es_video(Path::new("/home/pato/fondo.WEBM")), "sin importar mayúsculas");
+        assert!(!es_video(Path::new("/usr/share/backgrounds/vasakos/wallpaper-1.jpg")));
+        assert!(!es_video(Path::new("/home/pato/sin-extension")));
+    }
+
+    /// El error que rompió la previsualización: con `-ss 1` sobre una imagen,
+    /// ffmpeg escribe un archivo vacío y **devuelve éxito**. Mirar el código de
+    /// salida y que el archivo exista no alcanza para nada.
+    #[test]
+    fn un_archivo_vacio_no_cuenta_como_miniatura() {
+        let dir = std::env::temp_dir().join("vasak-miniatura-prueba");
+        let _ = std::fs::create_dir_all(&dir);
+
+        let vacio = dir.join("vacio.jpg");
+        std::fs::write(&vacio, b"").unwrap();
+        assert!(!archivo_con_contenido(&vacio));
+
+        let recortado = dir.join("recortado.jpg");
+        std::fs::write(&recortado, b"apenas unos bytes").unwrap();
+        assert!(!archivo_con_contenido(&recortado), "un JPEG no pesa 17 bytes");
+
+        let bueno = dir.join("bueno.jpg");
+        std::fs::write(&bueno, vec![0u8; 4096]).unwrap();
+        assert!(archivo_con_contenido(&bueno));
+
+        assert!(!archivo_con_contenido(&dir.join("no-existe.jpg")));
+    }
+
+    /// La miniatura se rehace si el archivo cambió, y nunca choca con la clave
+    /// del video optimizado del mismo archivo.
+    #[test]
+    fn la_clave_de_la_miniatura_es_propia_y_cambia_con_el_archivo() {
+        let ruta = Path::new("/home/pato/fondo.mp4");
+        let a = thumbnail_name(ruta, 1000, 111);
+        assert_eq!(a, thumbnail_name(ruta, 1000, 111));
+        assert_ne!(a, thumbnail_name(ruta, 2000, 111));
+        assert!(a.ends_with(".jpg"));
+        assert_ne!(
+            a.trim_start_matches("miniatura-"),
+            cache_key(ruta, 1000, 111, (1920, 1080)).trim_start_matches("fondo-"),
+            "la miniatura y el video optimizado no pueden compartir clave"
+        );
     }
 
     #[test]
