@@ -365,6 +365,7 @@ views:
     invalidIconSize: El tamaño del icono debe estar entre 24 y 128
     files: Archivos
     showFiles: Mostrar Archivos
+    filesAreAWidget: 'Los archivos del escritorio ahora son un widget: se muestran poniéndolo en el escritorio y se ocultan sacándolo.'
     showHiddenFiles: Mostrar Archivos Ocultos
     enabled: Activado
     disabled: Desactivado

@@ -365,6 +365,7 @@ views:
     invalidIconSize: The icon size must be between 24 and 128
     files: Files
     showFiles: Show Files
+    filesAreAWidget: 'Desktop files are a widget now: show them by placing it on the desktop, hide them by removing it.'
     showHiddenFiles: Show Hidden Files
     enabled: Enabled
     disabled: Disabled
