@@ -35,6 +35,7 @@ sidebar:
     appearanceIconPacks: Icons
     appearanceWallpaper: Wallpapers
     appearanceDesktop: Desktop
+    appearancePanel: Panel
     multimediaAudio: Audio output
     multimediaAudioInput: Audio input
     wayfireInput: Keyboard and Mouse
@@ -354,6 +355,23 @@ views:
     dropToChange: Drag an image here to change it
     dropHere: Drag an image here
 
+  appearancePanel:
+    title: Panel
+    description: Choose what the bar at the top of the screen shows.
+    applyChanges: Apply Changes
+    loading: Loading configuration...
+    errorLoading: 'Error loading the panel configuration: {0}'
+    errorSaving: 'Error saving the panel configuration: {0}'
+    saved: Panel configuration saved
+    indicators: Indicators
+    weather: Weather
+    weatherHint: The icon and the temperature for your city, next to the player.
+    music: Music player
+    musicHint: The controls and the cover of what is playing.
+    transfer: Network transfer
+    transferHint: How much comes down and goes up per second.
+    tray: Application icons
+    trayHint: The icons applications put in the system tray.
   appearanceDesktop:
     title: Desktop Files
     description: Adjust the visibility and size of the icons on the desktop background.

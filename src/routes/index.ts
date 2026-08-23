@@ -23,6 +23,11 @@ const routes = [
 		component: () => import('@/views/AppearanceDesktopView.vue'),
 	},
 	{
+		path: '/appearance-panel',
+		name: 'appearance-panel',
+		component: () => import('@/views/AppearancePanelView.vue'),
+	},
+	{
 		path: '/appearance-fonts',
 		name: 'appearance-fonts',
 		component: () => import('@/views/AppearanceFontsView.vue'),
