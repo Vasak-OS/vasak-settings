@@ -25,7 +25,6 @@ const error = ref('');
 const successMessage = ref('');
 
 const vskConfig: Ref<VSKConfig | null> = ref(null);
-const showFiles = ref(false);
 const showHiddenFiles = ref(false);
 const iconSize = ref(64);
 
@@ -40,7 +39,6 @@ onMounted(async () => {
 		vskConfig.value = await readConfig();
 
 		if (vskConfig.value?.desktop) {
-			showFiles.value = vskConfig.value.desktop.showfiles ?? false;
 			showHiddenFiles.value = vskConfig.value.desktop.showhiddenfiles ?? false;
 			iconSize.value = Number(vskConfig.value.desktop.iconsize ?? 64);
 		}
@@ -64,7 +62,6 @@ const saveConfig = async () => {
 		if (vskConfig.value) {
 			vskConfig.value.desktop = {
 				...vskConfig.value.desktop,
-				showfiles: showFiles.value,
 				showhiddenfiles: showHiddenFiles.value,
 				iconsize: iconSize.value,
 			};
@@ -119,23 +116,17 @@ const isFormValid = computed(() => {
 				<SectionCard>
 					<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.appearanceDesktop.files') }}</h3>
 					<div class="flex flex-col gap-5">
-						<div class="flex items-center justify-between">
-							<label class="text-sm font-medium text-tx-primary">{{ t('views.appearanceDesktop.showFiles') }}</label>
-							<div class="flex items-center gap-3">
-								<SwitchToggle
-									:is-on="showFiles"
-									@toggle="val => (showFiles = val)"
-								/>
-								<span class="w-20 text-xs text-tx-muted">{{ showFiles ? t('views.appearanceDesktop.enabled') : t('views.appearanceDesktop.disabled') }}</span>
-							</div>
-						</div>
+						<!-- Mostrar u ocultar los archivos ya no es un interruptor: se
+						     hace poniendo o sacando el widget de archivos del escritorio,
+						     que además elige dónde y de qué tamaño. Un interruptor acá
+						     contradiría al widget. -->
+						<p class="text-sm text-tx-muted">{{ t('views.appearanceDesktop.filesAreAWidget') }}</p>
 
 						<div class="flex items-center justify-between">
 							<label class="text-sm font-medium text-tx-primary">{{ t('views.appearanceDesktop.showHiddenFiles') }}</label>
 							<div class="flex items-center gap-3">
 								<SwitchToggle
 									:is-on="showHiddenFiles"
-									:disabled="!showFiles"
 									@toggle="val => (showHiddenFiles = val)"
 								/>
 								<span class="w-20 text-xs text-tx-muted">{{ showHiddenFiles ? t('views.appearanceDesktop.enabled') : t('views.appearanceDesktop.disabled') }}</span>
