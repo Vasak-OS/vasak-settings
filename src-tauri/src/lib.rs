@@ -127,6 +127,8 @@ pub fn run() {
             commands::online_accounts::remove_account,
             commands::online_accounts::start_google_oauth,
             commands::online_accounts::account_manager_ping,
+            commands::greeter::get_greeter_config,
+            commands::greeter::set_greeter_config,
             commands::permissions::list_permissions,
             commands::permissions::set_permission,
             commands::permissions::forget_permission,

@@ -18,4 +18,5 @@ pub mod language;
 pub mod online_accounts;
 pub mod permissions;
 pub mod connect;
+pub mod greeter;
 
