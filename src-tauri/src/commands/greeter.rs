@@ -344,6 +344,32 @@ fn readable_by_greeter(path: &Path) -> bool {
     })
 }
 
+/// Con qué extensión se guarda la copia del fondo.
+///
+/// La del archivo original, porque el greeter decide si algo es un video mirando
+/// el nombre. Cuando no tiene ninguna se usa la de lo que el archivo **es**: la
+/// copia no puede llamarse `background` a secas, que es el nombre del archivo
+/// que apunta al fondo, y se sobrescribirían entre ellos.
+fn copy_extension(origen: &Path) -> String {
+    let extension = extension_of(origen);
+
+    if !extension.is_empty() {
+        return extension;
+    }
+
+    // Sin extensión el greeter no lo va a tomar por un video, así que a esta
+    // altura es una imagen: `validate_background` no deja pasar otra cosa.
+    match sniff_image(origen) {
+        Some("image/png") => "png",
+        Some("image/jpeg") => "jpg",
+        Some("image/gif") => "gif",
+        Some("image/webp") => "webp",
+        Some("image/svg+xml") => "svg",
+        _ => "img",
+    }
+    .to_string()
+}
+
 /// Si el fondo elegido hay que copiar a `/etc` en vez de apuntarlo donde está.
 ///
 /// Dos razones distintas para lo mismo:
@@ -498,14 +524,7 @@ fn stage_config(
     let guardado = if !needs_copy(&origen, readable_by_greeter(&origen)) {
         origen.to_string_lossy().into_owned()
     } else {
-        // Se copia con la extensión original: el greeter decide si es video por
-        // el nombre del archivo.
-        let extension = extension_of(&origen);
-        let nombre = if extension.is_empty() {
-            BACKGROUND_FILE.to_string()
-        } else {
-            format!("{BACKGROUND_FILE}.{extension}")
-        };
+        let nombre = format!("{BACKGROUND_FILE}.{}", copy_extension(&origen));
 
         std::fs::copy(&origen, stage.join(&nombre)).map_err(|error| {
             format!(
@@ -719,6 +738,29 @@ mod tests {
         assert!(!readable_by_greeter(&adentro));
 
         std::fs::set_permissions(&cerrado, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// La copia no puede quedarse con el nombre del archivo que apunta al fondo:
+    /// se sobrescribirían entre ellos y no quedaría ni el fondo ni la ruta.
+    #[test]
+    fn una_copia_sin_extension_toma_la_de_lo_que_el_archivo_es() {
+        let dir = temp_dir("extension");
+
+        let sin_extension = dir.join("fondo");
+        write_file(&sin_extension, PNG);
+        assert_eq!(copy_extension(&sin_extension), "png");
+
+        let con_extension = dir.join("fondo.JPG");
+        write_file(&con_extension, PNG);
+        assert_eq!(
+            copy_extension(&con_extension),
+            "jpg",
+            "la extensión original manda, aunque el contenido diga otra cosa"
+        );
+
+        assert_eq!(copy_extension(Path::new("/tmp/fondo.mp4")), "mp4");
+
         let _ = std::fs::remove_dir_all(&dir);
     }
 
