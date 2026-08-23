@@ -245,12 +245,6 @@ const save = async () => {
 						</FormGroup>
 
 						<p class="text-sm text-tx-muted">{{ t('views.loginScreen.schemeHint') }}</p>
-
-						<!-- Lo que todavía no hace nadie, dicho acá y no descubierto
-						     probando: el gestor de inicio tiene los colores fijos en su
-						     hoja de estilos, así que el tema y el esquema se guardan
-						     pero todavía no cambian nada de lo que se ve. -->
-						<AlertMessage :message="t('views.loginScreen.pendingSupport')" tone="warning" />
 					</div>
 				</SectionCard>
 

@@ -965,7 +965,6 @@ views:
     light: Light
     scheme: Colour scheme
     schemeNone: The colours the login screen ships with
-    pendingSupport: 'For now the login screen is always drawn with its own dark colours: the theme and the scheme are stored in the system, waiting for the version of the login manager that reads them.'
     schemeHint: 'The scheme is copied whole into the system: the login screen runs before there is a session and cannot read the schemes in your home folder.'
     currentSection: What is shown today
     currentHint: What the login screen will draw with the settings currently stored.
