@@ -55,6 +55,7 @@ pub fn run() {
         .plugin(tauri_plugin_bluetooth_manager::init())
         .plugin(tauri_plugin_network_manager::init())
         .invoke_handler(tauri::generate_handler![
+            commands::initial_section::initial_section,
             commands::system_info::get_system_info,
             commands::system_info::get_cpu_usage_only,
             commands::system_info::get_memory_usage_only,

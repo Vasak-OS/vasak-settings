@@ -5,6 +5,7 @@ pub mod shortcuts;
 pub mod datetime;
 pub mod display_power;
 pub mod idle;
+pub mod initial_section;
 pub mod users;
 pub mod wallpaper_video;
 pub mod wayfire_config;
