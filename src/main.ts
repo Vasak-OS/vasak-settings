@@ -4,6 +4,7 @@ import { createPinia } from 'pinia';
 import { createApp } from 'vue';
 import App from '@/App.vue';
 import { router } from '@/routes';
+import { disableNativeContextMenu } from '@/utils/native-menu';
 import '@/assets/main.css';
 
 const i18n = I18n.getInstance();
@@ -16,6 +17,8 @@ const i18n = I18n.getInstance();
 for (const evento of ['dragover', 'drop'] as const) {
 	window.addEventListener(evento, (e) => e.preventDefault());
 }
+
+disableNativeContextMenu();
 
 const app = createApp(App);
 const pinia = createPinia();

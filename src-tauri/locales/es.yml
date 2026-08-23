@@ -998,3 +998,8 @@ shortcutKeys:
   KEY_NEXTSONG:
     label: Canción siguiente
     description: Salta a la canción o pista siguiente
+textMenu:
+  copy: Copiar
+  cut: Cortar
+  paste: Pegar
+  selectAll: Seleccionar todo
