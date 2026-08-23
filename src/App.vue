@@ -3,7 +3,6 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { useConfigStore } from '@vasakgroup/plugin-config-manager';
 import type { Store } from 'pinia';
 import { onMounted, onUnmounted, type Ref, ref } from 'vue';
-import TextContextMenu from '@/components/ui/TextContextMenu.vue';
 import WindowAppLayout from '@/layouts/WindowAppLayout.vue';
 
 let unListenConfig: Ref<UnlistenFn | null> = ref(null);
@@ -37,8 +36,4 @@ onUnmounted(() => {
 	<WindowAppLayout>
 		<RouterView />
 	</WindowAppLayout>
-
-	<!-- Una sola vez, en el marco: escucha en el documento, así ninguna pantalla
-	     tiene que acordarse de nada. -->
-	<TextContextMenu />
 </template>
