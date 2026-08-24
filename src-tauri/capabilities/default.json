@@ -15,6 +15,7 @@
     "core:window:allow-close",
     "vicons:default",
     "config-manager:default",
+    "vsk-contextual-menu:default",
     "system-fonts:default",
     "network-manager:allow-get-network-state",
     "network-manager:allow-list-wifi-networks",
