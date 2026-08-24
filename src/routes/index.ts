@@ -137,6 +137,11 @@ const routes = [
 		name: 'privacy-security',
 		component: () => import('@/views/PrivacySecurityView.vue'),
 	},
+	{
+		path: '/login-screen',
+		name: 'login-screen',
+		component: () => import('@/views/LoginScreenView.vue'),
+	},
 ];
 export const router = createRouter({
 	history: createMemoryHistory(),

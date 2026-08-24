@@ -55,6 +55,7 @@ sidebar:
     networkBluetooth: Bluetooth
     networkVpn: VPN
     phoneDevices: Teléfonos
+    loginScreen: Inicio de sesión
 
 wayfire:
   plugins:
@@ -945,6 +946,44 @@ views:
     emptyDevices: No hay dispositivos de entrada disponibles
     level: 'Nivel:'
     defaultBadge: Activo
+
+  loginScreen:
+    title: Inicio de sesión
+    description: El aspecto de la pantalla que aparece antes de entrar a la sesión.
+    applyChanges: Aplicar cambios
+    loading: Leyendo la configuración del inicio de sesión...
+    errorLoading: 'Error leyendo la configuración del inicio de sesión: {0}'
+    # El sistema ya explica qué pasó, así que el mensaje se muestra tal cual en
+    # vez de quedar envuelto en otro «no se pudo».
+    errorSaving: '{0}'
+    saved: Configuración del inicio de sesión guardada
+    needsAdmin: La pantalla de inicio de sesión es del sistema y no de tu cuenta, así que guardar pide una contraseña de administrador.
+    appearanceSection: Apariencia
+    appearanceHint: Los colores con los que se dibuja la pantalla de inicio de sesión.
+    darkMode: Modo oscuro
+    dark: Oscuro
+    light: Claro
+    scheme: Esquema de colores
+    schemeNone: Los colores que trae la pantalla de inicio
+    schemeHint: 'El esquema se copia completo al sistema: la pantalla de inicio corre antes de que haya sesión y no puede leer los esquemas de tu carpeta personal.'
+    currentSection: Lo que se ve hoy
+    currentHint: Lo que la pantalla de inicio de sesión va a dibujar con lo que está guardado.
+    currentImage: Imagen
+    currentVideo: Video
+    nothing: Nada
+    usingSystemBackground: No hay fondo configurado, así que se usa el que trae VasakOS.
+    useSystemBackground: Usar el del sistema
+    videoTitle: Fondo en movimiento
+    videoNote: 'La pantalla de inicio de sesión reproduce el video desde memoria: hasta 64 MB, y la imagen queda como respaldo si no se puede reproducir.'
+    officialTitle: Fondos del sistema
+    noWallpapers: No se encontraron fondos en /usr/share/backgrounds/vasakos.
+    customPathTitle: Ruta personalizada
+    customPathHint: Una ruta absoluta a una imagen (PNG, JPEG, GIF, WebP o SVG) o a un video (MP4, WebM u OGV).
+    fullPath: Ruta completa
+    pathPlaceholder: /usr/share/backgrounds/vasakos/default.jpg
+    dragHint: También podés arrastrar el archivo a la ventana para cargar su ruta.
+    copyNote: Si el archivo está en tu carpeta personal se copia al sistema al guardar, porque la pantalla de inicio de sesión no puede leer tu carpeta.
+    invalidFile: El archivo que arrastraste no es una imagen ni un video que la pantalla de inicio de sesión pueda usar.
 
 shortcutKeys:
   KEY_VOLUMEUP:

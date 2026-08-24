@@ -147,6 +147,11 @@ const sidebarCategories = computed<SidebarCategory[]>(() => [
 				label: t('sidebar.items.privacySecurity'),
 				icon: 'security-high',
 			},
+			{
+				id: 'login-screen',
+				label: t('sidebar.items.loginScreen'),
+				icon: 'preferences-system-login',
+			},
 		],
 	},
 	{
