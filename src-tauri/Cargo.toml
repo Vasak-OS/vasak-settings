@@ -44,6 +44,7 @@ zbus = { version = "4", default-features = false, features = ["tokio"] }
 tauri-plugin-bluetooth-manager = "2"
 #tauri-plugin-bluetooth-manager = { path = "../../tauri-plugin-bluetooth-manager" }
 tauri-plugin-network-manager = "2"
+tauri-plugin-vsk-contextual-menu = "2"
 #tauri-plugin-network-manager = { path = "../../tauri-plugin-network-manager" }
 
 [profile.dev]

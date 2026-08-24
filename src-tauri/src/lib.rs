@@ -54,7 +54,10 @@ pub fn run() {
         .plugin(tauri_plugin_vicons::init())
         .plugin(tauri_plugin_bluetooth_manager::init())
         .plugin(tauri_plugin_network_manager::init())
+        .plugin(tauri_plugin_vsk_contextual_menu::init())
         .invoke_handler(tauri::generate_handler![
+            commands::clipboard::clipboard_read_text,
+            commands::clipboard::clipboard_write_text,
             commands::system_info::get_system_info,
             commands::system_info::get_cpu_usage_only,
             commands::system_info::get_memory_usage_only,

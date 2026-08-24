@@ -980,3 +980,8 @@ shortcutKeys:
   KEY_NEXTSONG:
     label: Next track
     description: Skips to the next song or track
+textMenu:
+  copy: Copy
+  cut: Cut
+  paste: Paste
+  selectAll: Select all
