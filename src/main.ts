@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { getIconSource } from '@vasakgroup/plugin-vicons';
 import { setupContextMenu } from '@vasakgroup/plugin-vsk-contextual-menu';
 import I18n from '@vasakgroup/tauri-plugin-i18n';
@@ -32,3 +33,19 @@ app.use(pinia);
 app.use(router);
 
 app.mount('#app');
+
+/**
+ * `vasak-settings appearance-panel` abre esa pantalla en vez de la portada.
+ *
+ * La lista de secciones válidas es la del router y no una copia: `hasRoute`
+ * descarta cualquier cosa que no exista, así que agregar una pantalla no obliga
+ * a tocar además una lista aparte. Va después de montar para no demorar el
+ * primer dibujado, y si el argumento no sirve la aplicación abre donde siempre.
+ */
+invoke<string | null>('initial_section')
+	.then((seccion) => {
+		if (seccion && router.hasRoute(seccion)) router.push({ name: seccion });
+	})
+	.catch(() => {
+		// Sin el puente con Rust no hay argumento que leer; la portada sirve.
+	});

@@ -73,6 +73,11 @@ const sidebarCategories = computed<SidebarCategory[]>(() => [
 				label: t('sidebar.items.appearanceDesktop'),
 				icon: 'preferences-desktop-display',
 			},
+			{
+				id: 'appearance-panel',
+				label: t('sidebar.items.appearancePanel'),
+				icon: 'preferences-system-windows',
+			},
 		],
 	},
 	{

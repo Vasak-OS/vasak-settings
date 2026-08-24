@@ -35,6 +35,7 @@ sidebar:
     appearanceIconPacks: Iconos
     appearanceWallpaper: Fondos
     appearanceDesktop: Escritorio
+    appearancePanel: Panel
     multimediaAudio: Audio salida
     multimediaAudioInput: Audio entrada
     wayfireInput: Teclado y Ratón
@@ -355,6 +356,23 @@ views:
     dropToChange: Arrastra una imagen aquí para cambiar
     dropHere: Arrastra una imagen aquí
 
+  appearancePanel:
+    title: Panel
+    description: Elegí qué muestra la barra que está siempre arriba de la pantalla.
+    applyChanges: Aplicar Cambios
+    loading: Cargando configuración...
+    errorLoading: 'Error cargando la configuración del panel: {0}'
+    errorSaving: 'Error guardando la configuración del panel: {0}'
+    saved: Configuración del panel guardada
+    indicators: Indicadores
+    weather: Clima
+    weatherHint: El icono y la temperatura de tu ciudad, al lado del reproductor.
+    music: Reproductor
+    musicHint: Los controles y la tapa de lo que está sonando.
+    transfer: Transferencia de red
+    transferHint: Cuánto baja y cuánto sube por segundo.
+    tray: Iconos de aplicaciones
+    trayHint: Los iconos que las aplicaciones ponen en la bandeja del sistema.
   appearanceDesktop:
     title: Archivos del Escritorio
     description: Ajusta la visibilidad y el tamaño de los iconos en el fondo de escritorio.
