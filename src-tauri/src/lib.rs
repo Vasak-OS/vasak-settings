@@ -54,8 +54,11 @@ pub fn run() {
         .plugin(tauri_plugin_vicons::init())
         .plugin(tauri_plugin_bluetooth_manager::init())
         .plugin(tauri_plugin_network_manager::init())
+        .plugin(tauri_plugin_vsk_contextual_menu::init())
         .invoke_handler(tauri::generate_handler![
             commands::initial_section::initial_section,
+            commands::clipboard::clipboard_read_text,
+            commands::clipboard::clipboard_write_text,
             commands::system_info::get_system_info,
             commands::system_info::get_cpu_usage_only,
             commands::system_info::get_memory_usage_only,
@@ -128,6 +131,8 @@ pub fn run() {
             commands::online_accounts::remove_account,
             commands::online_accounts::start_google_oauth,
             commands::online_accounts::account_manager_ping,
+            commands::greeter::get_greeter_config,
+            commands::greeter::set_greeter_config,
             commands::permissions::list_permissions,
             commands::permissions::set_permission,
             commands::permissions::forget_permission,

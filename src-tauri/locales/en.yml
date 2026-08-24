@@ -56,6 +56,7 @@ sidebar:
     networkBluetooth: Bluetooth
     networkVpn: VPN
     phoneDevices: Phones
+    loginScreen: Login Screen
 
 wayfire:
   plugins:
@@ -964,6 +965,44 @@ views:
     level: 'Level:'
     defaultBadge: Active
 
+  loginScreen:
+    title: Login Screen
+    description: How the screen that appears before you sign in looks.
+    applyChanges: Apply Changes
+    loading: Reading the login screen settings...
+    errorLoading: 'Error reading the login screen settings: {0}'
+    # The system already explains what happened, so the message is shown as it
+    # comes instead of being wrapped in another "could not".
+    errorSaving: '{0}'
+    saved: Login screen settings saved
+    needsAdmin: The login screen belongs to the system rather than to your account, so saving asks for an administrator password.
+    appearanceSection: Appearance
+    appearanceHint: The colours the login screen is drawn with.
+    darkMode: Dark mode
+    dark: Dark
+    light: Light
+    scheme: Colour scheme
+    schemeNone: The colours the login screen ships with
+    schemeHint: 'The scheme is copied whole into the system: the login screen runs before there is a session and cannot read the schemes in your home folder.'
+    currentSection: What is shown today
+    currentHint: What the login screen will draw with the settings currently stored.
+    currentImage: Image
+    currentVideo: Video
+    nothing: Nothing
+    usingSystemBackground: No background is configured, so the one VasakOS ships with is used.
+    useSystemBackground: Use the system one
+    videoTitle: Moving background
+    videoNote: 'The login screen plays the video from memory: up to 64 MB, and the image stays as the fallback if it cannot be played.'
+    officialTitle: System Backgrounds
+    noWallpapers: No backgrounds were found in /usr/share/backgrounds/vasakos.
+    customPathTitle: Custom Path
+    customPathHint: An absolute path to an image (PNG, JPEG, GIF, WebP or SVG) or to a video (MP4, WebM or OGV).
+    fullPath: Full path
+    pathPlaceholder: /usr/share/backgrounds/vasakos/default.jpg
+    dragHint: You can also drag the file onto the window to load its path.
+    copyNote: A file inside your home folder is copied into the system when you save, because the login screen cannot read your folder.
+    invalidFile: The file you dropped is not an image or a video the login screen can use.
+
 shortcutKeys:
   KEY_VOLUMEUP:
     label: Volume up
@@ -998,3 +1037,8 @@ shortcutKeys:
   KEY_NEXTSONG:
     label: Next track
     description: Skips to the next song or track
+textMenu:
+  copy: Copy
+  cut: Cut
+  paste: Paste
+  selectAll: Select all

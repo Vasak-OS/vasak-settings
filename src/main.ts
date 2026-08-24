@@ -1,4 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
+import { getIconSource } from '@vasakgroup/plugin-vicons';
+import { setupContextMenu } from '@vasakgroup/plugin-vsk-contextual-menu';
 import I18n from '@vasakgroup/tauri-plugin-i18n';
 import { createPinia } from 'pinia';
 import { createApp } from 'vue';
@@ -16,6 +18,12 @@ const i18n = I18n.getInstance();
 for (const evento of ['dragover', 'drop'] as const) {
 	window.addEventListener(evento, (e) => e.preventDefault());
 }
+
+// El menú del clic derecho del escritorio, una sola vez para toda la
+// aplicación: le enseña a resolver los nombres de iconos del sistema y apaga el
+// menú que dibuja WebKit, que ofrece «Recargar» e «Inspeccionar elemento» sobre
+// una aplicación que no es una página web.
+setupContextMenu({ iconResolver: getIconSource });
 
 const app = createApp(App);
 const pinia = createPinia();
