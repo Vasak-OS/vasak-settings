@@ -18,6 +18,16 @@ const { t, locale } = useI18n();
 
 const refreshIntervalMs = 30000;
 let refreshTimer: number | null = null;
+let onVisibilityChange: (() => void) | null = null;
+/**
+ * Identifica la lectura más reciente.
+ *
+ * Al volver la ventana se dispara una lectura inmediata, y la del intervalo
+ * anterior puede estar todavía en vuelo: si esa vieja resolvía después,
+ * sobrescribía `systemInfo` con datos más viejos que los que ya se mostraban.
+ * Sólo la última lectura pedida tiene derecho a escribir.
+ */
+let lecturaActual = 0;
 
 const systemInfo = ref<SystemInfo | null>(null);
 const loading = ref(true);
@@ -87,12 +97,21 @@ const loadSystemInfo = async (showLoading = false) => {
 		errorMessage.value = '';
 	}
 
+	lecturaActual += 1;
+	const estaLectura = lecturaActual;
+
 	try {
-		systemInfo.value = await getSystemInfo();
+		const leido = await getSystemInfo();
+		// Sólo escribe la última lectura pedida: una anterior que resuelva tarde
+		// pisaría con datos más viejos lo que ya se está mostrando.
+		if (estaLectura !== lecturaActual) {
+			return;
+		}
+		systemInfo.value = leido;
 		lastUpdatedAt.value = new Date();
 		errorMessage.value = '';
 	} catch (error) {
-		if (!systemInfo.value) {
+		if (estaLectura === lecturaActual && !systemInfo.value) {
 			errorMessage.value = error instanceof Error ? error.message : t('views.home.loadError');
 		}
 	} finally {
@@ -102,15 +121,49 @@ const loadSystemInfo = async (showLoading = false) => {
 	}
 };
 
-onMounted(() => {
-	loadSystemInfo(true);
+/**
+ * Sólo se refresca mientras la ventana esté a la vista.
+ *
+ * La información del sistema se releía cada 30 segundos aunque Ajustes
+ * estuviera minimizado o en otro escritorio, y cada relectura consulta CPU,
+ * memoria y discos. Nadie lee una pantalla que no está en pantalla.
+ */
+const arrancarRefresco = () => {
+	if (refreshTimer !== null || document.hidden) {
+		return;
+	}
 	refreshTimer = window.setInterval(() => loadSystemInfo(false), refreshIntervalMs);
-});
+};
 
-onUnmounted(() => {
+const detenerRefresco = () => {
 	if (refreshTimer !== null) {
 		window.clearInterval(refreshTimer);
 		refreshTimer = null;
+	}
+};
+
+onMounted(() => {
+	loadSystemInfo(true);
+
+	onVisibilityChange = () => {
+		if (document.hidden) {
+			detenerRefresco();
+			return;
+		}
+		// Al volver se relee ya: lo que se muestra quedó viejo mientras no se veía.
+		void loadSystemInfo(false);
+		arrancarRefresco();
+	};
+	document.addEventListener('visibilitychange', onVisibilityChange);
+
+	arrancarRefresco();
+});
+
+onUnmounted(() => {
+	detenerRefresco();
+	if (onVisibilityChange) {
+		document.removeEventListener('visibilitychange', onVisibilityChange);
+		onVisibilityChange = null;
 	}
 });
 </script>
