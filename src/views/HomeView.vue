@@ -18,6 +18,7 @@ const { t, locale } = useI18n();
 
 const refreshIntervalMs = 30000;
 let refreshTimer: number | null = null;
+let onVisibilityChange: (() => void) | null = null;
 
 const systemInfo = ref<SystemInfo | null>(null);
 const loading = ref(true);
@@ -102,15 +103,49 @@ const loadSystemInfo = async (showLoading = false) => {
 	}
 };
 
-onMounted(() => {
-	loadSystemInfo(true);
+/**
+ * Sólo se refresca mientras la ventana esté a la vista.
+ *
+ * La información del sistema se releía cada 30 segundos aunque Ajustes
+ * estuviera minimizado o en otro escritorio, y cada relectura consulta CPU,
+ * memoria y discos. Nadie lee una pantalla que no está en pantalla.
+ */
+const arrancarRefresco = () => {
+	if (refreshTimer !== null || document.hidden) {
+		return;
+	}
 	refreshTimer = window.setInterval(() => loadSystemInfo(false), refreshIntervalMs);
-});
+};
 
-onUnmounted(() => {
+const detenerRefresco = () => {
 	if (refreshTimer !== null) {
 		window.clearInterval(refreshTimer);
 		refreshTimer = null;
+	}
+};
+
+onMounted(() => {
+	loadSystemInfo(true);
+
+	onVisibilityChange = () => {
+		if (document.hidden) {
+			detenerRefresco();
+			return;
+		}
+		// Al volver se relee ya: lo que se muestra quedó viejo mientras no se veía.
+		void loadSystemInfo(false);
+		arrancarRefresco();
+	};
+	document.addEventListener('visibilitychange', onVisibilityChange);
+
+	arrancarRefresco();
+});
+
+onUnmounted(() => {
+	detenerRefresco();
+	if (onVisibilityChange) {
+		document.removeEventListener('visibilitychange', onVisibilityChange);
+		onVisibilityChange = null;
 	}
 });
 </script>
