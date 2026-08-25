@@ -8,6 +8,16 @@ import App from '@/App.vue';
 import { router } from '@/routes';
 import '@/assets/main.css';
 
+// Una violación de CSP no se ve: el recurso simplemente no carga y la interfaz
+// queda a medias sin decir nada. Esto la manda a la consola, que es donde se
+// puede encontrar al ajustar la política.
+document.addEventListener('securitypolicyviolation', (evento) => {
+	console.error(
+		`[CSP] bloqueado ${evento.blockedURI || '(en línea)'} por la directiva ` +
+			`«${evento.violatedDirective}» en ${evento.sourceFile ?? 'documento'}:${evento.lineNumber}`
+	);
+});
+
 const i18n = I18n.getInstance();
 // Soltar un archivo en la ventana lo maneja Tauri, que avisa por
 // `tauri://drag-drop` con la ruta. Lo que sigue evita que **además** lo procese
