@@ -305,6 +305,10 @@ pub fn archivo_con_contenido(path: &Path) -> bool {
 /// Corre ffmpeg una vez. Devuelve si dejó una miniatura de verdad.
 async fn extraer_cuadro(entrada: &str, salida: &Path, salto: &[&str]) -> Result<bool, String> {
     let destino = salida.to_str().ok_or("ruta inválida")?;
+    // El filtro se arma con la constante en lugar de repetir el 480: estaban los
+    // dos por separado, así que cambiar uno dejaba al otro atrás sin que nada lo
+    // avisara. Se liga antes porque los argumentos son préstamos.
+    let filtro = format!("scale={ANCHO_MINIATURA}:-2");
     let mut args: Vec<&str> = vec!["-hide_banner", "-nostdin", "-y"];
     args.extend_from_slice(salto);
     args.extend_from_slice(&[
@@ -313,7 +317,7 @@ async fn extraer_cuadro(entrada: &str, salida: &Path, salto: &[&str]) -> Result<
         "-frames:v",
         "1",
         "-vf",
-        ANCHO_FILTRO,
+        &filtro,
         "-q:v",
         "4",
         destino,
@@ -334,7 +338,6 @@ async fn extraer_cuadro(entrada: &str, salida: &Path, salto: &[&str]) -> Result<
 /// que 480 alcanza para pantallas con escala y sigue siendo dos órdenes de
 /// magnitud menos memoria que un 5K.
 const ANCHO_MINIATURA: u32 = 480;
-const ANCHO_FILTRO: &str = "scale=480:-2";
 
 /// El nombre de la miniatura en la caché, con la misma idea que el del video: si
 /// el archivo cambia, la clave cambia y no se muestra una miniatura vieja.

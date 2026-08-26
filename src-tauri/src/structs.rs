@@ -108,6 +108,8 @@ pub enum LogLevel {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LogSource {
     Rust,
+    /// Sin construir todavía: la usaría `log_from_js`. Ver el comentario ahí.
+    #[allow(dead_code)]
     JavaScript,
 }
 

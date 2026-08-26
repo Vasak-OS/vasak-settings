@@ -30,8 +30,6 @@ struct Entry {
 /// Where a section lives inside the file, and the entries it contains.
 struct SectionSpan {
 	header: usize,
-	/// Exclusive: index of the next header, or the number of lines.
-	end: usize,
 	entries: Vec<Entry>,
 }
 
@@ -109,8 +107,8 @@ fn find_section(lines: &[&str], section: &str) -> Option<SectionSpan> {
 		let first_value = trimmed[eq_pos + 1..].trim();
 
 		// Re-run the continuation join over the value part only.
-		let (value, last_line) = if first_value.ends_with('\\') {
-			let mut parts = vec![first_value[..first_value.len() - 1].trim().to_string()];
+		let (value, last_line) = if let Some(sin_barra) = first_value.strip_suffix('\\') {
+			let mut parts = vec![sin_barra.trim().to_string()];
 			let (rest, last) = join_continuation(lines, index + 1);
 			parts.push(rest);
 			(
@@ -137,7 +135,6 @@ fn find_section(lines: &[&str], section: &str) -> Option<SectionSpan> {
 
 	Some(SectionSpan {
 		header,
-		end,
 		entries,
 	})
 }

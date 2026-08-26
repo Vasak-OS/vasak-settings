@@ -134,6 +134,13 @@ impl VasakLogger {
     }
     
     /// Obtiene la ruta actual del log
+    /// Sin usar todavía: es la mitad de Rust del camino por el que el frontend
+    /// escribiría en el mismo archivo de registro que el backend. Se deja hecha, no
+    /// podada, porque hoy los errores del frontend de Ajustes no van a ningún lado
+    /// durable —sólo a la consola del webview, que nadie ve— y esto es lo que falta
+    /// para cerrarlo. El patrón completo, con el puente del lado de JS, está en
+    /// vasak-desktop.
+    #[allow(dead_code)]
     pub fn get_current_log_path(&self) -> PathBuf {
         self.log_path.clone()
     }
@@ -168,7 +175,15 @@ pub fn log_error(message: &str) {
     }
 }
 
-/// Log desde JavaScript
+/// Log desde JavaScript.
+///
+/// Sin usar todavía: es la mitad de Rust del camino por el que el frontend
+/// escribiría en el mismo archivo de registro que el backend. Se deja hecha, no
+/// podada, porque hoy los errores del frontend de Ajustes no van a ningún lado
+/// durable —sólo a la consola del webview, que nadie ve— y esto es lo que falta
+/// para cerrarlo. El patrón completo, con el puente del lado de JS, está en
+/// vasak-desktop.
+#[allow(dead_code)]
 pub fn log_from_js(level: &str, message: &str) {
     let log_level = match level.to_uppercase().as_str() {
         "DEBUG" => LogLevel::Debug,
@@ -184,6 +199,13 @@ pub fn log_from_js(level: &str, message: &str) {
 }
 
 /// Obtiene la ruta del archivo de log actual
+/// Sin usar todavía: es la mitad de Rust del camino por el que el frontend
+/// escribiría en el mismo archivo de registro que el backend. Se deja hecha, no
+/// podada, porque hoy los errores del frontend de Ajustes no van a ningún lado
+/// durable —sólo a la consola del webview, que nadie ve— y esto es lo que falta
+/// para cerrarlo. El patrón completo, con el puente del lado de JS, está en
+/// vasak-desktop.
+#[allow(dead_code)]
 pub fn get_log_file_path() -> String {
     if let Ok(logger) = LOGGER.lock() {
         logger.get_current_log_path().to_string_lossy().to_string()

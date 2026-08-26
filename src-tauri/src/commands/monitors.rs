@@ -647,6 +647,17 @@ pub async fn apply_monitor_layout(
 		));
 	}
 
+	// Esta comprobación estaba escrita y no la llamaba nadie, así que dos
+	// monitores apilados se aplicaban igual: uno queda tapando al otro, con el
+	// escritorio dibujado en un área que no se ve.
+	let apilados = overlapping_outputs(&settings);
+	if !apilados.is_empty() {
+		return Err(format!(
+			"{} queda encima de otro monitor. Acomodalos pegados, sin superponerse.",
+			apilados.join(", ")
+		));
+	}
+
 	WayfireConfig::global().edit(|content| {
 		let mut updated = content.to_string();
 

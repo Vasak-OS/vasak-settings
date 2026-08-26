@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::logger::{log_debug, log_error};
+use crate::logger::log_debug;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct KeyboardLayout {
