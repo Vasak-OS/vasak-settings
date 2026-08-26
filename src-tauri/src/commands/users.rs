@@ -210,7 +210,7 @@ pub async fn list_users() -> Result<Vec<UserAccount>, String> {
         });
     }
 
-    users.sort_by(|a, b| a.uid.cmp(&b.uid));
+    users.sort_by_key(|a| a.uid);
     Ok(users)
 }
 

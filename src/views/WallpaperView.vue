@@ -179,8 +179,7 @@ onMounted(async () => {
 		await configStore.value.loadConfig();
 		vskConfig.value = await readConfig();
 		selectedWallpaperPath.value = vskConfig.value?.desktop?.wallpaper?.[0] ?? '';
-		pauseVideoOnBattery.value =
-			(vskConfig.value?.desktop as any)?.pausevideoonbattery ?? true;
+		pauseVideoOnBattery.value = (vskConfig.value?.desktop as any)?.pausevideoonbattery ?? true;
 
 		officialWallpapers.value = await getOfficialWallpapers<string[]>();
 

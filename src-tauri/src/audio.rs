@@ -174,7 +174,7 @@ fn parse_devices(output: &str, default_name: Option<&str>, prefix: &str) -> Vec<
                     id: current_id.clone(),
                     name: desc,
                     description: current_name.clone(),
-                    is_default: default_name.map(|d| d == &current_name).unwrap_or(false),
+                    is_default: default_name.map(|d| d == current_name).unwrap_or(false),
                     volume: current_volume,
                 });
             }
@@ -219,7 +219,7 @@ fn parse_devices(output: &str, default_name: Option<&str>, prefix: &str) -> Vec<
                 id: current_id.clone(),
                 name: desc,
                 description: current_name.clone(),
-                is_default: default_name.map(|d| d == &current_name).unwrap_or(false),
+                is_default: default_name.map(|d| d == current_name).unwrap_or(false),
                 volume: current_volume,
             });
             current_id.clear();
@@ -240,7 +240,7 @@ fn parse_devices(output: &str, default_name: Option<&str>, prefix: &str) -> Vec<
             id: current_id,
             name: desc,
             description: current_name.clone(),
-            is_default: default_name.map(|d| d == &current_name).unwrap_or(false),
+            is_default: default_name.map(|d| d == current_name).unwrap_or(false),
             volume: current_volume,
         });
     }
