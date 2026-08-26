@@ -867,27 +867,6 @@ views:
         invalidJson: '{0} must be valid JSON'
         notKeyValue: '{0} must be a key/value object'
         valueNotString: "{0}: the value of '{1}' must be a string"
-  privacy:
-    title: Privacy and security
-    description: Which applications may use your online accounts.
-    emptyDescription: >-
-      When an application wants to use one of your accounts, you will be asked,
-      and the answer will show up here.
-    unverified: >-
-      This program was not installed by the system, so we cannot guarantee it
-      will still be the same program later on.
-    forget: Ask again
-    allow: Allow
-    deny: Don't allow
-    note: >-
-      Changing a permission asks for your password.
-    resources:
-      accountEmail: Account email
-      accountCalendar: Calendar
-      accountContacts: Contacts
-      accountChat: Messages
-      accountDrive: Cloud files
-      accountTasks: Tasks
   phoneDevices:
     section: Network
     title: Phones
@@ -936,6 +915,27 @@ views:
       registerProvider: 'Error registering {0}: {1}'
       registerCustom: 'Error registering custom account: {0}'
       deleteAccount: 'Error deleting account: {0}'
+    permissions:
+      title: Applications with access
+      description: Which programs may use these accounts, and which parts of them.
+      emptyDescription: >-
+        When an application wants to use one of your accounts, you will be asked,
+        and the answer will show up here.
+      unverified: >-
+        This program was not installed by the system, so we cannot guarantee it
+        will still be the same program later on.
+      forget: Ask again
+      allow: Allow
+      deny: Don't allow
+      note: >-
+        Changing a permission asks for your password.
+      resources:
+        accountEmail: Account email
+        accountCalendar: Calendar
+        accountContacts: Contacts
+        accountChat: Messages
+        accountDrive: Cloud files
+        accountTasks: Tasks
   multimediaAudio:
     title: Output Audio
     description: Manage speakers and system playback volume.

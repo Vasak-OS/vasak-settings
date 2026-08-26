@@ -148,11 +148,6 @@ const sidebarCategories = computed<SidebarCategory[]>(() => [
 			{ id: 'power', label: t('sidebar.items.power'), icon: 'battery' },
 			{ id: 'monitors', label: t('sidebar.items.monitors'), icon: 'video-display' },
 			{
-				id: 'privacy-security',
-				label: t('sidebar.items.privacySecurity'),
-				icon: 'security-high',
-			},
-			{
 				id: 'login-screen',
 				label: t('sidebar.items.loginScreen'),
 				icon: 'preferences-system-login',

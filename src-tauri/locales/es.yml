@@ -867,27 +867,6 @@ views:
         invalidJson: '{0} debe ser un JSON válido'
         notKeyValue: '{0} debe ser un objeto clave/valor'
         valueNotString: "{0}: el valor de '{1}' debe ser string"
-  privacy:
-    title: Privacidad y seguridad
-    description: Qué aplicaciones pueden usar tus cuentas en línea.
-    emptyDescription: >-
-      Cuando una aplicación quiera usar alguna de tus cuentas, te lo vamos a
-      preguntar y la respuesta va a aparecer acá.
-    unverified: >-
-      Este programa no está instalado por el sistema, así que no podemos
-      garantizar que siga siendo el mismo más adelante.
-    forget: Preguntar de nuevo
-    allow: Permitir
-    deny: No permitir
-    note: >-
-      Cambiar un permiso pide tu contraseña.
-    resources:
-      accountEmail: Correo de tus cuentas
-      accountCalendar: Calendario
-      accountContacts: Contactos
-      accountChat: Mensajes
-      accountDrive: Archivos en la nube
-      accountTasks: Tareas
   phoneDevices:
     section: Red
     title: Teléfonos
@@ -936,6 +915,27 @@ views:
       registerProvider: 'Error al registrar {0}: {1}'
       registerCustom: 'Error al registrar cuenta personalizada: {0}'
       deleteAccount: 'Error al eliminar cuenta: {0}'
+    permissions:
+      title: Aplicaciones con acceso
+      description: Qué programas pueden usar estas cuentas, y qué parte de ellas.
+      emptyDescription: >-
+        Cuando una aplicación quiera usar alguna de tus cuentas, te lo vamos a
+        preguntar y la respuesta va a aparecer acá.
+      unverified: >-
+        Este programa no está instalado por el sistema, así que no podemos
+        garantizar que siga siendo el mismo más adelante.
+      forget: Preguntar de nuevo
+      allow: Permitir
+      deny: No permitir
+      note: >-
+        Cambiar un permiso pide tu contraseña.
+      resources:
+        accountEmail: Correo de tus cuentas
+        accountCalendar: Calendario
+        accountContacts: Contactos
+        accountChat: Mensajes
+        accountDrive: Archivos en la nube
+        accountTasks: Tareas
   multimediaAudio:
     title: Audio de Salida
     description: Administra parlantes y volumen de reproducción del sistema.

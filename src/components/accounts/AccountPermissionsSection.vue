@@ -1,9 +1,22 @@
 <script setup lang="ts">
+/**
+ * Qué aplicaciones pueden usar tus cuentas en línea.
+ *
+ * Vivía en una pantalla propia llamada «Privacidad y seguridad», y ese nombre era
+ * el problema: quien la abre espera la cámara, el micrófono y la pantalla, y de
+ * eso el sistema hoy no tiene control —el dispositivo de vídeo se abre directo y
+ * el compositor entrega la captura a cualquier cliente—. Una pantalla que promete
+ * privacidad y sólo administra permisos de cuentas deja a la persona creyendo que
+ * decidió algo que no decidió.
+ *
+ * Acá dice exactamente lo que es. Y lo que hace sí se hace cumplir:
+ * `vasak-accounts` le pregunta a `vasak-permissions` por cada acceso, así que
+ * negar acá niega de verdad.
+ */
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
 import {
 	forgetPermission,
 	listPermissions,
@@ -50,8 +63,7 @@ const RESOURCE_LABEL: Record<string, string> = {
 };
 
 const labelFor = (resource: string) =>
-	t(`views.privacy.resources.${RESOURCE_LABEL[resource] ?? resource}`);
-
+	t(`views.onlineAccounts.permissions.resources.${RESOURCE_LABEL[resource] ?? resource}`);
 
 const entries = ref<PermissionEntry[]>([]);
 const loading = ref(true);
@@ -112,12 +124,15 @@ onMounted(load);
 </script>
 
 <template>
-	<section class="flex flex-col gap-4 p-4">
-		<PageHeader
-			:section="t('sidebar.system')"
-			:title="t('views.privacy.title')"
-			:description="t('views.privacy.description')"
-		/>
+	<section class="flex flex-col gap-3">
+		<header>
+			<h2 class="text-lg font-medium text-tx-primary">
+				{{ t('views.onlineAccounts.permissions.title') }}
+			</h2>
+			<p class="text-sm text-tx-muted">
+				{{ t('views.onlineAccounts.permissions.description') }}
+			</p>
+		</header>
 
 		<AlertMessage v-if="errorMessage" type="error" :message="errorMessage" />
 
@@ -126,7 +141,7 @@ onMounted(load);
 		<EmptyStateBox
 			v-else-if="!hasEntries"
 			padding="lg"
-			:message="t('views.privacy.emptyDescription')"
+			:message="t('views.onlineAccounts.permissions.emptyDescription')"
 		/>
 
 		<article
@@ -149,7 +164,7 @@ onMounted(load);
 						v-if="entry.application.provenance === 'unverified'"
 						class="mt-1 text-xs text-status-warning"
 					>
-						{{ t('views.privacy.unverified') }}
+						{{ t('views.onlineAccounts.permissions.unverified') }}
 					</p>
 				</div>
 
@@ -159,7 +174,7 @@ onMounted(load);
 					class="rounded-corner border border-ui-border px-3 py-1.5 text-sm text-tx-main hover:bg-ui-surface disabled:opacity-50"
 					@click="forget(entry)"
 				>
-					{{ t('views.privacy.forget') }}
+					{{ t('views.onlineAccounts.permissions.forget') }}
 				</button>
 			</header>
 
@@ -185,7 +200,7 @@ onMounted(load);
 							"
 							@click="change(entry, resource, true)"
 						>
-							{{ t('views.privacy.allow') }}
+							{{ t('views.onlineAccounts.permissions.allow') }}
 						</button>
 						<button
 							type="button"
@@ -198,7 +213,7 @@ onMounted(load);
 							"
 							@click="change(entry, resource, false)"
 						>
-							{{ t('views.privacy.deny') }}
+							{{ t('views.onlineAccounts.permissions.deny') }}
 						</button>
 					</div>
 				</li>
@@ -206,7 +221,7 @@ onMounted(load);
 		</article>
 
 		<p class="text-xs text-tx-muted">
-			{{ t('views.privacy.note') }}
+			{{ t('views.onlineAccounts.permissions.note') }}
 		</p>
 	</section>
 </template>
