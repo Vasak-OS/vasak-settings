@@ -5,7 +5,7 @@ use crate::tools::system_info_tools::{
     get_system_details, get_temperature_info,
 };
 use crate::structs::{
-    CpuInfo, MemoryInfo, SystemInfo,
+    CpuInfo, SystemInfo,
 };
 
 #[tauri::command]
@@ -32,17 +32,3 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
     Ok(info)
 }
 
-#[tauri::command]
-pub fn get_cpu_usage_only() -> Result<f32, String> {
-    let usage = get_cpu_usage();
-    log_debug(&format!("Uso de CPU: {:.1}%", usage));
-    Ok(usage)
-}
-
-#[tauri::command]
-pub fn get_memory_usage_only() -> Result<MemoryInfo, String> {
-    let mem = get_memory_info();
-    log_debug(&format!("Uso de memoria: {:.1}GB/{:.1}GB ({:.1}%)", 
-        mem.used_gb, mem.total_gb, mem.usage_percent));
-    Ok(mem)
-}

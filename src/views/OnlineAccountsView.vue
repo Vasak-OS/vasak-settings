@@ -2,6 +2,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, reactive, ref } from 'vue';
+import AccountPermissionsSection from '@/components/accounts/AccountPermissionsSection.vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
@@ -532,5 +533,10 @@ onMounted(async () => {
 				</div>
 			</div>
 		</div>
+
+		<!-- Qué aplicaciones pueden usar estas cuentas. Vivía en una pantalla
+		     aparte llamada «Privacidad y seguridad», que prometía cámara y
+		     micrófono sin poder controlarlos. -->
+		<AccountPermissionsSection />
 	</div>
 </template>

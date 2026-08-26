@@ -31,31 +31,6 @@ impl Default for SystemConfig {
 
 /// Obtiene la configuración actual del sistema desde archivo
 #[tauri::command]
-pub async fn get_system_config() -> Result<SystemConfig, String> {
-    log_debug("Obteniendo configuración del sistema desde archivo");
-    let config_path = get_config_path()?;
-
-    if config_path.exists() {
-        let content = std::fs::read_to_string(&config_path)
-            .map_err(|e| {
-                log_error(&format!("Error leyendo configuración: {}", e));
-                format!("Error leyendo configuración: {}", e)
-            })?;
-
-        let config: SystemConfig = serde_json::from_str(&content).map_err(|e| {
-            log_error(&format!("Error parseando configuración: {}", e));
-            format!("Error parseando configuración: {}", e)
-        })?;
-        log_debug(&format!("Configuración cargada: GTK={}, Icons={}, Cursor={}, Dark={}", 
-            config.gtk_theme, config.icon_pack, config.cursor_theme, config.dark_mode));
-        Ok(config)
-    } else {
-        log_warning("Archivo de configuración no existe, usando valores por defecto");
-        Ok(SystemConfig::default())
-    }
-}
-
-#[tauri::command]
 pub async fn get_current_system_state() -> Result<SystemConfig, String> {
     log_debug("Obteniendo estado actual del sistema desde gsettings");
     let gtk_theme = get_current_gtk_theme()

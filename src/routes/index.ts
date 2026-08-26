@@ -138,11 +138,6 @@ const routes = [
 		component: () => import('@/views/OnlineAccountsView.vue'),
 	},
 	{
-		path: '/privacy-security',
-		name: 'privacy-security',
-		component: () => import('@/views/PrivacySecurityView.vue'),
-	},
-	{
 		path: '/login-screen',
 		name: 'login-screen',
 		component: () => import('@/views/LoginScreenView.vue'),
