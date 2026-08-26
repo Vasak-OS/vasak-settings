@@ -16,6 +16,7 @@
     "vicons:default",
     "config-manager:default",
     "vsk-contextual-menu:default",
+    "vsk-journal:default",
     "system-fonts:default",
     "network-manager:allow-get-network-state",
     "network-manager:allow-list-wifi-networks",
