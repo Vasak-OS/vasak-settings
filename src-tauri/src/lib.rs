@@ -54,6 +54,11 @@ pub fn run() {
         .plugin(tauri_plugin_vicons::init())
         .plugin(tauri_plugin_bluetooth_manager::init())
         .plugin(tauri_plugin_network_manager::init())
+        // El diario del sistema, con el nombre de esta aplicación. Va **primero**
+        // de todos los plugins: instala el gancho de pánico, y un pánico mientras
+        // arranca otro plugin es de los más probables y de los que menos rastro
+        // dejan — sin esto sólo queda un volcado de núcleo sin símbolos.
+        .plugin(tauri_plugin_vsk_journal::init())
         .plugin(tauri_plugin_vsk_contextual_menu::init())
         .invoke_handler(tauri::generate_handler![
             commands::initial_section::initial_section,

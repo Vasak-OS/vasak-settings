@@ -7,6 +7,7 @@ import { createApp } from 'vue';
 import App from '@/App.vue';
 import { router } from '@/routes';
 import '@/assets/main.css';
+import { captureFailures } from '@vasakgroup/plugin-vsk-journal';
 
 /**
  * Los valores que la especificación de CSP informa en lugar de una URL.
@@ -93,6 +94,12 @@ for (const evento of ['dragover', 'drop'] as const) {
 // menú que dibuja WebKit, que ofrece «Recargar» e «Inspeccionar elemento» sobre
 // una aplicación que no es una página web.
 setupContextMenu({ iconResolver: getIconSource });
+
+// Lo que rompe la interfaz va al diario del sistema, con el nombre de esta
+// aplicación. Antes no iba a ninguna parte: un error de JavaScript deja la
+// pantalla a medias y la consola del WebView no la ve nadie en una máquina
+// instalada.
+captureFailures();
 
 const app = createApp(App);
 const pinia = createPinia();
