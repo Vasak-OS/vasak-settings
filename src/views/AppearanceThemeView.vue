@@ -328,7 +328,7 @@ const isFormValid = computed(() => {
 						<div class="flex items-center justify-between">
 							<label class="text-sm font-medium text-tx-primary">{{ t('views.appearanceTheme.darkMode') }}</label>
 							<div class="flex items-center gap-3">
-								<SwitchToggle v-if="vskConfig" :is-on="vskConfig.style.darkmode" @toggle="val => (vskConfig!.style.darkmode = val)" />
+								<SwitchToggle :label="t('views.appearanceTheme.darkMode')" v-if="vskConfig" :is-on="vskConfig.style.darkmode" @toggle="val => (vskConfig!.style.darkmode = val)" />
 								<span class="w-20 text-xs text-tx-muted">{{ vskConfig?.style.darkmode ? t('views.appearanceTheme.enabled') : t('views.appearanceTheme.disabled') }}</span>
 							</div>
 						</div>

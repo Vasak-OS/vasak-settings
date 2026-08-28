@@ -265,7 +265,7 @@ async function selectProfile(profile: string) {
 						{{ t('views.power.idleLockDescription') }}
 					</p>
 				</div>
-				<SwitchToggle
+				<SwitchToggle :label="t('views.power.idleLock')"
 					:is-on="idle.enabled"
 					:disabled="savingIdle || !idle.available"
 					@toggle="toggleIdle"
@@ -292,7 +292,7 @@ async function selectProfile(profile: string) {
 					<h4 class="text-sm font-medium">{{ t('views.power.lockScreen') }}</h4>
 					<p class="text-xs text-tx-muted">{{ t('views.power.lockScreenDescription') }}</p>
 				</div>
-				<SwitchToggle :is-on="idle.lock_enabled" @toggle="idle.lock_enabled = $event" />
+				<SwitchToggle :label="t('views.power.lockScreen')" :is-on="idle.lock_enabled" @toggle="idle.lock_enabled = $event" />
 			</div>
 			<FormGroup v-if="idle.lock_enabled" :label="t('views.power.lockMinutes')" class="mt-2">
 				<NumberInput v-model="idle.lock_minutes" :min="1" :max="180" narrow />
@@ -306,7 +306,7 @@ async function selectProfile(profile: string) {
 						<template v-else>{{ t('views.power.wlopmMissing') }}</template>
 					</p>
 				</div>
-				<SwitchToggle
+				<SwitchToggle :label="t('views.power.screenOff')"
 					:is-on="idle.screen_off_enabled"
 					:disabled="!idle.can_screen_off"
 					@toggle="idle.screen_off_enabled = $event"
@@ -321,7 +321,7 @@ async function selectProfile(profile: string) {
 					<h4 class="text-sm font-medium">{{ t('views.power.lockBeforeSleep') }}</h4>
 					<p class="text-xs text-tx-muted">{{ t('views.power.lockBeforeSleepDescription') }}</p>
 				</div>
-				<SwitchToggle
+				<SwitchToggle :label="t('views.power.lockBeforeSleep')"
 					:is-on="idle.lock_before_sleep"
 					@toggle="idle.lock_before_sleep = $event"
 				/>

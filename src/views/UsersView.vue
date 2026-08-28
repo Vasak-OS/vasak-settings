@@ -231,7 +231,7 @@ function canDemote(user: UserAccount): boolean {
 
 			<div class="mt-4 flex items-center justify-between gap-3">
 				<div class="flex items-center gap-3">
-					<SwitchToggle :is-on="newUser.admin" @toggle="newUser.admin = $event" />
+					<SwitchToggle :label="t('views.users.admin')" :is-on="newUser.admin" @toggle="newUser.admin = $event" />
 					<span class="text-sm text-tx-primary">{{ t('views.users.admin') }}</span>
 				</div>
 				<button
@@ -314,7 +314,7 @@ function canDemote(user: UserAccount): boolean {
 							<template v-else>{{ t('views.users.adminExplanation') }}</template>
 						</p>
 					</div>
-					<SwitchToggle
+					<SwitchToggle :label="t('views.users.admin')"
 						:is-on="user.is_admin"
 						:disabled="busy || (user.is_admin && !canDemote(user))"
 						@toggle="toggleAdmin(user, $event)"
@@ -326,7 +326,7 @@ function canDemote(user: UserAccount): boolean {
 						<h4 class="text-sm font-medium">{{ t('views.users.lockedTitle') }}</h4>
 						<p class="text-xs text-tx-muted">{{ t('views.users.lockedDescription') }}</p>
 					</div>
-					<SwitchToggle
+					<SwitchToggle :label="t('views.users.lockedTitle')"
 						:is-on="user.locked"
 						:disabled="busy || user.is_current"
 						@toggle="toggleLocked(user, $event)"

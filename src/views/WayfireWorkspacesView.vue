@@ -120,7 +120,7 @@ async function saveAll() {
 							/>
 						</FormGroup>
 						<FormGroup :label="t('views.wayfireWorkspaces.wraparound')">
-							<SwitchToggle
+							<SwitchToggle :label="t('views.wayfireWorkspaces.wraparound')"
 								:isOn="vswitch.getBool('wraparound', false)"
 								@toggle="vswitch.setBool('wraparound', $event)"
 							/>

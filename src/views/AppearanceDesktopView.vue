@@ -125,7 +125,7 @@ const isFormValid = computed(() => {
 						<div class="flex items-center justify-between">
 							<label class="text-sm font-medium text-tx-primary">{{ t('views.appearanceDesktop.showHiddenFiles') }}</label>
 							<div class="flex items-center gap-3">
-								<SwitchToggle
+								<SwitchToggle :label="t('views.appearanceDesktop.showHiddenFiles')"
 									:is-on="showHiddenFiles"
 									@toggle="val => (showHiddenFiles = val)"
 								/>

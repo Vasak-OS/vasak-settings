@@ -181,7 +181,7 @@ function toggleLocalRtc(value: boolean) {
 						{{ t('views.datetime.automaticTimeDescription') }}
 					</p>
 				</div>
-				<SwitchToggle
+				<SwitchToggle :label="t('views.datetime.automaticTime')"
 					:is-on="isAutomatic"
 					:disabled="busy || !(info?.can_ntp ?? false)"
 					@toggle="toggleAutomatic"
@@ -268,7 +268,7 @@ function toggleLocalRtc(value: boolean) {
 							{{ t('views.datetime.localRtcDescription') }}
 						</p>
 					</div>
-					<SwitchToggle
+					<SwitchToggle :label="t('views.datetime.localRtc')"
 						:is-on="info?.local_rtc ?? false"
 						:disabled="busy"
 						@toggle="toggleLocalRtc"

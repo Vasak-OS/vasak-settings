@@ -157,7 +157,7 @@ onUnmounted(() => {
 			<template #actions>
 				<div class="flex items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2">
 					<span class="text-sm font-medium">{{ isBluetoothOn ? t('views.networkBluetooth.on') : t('views.networkBluetooth.off') }}</span>
-					<SwitchToggle
+					<SwitchToggle :label="t('views.networkBluetooth.title')"
 						:is-on="isBluetoothOn"
 						:disabled="isTogglingBluetooth"
 						@toggle="toggleBT"
@@ -220,8 +220,7 @@ onUnmounted(() => {
 							:class="isScanning ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'"
 							@click="scanDevices"
 							:disabled="isScanning"
-							:title="t('views.networkBluetooth.scanTooltip')"
-						>
+							:title="t('views.networkBluetooth.scanTooltip')" :aria-label="t('views.networkBluetooth.scanTooltip')">
 							<svg class="h-4 w-4 text-tx-muted" :class="{ 'animate-spin text-primary': isScanning }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 							</svg>

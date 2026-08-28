@@ -151,7 +151,7 @@ function toggleNightLight(value: boolean) {
 						{{ t('views.brightness.nightLightDescription') }}
 					</p>
 				</div>
-				<SwitchToggle
+				<SwitchToggle :label="t('views.brightness.nightLight')"
 					:is-on="nightLight.enabled"
 					:disabled="savingNight || !nightLight.available"
 					@toggle="toggleNightLight"

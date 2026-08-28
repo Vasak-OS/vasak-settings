@@ -93,7 +93,7 @@ onMounted(async () => {
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.numlock')">
-						<SwitchToggle
+						<SwitchToggle :label="t('views.wayfireInput.numlock')"
 							:isOn="input.getBool('kb_numlock_default_state', false)"
 							@toggle="input.setBool('kb_numlock_default_state', $event)"
 						/>
@@ -104,13 +104,13 @@ onMounted(async () => {
 			<SectionCard :title="t('views.wayfireInput.mouse')">
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup :label="t('views.wayfireInput.leftHanded')">
-						<SwitchToggle
+						<SwitchToggle :label="t('views.wayfireInput.leftHanded')"
 							:isOn="input.getBool('left_handed_mode', false)"
 							@toggle="input.setBool('left_handed_mode', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.middleEmulation')">
-						<SwitchToggle
+						<SwitchToggle :label="t('views.wayfireInput.middleEmulation')"
 							:isOn="input.getBool('middle_emulation', false)"
 							@toggle="input.setBool('middle_emulation', $event)"
 						/>
@@ -132,7 +132,7 @@ onMounted(async () => {
 						<span class="text-xs text-tx-muted">{{ input.getFloat('mouse_cursor_speed', 0).toFixed(2) }}</span>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.mouseNaturalScroll')">
-						<SwitchToggle
+						<SwitchToggle :label="t('views.wayfireInput.mouseNaturalScroll')"
 							:isOn="input.getBool('mouse_natural_scroll', false)"
 							@toggle="input.setBool('mouse_natural_scroll', $event)"
 						/>
@@ -143,7 +143,7 @@ onMounted(async () => {
 			<SectionCard :title="t('views.wayfireInput.touchpad')">
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup :label="t('views.wayfireInput.tapToClick')">
-						<SwitchToggle
+						<SwitchToggle :label="t('views.wayfireInput.tapToClick')"
 							:isOn="input.getBool('tap_to_click', true)"
 							@toggle="input.setBool('tap_to_click', $event)"
 						/>
@@ -163,25 +163,25 @@ onMounted(async () => {
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.naturalScroll')">
-						<SwitchToggle
+						<SwitchToggle :label="t('views.wayfireInput.naturalScroll')"
 							:isOn="input.getBool('natural_scroll', false)"
 							@toggle="input.setBool('natural_scroll', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.disableWhileTyping')">
-						<SwitchToggle
+						<SwitchToggle :label="t('views.wayfireInput.disableWhileTyping')"
 							:isOn="input.getBool('disable_touchpad_while_typing', false)"
 							@toggle="input.setBool('disable_touchpad_while_typing', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.disableWithMouse')">
-						<SwitchToggle
+						<SwitchToggle :label="t('views.wayfireInput.disableWithMouse')"
 							:isOn="input.getBool('disable_touchpad_while_mouse', false)"
 							@toggle="input.setBool('disable_touchpad_while_mouse', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.tapAndDrag')">
-						<SwitchToggle
+						<SwitchToggle :label="t('views.wayfireInput.tapAndDrag')"
 							:isOn="input.getBool('tap_and_drag', true)"
 							@toggle="input.setBool('tap_and_drag', $event)"
 						/>

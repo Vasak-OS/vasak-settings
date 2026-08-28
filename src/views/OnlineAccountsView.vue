@@ -420,7 +420,7 @@ onMounted(async () => {
 							v-model="customForm.displayName"
 							type="text"
 							:placeholder="t('views.onlineAccounts.displayNamePlaceholder')"
-							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm outline-none"
+							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
 							:class="customFormErrors.displayName ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 						/>
 						<span v-if="customFormErrors.displayName" class="mt-0.5 block text-xs text-status-error">
@@ -435,7 +435,7 @@ onMounted(async () => {
 								v-model="customForm.imapServer"
 								type="text"
 								placeholder="imap.example.com"
-								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm outline-none"
+								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
 								:class="customFormErrors.imapServer ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 							/>
 							<span v-if="customFormErrors.imapServer" class="mt-0.5 block text-xs text-status-error">
@@ -448,7 +448,7 @@ onMounted(async () => {
 								v-model.number="customForm.imapPort"
 								type="number"
 								placeholder="993"
-								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm outline-none"
+								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
 								:class="customFormErrors.imapPort ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 							/>
 							<span v-if="customFormErrors.imapPort" class="mt-0.5 block text-xs text-status-error">
@@ -464,7 +464,7 @@ onMounted(async () => {
 								v-model="customForm.smtpServer"
 								type="text"
 								placeholder="smtp.example.com"
-								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm outline-none"
+								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
 								:class="customFormErrors.smtpServer ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 							/>
 							<span v-if="customFormErrors.smtpServer" class="mt-0.5 block text-xs text-status-error">
@@ -477,7 +477,7 @@ onMounted(async () => {
 								v-model.number="customForm.smtpPort"
 								type="number"
 								placeholder="587"
-								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm outline-none"
+								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
 								:class="customFormErrors.smtpPort ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 							/>
 							<span v-if="customFormErrors.smtpPort" class="mt-0.5 block text-xs text-status-error">
@@ -492,7 +492,7 @@ onMounted(async () => {
 							v-model="customForm.username"
 							type="text"
 							:placeholder="t('views.onlineAccounts.usernamePlaceholder')"
-							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm outline-none"
+							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
 							:class="customFormErrors.username ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 						/>
 						<span v-if="customFormErrors.username" class="mt-0.5 block text-xs text-status-error">
@@ -506,7 +506,7 @@ onMounted(async () => {
 							v-model="customForm.password"
 							type="password"
 							:placeholder="t('views.onlineAccounts.passwordPlaceholder')"
-							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm outline-none"
+							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
 							:class="customFormErrors.password ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 						/>
 						<span v-if="customFormErrors.password" class="mt-0.5 block text-xs text-status-error">

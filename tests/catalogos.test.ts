@@ -57,6 +57,28 @@ function archivosDeCodigo(dir: string): string[] {
 	return encontrados;
 }
 
+const MARCA = '<SwitchToggle';
+
+/**
+ * La etiqueta de apertura que arranca en `desde`. No sirve una expresión
+ * regular: los atributos llevan valores con `>` adentro —`(v) => algo`— y
+ * cortar en el primer `>` parte la etiqueta al medio.
+ */
+function etiquetaDeApertura(texto: string, desde: number): string {
+	let comilla = '';
+	for (let i = desde; i < texto.length; i++) {
+		const caracter = texto[i];
+		if (comilla) {
+			if (caracter === comilla) comilla = '';
+		} else if (caracter === '"' || caracter === "'") {
+			comilla = caracter;
+		} else if (caracter === '>') {
+			return texto.slice(desde, i + 1);
+		}
+	}
+	return texto.slice(desde);
+}
+
 const es = clavesDe(readFileSync(join(CATALOGOS, 'es.yml'), 'utf8'));
 const en = clavesDe(readFileSync(join(CATALOGOS, 'en.yml'), 'utf8'));
 
@@ -110,6 +132,39 @@ describe('catálogos de idioma', () => {
 		}
 
 		expect(encontradas.sort()).toEqual([]);
+	});
+
+	test('cada control sin texto propio recibe su etiqueta', () => {
+		// `SwitchToggle` no tiene contenido: sólo la pista y el pulgar. El texto
+		// que lo nombra está al lado, en un `<label>` o un `<h4>` que el
+		// interruptor no referencia, así que un lector de pantalla anunciaba
+		// «interruptor, activado» y nada más. La prop `label` lo resuelve, y el
+		// typecheck lo exige — pero sólo mientras siga siendo obligatoria: alcanza
+		// con darle un valor por omisión para «desbloquear» una vista y los
+		// controles se quedan sin nombre otra vez, en silencio.
+		const sinEtiqueta: string[] = [];
+
+		for (const archivo of archivosDeCodigo(join(RAIZ, 'src'))) {
+			if (!archivo.endsWith('.vue')) continue;
+			const texto = readFileSync(archivo, 'utf8');
+			for (let i = texto.indexOf(MARCA); i !== -1; i = texto.indexOf(MARCA, i + 1)) {
+				if (/[\w-]/.test(texto[i + MARCA.length] ?? '')) continue;
+				if (!/[\s:]label\s*=/.test(etiquetaDeApertura(texto, i))) {
+					sinEtiqueta.push(archivo.slice(RAIZ.length));
+				}
+			}
+		}
+
+		expect(sinEtiqueta.sort()).toEqual([]);
+	});
+
+	test('el control se sigue llamando igual', () => {
+		// Si se renombra `SwitchToggle`, la prueba de arriba pasa sin revisar nada.
+		const usos = archivosDeCodigo(join(RAIZ, 'src'))
+			.filter((archivo) => archivo.endsWith('.vue'))
+			.flatMap((archivo) => readFileSync(archivo, 'utf8').split(MARCA).slice(1));
+
+		expect(usos.length).toBeGreaterThan(30);
 	});
 
 	test('el catálogo se lee de verdad', () => {

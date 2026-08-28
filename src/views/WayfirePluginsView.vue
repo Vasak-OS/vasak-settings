@@ -14,6 +14,11 @@ onMounted(() => load(true));
 function handleToggle(id: string, value: boolean) {
 	void setEnabled(id, value);
 }
+
+/** Un plugin que el registro no conoce sólo tiene su id para mostrar. */
+function etiquetaDe(plugin: { id: string; unknown?: boolean }) {
+	return plugin.unknown ? plugin.id : t(`wayfire.plugins.${plugin.id}.label`);
+}
 </script>
 
 <template>
@@ -41,7 +46,7 @@ function handleToggle(id: string, value: boolean) {
 					<div class="min-w-0 flex-1">
 						<div class="flex items-center gap-2">
 							<span class="truncate text-sm font-medium text-tx-primary">
-							{{ plugin.unknown ? plugin.id : t(`wayfire.plugins.${plugin.id}.label`) }}
+							{{ etiquetaDe(plugin) }}
 						</span>
 							<code class="shrink-0 rounded bg-ui-surface/70 px-1.5 py-0.5 text-[10px] text-tx-muted">
 								{{ plugin.id }}
@@ -65,7 +70,7 @@ function handleToggle(id: string, value: boolean) {
 					>
 						{{ t('common.required') }}
 					</span>
-					<SwitchToggle
+					<SwitchToggle :label="etiquetaDe(plugin)"
 						v-else
 						:is-on="plugin.enabled"
 						@toggle="(value) => handleToggle(plugin.id, value)"
