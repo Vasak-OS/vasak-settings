@@ -256,7 +256,7 @@ async function saveAll() {
 						<span class="text-xs text-tx-muted">{{ cube.getFloat('zoom', 0.1).toFixed(2) }}</span>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireEffects.light')">
-						<SwitchToggle
+						<SwitchToggle :label="t('views.wayfireEffects.light')"
 							:isOn="cube.getBool('light', true)"
 							@toggle="cube.setBool('light', $event)"
 						/>

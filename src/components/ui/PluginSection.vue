@@ -56,7 +56,7 @@ function handleToggle(value: boolean) {
 			>
 				{{ t('common.required') }}
 			</span>
-			<SwitchToggle v-else :is-on="isEnabled" @toggle="handleToggle" />
+			<SwitchToggle :label="heading" v-else :is-on="isEnabled" @toggle="handleToggle" />
 		</header>
 
 		<p v-if="isRequired" class="px-4 pb-3 text-[11px] leading-relaxed text-tx-muted">

@@ -133,7 +133,7 @@ const saveConfig = async () => {
 								{{ t('views.appearancePanel.weatherHint') }}
 							</span>
 						</div>
-						<SwitchToggle :is-on="weather" @toggle="(val) => (weather = val)" />
+						<SwitchToggle :label="t('views.appearancePanel.weather')" :is-on="weather" @toggle="(val) => (weather = val)" />
 					</div>
 
 					<div class="flex items-start justify-between gap-4">
@@ -145,7 +145,7 @@ const saveConfig = async () => {
 								{{ t('views.appearancePanel.musicHint') }}
 							</span>
 						</div>
-						<SwitchToggle :is-on="music" @toggle="(val) => (music = val)" />
+						<SwitchToggle :label="t('views.appearancePanel.music')" :is-on="music" @toggle="(val) => (music = val)" />
 					</div>
 
 					<div class="flex items-start justify-between gap-4">
@@ -157,7 +157,7 @@ const saveConfig = async () => {
 								{{ t('views.appearancePanel.transferHint') }}
 							</span>
 						</div>
-						<SwitchToggle :is-on="transfer" @toggle="(val) => (transfer = val)" />
+						<SwitchToggle :label="t('views.appearancePanel.transfer')" :is-on="transfer" @toggle="(val) => (transfer = val)" />
 					</div>
 
 					<div class="flex items-start justify-between gap-4">
@@ -169,7 +169,7 @@ const saveConfig = async () => {
 								{{ t('views.appearancePanel.trayHint') }}
 							</span>
 						</div>
-						<SwitchToggle :is-on="tray" @toggle="(val) => (tray = val)" />
+						<SwitchToggle :label="t('views.appearancePanel.tray')" :is-on="tray" @toggle="(val) => (tray = val)" />
 					</div>
 				</div>
 			</SectionCard>

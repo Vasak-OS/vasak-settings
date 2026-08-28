@@ -157,7 +157,7 @@ onUnmounted(() => {
 			<template #actions>
 				<div class="flex items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2">
 					<span class="text-sm font-medium">{{ isBluetoothOn ? t('views.networkBluetooth.on') : t('views.networkBluetooth.off') }}</span>
-					<SwitchToggle
+					<SwitchToggle :label="t('views.networkBluetooth.title')"
 						:is-on="isBluetoothOn"
 						:disabled="isTogglingBluetooth"
 						@toggle="toggleBT"

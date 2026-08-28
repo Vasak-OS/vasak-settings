@@ -229,7 +229,7 @@ const save = async () => {
 						<div class="flex items-center justify-between">
 							<label class="text-sm font-medium">{{ t('views.loginScreen.darkMode') }}</label>
 							<div class="flex items-center gap-3">
-								<SwitchToggle :is-on="darkMode" @toggle="(val: boolean) => (darkMode = val)" />
+								<SwitchToggle :label="t('views.loginScreen.darkMode')" :is-on="darkMode" @toggle="(val: boolean) => (darkMode = val)" />
 								<span class="w-16 text-xs text-tx-muted">
 									{{ darkMode ? t('views.loginScreen.dark') : t('views.loginScreen.light') }}
 								</span>

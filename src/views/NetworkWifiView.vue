@@ -305,7 +305,7 @@ onUnmounted(() => {
 							}}
 						</span>
 					</div>
-					<SwitchToggle :is-on="wifiEnabled" :disabled="!wifiAvailable" @toggle="toggleWifi" />
+					<SwitchToggle :label="t('views.networkWifi.title')" :is-on="wifiEnabled" :disabled="!wifiAvailable" @toggle="toggleWifi" />
 				</div>
 			</template>
 		</PageHeader>

@@ -325,7 +325,7 @@ onMounted(load);
 							{{ t('views.monitors.primary') }}
 						</span>
 					</div>
-					<SwitchToggle
+					<SwitchToggle :label="t('views.monitors.enableMonitor').replace('{0}', monitor.name)"
 						v-if="monitor.connected"
 						:isOn="monitor.enabled"
 						@toggle="monitor.enabled = $event"

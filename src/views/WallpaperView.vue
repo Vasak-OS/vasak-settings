@@ -265,7 +265,7 @@ onUnmounted(() => {
 					<label class="text-sm font-medium text-tx-primary">
 						{{ t('views.appearanceWallpaper.pauseOnBattery') }}
 					</label>
-					<SwitchToggle
+					<SwitchToggle :label="t('views.appearanceWallpaper.pauseOnBattery')"
 						:is-on="pauseVideoOnBattery"
 						@toggle="(val: boolean) => (pauseVideoOnBattery = val)"
 					/>

@@ -171,7 +171,7 @@ async function saveAll() {
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireWindows.snapEdges')">
-						<SwitchToggle
+						<SwitchToggle :label="t('views.wayfireWindows.snapEdges')"
 							:isOn="move.getBool('enable_snap', true)"
 							@toggle="move.setBool('enable_snap', $event)"
 						/>

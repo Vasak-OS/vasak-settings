@@ -742,6 +742,7 @@ views:
     new: Nuevo
     primary: Principal
     setPrimary: Establecer como principal
+    enableMonitor: Usar {0}
     resolution: Resolución
     refreshRate: Frecuencia
     positionLabel: Posición
