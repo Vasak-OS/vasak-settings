@@ -204,12 +204,12 @@ function onPointerUp() {
 			<div
 				v-for="m in props.monitors"
 				:key="m.name"
-				class="absolute flex cursor-grab select-none flex-col items-center justify-center overflow-hidden rounded-lg border-2 text-center transition-shadow active:cursor-grabbing"
+				class="absolute flex cursor-grab select-none flex-col items-center justify-center overflow-hidden rounded-corner border-2 text-center transition-shadow active:cursor-grabbing"
 				:class="
 					dragging?.name === m.name
 						? 'border-primary shadow-lg shadow-primary/20'
 						: m.name === props.primaryName
-							? 'border-accent'
+							? 'border-primary'
 							: 'border-ui-border hover:border-primary/50'
 				"
 				:style="{ ...monitorStyle(m), background: 'var(--color-ui-surface)' }"

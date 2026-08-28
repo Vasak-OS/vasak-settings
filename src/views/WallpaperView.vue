@@ -323,7 +323,7 @@ onUnmounted(() => {
 
 					<div v-if="selectedWallpaperPath" class="mt-4 rounded-corner border border-ui-border bg-ui-surface/30 p-3">
 						<p class="mb-2 text-xs uppercase tracking-[0.16em] text-tx-muted">{{ t('views.appearanceWallpaper.preview') }}</p>
-						<div class="group relative flex h-40 w-full items-center justify-center overflow-hidden rounded-corner border-2 border-dashed border-[var(--primary-color,#0084ff)]/30 bg-ui-surface/80 transition-colors hover:border-[var(--primary-color,#0084ff)]/50 hover:bg-[var(--primary-color,#0084ff)]/5">
+						<div class="group relative flex h-40 w-full items-center justify-center overflow-hidden rounded-corner border-2 border-dashed border-primary/30 bg-ui-surface/80 transition-colors hover:border-primary/50 hover:bg-primary/5">
 							<!-- También la previsualización va por miniatura, y de un video
 							     muestra un cuadro. Un elemento multimedia apuntando al
 							     protocolo interno falla y reintenta, y cada intento entrega el
@@ -342,7 +342,7 @@ onUnmounted(() => {
 					</div>
 					<div v-else class="mt-4 rounded-corner border border-ui-border bg-ui-surface/30 p-3">
 						<p class="mb-2 text-xs uppercase tracking-[0.16em] text-tx-muted">{{ t('views.appearanceWallpaper.preview') }}</p>
-						<div class="group relative flex h-40 w-full items-center justify-center overflow-hidden rounded-corner border-2 border-dashed border-[var(--primary-color,#0084ff)]/30 bg-ui-surface/80 transition-colors hover:border-[var(--primary-color,#0084ff)]/50 hover:bg-[var(--primary-color,#0084ff)]/5">
+						<div class="group relative flex h-40 w-full items-center justify-center overflow-hidden rounded-corner border-2 border-dashed border-primary/30 bg-ui-surface/80 transition-colors hover:border-primary/50 hover:bg-primary/5">
 							<div class="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors hover:bg-black/20">
 								<div class="pointer-events-none text-center">
 									<span class="mb-2 block text-sm text-white">📂 {{ t('views.appearanceWallpaper.dropHere') }}</span>

@@ -313,7 +313,7 @@ const isFormValid = computed(() => {
 									id="primary-color"
 									type="color"
 									v-model="(vskConfig.style as any)['primarycolor']"
-									class="h-10 w-[50px] cursor-pointer rounded-corner border-2 border-ui-surface/10 bg-transparent p-0 transition-colors duration-200 hover:border-[var(--primary-color,#0084ff)]"
+									class="h-10 w-[50px] cursor-pointer rounded-corner border-2 border-ui-surface/10 bg-transparent p-0 transition-colors duration-200 hover:border-primary"
 								/>
 								<TextInput
 									v-if="vskConfig"

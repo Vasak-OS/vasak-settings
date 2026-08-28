@@ -171,7 +171,7 @@ onUnmounted(() => {
 				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.multimediaAudioInput.inputLevel') }}</h3>
 				<div class="flex items-center gap-4 rounded-corner border border-ui-border bg-ui-surface/40 p-4">
 					<button
-						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner border transition-colors hover:bg-[var(--primary-color,#0084ff)] hover:text-white"
+						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner border transition-colors hover:bg-primary hover:text-white"
 						:class="
 							inputVolumeInfo.is_muted
 								? 'border-status-error/40 text-status-error'
@@ -205,7 +205,7 @@ onUnmounted(() => {
 							:class="
 								inputVolumeInfo.is_muted
 									? 'text-status-error'
-									: 'text-[var(--primary-color,#0084ff)]'
+									: 'text-primary'
 							"
 						>
 							{{ inputVolumePercentage }}%
@@ -243,7 +243,7 @@ onUnmounted(() => {
 						class="group flex cursor-pointer items-center justify-between gap-3 rounded-corner border px-4 py-3 transition-colors"
 						:class="
 							selectedInputDeviceId === device.id
-								? 'border-[var(--primary-color,#0084ff)]/50 bg-[var(--primary-color,#0084ff)]/5 shadow-sm'
+								? 'border-primary/50 bg-primary/5 shadow-sm'
 								: 'border-ui-border bg-ui-surface/40 hover:border-ui-border.hover hover:bg-ui-surface'
 						"
 						@click="selectInputDevice(device.id)"
@@ -252,8 +252,8 @@ onUnmounted(() => {
 							class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors"
 							:class="
 								selectedInputDeviceId === device.id
-									? 'border-[var(--primary-color,#0084ff)] bg-[var(--primary-color,#0084ff)]'
-									: 'border-ui-border group-hover:border-[var(--primary-color,#0084ff)]/50'
+									? 'border-primary bg-primary'
+									: 'border-ui-border group-hover:border-primary/50'
 							"
 						>
 							<div
@@ -273,7 +273,7 @@ onUnmounted(() => {
 
 						<span
 							v-if="device.is_default"
-							class="rounded border border-[var(--primary-color,#0084ff)]/20 bg-[var(--primary-color,#0084ff)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--primary-color,#0084ff)]"
+							class="rounded border border-primary/20 bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary"
 						>
 							{{ t('views.multimediaAudioInput.defaultBadge') }}
 						</span>

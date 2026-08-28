@@ -320,7 +320,7 @@ onMounted(load);
 						</span>
 						<span
 							v-else-if="monitor.name === primaryName"
-							class="rounded bg-accent/20 px-2 py-0.5 text-xs text-accent"
+							class="rounded bg-primary/20 px-2 py-0.5 text-xs text-primary"
 						>
 							{{ t('views.monitors.primary') }}
 						</span>
@@ -337,7 +337,7 @@ onMounted(load);
 						<button
 							v-if="monitor.name !== primaryName"
 							type="button"
-							class="rounded-corner border border-ui-border px-3 py-1 text-xs text-tx-muted transition-colors hover:border-accent/40 hover:text-accent"
+							class="rounded-corner border border-ui-border px-3 py-1 text-xs text-tx-muted transition-colors hover:border-primary/40 hover:text-primary"
 							@click="makePrimary(monitor)"
 						>
 							{{ t('views.monitors.setPrimary') }}
@@ -391,7 +391,7 @@ onMounted(load);
 									type="range"
 									min="1"
 									max="100"
-									class="h-2 w-full cursor-pointer appearance-none rounded-full bg-ui-border accent-[var(--primary-color,#0084ff)]"
+									class="h-2 w-full cursor-pointer appearance-none rounded-full bg-ui-border accent-primary"
 									:value="brightness[monitor.name].percent"
 									@input="
 										onBrightnessChange(

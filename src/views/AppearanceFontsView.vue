@@ -245,7 +245,7 @@ const isFormValid = computed(() => {
 							:key="font.id"
 							type="button"
 							class="group rounded-corner border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary hover:bg-ui-surface/70"
-							:class="selectedFonts[activeTarget] === font.name ? 'border-primary bg-ui-surface/80 shadow-[0_0_0_1px_var(--primary-color,#0084ff)]/20' : 'border-ui-border bg-ui-bg/40'"
+							:class="selectedFonts[activeTarget] === font.name ? 'border-primary bg-ui-surface/80 shadow-[0_0_0_1px_var(--color-primary)]/20' : 'border-ui-border bg-ui-bg/40'"
 							@click="pickFont(font)"
 						>
 							<div class="flex items-start justify-between gap-3">
