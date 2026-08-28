@@ -1,6 +1,9 @@
 _version: 1
 
 common:
+  keyBinding:
+    prompt: Press the shortcut
+    hint: Press the key combination directly
   save: Save changes
   saving: Saving…
   cancel: Cancel
@@ -13,6 +16,7 @@ common:
   loading: Loading…
   required: Required
   advancedOptions: Advanced options
+  clear: Clear
   noResults: No results
   saved: Settings saved successfully
   name: Name
@@ -21,6 +25,7 @@ common:
   saveSectionError: "Error saving section [{0}]"
 
 sidebar:
+  noCategories: No categories available.
   general: General
   appearance: Appearance
   multimedia: Multimedia
@@ -197,6 +202,38 @@ views:
       disks: Disks
       disksHint: mounts detected
       uptime: Uptime
+    cards:
+      overviewSection: Overview
+      overviewTitle: Quick indicators
+      performanceSection: Performance
+      performanceTitle: CPU and RAM
+      processor: Processor
+      memory: Memory
+      currentUse: Current use
+      disks: Disks
+      swapSection: Swap and sensors
+      swap: Swap
+      noSwap: No active swap.
+      temperatures: Temperatures
+      noSensors: No sensors available.
+      system: System
+      gpu: GPU
+      cpuUsage: CPU usage
+      cores: Cores
+      frequency: Frequency
+      temperature: Temperature
+      ramUsage: RAM usage
+      total: Total
+      usedFree: Used / Free
+      diskUsage: Disk usage
+      host: Host
+      operatingSystem: OS
+      kernel: Kernel
+      display: Display
+      uptime: Uptime
+      vpnState: VPN state
+      vpnGateway: Gateway
+      vpnProfile: Active profile
   shortcuts:
     title: Shortcuts
     description: Create, edit and delete daemon shortcuts easily.
@@ -857,6 +894,12 @@ views:
       profileName: Profile name
       vpnType: VPN type
       username: User
+      gateway: Gateway / Remote
+      password: Password
+      caCertPath: CA certificate path
+      userCertPath: User certificate path
+      privateKeyPath: Private key path
+      privateKeyPassword: Private key password
       settingsJson: Settings JSON (string/string object)
       secretsJson: Secrets JSON (string/string object)
       autoconnect: Auto-connect this profile
@@ -1042,3 +1085,7 @@ textMenu:
   cut: Cut
   paste: Paste
   selectAll: Select all
+windowControls:
+  minimize: Minimize
+  maximize: Maximize
+  close: Close

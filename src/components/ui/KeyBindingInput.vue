@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onBeforeUnmount, ref } from 'vue';
 
 interface Props {
 	modelValue: string;
 }
+
+const { t } = useI18n();
 
 const props = defineProps<Props>();
 const emit = defineEmits<{
@@ -164,12 +167,12 @@ function clear() {
 				{{ key }}
 			</span>
 			<span v-if="displayKeys.length === 0" class="text-tx-muted/70">
-				Presiona la combinación
+				{{ t('common.keyBinding.prompt') }}
 			</span>
 		</div>
 		<div class="flex items-center justify-between gap-2">
 			<p class="text-xs text-tx-muted">
-				Presiona la combinación de teclas directamente
+				{{ t('common.keyBinding.hint') }}
 			</p>
 			<button
 				v-if="modelValue"
@@ -177,7 +180,7 @@ function clear() {
 				class="rounded-corner border border-ui-border bg-ui-surface/60 px-2 py-1 text-xs font-medium transition-colors hover:bg-ui-surface"
 				@click="clear"
 			>
-				Limpiar
+				{{ t('common.clear') }}
 			</button>
 		</div>
 	</div>

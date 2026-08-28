@@ -46,7 +46,7 @@ defineEmits<{
       :class="active ? 'border-secondary bg-primary/20' : ''"
       aria-hidden="true"
     >
-      <img v-if="iconSrc" :src="iconSrc" alt="Icono" class="h-8 w-8 object-contain" />
+      <img v-if="iconSrc" :src="iconSrc" alt="" class="h-8 w-8 object-contain" />
       <span v-else>{{ label.charAt(0).toUpperCase() }}</span>
     </span>
 

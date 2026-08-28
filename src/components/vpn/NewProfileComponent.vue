@@ -199,7 +199,7 @@ const handleCancel = () => {
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-					Gateway / Remote
+					{{ t('views.networkVpn.dialog.gateway') }}
 					<TextInput v-model="profileGateway" class="mt-1" />
 				</label>
 
@@ -209,27 +209,27 @@ const handleCancel = () => {
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-					Password
+					{{ t('views.networkVpn.dialog.password') }}
 					<TextInput v-model="profilePassword" type="password" class="mt-1" />
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-					CA cert path
+					{{ t('views.networkVpn.dialog.caCertPath') }}
 					<TextInput v-model="profileCaCertPath" class="mt-1" />
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-					User cert path
+					{{ t('views.networkVpn.dialog.userCertPath') }}
 					<TextInput v-model="profileUserCertPath" class="mt-1" />
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-					Private key path
+					{{ t('views.networkVpn.dialog.privateKeyPath') }}
 					<TextInput v-model="profilePrivateKeyPath" class="mt-1" />
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
-					Private key password
+					{{ t('views.networkVpn.dialog.privateKeyPassword') }}
 					<TextInput v-model="profilePrivateKeyPassword" type="password" class="mt-1" />
 				</label>
 			</div>

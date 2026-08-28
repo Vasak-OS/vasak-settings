@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import MountedDiskCard from '@/components/systeminformation/MountedDiskCard.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import type { DiskInfo } from '@/types/system';
+
+const { t } = useI18n();
 
 defineProps<{
 	disks: DiskInfo[];
@@ -11,7 +14,7 @@ defineProps<{
 <template>
 	<SectionCard>
 		<div class="flex items-center justify-between gap-3">
-			<h2 class="text-lg font-semibold">Discos</h2>
+			<h2 class="text-lg font-semibold">{{ t('views.home.cards.disks') }}</h2>
 			<span class="text-sm text-tx-muted">{{ disks.length }} discos agrupados</span>
 		</div>
 

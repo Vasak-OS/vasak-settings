@@ -1,6 +1,9 @@
 _version: 1
 
 common:
+  keyBinding:
+    prompt: Presioná la combinación
+    hint: Presioná la combinación de teclas directamente
   save: Guardar cambios
   saving: Guardando…
   cancel: Cancelar
@@ -13,6 +16,7 @@ common:
   loading: Cargando…
   required: Requerido
   advancedOptions: Opciones avanzadas
+  clear: Limpiar
   noResults: Sin resultados
   saved: Configuración guardada correctamente
   name: Nombre
@@ -21,6 +25,7 @@ common:
   saveSectionError: "Error guardando sección [{0}]"
 
 sidebar:
+  noCategories: No hay categorías disponibles.
   general: General
   appearance: Apariencia
   multimedia: Multimedia
@@ -182,21 +187,53 @@ views:
     description: 'Activá solo lo que uses: cada plugin apagado es memoria y trabajo que Wayfire no hace.'
     activeCount: '{0} activos.'
   home:
-    noGpu: No se detecto GPU compatible.
+    noGpu: No se detectó GPU compatible.
     section: Centro de control
     title: Estado del sistema
-    description: Resumen rapido de recursos, hardware y entorno actual.
-    lastUpdated: "Ultima actualizacion: {0}"
+    description: Resumen rápido de recursos, hardware y entorno actual.
+    lastUpdated: "Última actualización: {0}"
     noUpdates: Sin actualizaciones
     refresh: Actualizar
-    loading: Cargando informacion del sistema...
-    loadError: No se pudo obtener la informacion del sistema
+    loading: Cargando información del sistema...
+    loadError: No se pudo obtener la información del sistema
     metrics:
       cpu: CPU
       memory: Memoria
       disks: Discos
       disksHint: montajes detectados
-      uptime: Uptime
+      uptime: Encendido
+    cards:
+      overviewSection: Resumen
+      overviewTitle: Indicadores rápidos
+      performanceSection: Rendimiento
+      performanceTitle: CPU y RAM
+      processor: Procesador
+      memory: Memoria
+      currentUse: Uso actual
+      disks: Discos
+      swapSection: Swap y sensores
+      swap: Swap
+      noSwap: No hay swap activa.
+      temperatures: Temperaturas
+      noSensors: Sin sensores disponibles.
+      system: Sistema
+      gpu: GPU
+      cpuUsage: Uso de CPU
+      cores: Núcleos
+      frequency: Frecuencia
+      temperature: Temperatura
+      ramUsage: Uso de RAM
+      total: Total
+      usedFree: Usada / Disponible
+      diskUsage: Uso del disco
+      host: Equipo
+      operatingSystem: SO
+      kernel: Núcleo
+      display: Pantalla
+      uptime: Encendido
+      vpnState: Estado VPN
+      vpnGateway: Pasarela
+      vpnProfile: Perfil activo
   shortcuts:
     title: Shortcuts
     description: Crea, edita y elimina atajos del daemon de forma simple.
@@ -857,6 +894,12 @@ views:
       profileName: Nombre del perfil
       vpnType: Tipo VPN
       username: Usuario
+      gateway: Pasarela / Servidor remoto
+      password: Contraseña
+      caCertPath: Ruta del certificado de la autoridad
+      userCertPath: Ruta del certificado de usuario
+      privateKeyPath: Ruta de la clave privada
+      privateKeyPassword: Contraseña de la clave privada
       settingsJson: Settings JSON (objeto string/string)
       secretsJson: Secrets JSON (objeto string/string)
       autoconnect: Autoconectar este perfil
@@ -1042,3 +1085,7 @@ textMenu:
   cut: Cortar
   paste: Pegar
   selectAll: Seleccionar todo
+windowControls:
+  minimize: Minimizar
+  maximize: Maximizar
+  close: Cerrar

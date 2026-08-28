@@ -1,14 +1,17 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import ProgressBar from '@/components/ui/ProgressBar.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import type { DiskInfo } from '@/types/system';
+
+const { t, locale } = useI18n();
 
 defineProps<{
 	disk: DiskInfo;
 }>();
 
 const formatNumber = (value: number, digits = 0) =>
-	new Intl.NumberFormat('es-AR', {
+	new Intl.NumberFormat(locale.value, {
 		maximumFractionDigits: digits,
 		minimumFractionDigits: digits,
 	}).format(value);
@@ -43,7 +46,7 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 			</div>
 
 			<div class="mt-3">
-				<ProgressBar label="Uso del disco" :value="disk.usage_percent" />
+				<ProgressBar :label="t('views.home.cards.diskUsage')" :value="disk.usage_percent" />
 			</div>
 		</div>
 	</SectionCard>

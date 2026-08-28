@@ -1,8 +1,11 @@
 <script lang="ts" setup>
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import SidebarButton from '@/components/sidebar/SidebarButton.vue';
 import SidebarCategoryGroup from '@/components/sidebar/SidebarCategoryGroup.vue';
 import { SidebarCategory } from '@/types/sidebar';
+
+const { t } = useI18n();
 
 const props = withDefaults(
 	defineProps<{
@@ -96,7 +99,7 @@ onBeforeUnmount(() => {
 					v-if="!hasCategories"
 					class="rounded-corner border border-dashed border-ui-border bg-ui-surface/40 p-3 text-xs text-tx-muted"
 				>
-					No hay categorias disponibles.
+					{{ t('sidebar.noCategories') }}
 				</div>
 			</div>
 		</aside>

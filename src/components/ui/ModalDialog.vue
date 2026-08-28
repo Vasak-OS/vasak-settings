@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+
+const { t } = useI18n();
+
 interface Props {
 	open: boolean;
 	title: string;
@@ -30,7 +34,7 @@ defineEmits<{
 					class="rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-1.5 text-sm text-tx-muted transition-colors hover:bg-ui-surface hover:text-tx-primary"
 					@click="$emit('close')"
 				>
-					Cerrar
+					{{ t('common.close') }}
 				</button>
 			</div>
 
