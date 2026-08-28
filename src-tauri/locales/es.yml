@@ -218,6 +218,22 @@ views:
       noSensors: Sin sensores disponibles.
       system: Sistema
       gpu: GPU
+      cpuUsage: Uso de CPU
+      cores: Núcleos
+      frequency: Frecuencia
+      temperature: Temperatura
+      ramUsage: Uso de RAM
+      total: Total
+      usedFree: Usada / Disponible
+      diskUsage: Uso del disco
+      host: Equipo
+      operatingSystem: SO
+      kernel: Núcleo
+      display: Pantalla
+      uptime: Encendido
+      vpnState: Estado VPN
+      vpnGateway: Pasarela
+      vpnProfile: Perfil activo
   shortcuts:
     title: Shortcuts
     description: Crea, edita y elimina atajos del daemon de forma simple.

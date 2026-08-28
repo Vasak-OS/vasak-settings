@@ -87,6 +87,31 @@ describe('catálogos de idioma', () => {
 		expect(faltantes.sort()).toEqual([]);
 	});
 
+	test('ninguna etiqueta visible va escrita en el componente', () => {
+		// El caso que se escapó la primera vez: `label="Uso de CPU"` no es un
+		// nodo de texto ni un atributo del documento, es una prop, y por eso
+		// pasaba desapercibido. En una sesión en inglés la tarjeta salía mitad y
+		// mitad.
+		//
+		// Se permiten los nombres propios y los términos que no se traducen: una
+		// lista corta y explícita es mejor que dejar la comprobación afuera.
+		const SIN_TRADUCIR = new Set(['Wi-Fi', 'Ethernet', 'Shell', 'GPU', 'CPU', 'RAM', 'VPN', 'IP']);
+		const literal = /\s(?:label|hint)="([A-ZÁÉÍÓÚ][^"]{1,60})"/g;
+		const encontradas: string[] = [];
+
+		for (const archivo of archivosDeCodigo(join(RAIZ, 'src'))) {
+			if (!archivo.endsWith('.vue')) continue;
+			const texto = readFileSync(archivo, 'utf8');
+			for (const uso of texto.matchAll(literal)) {
+				if (!SIN_TRADUCIR.has(uso[1])) {
+					encontradas.push(`${archivo.slice(RAIZ.length)}: ${uso[1]}`);
+				}
+			}
+		}
+
+		expect(encontradas.sort()).toEqual([]);
+	});
+
 	test('el catálogo se lee de verdad', () => {
 		// Si el analizador de arriba se rompe, las dos pruebas anteriores pasan
 		// con dos conjuntos vacíos y no protegen nada.

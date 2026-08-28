@@ -33,13 +33,13 @@ const { t } = useI18n();
 
 <template>
 	<div class="space-y-3">
-		<StatTile label="Estado VPN" :value="vpnStateLabelComputed" />
+		<StatTile :label="t('views.home.cards.vpnState')" :value="vpnStateLabelComputed" />
 		<StatTile
-			label="Perfil activo"
+			:label="t('views.home.cards.vpnProfile')"
 			:value="activeProfile?.id || vpnStatus?.active_profile_name || t('views.networkVpn.noActiveConnection')"
 			:hint="vpnStatus?.active_profile_uuid || undefined"
 		/>
-		<StatTile label="Gateway" :value="vpnStatus?.gateway || 'No disponible'" />
+		<StatTile :label="t('views.home.cards.vpnGateway')" :value="vpnStatus?.gateway || 'No disponible'" />
 		<StatTile label="IP" :value="vpnStatus?.ip_address || 'No disponible'" />
 	</div>
 </template>

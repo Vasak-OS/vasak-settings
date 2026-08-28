@@ -218,6 +218,22 @@ views:
       noSensors: No sensors available.
       system: System
       gpu: GPU
+      cpuUsage: CPU usage
+      cores: Cores
+      frequency: Frequency
+      temperature: Temperature
+      ramUsage: RAM usage
+      total: Total
+      usedFree: Used / Free
+      diskUsage: Disk usage
+      host: Host
+      operatingSystem: OS
+      kernel: Kernel
+      display: Display
+      uptime: Uptime
+      vpnState: VPN state
+      vpnGateway: Gateway
+      vpnProfile: Active profile
   shortcuts:
     title: Shortcuts
     description: Create, edit and delete daemon shortcuts easily.

@@ -44,13 +44,13 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 				</div>
 
 				<div class="mt-4">
-					<ProgressBar label="Uso de CPU" :value="cpu.usage" />
+					<ProgressBar :label="t('views.home.cards.cpuUsage')" :value="cpu.usage" />
 				</div>
 
 				<div class="mt-4 grid gap-3 sm:grid-cols-3">
-					<StatTile label="Nucleos" :value="String(cpu.cores)" />
-					<StatTile label="Frecuencia" :value="cpu.frequency ? `${formatNumber(cpu.frequency, 2)} GHz` : 'N/A'" />
-					<StatTile label="Temperatura" :value="temperature?.cpu_temp !== null && temperature?.cpu_temp !== undefined ? `${formatNumber(temperature.cpu_temp, 1)} °C` : 'N/A'" />
+					<StatTile :label="t('views.home.cards.cores')" :value="String(cpu.cores)" />
+					<StatTile :label="t('views.home.cards.frequency')" :value="cpu.frequency ? `${formatNumber(cpu.frequency, 2)} GHz` : 'N/A'" />
+					<StatTile :label="t('views.home.cards.temperature')" :value="temperature?.cpu_temp !== null && temperature?.cpu_temp !== undefined ? `${formatNumber(temperature.cpu_temp, 1)} °C` : 'N/A'" />
 				</div>
 			</div>
 
@@ -64,12 +64,12 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 				</div>
 
 				<div class="mt-4">
-					<ProgressBar label="Uso de RAM" :value="memory.usage_percent" />
+					<ProgressBar :label="t('views.home.cards.ramUsage')" :value="memory.usage_percent" />
 				</div>
 
 				<div class="mt-4 grid gap-3">
-					<StatTile label="Total" :value="formatGb(memory.total_gb)" />
-					<StatTile label="Usada / Disponible" :value="`${formatGb(memory.used_gb)} · ${formatGb(memory.available_gb)}`" />
+					<StatTile :label="t('views.home.cards.total')" :value="formatGb(memory.total_gb)" />
+					<StatTile :label="t('views.home.cards.usedFree')" :value="`${formatGb(memory.used_gb)} · ${formatGb(memory.available_gb)}`" />
 				</div>
 			</div>
 		</div>
