@@ -1,14 +1,17 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import ProgressBar from '@/components/ui/ProgressBar.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import type { DiskInfo } from '@/types/system';
+
+const { locale } = useI18n();
 
 defineProps<{
 	disk: DiskInfo;
 }>();
 
 const formatNumber = (value: number, digits = 0) =>
-	new Intl.NumberFormat('es-AR', {
+	new Intl.NumberFormat(locale.value, {
 		maximumFractionDigits: digits,
 		minimumFractionDigits: digits,
 	}).format(value);

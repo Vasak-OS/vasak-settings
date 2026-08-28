@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import StatTile from '@/components/ui/StatTile.vue';
+
+const { t } = useI18n();
 
 export interface SystemMetricItem {
 	label: string;
@@ -17,8 +20,8 @@ defineProps<{
 	<SectionCard>
 		<div class="flex items-center justify-between gap-3">
 			<div>
-				<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">Resumen</p>
-				<h2 class="mt-1 text-lg font-semibold">Indicadores rapidos</h2>
+				<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">{{ t('views.home.cards.overviewSection') }}</p>
+				<h2 class="mt-1 text-lg font-semibold">{{ t('views.home.cards.overviewTitle') }}</h2>
 			</div>
 		</div>
 

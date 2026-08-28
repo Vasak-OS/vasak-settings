@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+
+const { t } = useI18n();
+
 import type { VpnProfile } from '@/services/network.service';
 
 interface Props {
@@ -51,14 +55,14 @@ defineEmits<Emits>();
 					class="rounded-corner border border-ui-border px-2 py-1 text-xs text-tx-muted hover:bg-ui-surface"
 					@click="$emit('edit')"
 				>
-					Editar
+					{{ t('common.edit') }}
 				</button>
 				<button
 					class="rounded-corner border border-status-danger/20 bg-status-danger/10 px-2 py-1 text-xs text-status-danger hover:bg-status-danger/20 disabled:cursor-not-allowed disabled:opacity-50"
 					@click="$emit('delete')"
 					:disabled="actionProfileUuid === profile.uuid"
 				>
-					Eliminar
+					{{ t('common.delete') }}
 				</button>
 			</div>
 		</div>
