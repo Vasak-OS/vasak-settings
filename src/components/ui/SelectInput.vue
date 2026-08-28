@@ -29,7 +29,7 @@ const updateValue = (event: Event) => {
 		:value="modelValue"
 		:disabled="disabled"
 		@change="updateValue"
-		class="w-full appearance-none rounded-corner border border-ui-border bg-ui-surface/50 bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg_xmlns=%27http://www.w3.org/2000/svg%27_viewBox=%270_0_24_24%27_fill=%27none%27_stroke=%27white%27_stroke-width=%272%27_stroke-linecap=%27round%27_stroke-linejoin=%27round%27%3e%3cpolyline_points=%276_9_12_15_18_9%27%3e%3c/polyline%3e%3c/svg%3e')] bg-[length:20px] bg-[right_8px_center] bg-no-repeat px-3 py-2.5 pr-9 text-sm text-tx-primary transition-all duration-200 hover:bg-ui-surface focus:border-[var(--primary-color,#0084ff)] focus:bg-ui-surface/80 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color,#0084ff)]/20 disabled:cursor-not-allowed disabled:opacity-50"
+		class="w-full appearance-none rounded-corner border border-ui-border bg-ui-surface/50 bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg_xmlns=%27http://www.w3.org/2000/svg%27_viewBox=%270_0_24_24%27_fill=%27none%27_stroke=%27white%27_stroke-width=%272%27_stroke-linecap=%27round%27_stroke-linejoin=%27round%27%3e%3cpolyline_points=%276_9_12_15_18_9%27%3e%3c/polyline%3e%3c/svg%3e')] bg-[length:20px] bg-[right_8px_center] bg-no-repeat px-3 py-2.5 pr-9 text-sm text-tx-primary transition-all duration-200 hover:bg-ui-surface focus:border-primary focus:bg-ui-surface/80 focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
 	>
 		<template v-for="opt in options" :key="typeof opt === 'string' ? opt : opt.value">
 			<option

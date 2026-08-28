@@ -30,7 +30,7 @@ const deviceExtraInfo = computed(() => {
 <template>
 	<div 
 		class="flex items-center justify-between rounded-corner border bg-ui-surface/60 px-4 py-3 pb-3 mb-2"
-		:class="[connected ? 'border-[var(--primary-color,#0084ff)]/60 bg-[var(--primary-color,#0084ff)]/5' : 'border-ui-border hover:border-ui-border/80']"
+		:class="[connected ? 'border-primary/60 bg-primary/5' : 'border-ui-border hover:border-ui-border/80']"
 	>
 		<div class="flex flex-1 min-w-0 items-center gap-3">
 			<img v-if="icon" :src="icon" :alt="deviceTitle" class="h-6 w-6 shrink-0 opacity-80" />
@@ -55,13 +55,13 @@ const deviceExtraInfo = computed(() => {
 		<div class="ml-4 flex items-center gap-3">
 			<div
 				v-if="connected"
-				class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"
+				class="w-2 h-2 rounded-full bg-status-success shadow-[0_0_8px_rgba(34,197,94,0.6)]"
 			/>
 			<button
 				type="button"
 				class="rounded-corner px-3 py-1.5 text-xs font-medium cursor-pointer transition-colors"
 				:class="connected 
-					? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20' 
+					? 'bg-status-error/10 text-status-error hover:bg-status-error/20 border border-status-error/20' 
 					: 'bg-primary border border-primary text-white shadow-sm hover:brightness-110'"
 				@click.stop="emit('action')"
 			>

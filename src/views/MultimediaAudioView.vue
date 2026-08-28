@@ -177,7 +177,7 @@ onUnmounted(() => {
 				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.multimediaAudio.masterVolume') }}</h3>
 				<div class="flex items-center gap-4 rounded-corner border border-ui-border bg-ui-surface/40 p-4">
 					<button 
-						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner bg-ui-surface transition-colors hover:bg-[var(--primary-color,#0084ff)] hover:text-white"
+						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner bg-ui-surface transition-colors hover:bg-primary hover:text-white"
 						:class="volumeInfo.is_muted ? 'text-status-error border border-status-error/40' : 'text-tx-primary border border-ui-border'"
 						@click="toggleMute"
 						:title="t('views.multimediaAudio.muteTooltip')"
@@ -196,7 +196,7 @@ onUnmounted(() => {
 					</div>
 
 					<div class="w-12 text-right">
-						<span class="text-sm font-semibold" :class="volumeInfo.is_muted ? 'text-status-error' : 'text-[var(--primary-color,#0084ff)]'">
+						<span class="text-sm font-semibold" :class="volumeInfo.is_muted ? 'text-status-error' : 'text-primary'">
 							{{ volumePercentage }}%
 						</span>
 					</div>
@@ -227,14 +227,14 @@ onUnmounted(() => {
 						:key="device.id"
 						class="group flex cursor-pointer items-center justify-between gap-3 rounded-corner border px-4 py-3 transition-colors"
 						:class="selectedDeviceId === device.id 
-							? 'border-[var(--primary-color,#0084ff)]/50 bg-[var(--primary-color,#0084ff)]/5 shadow-sm' 
+							? 'border-primary/50 bg-primary/5 shadow-sm' 
 							: 'border-ui-border bg-ui-surface/40 hover:border-ui-border.hover hover:bg-ui-surface'"
 						@click="selectDevice(device.id)"
 					>
 						<!-- Selector Circle -->
 						<div 
 							class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors"
-							:class="selectedDeviceId === device.id ? 'border-[var(--primary-color,#0084ff)] bg-[var(--primary-color,#0084ff)]' : 'border-ui-border group-hover:border-[var(--primary-color,#0084ff)]/50'"
+							:class="selectedDeviceId === device.id ? 'border-primary bg-primary' : 'border-ui-border group-hover:border-primary/50'"
 						>
 							<div v-if="selectedDeviceId === device.id" class="h-2 w-2 rounded-full bg-white scale-100 transition-transform"></div>
 						</div>
@@ -250,7 +250,7 @@ onUnmounted(() => {
 						</div>
 
 						<!-- Badge Default -->
-						<span v-if="device.is_default" class="rounded bg-[var(--primary-color,#0084ff)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--primary-color,#0084ff)] border border-[var(--primary-color,#0084ff)]/20">
+						<span v-if="device.is_default" class="rounded bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary border border-primary/20">
 							{{ t('views.multimediaAudio.defaultBadge') }}
 						</span>
 					</li>
