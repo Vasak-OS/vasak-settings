@@ -180,8 +180,7 @@ onUnmounted(() => {
 						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner bg-ui-surface transition-colors hover:bg-primary hover:text-white"
 						:class="volumeInfo.is_muted ? 'text-status-error border border-status-error/40' : 'text-tx-primary border border-ui-border'"
 						@click="toggleMute"
-						:title="t('views.multimediaAudio.muteTooltip')"
-					>
+						:title="t('views.multimediaAudio.muteTooltip')" :aria-label="t('views.multimediaAudio.muteTooltip')">
 						<img v-if="volumeIconContent" :src="volumeIconContent" :alt="t('views.multimediaAudio.volumeAlt')" class="h-6 w-6" :class="{'opacity-60': volumeInfo.is_muted}" />
 					</button>
 

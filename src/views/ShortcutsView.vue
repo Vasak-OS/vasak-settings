@@ -208,7 +208,7 @@ onMounted(loadShortcuts);
 							v-model="searchQuery"
 							type="text"
 							:placeholder="t('views.shortcuts.searchPlaceholder')"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary outline-none transition-colors placeholder:text-tx-muted/70 focus:border-primary sm:max-w-sm"
+							class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary transition-colors placeholder:text-tx-muted/70 focus:border-primary sm:max-w-sm"
 						/>
 					</div>
 

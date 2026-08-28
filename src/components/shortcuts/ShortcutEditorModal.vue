@@ -305,7 +305,7 @@ const handleCancel = () => {
 					<div
 						id="shortcut-keys"
 						tabindex="0"
-						class="min-h-10 w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary outline-none transition-colors focus:border-primary flex flex-wrap gap-2 items-center"
+						class="min-h-10 w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary transition-colors focus:border-primary flex flex-wrap gap-2 items-center"
 						@keydown="handleKeyDown"
 						@keyup="handleKeyUp"
 					>
@@ -342,7 +342,7 @@ const handleCancel = () => {
 					v-model="action"
 					type="text"
 					placeholder="launch"
-					class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary outline-none transition-colors placeholder:text-tx-muted/70 focus:border-primary"
+					class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary transition-colors placeholder:text-tx-muted/70 focus:border-primary"
 				/>
 			</FormGroup>
 
@@ -352,7 +352,7 @@ const handleCancel = () => {
 					v-model="target"
 					rows="3"
 					placeholder="firefox"
-					class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary outline-none transition-colors placeholder:text-tx-muted/70 focus:border-primary"
+					class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary transition-colors placeholder:text-tx-muted/70 focus:border-primary"
 				/>
 			</FormGroup>
 

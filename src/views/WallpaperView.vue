@@ -316,7 +316,7 @@ onUnmounted(() => {
 							type="text"
 							v-model="selectedWallpaperPath"
 							:placeholder="t('views.appearanceWallpaper.pathPlaceholder')"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/40 px-3 py-2 text-sm outline-none focus:border-primary"
+							class="w-full rounded-corner border border-ui-border bg-ui-surface/40 px-3 py-2 text-sm focus:border-primary"
 						/>
 						<p class="mt-2 text-xs text-tx-muted">{{ t('views.appearanceWallpaper.dragHint') }}</p>
 					</div>

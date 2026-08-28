@@ -178,8 +178,7 @@ onUnmounted(() => {
 								: 'border-ui-border text-tx-primary'
 						"
 						@click="toggleInputMute"
-						:title="t('views.multimediaAudioInput.muteTooltip')"
-					>
+						:title="t('views.multimediaAudioInput.muteTooltip')" :aria-label="t('views.multimediaAudioInput.muteTooltip')">
 						<img
 							v-if="inputVolumeIconContent"
 							:src="inputVolumeIconContent"

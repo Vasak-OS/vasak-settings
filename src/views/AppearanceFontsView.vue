@@ -195,7 +195,7 @@ const isFormValid = computed(() => {
 									v-model="searchQuery"
 									type="text"
 									:placeholder="t('views.appearanceFonts.searchPlaceholder')"
-									class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary outline-none transition-colors placeholder:text-tx-muted/70 focus:border-primary"
+									class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary transition-colors placeholder:text-tx-muted/70 focus:border-primary"
 								/>
 							</template>
 						</FormGroup>
