@@ -4,6 +4,8 @@ import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import SidebarComponent from '@/components/sidebar/SidebarComponent.vue';
 import TopBarComponent from '@/components/topbar/TopBarComponent.vue';
+import { menuSegunHardware } from '@/composables/secciones-por-hardware';
+import { useHardwareDeRed } from '@/composables/useHardwareDeRed';
 import { useReactiveIcon } from '@/composables/useReactiveIcon';
 import { SidebarCategory } from '@/types/sidebar';
 
@@ -31,7 +33,9 @@ watch(
 
 const [appIcon] = useReactiveIcon('preferences');
 
-const sidebarCategories = computed<SidebarCategory[]>(() => [
+const { wifi, bluetooth } = useHardwareDeRed();
+
+const todasLasCategorias = computed<SidebarCategory[]>(() => [
 	{
 		id: 'general',
 		title: t('sidebar.general'),
@@ -177,6 +181,19 @@ const sidebarCategories = computed<SidebarCategory[]>(() => [
 		],
 	},
 ]);
+
+/**
+ * El menú que se dibuja, sin las secciones cuyo hardware no existe.
+ *
+ * Un equipo sin placa inalámbrica mostraba igual la sección de Wi-Fi, y ahí lo
+ * único que se puede leer es que no hay ninguna red: no falla nada, pero le hace
+ * buscar a alguien un problema donde no hay ninguno. Lo mismo con Bluetooth.
+ *
+ * Lo que **no se pudo averiguar** se muestra: ver `menuSegunHardware`.
+ */
+const sidebarCategories = computed<SidebarCategory[]>(() =>
+	menuSegunHardware(todasLasCategorias.value, { wifi: wifi.value, bluetooth: bluetooth.value })
+);
 </script>
 <template>
   <div
