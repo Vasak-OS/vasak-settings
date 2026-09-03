@@ -78,6 +78,10 @@ async fn pedir_al_frente() {
         .and_then(|b| b.destination("org.vasak.os.Desktop"))
         .and_then(|b| b.interface("org.vasak.os.Desktop"))
         .and_then(|b| b.with_flags(zbus::message::Flags::NoReplyExpected))
+        // Y sin arrancarlo si no está: pedir una sección de la configuración no
+        // tiene por qué encender el escritorio. `NoReplyExpected` no evita esa
+        // activación, hace falta decirlo aparte.
+        .and_then(|b| b.with_flags(zbus::message::Flags::NoAutoStart))
         .and_then(|b| b.build(&(APP_ID,)));
 
     match mensaje {
