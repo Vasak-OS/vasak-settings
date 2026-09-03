@@ -48,6 +48,48 @@ fn default_locale() -> String {
     }
 }
 
+/// Cómo nombra el compositor a esta ventana.
+const APP_ID: &str = "vasak-settings";
+
+/// Le pide al escritorio que traiga esta ventana al frente.
+///
+/// En Wayland una aplicación **no puede** traerse sola al frente: es a
+/// propósito, para que ninguna te robe el foco. `set_focus()` termina en un
+/// `present()` de GTK que el compositor ignora sin un token de activación, y
+/// una segunda invocación lanzada desde una terminal no tiene ninguno que pasar.
+///
+/// El único que puede es el compositor, y de todo el escritorio el único que le
+/// habla es vasak-desktop. Así que se le pide a él, por `PresentApp`.
+///
+/// Va **sin esperar respuesta**: ese servicio no contesta ninguno de sus
+/// métodos, y una llamada normal se quedaría colgada hasta que venciera el
+/// plazo de D-Bus. Si el escritorio no está corriendo, no pasa nada: la ventana
+/// ya navegó a la sección pedida, sólo que puede quedar detrás.
+async fn pedir_al_frente() {
+    let conexion = match zbus::Connection::session().await {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("[vasak-settings] sin bus de sesión para pedir el frente: {e}");
+            return;
+        }
+    };
+
+    let mensaje = zbus::message::Message::method("/org/vasak/os/Desktop", "PresentApp")
+        .and_then(|b| b.destination("org.vasak.os.Desktop"))
+        .and_then(|b| b.interface("org.vasak.os.Desktop"))
+        .and_then(|b| b.with_flags(zbus::message::Flags::NoReplyExpected))
+        .and_then(|b| b.build(&(APP_ID,)));
+
+    match mensaje {
+        Ok(mensaje) => {
+            if let Err(e) = conexion.send(&mensaje).await {
+                eprintln!("[vasak-settings] no se pudo pedir traer la ventana al frente: {e}");
+            }
+        }
+        Err(e) => eprintln!("[vasak-settings] no se pudo armar el pedido de traer al frente: {e}"),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -72,9 +114,14 @@ pub fn run() {
 
             // Traerla al frente primero: si la sección no es válida, la persona
             // igual pidió abrir la configuración y tiene que verla.
+            //
+            // `set_focus` se llama igual aunque en Wayland no alcance: en otros
+            // compositores sí funciona, y no cuesta nada. Lo que hace el trabajo
+            // acá es el pedido al escritorio de la línea siguiente.
             let _ = ventana.unminimize();
             let _ = ventana.show();
             let _ = ventana.set_focus();
+            tauri::async_runtime::spawn(pedir_al_frente());
 
             if let Some(seccion) = commands::initial_section::seccion_pedida(argv) {
                 let _ = ventana.emit(EVENTO_IR_A_SECCION, seccion);
