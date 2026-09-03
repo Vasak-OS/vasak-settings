@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { getIconSource } from '@vasakgroup/plugin-vicons';
 import { setupContextMenu } from '@vasakgroup/plugin-vsk-contextual-menu';
 import I18n from '@vasakgroup/tauri-plugin-i18n';
@@ -111,17 +112,37 @@ app.use(router);
 app.mount('#app');
 
 /**
- * `vasak-settings appearance-panel` abre esa pantalla en vez de la portada.
+ * Lleva la ventana a una sección, si esa sección existe.
  *
  * La lista de secciones válidas es la del router y no una copia: `hasRoute`
  * descarta cualquier cosa que no exista, así que agregar una pantalla no obliga
- * a tocar además una lista aparte. Va después de montar para no demorar el
- * primer dibujado, y si el argumento no sirve la aplicación abre donde siempre.
+ * a tocar además una lista aparte.
+ */
+function irASeccion(seccion: string | null) {
+	if (seccion && router.hasRoute(seccion)) router.push({ name: seccion });
+}
+
+/**
+ * `vasak-settings appearance-panel` abre esa pantalla en vez de la portada.
+ *
+ * Va después de montar para no demorar el primer dibujado, y si el argumento no
+ * sirve la aplicación abre donde siempre.
  */
 invoke<string | null>('initial_section')
-	.then((seccion) => {
-		if (seccion && router.hasRoute(seccion)) router.push({ name: seccion });
-	})
+	.then(irASeccion)
 	.catch(() => {
 		// Sin el puente con Rust no hay argumento que leer; la portada sirve.
 	});
+
+/**
+ * Y lo mismo cuando la ventana **ya estaba abierta**.
+ *
+ * Una segunda invocación no dibuja una ventana nueva —de eso se encarga
+ * `tauri-plugin-single-instance`—, así que la sección que pidió tiene que
+ * llegar por acá. Sin esto, pedir una sección con la configuración abierta no
+ * hacía nada visible: la ventana se traía al frente en la portada o donde
+ * hubiera quedado.
+ */
+listen<string>('vasak-settings:ir-a-seccion', (aviso) => irASeccion(aviso.payload)).catch(() => {
+	// Sin el puente, la ventana igual se trae al frente desde Rust.
+});
