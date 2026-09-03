@@ -7,6 +7,13 @@ mod audio;
 
 use std::path::PathBuf;
 
+use tauri::{Emitter, Manager};
+
+/// Por dónde le llega a la página la sección que pidió una segunda invocación.
+///
+/// El mismo nombre está en `main.ts`; son los dos extremos del mismo aviso.
+const EVENTO_IR_A_SECCION: &str = "vasak-settings:ir-a-seccion";
+
 /// Where the translations live.
 ///
 /// The i18n plugin only probes paths relative to the executable and the working
@@ -44,6 +51,35 @@ fn default_locale() -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Una sola ventana de configuración.
+        //
+        // Sin esto, `vasak-settings appearance-panel` con la ventana ya abierta
+        // arrancaba un proceso nuevo y apilaba una segunda ventana encima de la
+        // primera: la sección pedida se abría, pero en otra ventana, y quedaban
+        // dos configuraciones distintas sobre la misma máquina. Ahora la segunda
+        // invocación no dibuja nada: le pasa la sección a la que ya está y la
+        // trae al frente.
+        //
+        // No va antes que el diario a propósito, aunque la documentación del
+        // plugin sugiera registrarlo primero: el diario instala el gancho de
+        // pánico, y lo que se gana poniéndolo antes —que el segundo proceso
+        // salga unos milisegundos más temprano— no compensa perder el rastro de
+        // un pánico ocurrido justo ahí.
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            let Some(ventana) = app.get_webview_window("main") else {
+                return;
+            };
+
+            // Traerla al frente primero: si la sección no es válida, la persona
+            // igual pidió abrir la configuración y tiene que verla.
+            let _ = ventana.unminimize();
+            let _ = ventana.show();
+            let _ = ventana.set_focus();
+
+            if let Some(seccion) = commands::initial_section::seccion_pedida(argv) {
+                let _ = ventana.emit(EVENTO_IR_A_SECCION, seccion);
+            }
+        }))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_config_manager::init())
         .plugin(tauri_plugin_system_fonts::init())
