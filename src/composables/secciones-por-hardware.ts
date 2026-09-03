@@ -8,7 +8,9 @@
  */
 
 import type { SidebarCategory } from '@/types/sidebar';
-import type { Disponibilidad } from './useHardwareDeRed';
+
+/** Hay, no hay, o no se pudo averiguar. */
+export type Disponibilidad = 'si' | 'no' | 'desconocido';
 
 /**
  * Qué elemento del menú depende de qué hardware.
@@ -48,4 +50,25 @@ export function menuSegunHardware(
 			}),
 		}))
 		.filter((categoria) => categoria.items.length > 0);
+}
+
+/**
+ * Si una sección no se puede abrir porque su hardware no está.
+ *
+ * Es la misma regla que la del menú, y por eso vive al lado: el menú esconde la
+ * sección y esto impide llegar a ella igual. Sin las dos, el guión que abre una
+ * sección puntual —`vasak-settings network-wifi`, que es lo que usa el menú del
+ * panel— dejaba a alguien en una pantalla que la ventana ya había decidido no
+ * ofrecerle.
+ *
+ * `desconocido` **deja pasar**, por lo mismo que deja la sección en el menú.
+ */
+export function seccionInaccesible(
+	nombre: string | null | undefined,
+	disponible: Record<Hardware, Disponibilidad>
+): boolean {
+	if (!nombre) return false;
+	const hardware = HARDWARE_POR_SECCION[nombre as keyof typeof HARDWARE_POR_SECCION];
+	if (!hardware) return false;
+	return disponible[hardware] === 'no';
 }

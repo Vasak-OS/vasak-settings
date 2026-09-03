@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import {
+	type Disponibilidad,
 	HARDWARE_POR_SECCION,
 	type Hardware,
 	menuSegunHardware,
+	seccionInaccesible,
 } from '../src/composables/secciones-por-hardware';
-import type { Disponibilidad } from '../src/composables/useHardwareDeRed';
 import type { SidebarCategory } from '../src/types/sidebar';
 
 /**
@@ -116,6 +117,62 @@ describe('el menú según el hardware', () => {
 
 		for (const seccion of Object.keys(HARDWARE_POR_SECCION)) {
 			expect(enElMenu).toContain(seccion);
+		}
+	});
+});
+
+describe('llegar a una sección por su ruta', () => {
+	test('la sección escondida tampoco se puede abrir', () => {
+		// La otra puerta: `vasak-settings network-wifi` abre la aplicación en esa
+		// pantalla, y es lo que usa el menú del panel. Sin el guard, el menú
+		// escondía la sección y la ruta dejaba entrar igual.
+		expect(seccionInaccesible('network-wifi', { wifi: 'no', bluetooth: 'si' })).toBe(true);
+		expect(seccionInaccesible('network-bluetooth', { wifi: 'si', bluetooth: 'no' })).toBe(true);
+	});
+
+	test('con el hardware puesto se entra', () => {
+		expect(seccionInaccesible('network-wifi', todo('si'))).toBe(false);
+		expect(seccionInaccesible('network-bluetooth', todo('si'))).toBe(false);
+	});
+
+	test('lo que no se pudo averiguar deja pasar', () => {
+		// La misma regla que en el menú: si no se pudo preguntar, esa pantalla es
+		// el único lugar donde el problema se puede explicar.
+		expect(seccionInaccesible('network-wifi', todo('desconocido'))).toBe(false);
+		expect(seccionInaccesible('network-bluetooth', todo('desconocido'))).toBe(false);
+	});
+
+	test('las secciones que no dependen de hardware nunca se bloquean', () => {
+		for (const nombre of ['home', 'network-vpn', 'phone-devices', 'appearance-theme']) {
+			expect(seccionInaccesible(nombre, todo('no'))).toBe(false);
+		}
+	});
+
+	test('una ruta sin nombre no bloquea nada', () => {
+		// `destino.name` puede llegar vacío, y devolver `true` ahí dejaría la
+		// aplicación redirigiendo a la portada para siempre.
+		expect(seccionInaccesible(undefined, todo('no'))).toBe(false);
+		expect(seccionInaccesible(null, todo('no'))).toBe(false);
+		expect(seccionInaccesible('', todo('no'))).toBe(false);
+	});
+
+	test('el destino de la redirección nunca se bloquea a sí mismo', () => {
+		// Si «home» dependiera de hardware, el guard se redirigiría en círculo.
+		expect(Object.keys(HARDWARE_POR_SECCION)).not.toContain('home');
+	});
+
+	test('esconder y bloquear usan la misma regla', () => {
+		// Dos reglas que se escriben aparte terminan discrepando. Acá se comprueba
+		// que para cada sección con hardware, esconderla del menú y bloquear su
+		// ruta digan lo mismo en los tres estados.
+		for (const seccion of Object.keys(HARDWARE_POR_SECCION)) {
+			for (const estado of ['si', 'no', 'desconocido'] as Disponibilidad[]) {
+				const disponible = todo(estado);
+				const enElMenu = ids(menuSegunHardware([red()], disponible)).includes(seccion);
+				const bloqueada = seccionInaccesible(seccion, disponible);
+
+				expect(enElMenu).toBe(!bloqueada);
+			}
 		}
 	});
 });

@@ -1,4 +1,6 @@
 import { createMemoryHistory, createRouter } from 'vue-router';
+import { seccionInaccesible } from '@/composables/secciones-por-hardware';
+import { hardwareDeRed } from '@/composables/useHardwareDeRed';
 
 const routes = [
 	{ path: '/', name: 'home', component: () => import('@/views/HomeView.vue') },
@@ -146,4 +148,26 @@ const routes = [
 export const router = createRouter({
 	history: createMemoryHistory(),
 	routes,
+});
+
+/**
+ * No se llega a una sección cuyo hardware no está.
+ *
+ * El menú lateral ya la esconde, pero hay otra puerta: `vasak-settings
+ * network-wifi` abre la aplicación directamente en esa pantalla, y es lo que usa
+ * el menú del panel. Sin esto, las dos puertas contestaban distinto — una
+ * escondía la sección y la otra dejaba entrar.
+ *
+ * El sondeo lo comparte con el menú, así que las dos decisiones salen de la
+ * misma respuesta y no de dos consultas que podrían diferir.
+ *
+ * `desconocido` deja pasar, igual que deja la sección en el menú: si no se pudo
+ * preguntar, esta pantalla es el único lugar donde eso se puede explicar.
+ */
+router.beforeEach(async (destino) => {
+	if (seccionInaccesible(destino.name as string | undefined, await hardwareDeRed())) {
+		return { name: 'home' };
+	}
+	// `undefined` y no `true`: es lo que vue-router entiende como «seguí».
+	return undefined;
 });

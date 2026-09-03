@@ -23,9 +23,9 @@
 import { listAdapters } from '@vasakgroup/plugin-bluetooth-manager';
 import { isWirelessAvailable } from '@vasakgroup/plugin-network-manager';
 import { onMounted, ref } from 'vue';
+import type { Disponibilidad, Hardware } from './secciones-por-hardware';
 
-/** Hay, no hay, o no se pudo averiguar. */
-export type Disponibilidad = 'si' | 'no' | 'desconocido';
+export type { Disponibilidad } from './secciones-por-hardware';
 
 /**
  * Traduce el resultado de una consulta a las tres respuestas.
@@ -41,31 +41,53 @@ function disponibilidadDe<T>(
 	return hay(resultado.value) ? 'si' : 'no';
 }
 
-export function useHardwareDeRed() {
-	const wifi = ref<Disponibilidad>('desconocido');
-	const bluetooth = ref<Disponibilidad>('desconocido');
+/**
+ * El sondeo, hecho una sola vez por ejecución.
+ *
+ * Lo piden dos: el menú lateral, para esconder lo que no existe, y el guard del
+ * router, para que no se pueda llegar igual. Compartir la promesa es lo que
+ * evita dos rondas de D-Bus y, sobre todo, que las dos decisiones se tomen con
+ * respuestas distintas.
+ *
+ * No se reintenta si falló. Un fallo da `desconocido`, que **deja pasar** y deja
+ * la sección a la vista, así que reintentar no cambiaría ninguna decisión.
+ */
+let sondeo: Promise<Record<Hardware, Disponibilidad>> | null = null;
 
-	const revisar = async () => {
-		// Las dos en paralelo y con `allSettled`: son consultas independientes y
-		// que una falle no tiene por qué dejar la otra sin respuesta.
-		const [inalambrica, adaptadores] = await Promise.allSettled([
-			isWirelessAvailable(),
-			listAdapters(),
-		]);
+export function hardwareDeRed(): Promise<Record<Hardware, Disponibilidad>> {
+	sondeo ??= consultar();
+	return sondeo;
+}
 
+async function consultar(): Promise<Record<Hardware, Disponibilidad>> {
+	// Las dos en paralelo y con `allSettled`: son consultas independientes y que
+	// una falle no tiene por qué dejar la otra sin respuesta.
+	const [inalambrica, adaptadores] = await Promise.allSettled([
+		isWirelessAvailable(),
+		listAdapters(),
+	]);
+
+	return {
 		// `is_wireless_available` es `!wireless_device_paths().is_empty()` en
 		// NetworkManager: cuenta dispositivos, no si la radio está encendida. Una
 		// placa apagada por software sigue siendo una placa, y su sección tiene
 		// que estar para poder prenderla.
-		wifi.value = disponibilidadDe(inalambrica, (hay) => hay);
-		bluetooth.value = disponibilidadDe(adaptadores, (lista) => lista.length > 0);
+		wifi: disponibilidadDe(inalambrica, (hay) => hay),
+		bluetooth: disponibilidadDe(adaptadores, (lista) => lista.length > 0),
 	};
+}
 
-	// Una sola vez al abrir: un adaptador USB enchufado con la ventana abierta no
-	// aparece hasta reabrirla. Es el precio de no dejar dos suscripciones vivas
-	// —una por plugin— para un cambio que casi nunca pasa mientras alguien mira
-	// esta pantalla.
-	onMounted(revisar);
+export function useHardwareDeRed() {
+	const wifi = ref<Disponibilidad>('desconocido');
+	const bluetooth = ref<Disponibilidad>('desconocido');
 
-	return { wifi, bluetooth, revisar };
+	// Una sola vez al abrir, y sin volver a preguntar: un adaptador USB
+	// enchufado con la ventana abierta no aparece hasta reabrirla.
+	onMounted(async () => {
+		const disponible = await hardwareDeRed();
+		wifi.value = disponible.wifi;
+		bluetooth.value = disponible.bluetooth;
+	});
+
+	return { wifi, bluetooth };
 }
