@@ -29,12 +29,13 @@ const { t } = useI18n();
 /**
  * The resources a person can be shown, in the order they appear.
  *
- * Only what the permission service actually enforces. The camera, the
- * microphone and the screen are handed out by PipeWire and the desktop portal,
- * which do not consult this policy — the service refuses those requests
- * outright rather than storing an answer that changes nothing, so there is
- * never anything here to show for them. A switch that looks like protection and
- * is not is worse than no switch at all.
+ * Sólo las cuentas. La cámara y el micrófono tienen su propia pantalla —
+ * Privacidad y seguridad—, porque lo que se decide ahí se hace cumplir de otra
+ * manera: con un perfil de AppArmor sobre la aplicación, no preguntándole a
+ * este servicio. Mezclarlos acá diría que se controlan igual, y no es cierto.
+ * La pantalla y la ubicación no aparecen en ningún lado todavía: las reparte el
+ * portal de escritorio, que no consulta esta política. Un interruptor que
+ * parece protección y no lo es es peor que ninguno.
  */
 const RESOURCES = [
 	'account.email',
