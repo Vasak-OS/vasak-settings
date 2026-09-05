@@ -2,16 +2,22 @@
 /**
  * Qué aplicaciones pueden usar la cámara y el micrófono.
  *
- * # Por qué esta pantalla existe y por qué se llama así
+ * # Por qué vuelve a llamarse así
  *
- * Hubo una pantalla «Privacidad y seguridad» y se quitó porque prometía más de
- * lo que el sistema podía cumplir: quien la abría esperaba control sobre la
- * cámara, y de eso no había nada. La advertencia que quedó escrita entonces
- * sigue valiendo: un interruptor que parece protección y no lo es, es peor que
- * no tener interruptor.
+ * Esta pantalla existió, se quitó en 41d5d68 porque prometía lo que el sistema
+ * no controlaba —quien la abría esperaba la cámara, el micrófono y la pantalla,
+ * y de las tres no había ninguna— y vuelve ahora que dos de esas tres sí se
+ * controlan.
  *
- * Ahora sí hay algo que cumplir, pero **a medias**, y por eso esta pantalla se
- * llama por los dos dispositivos que administra y no por una promesa amplia:
+ * Se intentó llamarla «Cámara y micrófono» para no prometer de más, y el nombre
+ * creaba otra expectativa equivocada: quien lee eso espera **configurar** los
+ * dispositivos —el nivel del micrófono, la resolución de la cámara— y no
+ * administrar quién los usa. Un apartado de seguridad es lo que corresponde a
+ * lo que hace.
+ *
+ * La advertencia que motivó el borrado sigue valiendo igual: un interruptor que
+ * parece protección y no lo es, es peor que no tener interruptor. Por eso lo
+ * que **no** cubre está dicho en la pantalla y no acá:
  *
  *  - Un perfil de AppArmor le niega la cámara y el micrófono a las aplicaciones
  *    que el sistema no instaló, y permitir acá le escribe una excepción. Eso el
@@ -19,9 +25,12 @@
  *  - Pero sólo cubre el acceso **directo** al dispositivo. Una aplicación que
  *    se los pida a PipeWire —que es como los piden las aplicaciones modernas—
  *    todavía no se detiene.
+ *  - Y la captura de pantalla, que era la tercera cosa que la gente esperaba
+ *    encontrar acá, sigue sin control: el compositor se la entrega a cualquier
+ *    cliente que la pida.
  *
- * Eso último está dicho en la propia pantalla. Callarlo sería repetir el error
- * que llevó a quitar la anterior.
+ * Callar cualquiera de esas tres cosas sería repetir el error que llevó a
+ * quitar la pantalla anterior.
  */
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, ref } from 'vue';
@@ -130,15 +139,15 @@ onMounted(load);
 	<div class="flex flex-col gap-4">
 		<PageHeader
 			:section="t('sidebar.system')"
-			:title="t('views.cameraMicrophone.title')"
-			:description="t('views.cameraMicrophone.description')"
+			:title="t('views.privacySecurity.title')"
+			:description="t('views.privacySecurity.description')"
 		/>
 
 		<SectionCard>
 			<!-- El alcance, a la vista y no en una nota al pie: mientras la vía de
 			     PipeWire siga abierta, esta pantalla no puede presentarse como
 			     protección completa. -->
-			<AlertMessage type="info" :message="t('views.cameraMicrophone.scope')" />
+			<AlertMessage type="info" :message="t('views.privacySecurity.scope')" />
 
 			<AlertMessage v-if="errorMessage" type="error" :message="errorMessage" />
 			<p v-if="loading" class="text-sm text-tx-muted">{{ t('common.loading') }}</p>
@@ -146,7 +155,7 @@ onMounted(load);
 			<EmptyStateBox
 				v-else-if="visible.length === 0"
 				padding="lg"
-				:message="t('views.cameraMicrophone.empty')"
+				:message="t('views.privacySecurity.empty')"
 			/>
 
 			<template v-else>
@@ -167,7 +176,7 @@ onMounted(load);
 							v-if="!estaConfinada(entry)"
 							class="mt-1 text-xs text-status-warning"
 						>
-							{{ t('views.cameraMicrophone.notConfined') }}
+							{{ t('views.privacySecurity.notConfined') }}
 						</p>
 					</div>
 					<button
@@ -176,7 +185,7 @@ onMounted(load);
 						class="rounded-corner border border-ui-border px-3 py-1.5 text-sm text-tx-main hover:bg-ui-surface disabled:opacity-50"
 						@click="forget(entry)"
 					>
-						{{ t('views.cameraMicrophone.forget') }}
+						{{ t('views.privacySecurity.forget') }}
 					</button>
 				</header>
 
@@ -187,7 +196,7 @@ onMounted(load);
 						class="flex items-center justify-between gap-3"
 					>
 						<span class="min-w-0 text-sm text-tx-main">
-							{{ t(`views.cameraMicrophone.resources.${resource}`) }}
+							{{ t(`views.privacySecurity.resources.${resource}`) }}
 						</span>
 						<div class="flex shrink-0 gap-1">
 							<button
@@ -201,7 +210,7 @@ onMounted(load);
 								"
 								@click="change(entry, resource, true)"
 							>
-								{{ t('views.cameraMicrophone.allow') }}
+								{{ t('views.privacySecurity.allow') }}
 							</button>
 							<button
 								type="button"
@@ -214,7 +223,7 @@ onMounted(load);
 								"
 								@click="change(entry, resource, false)"
 							>
-								{{ t('views.cameraMicrophone.deny') }}
+								{{ t('views.privacySecurity.deny') }}
 							</button>
 						</div>
 					</li>

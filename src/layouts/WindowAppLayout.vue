@@ -152,9 +152,9 @@ const todasLasCategorias = computed<SidebarCategory[]>(() => [
 			{ id: 'power', label: t('sidebar.items.power'), icon: 'battery' },
 			{ id: 'monitors', label: t('sidebar.items.monitors'), icon: 'video-display' },
 			{
-				id: 'camera-microphone',
-				label: t('sidebar.items.cameraMicrophone'),
-				icon: 'camera-web',
+				id: 'privacy-security',
+				label: t('sidebar.items.privacySecurity'),
+				icon: 'security-high',
 			},
 			{
 				id: 'login-screen',

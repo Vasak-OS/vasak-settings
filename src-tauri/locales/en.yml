@@ -62,7 +62,6 @@ sidebar:
     networkVpn: VPN
     phoneDevices: Phones
     loginScreen: Login Screen
-    cameraMicrophone: Camera and microphone
 
 wayfire:
   plugins:
@@ -183,14 +182,15 @@ wayfire:
       description: Rotates a window with the mouse.
 
 views:
-  cameraMicrophone:
-    title: Camera and microphone
+  privacySecurity:
+    title: Privacy and security
     description: >-
       Which applications may use this computer's camera and microphone.
     scope: >-
-      This covers applications the system did not install, and only when they
-      open the device directly. An application that asks PipeWire for them is
-      not stopped yet.
+      This covers the camera and the microphone, and only for applications the
+      system did not install, and only when they open the device directly. One
+      that asks PipeWire for them is not stopped yet, and screen capture is not
+      covered.
     empty: >-
       Nothing here yet. When an application tries to use the camera or the
       microphone without permission, it will show up here for you to decide.
