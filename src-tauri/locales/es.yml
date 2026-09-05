@@ -62,7 +62,6 @@ sidebar:
     networkVpn: VPN
     phoneDevices: Teléfonos
     loginScreen: Inicio de sesión
-    cameraMicrophone: Cámara y micrófono
 
 wayfire:
   plugins:
@@ -183,14 +182,15 @@ wayfire:
       description: Gira una ventana con el ratón.
 
 views:
-  cameraMicrophone:
-    title: Cámara y micrófono
+  privacySecurity:
+    title: Privacidad y seguridad
     description: >-
       Qué aplicaciones pueden usar la cámara y el micrófono de este equipo.
     scope: >-
-      Esto alcanza a las aplicaciones que no instaló el sistema, y sólo cuando
-      abren el dispositivo directamente. Una aplicación que se los pida a
-      PipeWire todavía no se detiene.
+      Esto alcanza a la cámara y al micrófono, y sólo en las aplicaciones que no
+      instaló el sistema y cuando abren el dispositivo directamente. Una que se
+      los pida a PipeWire todavía no se detiene, y la captura de pantalla no
+      está cubierta.
     empty: >-
       Todavía no hay ninguna. Cuando una aplicación intente usar la cámara o el
       micrófono y no tenga permiso, va a aparecer acá para que decidas.
