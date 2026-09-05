@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import {
+	pilaDeFuente,
 	readConfig,
 	useConfigStore,
 	type VSKConfig,
@@ -70,14 +71,6 @@ const filteredFonts = computed(() => {
 
 	return list.slice(0, 180);
 });
-
-const fontStack = (fontName: string) => {
-	if (!fontName) {
-		return 'sans-serif';
-	}
-
-	return `'${fontName.replace(/'/g, "\\'")}', sans-serif`;
-};
 
 const pickFont = (font: SystemFontItem) => {
 	selectedFonts.value[activeTarget.value] = font.name;
@@ -205,19 +198,19 @@ const isFormValid = computed(() => {
 							<div class="space-y-3 text-sm text-tx-muted">
 								<div>
 									<div class="text-xs uppercase tracking-wide text-tx-muted">{{ t('views.appearanceFonts.targets.terminal') }}</div>
-									<div class="text-tx-primary" :style="{ fontFamily: fontStack(selectedFonts.terminal) }">
+									<div class="text-tx-primary" :style="{ fontFamily: pilaDeFuente(selectedFonts.terminal, 'terminal') }">
 										{{ selectedFonts.terminal || t('views.appearanceFonts.noFontAssigned') }}
 									</div>
 								</div>
 								<div>
 									<div class="text-xs uppercase tracking-wide text-tx-muted">{{ t('views.appearanceFonts.targets.title') }}</div>
-									<div class="text-tx-primary" :style="{ fontFamily: fontStack(selectedFonts.title) }">
+									<div class="text-tx-primary" :style="{ fontFamily: pilaDeFuente(selectedFonts.title, 'title') }">
 										{{ selectedFonts.title || t('views.appearanceFonts.noFontAssigned') }}
 									</div>
 								</div>
 								<div>
 									<div class="text-xs uppercase tracking-wide text-tx-muted">{{ t('views.appearanceFonts.targets.apps') }}</div>
-									<div class="text-tx-primary" :style="{ fontFamily: fontStack(selectedFonts.apps) }">
+									<div class="text-tx-primary" :style="{ fontFamily: pilaDeFuente(selectedFonts.apps, 'apps') }">
 										{{ selectedFonts.apps || t('views.appearanceFonts.noFontAssigned') }}
 									</div>
 								</div>
@@ -262,7 +255,7 @@ const isFormValid = computed(() => {
 								<div class="text-[11px] uppercase tracking-wider text-tx-muted">{{ t('views.appearanceFonts.preview') }}</div>
 								<div
 									class="mt-2 text-sm leading-6 text-tx-primary"
-									:style="{ fontFamily: fontStack(font.name) }"
+									:style="{ fontFamily: pilaDeFuente(font.name, font.monospaced ? 'terminal' : 'apps') }"
 								>
 									{{ t('views.appearanceFonts.previewText') }}
 								</div>

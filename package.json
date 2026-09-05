@@ -18,7 +18,7 @@
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-shell": "^2.3.5",
     "@vasakgroup/plugin-bluetooth-manager": "^2.0.0",
-    "@vasakgroup/plugin-config-manager": "^2.2.6",
+    "@vasakgroup/plugin-config-manager": "^2.5.0",
     "@vasakgroup/plugin-network-manager": "^2.2.0",
     "@vasakgroup/plugin-vicons": "^2.1.2",
     "@vasakgroup/plugin-vsk-contextual-menu": "^2.0.2",
