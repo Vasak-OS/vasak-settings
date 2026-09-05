@@ -70,9 +70,19 @@ const loading = ref(true);
 const errorMessage = ref('');
 const busyPath = ref('');
 
-const load = async () => {
-	loading.value = true;
-	errorMessage.value = '';
+/**
+ * Trae la lista.
+ *
+ * `refrescar` es para releerla **después** de una acción que falló: sin eso,
+ * esta función limpiaba el mensaje que el manejador acababa de escribir y el
+ * fallo no llegaba a verse nunca. Una autenticación rechazada se veía igual que
+ * un cambio aplicado.
+ */
+const load = async (refrescar = false) => {
+	if (!refrescar) {
+		loading.value = true;
+		errorMessage.value = '';
+	}
 	try {
 		entries.value = await listPermissions();
 	} catch (error) {
@@ -99,7 +109,7 @@ const change = async (entry: PermissionEntry, resource: string, allowed: boolean
 		// A refused authentication is the normal case, not a failure worth
 		// alarming about — but the switch must snap back to the truth.
 		errorMessage.value = String(error);
-		await load();
+		await load(true);
 	} finally {
 		busyPath.value = '';
 	}

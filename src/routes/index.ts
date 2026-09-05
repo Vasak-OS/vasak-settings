@@ -135,6 +135,11 @@ const routes = [
 		component: () => import('@/views/LanguageKeyboardView.vue'),
 	},
 	{
+		path: '/camera-microphone',
+		name: 'camera-microphone',
+		component: () => import('@/views/CameraMicrophoneView.vue'),
+	},
+	{
 		path: '/online-accounts',
 		name: 'online-accounts',
 		component: () => import('@/views/OnlineAccountsView.vue'),

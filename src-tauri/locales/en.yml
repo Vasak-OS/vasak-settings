@@ -62,6 +62,7 @@ sidebar:
     networkVpn: VPN
     phoneDevices: Phones
     loginScreen: Login Screen
+    cameraMicrophone: Camera and microphone
 
 wayfire:
   plugins:
@@ -182,6 +183,26 @@ wayfire:
       description: Rotates a window with the mouse.
 
 views:
+  cameraMicrophone:
+    title: Camera and microphone
+    description: >-
+      Which applications may use this computer's camera and microphone.
+    scope: >-
+      This covers applications the system did not install, and only when they
+      open the device directly. An application that asks PipeWire for them is
+      not stopped yet.
+    empty: >-
+      Nothing here yet. When an application tries to use the camera or the
+      microphone without permission, it will show up here for you to decide.
+    notConfined: >-
+      The system installed this application, so no profile limits it: changing
+      this neither grants nor removes access.
+    forget: Forget
+    allow: Allow
+    deny: Don't allow
+    resources:
+      camera: Camera
+      microphone: Microphone
   wayfirePlugins:
     title: Compositor plugins
     description: 'Enable only what you use: every plugin turned off is memory and work Wayfire does not spend.'
