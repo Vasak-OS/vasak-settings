@@ -47,9 +47,20 @@ const loading = ref(true);
 const errorMessage = ref('');
 const busyPath = ref('');
 
-const load = async () => {
-	loading.value = true;
-	errorMessage.value = '';
+/**
+ * Trae la lista.
+ *
+ * `refrescar` es para volver a leerla **después** de una acción que falló: sin
+ * eso, esta función limpiaba el mensaje que el manejador acababa de escribir y
+ * ningún fallo llegaba a verse. Una autenticación rechazada se veía igual que
+ * un cambio aplicado, que es la peor forma de equivocarse en una pantalla de
+ * permisos.
+ */
+const load = async (refrescar = false) => {
+	if (!refrescar) {
+		loading.value = true;
+		errorMessage.value = '';
+	}
 	try {
 		entries.value = await listPermissions();
 	} catch (error) {
@@ -94,7 +105,7 @@ const change = async (entry: PermissionEntry, resource: string, allowed: boolean
 		// alarma — pero el estado que se ve tiene que volver a la verdad.
 		errorMessage.value = String(error);
 	} finally {
-		await load();
+		await load(true);
 		busyPath.value = '';
 	}
 };
@@ -107,7 +118,7 @@ const forget = async (entry: PermissionEntry) => {
 	} catch (error) {
 		errorMessage.value = String(error);
 	} finally {
-		await load();
+		await load(true);
 		busyPath.value = '';
 	}
 };
@@ -138,9 +149,9 @@ onMounted(load);
 				:message="t('views.cameraMicrophone.empty')"
 			/>
 
+			<template v-else>
 			<article
 				v-for="entry in visible"
-				v-else
 				:key="entry.application.binary_path"
 				class="rounded-corner border border-ui-border bg-ui-surface/40 p-4 flex flex-col gap-3"
 			>
@@ -181,7 +192,7 @@ onMounted(load);
 						<div class="flex shrink-0 gap-1">
 							<button
 								type="button"
-								:disabled="busyPath === entry.application.binary_path"
+								:disabled="busyPath === entry.application.binary_path || !estaConfinada(entry)"
 								class="rounded-corner px-3 py-1 text-xs disabled:opacity-50"
 								:class="
 									decisionOf(entry, resource) === 'allowed'
@@ -194,7 +205,7 @@ onMounted(load);
 							</button>
 							<button
 								type="button"
-								:disabled="busyPath === entry.application.binary_path"
+								:disabled="busyPath === entry.application.binary_path || !estaConfinada(entry)"
 								class="rounded-corner px-3 py-1 text-xs disabled:opacity-50"
 								:class="
 									decisionOf(entry, resource) === 'denied'
@@ -209,6 +220,7 @@ onMounted(load);
 					</li>
 				</ul>
 			</article>
+			</template>
 		</SectionCard>
 	</div>
 </template>
