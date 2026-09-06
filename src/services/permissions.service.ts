@@ -11,6 +11,15 @@ export interface PermissionApplication {
 
 export interface PermissionEntry {
 	application: PermissionApplication;
+	/**
+	 * Si este programa **pregunta** antes de usar el recurso.
+	 *
+	 * Distingue las dos formas en que una decisión llega a hacerse cumplir, que
+	 * la procedencia sola no separa: a lo que el sistema no instaló lo confina
+	 * un perfil, y a `vasak-connect` no lo confina nada pero consulta antes de
+	 * encender la cámara del teléfono y respeta la respuesta.
+	 */
+	asks: boolean;
 	/** Resource id → decision. */
 	decisions: Record<string, Decision>;
 }

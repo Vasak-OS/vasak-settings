@@ -354,7 +354,7 @@ views:
   appearanceFonts:
     sharpness: Thicker strokes
     sharpnessHint: Thickens letter strokes according to the size they are drawn at. Text reads fuller and less washed out, especially at small sizes.
-    sharpnessRelogin: Takes effect on your next login: anything already open keeps drawing as before.
+    sharpnessRelogin: "Takes effect on your next login: anything already open keeps drawing as before."
     title: Fonts
     description: Search system fonts and assign them to the terminal, titles and applications.
     applyChanges: Apply Changes

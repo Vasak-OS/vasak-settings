@@ -22,6 +22,18 @@ pub struct PermissionApplication {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PermissionEntry {
     pub application: PermissionApplication,
+    /// Si el programa **pregunta** antes de usar el recurso.
+    ///
+    /// Este puente vuelve a declarar la forma que manda el servicio, así que un
+    /// campo que no esté acá **se pierde en silencio**: serde lo descarta al
+    /// leer y la interfaz lo recibe como `undefined`. Pasó con éste — la
+    /// pantalla apagaba los controles de todo lo que instaló el sistema, que es
+    /// exactamente lo que el campo venía a arreglar.
+    ///
+    /// Con `default` para que un servicio más viejo, que todavía no lo manda,
+    /// no rompa la lectura: sale en `false`, que es lo que valía antes.
+    #[serde(default)]
+    pub asks: bool,
     /// Resource id → `"allowed"` | `"denied"` | `"unknown"`.
     pub decisions: std::collections::BTreeMap<String, String>,
 }
@@ -109,7 +121,7 @@ mod tests {
     /// Verbatim from a running service. The two sides are separate programs, so
     /// a field renamed on one of them would otherwise only show up as an empty
     /// screen with no explanation.
-    const FROM_THE_SERVICE: &str = r#"[{"application":{"binary_path":"/usr/bin/busctl","display_name":"busctl","provenance":"system-installed"},"decisions":{"account.email":"denied","camera":"denied"}}]"#;
+    const FROM_THE_SERVICE: &str = r#"[{"application":{"binary_path":"/usr/bin/busctl","display_name":"busctl","provenance":"system-installed"},"asks":true,"decisions":{"account.email":"denied","camera":"denied"}}]"#;
 
     #[test]
     fn the_service_reply_is_understood_as_sent() {
@@ -125,6 +137,21 @@ mod tests {
         // key rather than being read as a nested structure.
         assert_eq!(entry.decisions.get("account.email").map(String::as_str), Some("denied"));
         assert_eq!(entry.decisions.get("camera").map(String::as_str), Some("denied"));
+
+        // Este puente vuelve a declarar la forma del servicio, así que un campo
+        // que falte acá se pierde sin que nada falle. Con éste, la pantalla
+        // apagaba los controles de todo lo instalado por el sistema — incluido
+        // lo que sí pregunta, como vasak-connect con la cámara del teléfono.
+        assert!(entry.asks, "«asks» no llegó del servicio a la interfaz");
+    }
+
+    /// Y un servicio más viejo, que todavía no manda el campo, se sigue
+    /// leyendo. Sale en `false`, que es lo que valía antes de que existiera.
+    #[test]
+    fn a_service_without_the_field_is_still_understood() {
+        let sin_campo = r#"[{"application":{"binary_path":"/usr/bin/x","display_name":"x","provenance":"unverified"},"decisions":{}}]"#;
+        let entries: Vec<PermissionEntry> = serde_json::from_str(sin_campo).expect("parse");
+        assert!(!entries[0].asks);
     }
 
     #[test]

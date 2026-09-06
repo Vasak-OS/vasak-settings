@@ -127,13 +127,24 @@ const visible = computed(() =>
 );
 
 /**
- * Si un perfil confina a esta aplicación.
+ * Si cambiar esto acá va a servir de algo.
  *
- * El perfil cubre lo que el sistema no instaló. Para un programa que vino con
- * el sistema no hay nada que exceptuar, así que su interruptor no haría nada —y
- * eso hay que decirlo en vez de ofrecerlo igual.
+ * Hay dos maneras de que una decisión se haga cumplir, y mirar sólo la
+ * procedencia confundía una con la otra:
+ *
+ *  - A lo que el sistema **no** instaló lo confina un perfil, y permitirle algo
+ *    le escribe una excepción. Lo hace cumplir el kernel, sin que el programa
+ *    colabore.
+ *  - Un programa del sistema no tiene perfil que lo limite, pero si **pregunta**
+ *    —como `vasak-connect` antes de encender la cámara del teléfono— respeta lo
+ *    que se le conteste, así que su decisión vale igual.
+ *
+ * Con la condición anterior, el segundo caso aparecía con el interruptor
+ * apagado: un permiso concedido sin forma de retirarlo, que es justo lo que
+ * esta pantalla existe para evitar.
  */
-const estaConfinada = (entry: PermissionEntry) => entry.application.provenance === 'unverified';
+const sePuedeDecidir = (entry: PermissionEntry) =>
+	entry.application.provenance === 'unverified' || entry.asks;
 
 /** Identifica un bloqueo: el par perfil+ruta es único en la lista. */
 const claveDe = (b: BlockedItem) => `${b.perfil}\u0000${b.ruta}`;
@@ -289,7 +300,7 @@ onMounted(load);
 							{{ entry.application.binary_path }}
 						</p>
 						<p
-							v-if="!estaConfinada(entry)"
+							v-if="!sePuedeDecidir(entry)"
 							class="mt-1 text-xs text-status-warning"
 						>
 							{{ t('views.privacySecurity.notConfined') }}
@@ -317,7 +328,7 @@ onMounted(load);
 						<div class="flex shrink-0 gap-1">
 							<button
 								type="button"
-								:disabled="busyPath === entry.application.binary_path || !estaConfinada(entry)"
+								:disabled="busyPath === entry.application.binary_path || !sePuedeDecidir(entry)"
 								class="rounded-corner px-3 py-1 text-xs disabled:opacity-50"
 								:class="
 									decisionOf(entry, resource) === 'allowed'
@@ -330,7 +341,7 @@ onMounted(load);
 							</button>
 							<button
 								type="button"
-								:disabled="busyPath === entry.application.binary_path || !estaConfinada(entry)"
+								:disabled="busyPath === entry.application.binary_path || !sePuedeDecidir(entry)"
 								class="rounded-corner px-3 py-1 text-xs disabled:opacity-50"
 								:class="
 									decisionOf(entry, resource) === 'denied'

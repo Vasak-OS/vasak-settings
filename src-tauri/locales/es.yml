@@ -354,7 +354,7 @@ views:
   appearanceFonts:
     sharpness: Trazos más gruesos
     sharpnessHint: Engrosa los trazos de la letra según el tamaño en que se dibujan. El texto se lee más lleno y menos desvaído, sobre todo en cuerpos chicos.
-    sharpnessRelogin: Toma efecto al volver a iniciar sesión: lo que ya está abierto sigue dibujando como antes.
+    sharpnessRelogin: "Toma efecto al volver a iniciar sesión: lo que ya está abierto sigue dibujando como antes."
     title: Fuentes
     description: Busca fuentes del sistema y asígnalas al terminal, a los títulos y a las aplicaciones.
     applyChanges: Aplicar Cambios
