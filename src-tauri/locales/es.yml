@@ -189,10 +189,11 @@ views:
       cuáles pueden leer tus claves.
     scope: >-
       Esto alcanza a la cámara, al micrófono y a tus credenciales —las claves de
-      SSH y GPG, el llavero y los accesos guardados—, y sólo en las aplicaciones
-      que no instaló el sistema. Con la cámara y el micrófono cubre nada más que
-      la vía directa al dispositivo: una que se los pida a PipeWire todavía no se
-      detiene. La captura de pantalla no está cubierta.
+      SSH y GPG junto con los agentes que firman con ellas, el llavero y los
+      accesos guardados—, y sólo en las aplicaciones que no instaló el sistema.
+      Con la cámara y el micrófono cubre nada más que la vía directa al
+      dispositivo: una que se los pida a PipeWire todavía no se detiene. La
+      captura de pantalla no está cubierta.
     empty: >-
       Todavía no hay ninguna. Cuando una aplicación intente usar la cámara o el
       micrófono, o leer tus claves, y no tenga permiso, va a aparecer acá para

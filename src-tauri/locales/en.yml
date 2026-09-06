@@ -189,10 +189,11 @@ views:
       which may read your keys.
     scope: >-
       This covers the camera, the microphone and your credentials — SSH and GPG
-      keys, the keyring and saved logins — and only for applications the system
-      did not install. For the camera and the microphone it covers only the
-      direct path to the device: one that asks PipeWire for them is not stopped
-      yet. Screen capture is not covered.
+      keys along with the agents that sign with them, the keyring and saved
+      logins — and only for applications the system did not install. For the
+      camera and the microphone it covers only the direct path to the device:
+      one that asks PipeWire for them is not stopped yet. Screen capture is not
+      covered.
     empty: >-
       Nothing here yet. When an application tries to use the camera or the
       microphone, or to read your keys, without permission, it will show up here
