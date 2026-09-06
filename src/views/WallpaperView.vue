@@ -8,7 +8,6 @@ import {
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import type { Store } from 'pinia';
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
@@ -171,10 +170,7 @@ const saveWallpaperConfig = async () => {
 
 onMounted(async () => {
 	try {
-		configStore.value = useConfigStore() as Store<
-			'config',
-			{ config: VSKConfig; loadConfig: () => Promise<void> }
-		>;
+		configStore.value = useConfigStore();
 
 		await configStore.value.loadConfig();
 		vskConfig.value = await readConfig();
