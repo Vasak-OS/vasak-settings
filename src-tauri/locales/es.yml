@@ -185,15 +185,18 @@ views:
   privacySecurity:
     title: Privacidad y seguridad
     description: >-
-      Qué aplicaciones pueden usar la cámara y el micrófono de este equipo.
+      Qué aplicaciones pueden usar la cámara y el micrófono de este equipo, y
+      cuáles pueden leer tus claves.
     scope: >-
-      Esto alcanza a la cámara y al micrófono, y sólo en las aplicaciones que no
-      instaló el sistema y cuando abren el dispositivo directamente. Una que se
-      los pida a PipeWire todavía no se detiene, y la captura de pantalla no
-      está cubierta.
+      Esto alcanza a la cámara, al micrófono y a tus credenciales —las claves de
+      SSH y GPG, el llavero y los accesos guardados—, y sólo en las aplicaciones
+      que no instaló el sistema. Con la cámara y el micrófono cubre nada más que
+      la vía directa al dispositivo: una que se los pida a PipeWire todavía no se
+      detiene. La captura de pantalla no está cubierta.
     empty: >-
       Todavía no hay ninguna. Cuando una aplicación intente usar la cámara o el
-      micrófono y no tenga permiso, va a aparecer acá para que decidas.
+      micrófono, o leer tus claves, y no tenga permiso, va a aparecer acá para
+      que decidas.
     notConfined: >-
       Esta aplicación la instaló el sistema, así que ningún perfil la limita:
       cambiar esto no le quita ni le da acceso.
@@ -203,6 +206,7 @@ views:
     resources:
       camera: Cámara
       microphone: Micrófono
+      credentials: Claves y accesos guardados
   wayfirePlugins:
     title: Plugins del compositor
     description: 'Activá solo lo que uses: cada plugin apagado es memoria y trabajo que Wayfire no hace.'

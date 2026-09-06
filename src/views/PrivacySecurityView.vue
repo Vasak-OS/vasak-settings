@@ -47,9 +47,16 @@ import {
 
 const { t } = useI18n();
 
-/** Los dos dispositivos que el perfil de AppArmor niega, y por eso los únicos
- * sobre los que decidir acá cambia algo. */
-const RESOURCES = ['camera', 'microphone'] as const;
+/**
+ * Lo que el perfil de AppArmor niega, y por eso lo único sobre lo que decidir
+ * acá cambia algo.
+ *
+ * Las credenciales van primero a propósito. Es lo que más daño hace si se
+ * pierde —una clave de SSH sin frase abre servidores, un token abre la cuenta
+ * sin segundo factor— y lo que la persona menos espera que una aplicación
+ * cualquiera pueda leer.
+ */
+const RESOURCES = ['credentials', 'camera', 'microphone'] as const;
 
 const entries = ref<PermissionEntry[]>([]);
 const loading = ref(true);
