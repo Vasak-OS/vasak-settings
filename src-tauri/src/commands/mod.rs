@@ -16,6 +16,7 @@ pub mod battery;
 pub mod brightness;
 pub mod power_profiles;
 pub mod monitors;
+pub mod nitidez;
 pub mod language;
 pub mod online_accounts;
 pub mod permissions;

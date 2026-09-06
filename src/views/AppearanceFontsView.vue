@@ -14,6 +14,8 @@ import FormGroup from '@/components/ui/FormGroup.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
+import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+import { fijarNitidez, nitidezActiva } from '@/services/nitidez.service';
 import { getSystemFonts, type SystemFontItem } from '@/services/style.service';
 
 type FontTarget = 'terminal' | 'title' | 'apps';
@@ -30,6 +32,17 @@ const vskConfig: Ref<VSKConfig | null> = ref(null);
 const fonts = ref<SystemFontItem[]>([]);
 const searchQuery = ref('');
 const activeTarget = ref<FontTarget>('terminal');
+
+/**
+ * El engrosado de trazos de FreeType.
+ *
+ * Aparte de las familias porque es otra cosa: las de arriba eligen **qué** letra
+ * se usa y ésta **cómo** se dibuja. Y se guarda sola, sin pasar por «Aplicar
+ * cambios», porque no vive en la configuración de VasakOS sino en un archivo de
+ * entorno de la sesión.
+ */
+const nitidez = ref(false);
+const guardandoNitidez = ref(false);
 
 const selectedFonts = ref<Record<FontTarget, string>>({
 	terminal: '',
@@ -113,12 +126,26 @@ onMounted(async () => {
 		if (!selectedFonts.value.apps && uniqueFonts.value.length > 2) {
 			selectedFonts.value.apps = uniqueFonts.value[2].name;
 		}
+		nitidez.value = await nitidezActiva();
 	} catch (err) {
 		error.value = t('views.appearanceFonts.errorLoading').replace('{0}', String(err));
 	} finally {
 		loading.value = false;
 	}
 });
+
+const alternarNitidez = async (valor: boolean) => {
+	guardandoNitidez.value = true;
+	error.value = '';
+	try {
+		await fijarNitidez(valor);
+		nitidez.value = valor;
+	} catch (err) {
+		error.value = t('views.appearanceFonts.errorSaving').replace('{0}', String(err));
+	} finally {
+		guardandoNitidez.value = false;
+	}
+};
 
 const saveConfig = async () => {
 	saving.value = true;
@@ -223,6 +250,34 @@ const isFormValid = computed(() => {
 								</div>
 							</div>
 						</div>
+					</div>
+				</SectionCard>
+
+				<!-- El engrosado de trazos. Va aparte de las familias porque es otra
+				     cosa: arriba se elige **qué** letra se usa, acá **cómo** se
+				     dibuja. Y se guarda solo, sin pasar por «Aplicar cambios»,
+				     porque no vive en la configuración de VasakOS sino en un
+				     archivo de entorno de la sesión. -->
+				<SectionCard>
+					<div class="flex items-center justify-between gap-3">
+						<div class="min-w-0">
+							<h3 class="text-lg font-medium text-tx-primary">
+								{{ t('views.appearanceFonts.sharpness') }}
+							</h3>
+							<p class="text-sm text-tx-muted">{{ t('views.appearanceFonts.sharpnessHint') }}</p>
+							<!-- Se dice siempre y no sólo al tocarlo: alguien que abre esta
+							     pantalla y ve el interruptor encendido tiene que saber por
+							     qué el texto de al lado no cambió. -->
+							<p class="mt-1 text-xs text-tx-muted">
+								{{ t('views.appearanceFonts.sharpnessRelogin') }}
+							</p>
+						</div>
+						<SwitchToggle
+							:label="t('views.appearanceFonts.sharpness')"
+							:is-on="nitidez"
+							:disabled="guardandoNitidez"
+							@toggle="alternarNitidez"
+						/>
 					</div>
 				</SectionCard>
 
