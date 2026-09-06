@@ -45,7 +45,11 @@ import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import {
+	allowBlocked,
+	type BlockedItem,
+	dismissBlocked,
 	forgetPermission,
+	listBlocked,
 	listPermissions,
 	type PermissionEntry,
 	setPermission,
@@ -65,6 +69,17 @@ const { t } = useI18n();
 const RESOURCES = ['credentials', 'camera', 'microphone'] as const;
 
 const entries = ref<PermissionEntry[]>([]);
+/**
+ * Lo que algún perfil del sistema bloqueó y todavía nadie decidió.
+ *
+ * Va aparte de `entries` porque es otra cosa: `entries` son decisiones sobre
+ * recursos con nombre, y esto son hechos —tal perfil no dejó abrir tal ruta—
+ * que existen hasta que alguien los resuelve. Sin esta lista, un perfil que
+ * niega algo deja un programa que falla sin explicación y sin remedio, que es
+ * lo que obliga a tener los perfiles del sistema en modo aviso.
+ */
+const bloqueados = ref<BlockedItem[]>([]);
+const ocupado = ref('');
 const loading = ref(true);
 const errorMessage = ref('');
 const busyPath = ref('');
@@ -85,6 +100,9 @@ const load = async (refrescar = false) => {
 	}
 	try {
 		entries.value = await listPermissions();
+		// Si esto falla no se pierde la lista de permisos: son dos cosas
+		// independientes y una pantalla a medias es mejor que una vacía.
+		bloqueados.value = await listBlocked().catch(() => bloqueados.value);
 	} catch (error) {
 		errorMessage.value = String(error);
 	} finally {
@@ -116,6 +134,36 @@ const visible = computed(() =>
  * eso hay que decirlo en vez de ofrecerlo igual.
  */
 const estaConfinada = (entry: PermissionEntry) => entry.application.provenance === 'unverified';
+
+/** Identifica un bloqueo: el par perfil+ruta es único en la lista. */
+const claveDe = (b: BlockedItem) => `${b.perfil}\u0000${b.ruta}`;
+
+const permitirBloqueo = async (b: BlockedItem) => {
+	ocupado.value = claveDe(b);
+	errorMessage.value = '';
+	try {
+		await allowBlocked(b.perfil, b.ruta);
+	} catch (error) {
+		// Una autenticación rechazada es lo normal, no una alarma.
+		errorMessage.value = String(error);
+	} finally {
+		ocupado.value = '';
+		await load(true);
+	}
+};
+
+const descartarBloqueo = async (b: BlockedItem) => {
+	ocupado.value = claveDe(b);
+	errorMessage.value = '';
+	try {
+		await dismissBlocked(b.perfil, b.ruta);
+	} catch (error) {
+		errorMessage.value = String(error);
+	} finally {
+		ocupado.value = '';
+		await load(true);
+	}
+};
 
 const change = async (entry: PermissionEntry, resource: string, allowed: boolean) => {
 	busyPath.value = entry.application.binary_path;
@@ -155,6 +203,61 @@ onMounted(load);
 			:title="t('views.privacySecurity.title')"
 			:description="t('views.privacySecurity.description')"
 		/>
+
+		<!-- Lo que un perfil del sistema bloqueó y espera decisión.
+		     Va en su propia tarjeta y arriba de la lista de aplicaciones porque
+		     es lo único de esta pantalla que pide una acción: lo demás es
+		     estado que se consulta. -->
+		<SectionCard v-if="bloqueados.length > 0">
+			<header>
+				<h2 class="text-lg font-medium text-tx-main">
+					{{ t('views.privacySecurity.blocked.title') }}
+				</h2>
+				<p class="text-sm text-tx-muted">
+					{{ t('views.privacySecurity.blocked.description') }}
+				</p>
+			</header>
+
+			<article
+				v-for="b in bloqueados"
+				:key="claveDe(b)"
+				class="rounded-corner border border-ui-border bg-ui-surface/40 p-4 flex flex-col gap-3"
+			>
+				<div class="min-w-0">
+					<h3 class="font-semibold text-tx-main truncate">{{ b.perfil }}</h3>
+					<p v-if="b.programa" class="text-xs text-tx-muted break-all">{{ b.programa }}</p>
+					<!-- La ruta completa, sin recortar: es lo que se está por
+					     autorizar, y un «…» al final esconde justo la parte que
+					     distingue un archivo tuyo de otro que no lo es. -->
+					<p class="mt-2 text-sm text-tx-main break-all font-mono">{{ b.ruta }}</p>
+					<p class="mt-1 text-xs text-tx-muted">
+						{{ t('views.privacySecurity.blocked.permisos') }}: {{ b.mascara }}
+						<span v-if="b.veces > 1">
+							· {{ t('views.privacySecurity.blocked.veces').replace('{0}', String(b.veces)) }}
+						</span>
+					</p>
+				</div>
+
+				<div class="flex shrink-0 gap-2">
+					<button
+						type="button"
+						:disabled="ocupado === claveDe(b)"
+						class="rounded-corner px-3 py-1 text-xs border border-ui-border text-tx-main hover:bg-ui-surface disabled:opacity-50"
+						@click="permitirBloqueo(b)"
+					>
+						{{ t('views.privacySecurity.allow') }}
+					</button>
+					<button
+						type="button"
+						:disabled="ocupado === claveDe(b)"
+						class="rounded-corner px-3 py-1 text-xs border border-ui-border text-tx-muted hover:bg-ui-surface disabled:opacity-50"
+						@click="descartarBloqueo(b)"
+					>
+						{{ t('views.privacySecurity.blocked.descartar') }}
+					</button>
+				</div>
+			</article>
+		</SectionCard>
 
 		<SectionCard>
 			<!-- El alcance, a la vista y no en una nota al pie: mientras la vía de

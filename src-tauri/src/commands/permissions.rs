@@ -137,3 +137,112 @@ mod tests {
         assert!(entries[0].decisions.is_empty());
     }
 }
+
+/// Un bloqueo que ocurrió y espera decisión.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct BlockedItem {
+    /// El perfil de AppArmor que lo produjo. Es la identidad: se engancha al
+    /// binario, así que es más estable que la ruta del proceso.
+    pub perfil: String,
+    pub ruta: String,
+    pub mascara: String,
+    /// De qué programa venía, si se pudo averiguar. Sólo para mostrar.
+    pub programa: String,
+    /// Cuántas veces se repitió el mismo intento.
+    pub veces: u32,
+}
+
+/// Lo que algún perfil de AppArmor bloqueó y todavía nadie decidió.
+///
+/// Son los bloqueos que no corresponden a un recurso con nombre —cámara,
+/// micrófono, credenciales— sino a una ruta concreta que un perfil del sistema
+/// no dejó abrir. Existen para que se puedan desbloquear: sin esta lista, un
+/// perfil que niega algo deja un programa que falla sin explicación.
+#[tauri::command]
+pub async fn list_blocked() -> Result<Vec<BlockedItem>, String> {
+    let connection = service().await?;
+
+    let reply = connection
+        .call_method(Some(SERVICE_NAME), SERVICE_PATH, Some(SERVICE_INTERFACE), "ListBlocked", &())
+        .await
+        .map_err(|e| format!("No se pudo leer lo bloqueado: {e}"))?;
+
+    let raw: String = reply
+        .body()
+        .deserialize()
+        .map_err(|e| format!("Respuesta inválida del servicio de permisos: {e}"))?;
+
+    serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))
+}
+
+/// Permite exactamente lo que se bloqueó. Pasa por polkit.
+#[tauri::command]
+pub async fn allow_blocked(profile: String, path: String) -> Result<(), String> {
+    let connection = service().await?;
+    connection
+        .call_method(
+            Some(SERVICE_NAME),
+            SERVICE_PATH,
+            Some(SERVICE_INTERFACE),
+            "AllowBlocked",
+            &(profile, path),
+        )
+        .await
+        .map(|_| ())
+        .map_err(|e| format!("No se pudo permitir: {e}"))
+}
+
+/// Saca el bloqueo de la lista sin permitirlo.
+#[tauri::command]
+pub async fn dismiss_blocked(profile: String, path: String) -> Result<(), String> {
+    let connection = service().await?;
+    connection
+        .call_method(
+            Some(SERVICE_NAME),
+            SERVICE_PATH,
+            Some(SERVICE_INTERFACE),
+            "DismissBlocked",
+            &(profile, path),
+        )
+        .await
+        .map(|_| ())
+        .map_err(|e| format!("No se pudo descartar: {e}"))
+}
+
+/// Lo que ya se le permitió a un perfil, para poder retirarlo.
+#[tauri::command]
+pub async fn list_allowed(profile: String) -> Result<Vec<String>, String> {
+    let connection = service().await?;
+    let reply = connection
+        .call_method(
+            Some(SERVICE_NAME),
+            SERVICE_PATH,
+            Some(SERVICE_INTERFACE),
+            "ListAllowed",
+            &(profile,),
+        )
+        .await
+        .map_err(|e| format!("No se pudo leer lo permitido: {e}"))?;
+    let raw: String = reply
+        .body()
+        .deserialize()
+        .map_err(|e| format!("Respuesta inválida del servicio de permisos: {e}"))?;
+    serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))
+}
+
+/// Vuelve a bloquear algo que se había permitido. Pasa por polkit.
+#[tauri::command]
+pub async fn revoke_blocked(profile: String, rule: String) -> Result<(), String> {
+    let connection = service().await?;
+    connection
+        .call_method(
+            Some(SERVICE_NAME),
+            SERVICE_PATH,
+            Some(SERVICE_INTERFACE),
+            "RevokeBlocked",
+            &(profile, rule),
+        )
+        .await
+        .map(|_| ())
+        .map_err(|e| format!("No se pudo volver a bloquear: {e}"))
+}
