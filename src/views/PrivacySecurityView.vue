@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /**
- * Qué aplicaciones pueden usar la cámara y el micrófono.
+ * Qué aplicaciones pueden usar la cámara y el micrófono, y cuáles pueden leer
+ * tus claves.
  *
  * # Por qué vuelve a llamarse así
  *
@@ -19,12 +20,17 @@
  * parece protección y no lo es, es peor que no tener interruptor. Por eso lo
  * que **no** cubre está dicho en la pantalla y no acá:
  *
- *  - Un perfil de AppArmor le niega la cámara y el micrófono a las aplicaciones
- *    que el sistema no instaló, y permitir acá le escribe una excepción. Eso el
- *    kernel lo hace cumplir sin importar quién la haya abierto.
- *  - Pero sólo cubre el acceso **directo** al dispositivo. Una aplicación que
- *    se los pida a PipeWire —que es como los piden las aplicaciones modernas—
- *    todavía no se detiene.
+ *  - Un perfil de AppArmor le niega la cámara, el micrófono y tus credenciales
+ *    a las aplicaciones que el sistema no instaló, y permitir acá le escribe
+ *    una excepción. Eso el kernel lo hace cumplir sin importar quién la haya
+ *    abierto.
+ *  - Con la cámara y el micrófono sólo cubre el acceso **directo** al
+ *    dispositivo. Una aplicación que se los pida a PipeWire —que es como los
+ *    piden las aplicaciones modernas— todavía no se detiene.
+ *  - Las credenciales sí quedan cubiertas enteras, porque son archivos y
+ *    sockets y no hay un servicio intermedio que las reparta. Van los agentes
+ *    de SSH y GPG además de las claves: con el socket del agente se firma sin
+ *    leer ningún archivo, así que negar sólo la carpeta no serviría de nada.
  *  - Y la captura de pantalla, que era la tercera cosa que la gente esperaba
  *    encontrar acá, sigue sin control: el compositor se la entrega a cualquier
  *    cliente que la pida.
@@ -47,9 +53,16 @@ import {
 
 const { t } = useI18n();
 
-/** Los dos dispositivos que el perfil de AppArmor niega, y por eso los únicos
- * sobre los que decidir acá cambia algo. */
-const RESOURCES = ['camera', 'microphone'] as const;
+/**
+ * Lo que el perfil de AppArmor niega, y por eso lo único sobre lo que decidir
+ * acá cambia algo.
+ *
+ * Las credenciales van primero a propósito. Es lo que más daño hace si se
+ * pierde —una clave de SSH sin frase abre servidores, un token abre la cuenta
+ * sin segundo factor— y lo que la persona menos espera que una aplicación
+ * cualquiera pueda leer.
+ */
+const RESOURCES = ['credentials', 'camera', 'microphone'] as const;
 
 const entries = ref<PermissionEntry[]>([]);
 const loading = ref(true);
@@ -83,7 +96,7 @@ const decisionOf = (entry: PermissionEntry, resource: string) =>
 	entry.decisions[resource] ?? 'unknown';
 
 /**
- * Sólo las aplicaciones que pidieron alguno de estos dos dispositivos.
+ * Sólo las aplicaciones que pidieron alguna de estas tres cosas.
  *
  * La lista completa incluye permisos de cuentas, que se administran en su
  * propia pantalla: mostrarlos acá sería repetirlos en dos lugares y dejar dudas

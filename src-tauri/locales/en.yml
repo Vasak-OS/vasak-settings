@@ -185,15 +185,19 @@ views:
   privacySecurity:
     title: Privacy and security
     description: >-
-      Which applications may use this computer's camera and microphone.
+      Which applications may use this computer's camera and microphone, and
+      which may read your keys.
     scope: >-
-      This covers the camera and the microphone, and only for applications the
-      system did not install, and only when they open the device directly. One
-      that asks PipeWire for them is not stopped yet, and screen capture is not
+      This covers the camera, the microphone and your credentials — SSH and GPG
+      keys along with the agents that sign with them, the keyring and saved
+      logins — and only for applications the system did not install. For the
+      camera and the microphone it covers only the direct path to the device:
+      one that asks PipeWire for them is not stopped yet. Screen capture is not
       covered.
     empty: >-
       Nothing here yet. When an application tries to use the camera or the
-      microphone without permission, it will show up here for you to decide.
+      microphone, or to read your keys, without permission, it will show up here
+      for you to decide.
     notConfined: >-
       The system installed this application, so no profile limits it: changing
       this neither grants nor removes access.
@@ -203,6 +207,7 @@ views:
     resources:
       camera: Camera
       microphone: Microphone
+      credentials: Keys and saved logins
   wayfirePlugins:
     title: Compositor plugins
     description: 'Enable only what you use: every plugin turned off is memory and work Wayfire does not spend.'

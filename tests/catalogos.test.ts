@@ -20,14 +20,32 @@ import { fileURLToPath } from 'node:url';
 const RAIZ = fileURLToPath(new URL('..', import.meta.url));
 const CATALOGOS = join(RAIZ, 'src-tauri/locales');
 
-/** Las claves de un `.yml` plano por indentación, como `views.home.title`. */
+/**
+ * Las claves de un `.yml` plano por indentación, como `views.home.title`.
+ *
+ * Se saltea el contenido de los bloques `>-` y `|`. Ahí adentro todo es texto,
+ * y una línea de prosa que empiece con «palabra:» —«dispositivo: una que se los
+ * pida…»— se leía como una clave. El resultado era una falla que acusaba a la
+ * traducción de tener claves de más, cuando lo único que había pasado es que el
+ * texto se acomodó distinto al reescribirlo. Pasó de verdad, y el mensaje no
+ * daba ninguna pista de por dónde buscar.
+ */
 function clavesDe(yaml: string): Set<string> {
 	const claves = new Set<string>();
 	const pila: string[] = [];
+	/** Sangría del bloque de texto que se está salteando, si hay alguno. */
+	let sangriaDelBloque: number | null = null;
 
 	for (const linea of yaml.split('\n')) {
 		if (!linea.trim() || linea.trimStart().startsWith('#')) continue;
 		const sangria = linea.length - linea.trimStart().length;
+
+		if (sangriaDelBloque !== null) {
+			// El bloque termina cuando vuelve a la sangría de su propia clave.
+			if (sangria > sangriaDelBloque) continue;
+			sangriaDelBloque = null;
+		}
+
 		const nivel = sangria / 2;
 		// La clave puede venir entrecomillada, con comilla simple o doble: es como
 		// el YAML escribe `'0_env'`, que empieza con un dígito, y `"on"`/`"off"`,
@@ -38,7 +56,10 @@ function clavesDe(yaml: string): Set<string> {
 		pila.length = nivel;
 		pila[nivel] = match[1];
 		// Con valor es una hoja; sin valor, un grupo que sólo abre camino.
-		if (match[2].trim()) claves.add(pila.slice(0, nivel + 1).join('.'));
+		const valor = match[2].trim();
+		if (valor) claves.add(pila.slice(0, nivel + 1).join('.'));
+		// `>-`, `>`, `|`, `|-`… abren un bloque cuyo contenido es texto, no YAML.
+		if (/^[>|][-+]?\d*$/.test(valor)) sangriaDelBloque = sangria;
 	}
 
 	return claves;
