@@ -204,6 +204,12 @@ views:
     forget: Forget
     allow: Allow
     deny: Don't allow
+    blocked:
+      title: 'Blocked, waiting for you'
+      description: 'A security profile stopped a program from doing this. If you expected it, allow it; if not, dismiss it and it stays blocked.'
+      permisos: 'Permissions'
+      veces: 'tried {0} times'
+      descartar: 'Dismiss'
     resources:
       camera: Camera
       microphone: Microphone

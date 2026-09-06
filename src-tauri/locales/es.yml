@@ -204,6 +204,12 @@ views:
     forget: Olvidar
     allow: Permitir
     deny: No permitir
+    blocked:
+      title: 'Bloqueado, esperando tu decisión'
+      description: 'Un perfil de seguridad le impidió esto a un programa. Si era algo que esperabas, permitíselo; si no, descartalo y queda bloqueado.'
+      permisos: 'Permisos'
+      veces: 'intentado {0} veces'
+      descartar: 'Descartar'
     resources:
       camera: Cámara
       microphone: Micrófono
