@@ -192,7 +192,7 @@ views:
       SSH y GPG junto con los agentes que firman con ellas, el llavero y los
       accesos guardados—, y sólo en las aplicaciones que no instaló el sistema.
       Con la cámara y el micrófono cubre nada más que la vía directa al
-      dispositivo: una que se los pida a PipeWire todavía no se detiene. La
+      dispositivo; una que se los pida a PipeWire todavía no se detiene. La
       captura de pantalla no está cubierta.
     empty: >-
       Todavía no hay ninguna. Cuando una aplicación intente usar la cámara o el
