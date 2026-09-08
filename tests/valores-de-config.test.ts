@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { booleanoDeConfig, escribirEsquema } from '../src/tools/valores-de-config';
+import { booleanoDeConfig, escribirEsquema, limpiarEstilo } from '../src/tools/valores-de-config';
 
 /**
  * Las claves que el plugin de configuración transporta sin conocer llegan como
@@ -47,22 +47,6 @@ describe('escribirEsquema', () => {
 		expect(style['color-scheme']).toBe('catppuccin');
 	});
 
-	test('y saca la clave mal escrita que quedó de antes', () => {
-		// Hasta la versión 2.6.0 del plugin, lo que su modelo no conoce se
-		// borraba solo en cada lectura. Ahora se conserva —eso es lo que salvó la
-		// disposición de los widgets—, así que esta basura hay que sacarla a
-		// propósito o queda para siempre diciendo algo distinto de lo que vale.
-		const style: Record<string, unknown> = {
-			'color-scheme': 'vasak-default',
-			color_scheme: 'lo-que-alguien-eligió-y-no-se-aplicó',
-		};
-
-		escribirEsquema(style, 'catppuccin');
-
-		expect(style['color-scheme']).toBe('catppuccin');
-		expect('color_scheme' in style).toBe(false);
-	});
-
 	test('no toca nada más de la sección', () => {
 		const style: Record<string, unknown> = {
 			darkmode: true,
@@ -74,5 +58,44 @@ describe('escribirEsquema', () => {
 
 		expect(style.darkmode).toBe(true);
 		expect(style.radius).toBe(10);
+	});
+});
+
+/**
+ * Hasta la versión 2.6.0 del plugin de configuración, lo que su modelo no
+ * conoce se borraba solo en cada lectura. Ahora se conserva —eso es lo que
+ * salvó la disposición de los widgets—, así que lo que la interfaz dejó de
+ * escribir hay que sacarlo a propósito o queda para siempre.
+ */
+describe('limpiarEstilo', () => {
+	test('saca la clave del esquema mal escrita', () => {
+		const style: Record<string, unknown> = {
+			'color-scheme': 'catppuccin',
+			color_scheme: 'lo-que-alguien-eligió-y-no-se-aplicó',
+		};
+
+		limpiarEstilo(style);
+
+		expect('color_scheme' in style).toBe(false);
+		expect(style['color-scheme']).toBe('catppuccin');
+	});
+
+	test('y el color primario del control que se sacó', () => {
+		// Nadie leía esa clave: el color primario lo define el esquema. El control
+		// existía y no hacía nada, así que su valor quedaba escrito para nada.
+		const style: Record<string, unknown> = { primarycolor: '#0084FF', radius: 10 };
+
+		limpiarEstilo(style);
+
+		expect('primarycolor' in style).toBe(false);
+		expect(style.radius).toBe(10);
+	});
+
+	test('con una sección que no las tiene no hace nada', () => {
+		const style: Record<string, unknown> = { darkmode: true, 'color-scheme': 'x', radius: 8 };
+
+		limpiarEstilo(style);
+
+		expect(style).toEqual({ darkmode: true, 'color-scheme': 'x', radius: 8 });
 	});
 });
