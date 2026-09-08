@@ -25,6 +25,7 @@ import {
 	getSchemes,
 	setSystemConfig,
 } from '@/services/style.service';
+import { CLAVE_DEL_ESQUEMA, escribirEsquema } from '@/tools/valores-de-config';
 
 interface SchemePreviewValue {
 	label: string;
@@ -157,10 +158,11 @@ onMounted(async () => {
 		cursorThemes.value = Array.isArray(cursors) && cursors.length ? cursors : ['Adwaita'];
 		schemes.value = Array.isArray(loadedSchemes) ? loadedSchemes : [];
 
-		const storedSchemeId =
-			vskConfig.value?.style?.['color-scheme'] ||
-			configStore.value.config?.style?.color_scheme ||
-			'';
+		// Antes esto caía a `style.color_scheme` cuando la clave con guión no
+		// estaba. Era caer a la clave mal escrita —la que hacía que elegir un
+		// esquema no cambiara nada—, así que el respaldo tapaba el error en la
+		// pantalla mientras el sistema seguía con el esquema viejo.
+		const storedSchemeId = vskConfig.value?.style?.[CLAVE_DEL_ESQUEMA] || '';
 		selectedSchemeId.value = storedSchemeId;
 
 		if (selectedGtkTheme.value && !gtkThemes.value.includes(selectedGtkTheme.value)) {
@@ -239,7 +241,7 @@ const saveConfig = async () => {
 		}
 
 		if (vskConfig.value) {
-			(vskConfig.value.style as any).color_scheme = selectedSchemeId.value;
+			escribirEsquema(vskConfig.value.style, selectedSchemeId.value);
 		}
 
 		await writeConfig(vskConfig.value);
