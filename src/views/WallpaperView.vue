@@ -16,6 +16,7 @@ import ProgressBar from '@/components/ui/ProgressBar.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import { getOfficialWallpapers } from '@/services/style.service';
+import { booleanoDeConfig } from '@/tools/valores-de-config';
 
 const { t } = useI18n();
 
@@ -154,7 +155,7 @@ const saveWallpaperConfig = async () => {
 			...vskConfig.value.desktop,
 			wallpaper: finalPath ? [finalPath] : [],
 			pausevideoonbattery: pauseVideoOnBattery.value,
-		} as typeof vskConfig.value.desktop;
+		};
 
 		await writeConfig(vskConfig.value);
 		successMessage.value = t('views.appearanceWallpaper.saved');
@@ -175,7 +176,13 @@ onMounted(async () => {
 		await configStore.value.loadConfig();
 		vskConfig.value = await readConfig();
 		selectedWallpaperPath.value = vskConfig.value?.desktop?.wallpaper?.[0] ?? '';
-		pauseVideoOnBattery.value = (vskConfig.value?.desktop as any)?.pausevideoonbattery ?? true;
+		// El plugin ya declara que la sección del escritorio puede llevar claves
+		// suyas, así que esto no necesita una aserción: se comprueba el tipo en
+		// lugar de afirmarlo, que es lo que hace `booleanoDeConfig`.
+		pauseVideoOnBattery.value = booleanoDeConfig(
+			vskConfig.value?.desktop?.pausevideoonbattery,
+			true
+		);
 
 		officialWallpapers.value = await getOfficialWallpapers<string[]>();
 
