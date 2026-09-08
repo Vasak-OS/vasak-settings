@@ -19,3 +19,34 @@
 export function booleanoDeConfig(valor: unknown, porDefecto: boolean): boolean {
 	return typeof valor === 'boolean' ? valor : porDefecto;
 }
+
+/** La clave del esquema de color, tal como se llama en el archivo. */
+export const CLAVE_DEL_ESQUEMA = 'color-scheme';
+
+/**
+ * La clave mal escrita que quedó de antes: con guión bajo en lugar de guión.
+ *
+ * Era lo que guardaba la vista del tema, y por eso **elegir un esquema no
+ * cambiaba el esquema**: se escribía una clave nueva que nadie lee y
+ * `color-scheme` se quedaba con el valor viejo. La aserción `as any` de esa
+ * línea es lo que lo dejó pasar; sin ella no compilaba.
+ *
+ * Hasta la versión 2.6.0 del plugin de configuración, las claves que su modelo
+ * no conoce se borraban solas en cada lectura, así que esta basura no duraba.
+ * Ahora se conserva —que es lo que salvó la disposición de los widgets—, así
+ * que hay que sacarla a propósito. Si no, queda para siempre en el archivo de
+ * quien haya elegido un esquema alguna vez, diciendo algo distinto de lo que
+ * vale.
+ */
+const CLAVE_VIEJA_DEL_ESQUEMA = 'color_scheme';
+
+/**
+ * Deja escrito el esquema elegido, en la clave que se lee.
+ *
+ * Modifica la sección en lugar de devolver una nueva porque es lo que hace el
+ * resto de la vista, que guarda la configuración entera que tiene cargada.
+ */
+export function escribirEsquema(style: Record<string, unknown>, id: string): void {
+	style[CLAVE_DEL_ESQUEMA] = id;
+	delete style[CLAVE_VIEJA_DEL_ESQUEMA];
+}
