@@ -24,21 +24,24 @@ export function booleanoDeConfig(valor: unknown, porDefecto: boolean): boolean {
 export const CLAVE_DEL_ESQUEMA = 'color-scheme';
 
 /**
- * La clave mal escrita que quedó de antes: con guión bajo en lugar de guión.
+ * Las claves de estilo que la interfaz ya no escribe y quedaron en los archivos.
  *
- * Era lo que guardaba la vista del tema, y por eso **elegir un esquema no
- * cambiaba el esquema**: se escribía una clave nueva que nadie lee y
- * `color-scheme` se quedaba con el valor viejo. La aserción `as any` de esa
- * línea es lo que lo dejó pasar; sin ella no compilaba.
+ * `color_scheme` —con guión bajo— era lo que guardaba la vista del tema, y por
+ * eso **elegir un esquema no cambiaba el esquema**: se escribía una clave nueva
+ * que nadie lee y `color-scheme` se quedaba con el valor viejo.
+ *
+ * `primarycolor` era un control de «Color primario» que no hacía nada: nadie
+ * leía esa clave en ningún repositorio. El color primario lo define el esquema,
+ * así que el control se sacó en lugar de implementarlo.
  *
  * Hasta la versión 2.6.0 del plugin de configuración, las claves que su modelo
  * no conoce se borraban solas en cada lectura, así que esta basura no duraba.
- * Ahora se conserva —que es lo que salvó la disposición de los widgets—, así
- * que hay que sacarla a propósito. Si no, queda para siempre en el archivo de
- * quien haya elegido un esquema alguna vez, diciendo algo distinto de lo que
- * vale.
+ * Ahora se conservan —que es lo que salvó la disposición de los widgets—, así
+ * que hay que sacarlas a propósito. Si no, quedan para siempre en el archivo de
+ * quien haya tocado el tema alguna vez: una diciendo un esquema distinto del
+ * que vale, la otra un color que no se aplica en ninguna parte.
  */
-const CLAVE_VIEJA_DEL_ESQUEMA = 'color_scheme';
+const CLAVES_MUERTAS = ['color_scheme', 'primarycolor'];
 
 /**
  * Deja escrito el esquema elegido, en la clave que se lee.
@@ -48,5 +51,11 @@ const CLAVE_VIEJA_DEL_ESQUEMA = 'color_scheme';
  */
 export function escribirEsquema(style: Record<string, unknown>, id: string): void {
 	style[CLAVE_DEL_ESQUEMA] = id;
-	delete style[CLAVE_VIEJA_DEL_ESQUEMA];
+}
+
+/** Saca de la sección de estilo lo que la interfaz ya no escribe. */
+export function limpiarEstilo(style: Record<string, unknown>): void {
+	for (const clave of CLAVES_MUERTAS) {
+		delete style[clave];
+	}
 }

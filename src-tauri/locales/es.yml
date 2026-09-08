@@ -321,7 +321,6 @@ views:
     schemeRequired: Debes seleccionar un scheme
     baseStyles: Estilos Base
     borderRadius: Border Radius
-    primaryColor: Color Primario
     darkMode: Modo Oscuro
     enabled: Activado
     disabled: Desactivado

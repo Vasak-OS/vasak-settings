@@ -16,7 +16,6 @@ import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
-import TextInput from '@/components/ui/TextInput.vue';
 import {
 	getCurrentSystemState,
 	getCursorThemes,
@@ -25,7 +24,7 @@ import {
 	getSchemes,
 	setSystemConfig,
 } from '@/services/style.service';
-import { CLAVE_DEL_ESQUEMA, escribirEsquema } from '@/tools/valores-de-config';
+import { CLAVE_DEL_ESQUEMA, escribirEsquema, limpiarEstilo } from '@/tools/valores-de-config';
 
 interface SchemePreviewValue {
 	label: string;
@@ -242,6 +241,7 @@ const saveConfig = async () => {
 
 		if (vskConfig.value) {
 			escribirEsquema(vskConfig.value.style, selectedSchemeId.value);
+			limpiarEstilo(vskConfig.value.style);
 		}
 
 		await writeConfig(vskConfig.value);
@@ -302,25 +302,6 @@ const isFormValid = computed(() => {
 									<span class="w-8 text-right text-xs text-tx-muted">{{ vskConfig?.style.radius }}px</span>
 								</div>
 							</template>
-						</FormGroup>
-
-						<FormGroup :label="t('views.appearanceTheme.primaryColor')" html-for="primary-color">
-							<div class="flex items-center gap-3">
-								<input
-									v-if="vskConfig"
-									id="primary-color"
-									type="color"
-									v-model="(vskConfig.style as any)['primarycolor']"
-									class="h-10 w-[50px] cursor-pointer rounded-corner border-2 border-ui-surface/10 bg-transparent p-0 transition-colors duration-200 hover:border-primary"
-								/>
-								<TextInput
-									v-if="vskConfig"
-									mono
-									class="flex-1"
-									v-model="(vskConfig.style as any)['primarycolor']"
-									placeholder="#0084FF"
-								/>
-							</div>
 						</FormGroup>
 
 						<div class="flex items-center justify-between">
