@@ -979,6 +979,15 @@ views:
       chat: Messages
       drive: Cloud files
       tasks: Tasks
+    probe:
+      test: Test connection
+      testing: Testing…
+      imap: Incoming mail (IMAP)
+      smtp: Outgoing mail (SMTP)
+      saveAnyway: Save anyway
+      saveAnywayHint: >-
+        If you are sure the details are right, you can save anyway: the test can
+        fail because of a network that filters the port, or an unusual server.
     linkedAccounts: Linked accounts
     customDialogDescription: Set up your mail and sync server details manually.
     displayName: Display name
@@ -994,6 +1003,7 @@ views:
     customAdded: Custom account added successfully
     accountRemoved: "{0} account removed."
     errors:
+      probeFailed: 'Could not test the connection: {0}'
       connectProvider: 'Could not connect the {0} account: {1}'
       loadProviders: 'Error loading providers: {0}'
       nameRequired: The name is required

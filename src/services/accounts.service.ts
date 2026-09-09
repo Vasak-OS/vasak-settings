@@ -47,6 +47,48 @@ export const connectOauthAccount = (
 ): Promise<string> =>
 	invoke<string>('connect_oauth_account', { providerId, capabilities, displayName });
 
+/** Cómo le fue a una de las dos puntas de la prueba. */
+export interface ProbeOutcome {
+	ok: boolean;
+	/** Qué pasó, en términos de lo que se puede arreglar. */
+	detail: string;
+}
+
+/**
+ * Las dos puntas por separado, y eso importa: es muy común que la de entrada
+ * funcione y la de salida no. Un resultado único diría «no anda» sin decir cuál
+ * de los dos grupos de campos hay que mirar.
+ */
+export interface MailProbe {
+	imap: ProbeOutcome;
+	smtp: ProbeOutcome;
+}
+
+/**
+ * Prueba que una cuenta de correo funcione antes de guardarla.
+ *
+ * Corre en el proceso de la ventana y no en el servicio de cuentas: la
+ * contraseña ya está acá —la acaba de escribir la persona—, así que probarla no
+ * la expone a nada nuevo, y mantiene un cliente de IMAP y otro de SMTP fuera de
+ * un proceso que corre como root.
+ */
+export const testMailConnection = (
+	imapServer: string,
+	imapPort: number,
+	smtpServer: string,
+	smtpPort: number,
+	username: string,
+	password: string
+): Promise<MailProbe> =>
+	invoke<MailProbe>('test_mail_connection', {
+		imapServer,
+		imapPort,
+		smtpServer,
+		smtpPort,
+		username,
+		password,
+	});
+
 /**
  * Registra una cuenta con contraseña: IMAP/SMTP y compañía.
  *
