@@ -966,12 +966,19 @@ views:
     providers: Proveedores
     customProvider: Servidor personalizado
     unavailable:
-      google: >-
-        Todavía no. Google exige registrar la aplicación y para el correo pide
-        además una auditoría paga, así que Gmail va a entrar por IMAP.
-      nextcloud: >-
-        Todavía no. Está primero en la lista: tu propio servidor entrega las
-        credenciales, sin registrar nada con nadie.
+      noClientId: >-
+        Falta configurarlo. VasakOS no incluye credenciales propias para este
+        proveedor: quien administra el equipo tiene que registrar una aplicación
+        y dejar el client_id en /etc/vasak-accounts/providers.d.
+    providerConnected: Cuenta de {0} conectada.
+    needsReauth: Hay que volver a conectar esta cuenta.
+    capabilities:
+      email: Correo
+      calendar: Calendario
+      contacts: Contactos
+      chat: Mensajes
+      drive: Archivos en la nube
+      tasks: Tareas
     linkedAccounts: Cuentas vinculadas
     customDialogDescription: Configura manualmente los datos de tu servidor de correo y sincronización.
     displayName: Nombre para mostrar
@@ -987,6 +994,8 @@ views:
     customAdded: Cuenta personalizada agregada correctamente
     accountRemoved: Cuenta de {0} eliminada.
     errors:
+      connectProvider: 'No se pudo conectar la cuenta de {0}: {1}'
+      loadProviders: 'Error al cargar los proveedores: {0}'
       nameRequired: El nombre es obligatorio
       imapServerRequired: El servidor IMAP es obligatorio
       smtpServerRequired: El servidor SMTP es obligatorio

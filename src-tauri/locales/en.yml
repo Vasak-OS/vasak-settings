@@ -966,12 +966,19 @@ views:
     providers: Providers
     customProvider: Custom server
     unavailable:
-      google: >-
-        Not yet. Google requires registering the application, and for mail it
-        also wants a paid audit — so Gmail will come in over IMAP.
-      nextcloud: >-
-        Not yet. It is first in line: your own server hands out the
-        credentials, with nothing to register with anyone.
+      noClientId: >-
+        Not configured yet. VasakOS ships no credentials of its own for this
+        provider: whoever administers the machine has to register an application
+        and leave the client_id in /etc/vasak-accounts/providers.d.
+    providerConnected: '{0} account connected.'
+    needsReauth: This account has to be connected again.
+    capabilities:
+      email: Mail
+      calendar: Calendar
+      contacts: Contacts
+      chat: Messages
+      drive: Cloud files
+      tasks: Tasks
     linkedAccounts: Linked accounts
     customDialogDescription: Set up your mail and sync server details manually.
     displayName: Display name
@@ -987,6 +994,8 @@ views:
     customAdded: Custom account added successfully
     accountRemoved: "{0} account removed."
     errors:
+      connectProvider: 'Could not connect the {0} account: {1}'
+      loadProviders: 'Error loading providers: {0}'
       nameRequired: The name is required
       imapServerRequired: The IMAP server is required
       smtpServerRequired: The SMTP server is required
