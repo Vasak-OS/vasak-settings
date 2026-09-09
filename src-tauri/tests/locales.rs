@@ -310,3 +310,41 @@ fn las_dos_puntas_del_correo_se_nombran_distinto() {
         assert_ne!(entrada, salida, "las dos puntas dicen lo mismo en {idioma}.yml");
     }
 }
+
+/// Los textos del autodescubrimiento de calendario y contactos.
+///
+/// `nothingFoundHint` es el que más importa: hay servidores que no publican esa
+/// información y andan perfecto para el correo. Sin ese texto, no encontrar nada
+/// se lee como un fallo y alguien va a cancelar una cuenta que estaba bien.
+#[test]
+fn el_autodescubrimiento_tiene_todos_sus_textos() {
+    for idioma in ["es", "en"] {
+        let raiz = catalogo(idioma);
+        let dav = &raiz["views"]["onlineAccounts"]["dav"];
+
+        assert!(dav.is_mapping(), "views.onlineAccounts.dav falta en {idioma}.yml");
+        for clave in ["search", "searching", "hint", "nothingFoundHint"] {
+            assert!(
+                dav[clave].as_str().is_some_and(|t| !t.trim().is_empty()),
+                "falta views.onlineAccounts.dav.{clave} en {idioma}.yml"
+            );
+        }
+    }
+}
+
+/// Lo encontrado se rotula con los mismos nombres de capacidad que el resto de
+/// la pantalla, así que ésos tienen que existir — ya los cubre otro test, pero
+/// acá se deja dicho que el bloque de `dav` depende de ellos.
+#[test]
+fn lo_encontrado_se_rotula_con_los_nombres_de_capacidad() {
+    for idioma in ["es", "en"] {
+        let raiz = catalogo(idioma);
+        let nombres = &raiz["views"]["onlineAccounts"]["capabilities"];
+        for capacidad in ["calendar", "contacts"] {
+            assert!(
+                nombres[capacidad].as_str().is_some_and(|t| !t.trim().is_empty()),
+                "falta el nombre de '{capacidad}', que rotula lo que se encontró"
+            );
+        }
+    }
+}
