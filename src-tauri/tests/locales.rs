@@ -157,31 +157,38 @@ fn los_permisos_cuelgan_de_las_cuentas_en_linea() {
     }
 }
 
-/// El motivo por el que un proveedor todavía no se puede conectar.
+/// Un proveedor sin configurar tiene que llevar a algún lado.
 ///
-/// La pantalla lo muestra debajo del botón apagado, así que si la clave falta el
-/// botón queda deshabilitado y sin explicación — que es peor que el estado
-/// anterior, donde al menos estaba encendido.
-///
-/// Es **un** motivo y no uno por proveedor: la lista la trae el catálogo del
-/// servicio, así que acá no se sabe qué proveedores hay, y la razón por la que
-/// alguno no está listo es siempre la misma —le falta el client_id—.
+/// Antes decía «falta configurarlo» y nombraba un archivo de `/etc` para editar
+/// como administrador: un «no» con una salida que casi nadie iba a tomar. Ahora
+/// el botón abre el formulario, así que el texto invita a tocarlo, y la ruta —que
+/// sigue haciendo falta para saber dónde mirar los pasos de cada proveedor— vive
+/// en la explicación del propio formulario.
 #[test]
-fn un_proveedor_sin_configurar_explica_por_que() {
+fn un_proveedor_sin_configurar_lleva_a_configurarlo() {
     for idioma in ["es", "en"] {
         let raiz = catalogo(idioma);
-        let texto = raiz["views"]["onlineAccounts"]["unavailable"]["noClientId"]
-            .as_str()
-            .unwrap_or_default();
+        let credenciales = &raiz["views"]["onlineAccounts"]["credentials"];
 
+        let necesita = credenciales["needed"].as_str().unwrap_or_default();
         assert!(
-            !texto.trim().is_empty(),
-            "falta views.onlineAccounts.unavailable.noClientId en {idioma}.yml"
+            !necesita.trim().is_empty(),
+            "falta views.onlineAccounts.credentials.needed en {idioma}.yml"
         );
-        // Tiene que decir dónde, o no es una explicación: es un «no» sin salida.
+
+        // Y el formulario dice dónde están los pasos de cada proveedor, o la
+        // explicación se queda a mitad de camino.
+        let como = credenciales["how"].as_str().unwrap_or_default();
         assert!(
-            texto.contains("/etc/vasak-accounts/providers.d"),
-            "el motivo no dice dónde dejar el client_id en {idioma}.yml: {texto}"
+            como.contains("/usr/share/vasak-accounts/providers.d"),
+            "la explicación no dice dónde mirar los pasos en {idioma}.yml: {como}"
+        );
+
+        // El bloque viejo no puede volver: decía que había que editar un archivo
+        // como administrador, y eso ya no es cierto.
+        assert!(
+            raiz["views"]["onlineAccounts"]["unavailable"].is_null(),
+            "views.onlineAccounts.unavailable volvió en {idioma}.yml"
         );
     }
 }
@@ -365,6 +372,7 @@ fn las_credenciales_propias_explican_por_que_hacen_falta() {
             "views.onlineAccounts.credentials falta en {idioma}.yml"
         );
         for clave in [
+            "own",
             "needed",
             "title",
             "why",

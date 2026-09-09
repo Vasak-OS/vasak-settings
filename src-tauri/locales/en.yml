@@ -965,11 +965,6 @@ views:
     description: Connect your mail, calendar and contacts services.
     providers: Providers
     customProvider: Custom server
-    unavailable:
-      noClientId: >-
-        Not configured yet. VasakOS ships no credentials of its own for this
-        provider: whoever administers the machine has to register an application
-        and leave the client_id in /etc/vasak-accounts/providers.d.
     providerConnected: '{0} account connected.'
     needsReauth: This account has to be connected again.
     capabilities:
@@ -1013,6 +1008,7 @@ views:
         You can save anyway: some servers do not publish this and work perfectly
         for mail. The address can be added later.
     credentials:
+      own: "With your own credentials:"
       needed: Not configured yet — tap to set it up
       title: Credentials for {0}
       why: >-

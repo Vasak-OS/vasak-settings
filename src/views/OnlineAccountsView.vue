@@ -44,10 +44,27 @@ const providers = ref<ProviderInfo[]>([]);
  * motivo es siempre el mismo —falta el `client_id`— y por eso el texto dice qué
  * hacer al respecto.
  */
+/**
+ * Si a este proveedor le falta que le peguen sus credenciales.
+ *
+ * Ya no es un «no se puede»: el botón abre el formulario, así que el texto
+ * invita a tocarlo en vez de mandar a editar un archivo del sistema.
+ */
 const motivoNoDisponible = (provider: ProviderInfo): string | undefined =>
-	provider.configured ? undefined : t('views.onlineAccounts.unavailable.noClientId');
+	provider.configured ? undefined : t('views.onlineAccounts.credentials.needed');
 
-/** Los que ya tienen credenciales propias y se pueden quitar. */
+/**
+ * Los proveedores cuyas credenciales se pueden cambiar o quitar.
+ *
+ * Son los OAuth2 que ya están listos. Hace falta una vía propia porque el clic
+ * en la tarjeta de uno configurado **conecta la cuenta**, que es lo que
+ * corresponde: sin esta lista, el botón de quitar credenciales quedaba escrito y
+ * sin forma de llegar a él.
+ */
+const conCredencialesPropias = computed(() =>
+	providers.value.filter((p) => p.kind === 'oauth2' && p.configured)
+);
+
 const tieneCredenciales = (provider: ProviderInfo) =>
 	provider.kind === 'oauth2' && provider.configured;
 
@@ -234,17 +251,27 @@ const nextcloudError = ref('');
 const credencialesDe = ref<ProviderInfo | null>(null);
 const credencialesForm = reactive({ clientId: '', clientSecret: '' });
 const guardandoCredenciales = ref(false);
+/**
+ * El error va **dentro** del formulario y no en el aviso de arriba.
+ *
+ * El aviso general se dibuja encima de la grilla de proveedores y el formulario
+ * queda abajo: quien apreta guardar y falla se queda mirando el formulario sin
+ * ver por qué no pasó nada.
+ */
+const credencialesError = ref('');
 
 const abrirCredenciales = (provider: ProviderInfo) => {
 	errors.value = '';
 	success.value = '';
 	credencialesForm.clientId = '';
 	credencialesForm.clientSecret = '';
+	credencialesError.value = '';
 	credencialesDe.value = provider;
 };
 
 const cerrarCredenciales = () => {
 	credencialesDe.value = null;
+	credencialesError.value = '';
 };
 
 const guardarCredenciales = async () => {
@@ -252,7 +279,7 @@ const guardarCredenciales = async () => {
 	if (!provider || !credencialesForm.clientId.trim()) return;
 
 	guardandoCredenciales.value = true;
-	errors.value = '';
+	credencialesError.value = '';
 	try {
 		await setProviderCredentials(
 			provider.id,
@@ -268,24 +295,25 @@ const guardarCredenciales = async () => {
 			provider.display_name
 		);
 	} catch (err) {
-		errors.value = String(err);
+		credencialesError.value = String(err);
 	} finally {
 		guardandoCredenciales.value = false;
 	}
 };
 
 const quitarCredenciales = async (provider: ProviderInfo) => {
-	errors.value = '';
+	credencialesError.value = '';
 	success.value = '';
 	try {
 		await clearProviderCredentials(provider.id);
+		credencialesDe.value = null;
 		await fetchProviders();
 		success.value = t('views.onlineAccounts.credentials.cleared').replace(
 			'{0}',
 			provider.display_name
 		);
 	} catch (err) {
-		errors.value = String(err);
+		credencialesError.value = String(err);
 	}
 };
 
@@ -569,7 +597,7 @@ onMounted(async () => {
 					v-for="provider in providers"
 					:key="provider.id"
 					:disabled="loading"
-					:title="motivoNoDisponible(provider)"
+					:title="motivoNoDisponible(provider) && t('views.onlineAccounts.credentials.needed')"
 					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/40 px-4 py-5 text-center transition-colors"
 					:class="
 						loading
@@ -583,7 +611,6 @@ onMounted(async () => {
 						:src="iconos[provider.id]"
 						:alt="provider.display_name"
 						class="h-10 w-10"
-						:class="motivoNoDisponible(provider) && 'grayscale'"
 					/>
 					<span class="text-sm font-medium text-tx-primary">{{ provider.display_name }}</span>
 					<span class="text-xs text-tx-muted">
@@ -608,7 +635,6 @@ onMounted(async () => {
 						:src="customIcon"
 						:alt="t('views.onlineAccounts.customProvider')"
 						class="h-10 w-10"
-						:class="provider.unavailable && 'grayscale'"
 					/>
 					<span class="text-sm font-medium text-tx-primary">
 						{{ t('views.onlineAccounts.customProvider') }}
@@ -629,6 +655,8 @@ onMounted(async () => {
 			<p class="mb-4 text-xs text-tx-muted">
 				{{ t('views.onlineAccounts.credentials.how') }}
 			</p>
+
+			<AlertMessage v-if="credencialesError" :message="credencialesError" tone="error" />
 
 			<div class="flex flex-col gap-3">
 				<label class="flex flex-col gap-1">
