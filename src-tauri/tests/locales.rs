@@ -348,3 +348,75 @@ fn lo_encontrado_se_rotula_con_los_nombres_de_capacidad() {
         }
     }
 }
+
+/// Los textos de pegar las credenciales propias.
+///
+/// `why` es el que hace la diferencia entre «esto no anda» y «esto necesita un
+/// paso tuyo». Sin él, un botón que pide un ID de cliente parece un error de la
+/// distribución en vez de una decisión de no pagar una auditoría anual.
+#[test]
+fn las_credenciales_propias_explican_por_que_hacen_falta() {
+    for idioma in ["es", "en"] {
+        let raiz = catalogo(idioma);
+        let credenciales = &raiz["views"]["onlineAccounts"]["credentials"];
+
+        assert!(
+            credenciales.is_mapping(),
+            "views.onlineAccounts.credentials falta en {idioma}.yml"
+        );
+        for clave in [
+            "needed",
+            "title",
+            "why",
+            "how",
+            "clientId",
+            "clientSecret",
+            "clientSecretPlaceholder",
+            "secretNote",
+            "clear",
+            "saved",
+            "cleared",
+        ] {
+            assert!(
+                credenciales[clave].as_str().is_some_and(|t| !t.trim().is_empty()),
+                "falta views.onlineAccounts.credentials.{clave} en {idioma}.yml"
+            );
+        }
+    }
+}
+
+/// Los tres textos que llevan el nombre del proveedor tienen que interpolarlo:
+/// sin el marcador, el título dice «Credenciales para» a secas.
+#[test]
+fn los_textos_de_credenciales_nombran_al_proveedor() {
+    for idioma in ["es", "en"] {
+        let raiz = catalogo(idioma);
+        let credenciales = &raiz["views"]["onlineAccounts"]["credentials"];
+
+        for clave in ["title", "why", "saved", "cleared"] {
+            let texto = credenciales[clave].as_str().unwrap_or_default();
+            assert!(
+                texto.contains("{0}"),
+                "views.onlineAccounts.credentials.{clave} no nombra al proveedor en {idioma}.yml: {texto}"
+            );
+        }
+    }
+}
+
+/// La nota del secreto tiene que decir que **no** es un secreto de verdad.
+///
+/// Si no, alguien puede no pegarlo creyendo que se está exponiendo, y quedarse
+/// sin poder conectar la cuenta por una precaución que no corresponde.
+#[test]
+fn la_nota_del_secreto_aclara_que_no_es_uno() {
+    for idioma in ["es", "en"] {
+        let raiz = catalogo(idioma);
+        let nota = raiz["views"]["onlineAccounts"]["credentials"]["secretNote"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(
+            nota.contains("PKCE"),
+            "la nota no dice qué protege de verdad en {idioma}.yml: {nota}"
+        );
+    }
+}

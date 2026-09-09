@@ -109,6 +109,28 @@ export const testMailConnection = (
 export const connectNextcloudAccount = (server: string, displayName: string): Promise<string> =>
 	invoke<string>('connect_nextcloud_account', { server, displayName });
 
+/**
+ * Guarda tus credenciales para un proveedor OAuth2.
+ *
+ * VasakOS no incluye un `client_id` propio para Google ni para Microsoft: el de
+ * cada quien se saca gratis de la consola del proveedor. Sólo el identificador y
+ * el secreto — las URLs salen de los archivos que instala el paquete, así que
+ * desde acá no se puede apuntar un proveedor a otro servidor.
+ */
+export const setProviderCredentials = (
+	providerId: string,
+	clientId: string,
+	clientSecret: string
+): Promise<void> =>
+	invoke<void>('set_provider_credentials', { providerId, clientId, clientSecret });
+
+/**
+ * Las quita. Las cuentas ya conectadas siguen funcionando: cada una guarda el
+ * `client_id` con el que se autorizó.
+ */
+export const clearProviderCredentials = (providerId: string): Promise<void> =>
+	invoke<void>('clear_provider_credentials', { providerId });
+
 /** Dónde vive el calendario o la libreta de contactos, o por qué no se encontró. */
 export interface Hallazgo {
 	url: string | null;
