@@ -590,66 +590,6 @@ pub async fn account_manager_ping() -> Result<String, String> {
     Ok(reply)
 }
 
-/// Obtiene metadatos de una capability desde el daemon via D-Bus.
-#[tauri::command]
-pub async fn get_account_data(
-    account_id: String,
-    capability: String,
-) -> Result<String, String> {
-    let conn = account_manager().await?;
-
-    let proxy = zbus::ProxyBuilder::<zbus::Proxy<'_>>::new(&conn)
-        .destination(ACCOUNTS_SERVICE)
-        .map_err(|e| format!("destination: {e}"))?
-        .path(ACCOUNTS_PATH)
-        .map_err(|e| format!("path: {e}"))?
-        .interface(ACCOUNTS_INTERFACE)
-        .map_err(|e| format!("interface: {e}"))?
-        .build()
-        .await
-        .map_err(|e| format!("proxy: {e}"))?;
-
-    let reply: String = proxy
-        .call_method("GetAccountData", &(account_id, capability))
-        .await
-        .map_err(|e| format!("GetAccountData call: {e}"))?
-        .body()
-        .deserialize()
-        .map_err(|e| format!("GetAccountData deserialize: {e}"))?;
-
-    Ok(reply)
-}
-
-/// Obtiene un access_token válido desde el daemon (con refresco automático).
-#[tauri::command]
-pub async fn get_access_token(
-    account_id: String,
-    capability: String,
-) -> Result<String, String> {
-    let conn = account_manager().await?;
-
-    let proxy = zbus::ProxyBuilder::<zbus::Proxy<'_>>::new(&conn)
-        .destination(ACCOUNTS_SERVICE)
-        .map_err(|e| format!("destination: {e}"))?
-        .path(ACCOUNTS_PATH)
-        .map_err(|e| format!("path: {e}"))?
-        .interface(ACCOUNTS_INTERFACE)
-        .map_err(|e| format!("interface: {e}"))?
-        .build()
-        .await
-        .map_err(|e| format!("proxy: {e}"))?;
-
-    let reply: String = proxy
-        .call_method("GetAccessToken", &(account_id, capability))
-        .await
-        .map_err(|e| format!("GetAccessToken call: {e}"))?
-        .body()
-        .deserialize()
-        .map_err(|e| format!("GetAccessToken deserialize: {e}"))?;
-
-    Ok(reply)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -5,7 +5,8 @@ import { invoke } from '@tauri-apps/api/core';
  *
  * Es un resumen y no la cuenta entera porque listar no pide permiso: lo que sale
  * por ahí lo ve cualquier programa del usuario. El servidor y el `client_id`
- * quedan detrás de `getAccountData`, que sí pregunta.
+ * quedan detrás de `GetAccountData` del servicio de cuentas, que sí pregunta —
+ * y esta pantalla no lo llama: administra las cuentas, no las consume.
  */
 export interface AccountInfo {
 	id: string;
@@ -135,8 +136,3 @@ export const removeAccount = (accountId: string): Promise<void> =>
 
 export const accountManagerPing = (): Promise<string> => invoke<string>('account_manager_ping');
 
-export const getAccountData = (accountId: string, capability: string): Promise<string> =>
-	invoke<string>('get_account_data', { accountId, capability });
-
-export const getAccessToken = (accountId: string, capability: string): Promise<string> =>
-	invoke<string>('get_access_token', { accountId, capability });
