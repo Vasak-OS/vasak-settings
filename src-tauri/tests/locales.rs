@@ -157,25 +157,50 @@ fn los_permisos_cuelgan_de_las_cuentas_en_linea() {
     }
 }
 
-/// Los motivos por los que un proveedor todavía no se puede conectar.
+/// El motivo por el que un proveedor todavía no se puede conectar.
 ///
-/// La pantalla los muestra debajo del botón apagado, así que una clave que
-/// falte deja el botón deshabilitado y sin explicación — que es exactamente el
-/// estado anterior, con el botón encendido abriendo un flujo que no funcionaba.
+/// La pantalla lo muestra debajo del botón apagado, así que si la clave falta el
+/// botón queda deshabilitado y sin explicación — que es peor que el estado
+/// anterior, donde al menos estaba encendido.
+///
+/// Es **un** motivo y no uno por proveedor: la lista la trae el catálogo del
+/// servicio, así que acá no se sabe qué proveedores hay, y la razón por la que
+/// alguno no está listo es siempre la misma —le falta el client_id—.
 #[test]
-fn los_proveedores_no_disponibles_explican_por_que() {
+fn un_proveedor_sin_configurar_explica_por_que() {
     for idioma in ["es", "en"] {
         let raiz = catalogo(idioma);
-        let motivos = &raiz["views"]["onlineAccounts"]["unavailable"];
+        let texto = raiz["views"]["onlineAccounts"]["unavailable"]["noClientId"]
+            .as_str()
+            .unwrap_or_default();
+
         assert!(
-            motivos.is_mapping(),
-            "views.onlineAccounts.unavailable falta en {idioma}.yml"
+            !texto.trim().is_empty(),
+            "falta views.onlineAccounts.unavailable.noClientId en {idioma}.yml"
         );
-        for proveedor in ["google", "nextcloud"] {
-            let texto = motivos[proveedor].as_str().unwrap_or_default();
+        // Tiene que decir dónde, o no es una explicación: es un «no» sin salida.
+        assert!(
+            texto.contains("/etc/vasak-accounts/providers.d"),
+            "el motivo no dice dónde dejar el client_id en {idioma}.yml: {texto}"
+        );
+    }
+}
+
+/// Las capacidades se nombran con la misma clave con la que las nombra el
+/// servicio, así que una que falte se muestra cruda —«drive» en vez de
+/// «Archivos en la nube»— en la lista de cada proveedor y de cada cuenta.
+#[test]
+fn todas_las_capacidades_tienen_nombre_visible() {
+    for idioma in ["es", "en"] {
+        let raiz = catalogo(idioma);
+        let nombres = &raiz["views"]["onlineAccounts"]["capabilities"];
+
+        for capacidad in ["email", "calendar", "contacts", "chat", "drive", "tasks"] {
             assert!(
-                !texto.trim().is_empty(),
-                "falta el motivo de {proveedor} en {idioma}.yml"
+                nombres[capacidad]
+                    .as_str()
+                    .is_some_and(|t| !t.trim().is_empty()),
+                "falta el nombre de '{capacidad}' en {idioma}.yml"
             );
         }
     }

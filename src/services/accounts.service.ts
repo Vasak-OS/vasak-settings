@@ -1,41 +1,81 @@
 import { invoke } from '@tauri-apps/api/core';
 
+/**
+ * El resumen que devuelve el servicio de cuentas.
+ *
+ * Es un resumen y no la cuenta entera porque listar no pide permiso: lo que sale
+ * por ahí lo ve cualquier programa del usuario. El servidor y el `client_id`
+ * quedan detrás de `getAccountData`, que sí pregunta.
+ */
 export interface AccountInfo {
 	id: string;
-	provider: string;
 	display_name: string;
-	metadata: Record<string, unknown>;
-	created_at: string;
+	provider_type: string;
+	capabilities: string[];
+	/** El proveedor dejó de aceptar la autorización y hay que reconectarla. */
+	needs_reauth: boolean;
 }
 
-export const registerNewAccount = (
+/** Un proveedor OAuth2 del catálogo del servicio. */
+export interface ProviderInfo {
+	id: string;
+	display_name: string;
+	capabilities: string[];
+	/**
+	 * Si tiene `client_id`. Sin él no se puede empezar ningún flujo, y es lo
+	 * único que hace falta para decidir si el botón va encendido.
+	 */
+	configured: boolean;
+}
+
+export const listAccounts = (): Promise<AccountInfo[]> => invoke<AccountInfo[]>('list_accounts');
+
+export const listProviders = (): Promise<ProviderInfo[]> =>
+	invoke<ProviderInfo[]>('list_providers');
+
+/**
+ * Conecta una cuenta OAuth2 de punta a punta.
+ *
+ * Todo el flujo ocurre del otro lado del IPC: ni el código de autorización ni el
+ * `state` entran acá. El `code_verifier` de PKCE no sale nunca del servicio de
+ * cuentas, así que lo que se maneja en este proceso no es un secreto.
+ */
+export const connectOauthAccount = (
+	providerId: string,
+	capabilities: string[],
+	displayName: string
+): Promise<string> =>
+	invoke<string>('connect_oauth_account', { providerId, capabilities, displayName });
+
+/**
+ * Registra una cuenta con contraseña: IMAP/SMTP y compañía.
+ *
+ * Las cuentas OAuth2 no van por acá — el servicio rechaza sus secretos en este
+ * camino, porque sin las URLs para renovar el token quedarían cuentas que se
+ * mueren en una hora.
+ */
+export const registerPasswordAccount = (
 	provider: string,
+	displayName: string,
+	capability: string,
 	metadata: Record<string, unknown>,
 	secret: string
-): Promise<void> => {
-	return invoke<void>('register_new_account', {
+): Promise<string> =>
+	invoke<string>('register_password_account', {
 		provider,
+		displayName,
+		capability,
 		metadata,
 		secret,
 	});
-};
 
-export const listAccounts = (): Promise<AccountInfo[]> => {
-	return invoke<AccountInfo[]>('list_accounts');
-};
+export const removeAccount = (accountId: string): Promise<void> =>
+	invoke<void>('remove_account', { accountId });
 
-export const removeAccount = (accountId: string): Promise<void> => {
-	return invoke<void>('remove_account', { accountId });
-};
+export const accountManagerPing = (): Promise<string> => invoke<string>('account_manager_ping');
 
-export const accountManagerPing = (): Promise<string> => {
-	return invoke<string>('account_manager_ping');
-};
+export const getAccountData = (accountId: string, capability: string): Promise<string> =>
+	invoke<string>('get_account_data', { accountId, capability });
 
-export const getAccountData = (accountId: string, capability: string): Promise<string> => {
-	return invoke<string>('get_account_data', { accountId, capability });
-};
-
-export const getAccessToken = (accountId: string, capability: string): Promise<string> => {
-	return invoke<string>('get_access_token', { accountId, capability });
-};
+export const getAccessToken = (accountId: string, capability: string): Promise<string> =>
+	invoke<string>('get_access_token', { accountId, capability });
