@@ -156,3 +156,44 @@ fn los_permisos_cuelgan_de_las_cuentas_en_linea() {
         );
     }
 }
+
+/// Los motivos por los que un proveedor todavía no se puede conectar.
+///
+/// La pantalla los muestra debajo del botón apagado, así que una clave que
+/// falte deja el botón deshabilitado y sin explicación — que es exactamente el
+/// estado anterior, con el botón encendido abriendo un flujo que no funcionaba.
+#[test]
+fn los_proveedores_no_disponibles_explican_por_que() {
+    for idioma in ["es", "en"] {
+        let raiz = catalogo(idioma);
+        let motivos = &raiz["views"]["onlineAccounts"]["unavailable"];
+        assert!(
+            motivos.is_mapping(),
+            "views.onlineAccounts.unavailable falta en {idioma}.yml"
+        );
+        for proveedor in ["google", "nextcloud"] {
+            let texto = motivos[proveedor].as_str().unwrap_or_default();
+            assert!(
+                !texto.trim().is_empty(),
+                "falta el motivo de {proveedor} en {idioma}.yml"
+            );
+        }
+    }
+}
+
+/// Proton no vuelve.
+///
+/// No tiene API pública para terceros: el botón registraba una cuenta vacía con
+/// secreto vacío y no había forma de que llegara a funcionar. Si alguien
+/// reintroduce sus textos, es que está por reintroducir el botón.
+#[test]
+fn proton_no_tiene_textos_porque_no_tiene_api() {
+    for idioma in ["es", "en"] {
+        let claves = claves_de(idioma);
+        let restos: Vec<_> = claves
+            .iter()
+            .filter(|clave| clave.to_lowercase().contains("proton"))
+            .collect();
+        assert!(restos.is_empty(), "quedaron textos de Proton en {idioma}.yml: {restos:?}");
+    }
+}

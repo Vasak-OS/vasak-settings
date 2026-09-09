@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, reactive, ref } from 'vue';
 import AccountPermissionsSection from '@/components/accounts/AccountPermissionsSection.vue';
@@ -14,13 +13,21 @@ import {
 	removeAccount,
 } from '@/services/accounts.service';
 
-type ProviderKind = 'google' | 'proton' | 'nextcloud' | 'custom';
+type ProviderKind = 'google' | 'nextcloud' | 'custom';
 
 interface ProviderDef {
 	kind: ProviderKind;
 	label: string;
 	description: string;
 	icon: string;
+	/**
+	 * Por qué todavía no se puede conectar, o `undefined` si sí se puede.
+	 *
+	 * Un botón que abre un flujo roto es peor que un botón apagado: la persona
+	 * no sabe si se equivocó ella, si falta un dato o si el sistema está mal.
+	 * Con el motivo a la vista, sabe que no es su culpa y que va a llegar.
+	 */
+	unavailable?: string;
 }
 
 const { t } = useI18n();
@@ -29,20 +36,16 @@ const PROVIDERS = computed<ProviderDef[]>(() => [
 	{
 		kind: 'google',
 		label: 'Google',
-		description: 'Gmail, Calendar, Contacts, Drive',
+		description: 'Calendar, Contacts, Drive',
 		icon: 'google-symbolic',
-	},
-	{
-		kind: 'proton',
-		label: 'Proton',
-		description: 'Mail, Calendar, Drive, VPN',
-		icon: 'proton-symbolic',
+		unavailable: t('views.onlineAccounts.unavailable.google'),
 	},
 	{
 		kind: 'nextcloud',
 		label: 'Nextcloud',
 		description: 'Files, Calendar, Contacts, Talk',
 		icon: 'nextcloud-symbolic',
+		unavailable: t('views.onlineAccounts.unavailable.nextcloud'),
 	},
 	{
 		kind: 'custom',
@@ -93,13 +96,11 @@ const isCustomValid = computed(() => {
 });
 
 const [googleIcon, updateGoogleIcon] = useReactiveSymbol(() => 'google-symbolic');
-const [protonIcon, updateProtonIcon] = useReactiveSymbol(() => 'proton-symbolic');
 const [nextcloudIcon, updateNextcloudIcon] = useReactiveSymbol(() => 'nextcloud-symbolic');
 const [customIcon, updateCustomIcon] = useReactiveSymbol(() => 'computer-symbolic');
 
 const providerIcons: Record<ProviderKind, ReturnType<typeof useReactiveSymbol>[0]> = {
 	google: googleIcon,
-	proton: protonIcon,
 	nextcloud: nextcloudIcon,
 	custom: customIcon,
 };
@@ -168,100 +169,13 @@ const fetchAccounts = async () => {
 	}
 };
 
-const handleProviderClick = async (provider: ProviderDef) => {
+const handleProviderClick = (provider: ProviderDef) => {
 	errors.value = '';
 	success.value = '';
 
-	if (provider.kind === 'custom') {
-		showCustomForm.value = true;
-		return;
-	}
+	if (provider.unavailable) return;
 
-	if (provider.kind === 'google') {
-		await startGoogleOAuth();
-		return;
-	}
-
-	if (provider.kind === 'proton' || provider.kind === 'nextcloud') {
-		await registerWellKnown(provider.kind);
-	}
-};
-
-const GOOGLE_CLIENT_ID = '';
-const GOOGLE_SCOPES = [
-	'https://www.googleapis.com/auth/gmail.readonly',
-	'https://www.googleapis.com/auth/calendar.readonly',
-	'https://www.googleapis.com/auth/contacts.readonly',
-];
-
-const startGoogleOAuth = async () => {
-	loading.value = true;
-	errors.value = '';
-	success.value = '';
-
-	try {
-		const code = await invoke<string>('start_google_oauth', {
-			clientId: GOOGLE_CLIENT_ID,
-			scopes: GOOGLE_SCOPES,
-		});
-
-		const body = new URLSearchParams({
-			code,
-			client_id: GOOGLE_CLIENT_ID,
-			redirect_uri: `http://127.0.0.1:0/callback`,
-			grant_type: 'authorization_code',
-		});
-
-		const resp = await fetch('https://oauth2.googleapis.com/token', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-			body,
-		});
-
-		if (!resp.ok) {
-			const text = await resp.text();
-			throw new Error(`Google token endpoint error: ${resp.status} ${text}`);
-		}
-
-		const data = await resp.json();
-		const token = data.access_token as string;
-
-		await registerNewAccount(
-			'google',
-			{
-				display_name: 'Google',
-				scope: GOOGLE_SCOPES,
-				token_type: 'Bearer',
-			},
-			token
-		);
-
-		success.value = t('views.onlineAccounts.googleAdded');
-		await fetchAccounts();
-	} catch (err) {
-		errors.value = t('views.onlineAccounts.errors.googleAuth').replace('{0}', String(err));
-	} finally {
-		loading.value = false;
-	}
-};
-
-const registerWellKnown = async (provider: ProviderKind) => {
-	loading.value = true;
-	errors.value = '';
-	success.value = '';
-
-	try {
-		const label = provider === 'proton' ? 'Proton' : 'Nextcloud';
-		await registerNewAccount(provider, { display_name: label }, '');
-		success.value = t('views.onlineAccounts.providerRegistered').replace('{0}', label);
-		await fetchAccounts();
-	} catch (err) {
-		errors.value = t('views.onlineAccounts.errors.registerProvider')
-			.replace('{0}', provider)
-			.replace('{1}', String(err));
-	} finally {
-		loading.value = false;
-	}
+	showCustomForm.value = true;
 };
 
 const submitCustomProvider = async () => {
@@ -331,12 +245,7 @@ const deleteAccount = async (account: AccountInfo) => {
 
 onMounted(async () => {
 	await fetchAccounts();
-	await Promise.all([
-		updateGoogleIcon(),
-		updateProtonIcon(),
-		updateNextcloudIcon(),
-		updateCustomIcon(),
-	]);
+	await Promise.all([updateGoogleIcon(), updateNextcloudIcon(), updateCustomIcon()]);
 });
 </script>
 
@@ -358,9 +267,14 @@ onMounted(async () => {
 				<button
 					v-for="provider in PROVIDERS"
 					:key="provider.kind"
-					:disabled="loading"
+					:disabled="loading || !!provider.unavailable"
+					:title="provider.unavailable"
 					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/40 px-4 py-5 text-center transition-colors"
-					:class="loading ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'"
+					:class="
+						loading || provider.unavailable
+							? 'opacity-60 cursor-not-allowed'
+							: 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'
+					"
 					@click="handleProviderClick(provider)"
 				>
 					<img
@@ -368,9 +282,16 @@ onMounted(async () => {
 						:src="providerIcons[provider.kind].value"
 						:alt="provider.label"
 						class="h-10 w-10"
+						:class="provider.unavailable && 'grayscale'"
 					/>
 					<span class="text-sm font-medium text-tx-primary">{{ provider.label }}</span>
 					<span class="text-xs text-tx-muted">{{ provider.description }}</span>
+					<!-- El motivo, no un «no disponible» a secas: quien lo lee tiene que
+					     poder saber si le falta hacer algo o si es el sistema el que
+					     todavía no llegó. -->
+					<span v-if="provider.unavailable" class="text-xs text-status-warning">
+						{{ provider.unavailable }}
+					</span>
 				</button>
 			</div>
 		</SectionCard>

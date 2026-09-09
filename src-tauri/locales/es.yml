@@ -965,6 +965,13 @@ views:
     description: Conecta tus servicios de correo, calendario y contactos.
     providers: Proveedores
     customProvider: Servidor personalizado
+    unavailable:
+      google: >-
+        Todavía no. Google exige registrar la aplicación y para el correo pide
+        además una auditoría paga, así que Gmail va a entrar por IMAP.
+      nextcloud: >-
+        Todavía no. Está primero en la lista: tu propio servidor entrega las
+        credenciales, sin registrar nada con nadie.
     linkedAccounts: Cuentas vinculadas
     customDialogDescription: Configura manualmente los datos de tu servidor de correo y sincronización.
     displayName: Nombre para mostrar
@@ -977,9 +984,7 @@ views:
     password: Contraseña
     passwordPlaceholder: Contraseña de aplicación
     addAccount: Agregar cuenta
-    googleAdded: Cuenta de Google agregada correctamente
     customAdded: Cuenta personalizada agregada correctamente
-    providerRegistered: Cuenta de {0} registrada.
     accountRemoved: Cuenta de {0} eliminada.
     errors:
       nameRequired: El nombre es obligatorio
@@ -989,8 +994,6 @@ views:
       usernameRequired: El usuario es obligatorio
       passwordRequired: La contraseña es obligatoria
       loadAccounts: 'Error al cargar cuentas: {0}'
-      googleAuth: 'Error en autenticación Google: {0}'
-      registerProvider: 'Error al registrar {0}: {1}'
       registerCustom: 'Error al registrar cuenta personalizada: {0}'
       deleteAccount: 'Error al eliminar cuenta: {0}'
     permissions:
@@ -1006,7 +1009,9 @@ views:
       allow: Permitir
       deny: No permitir
       note: >-
-        Cambiar un permiso pide tu contraseña.
+        Cambiar un permiso pide tu contraseña. El permiso es por aplicación y
+        por tipo de dato: si le permitís el correo, lo puede usar de todas tus
+        cuentas de correo.
       resources:
         accountEmail: Correo de tus cuentas
         accountCalendar: Calendario
