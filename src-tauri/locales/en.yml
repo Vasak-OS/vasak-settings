@@ -1045,6 +1045,7 @@ views:
     customAdded: Custom account added successfully
     accountRemoved: "{0} account removed."
     errors:
+      notRevoked: 'The {0} account was removed from this machine, but the provider could not be notified ({1}). It is worth removing the access from their site.'
       discoverFailed: 'Could not search: {0}'
       serverRequired: The server address is required
       probeFailed: 'Could not test the connection: {0}'

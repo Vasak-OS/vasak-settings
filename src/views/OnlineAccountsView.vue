@@ -72,6 +72,16 @@ const iconoDe = (id: string) => `${id}-symbolic`;
 
 const errors = ref('');
 const success = ref('');
+/**
+ * Lo que se borró bien pero dejó algo pendiente del otro lado.
+ *
+ * Estado propio y no `errors`, por dos razones. La primera es que no es un
+ * error: lo que la persona pidió sí pasó. La segunda es concreta —y era un bug—:
+ * `fetchAccounts()` limpia `errors` al empezar, así que un aviso escrito justo
+ * antes de recargar la lista se borraba **antes de dibujarse**, y lo único que
+ * este aviso venía a agregar no se veía nunca.
+ */
+const aviso = ref('');
 const loading = ref(false);
 const accounts = ref<AccountInfo[]>([]);
 
@@ -221,6 +231,7 @@ const conectarProveedor = async (provider: ProviderInfo) => {
 	loading.value = true;
 	errors.value = '';
 	success.value = '';
+	aviso.value = '';
 
 	try {
 		await connectOauthAccount(provider.id, provider.capabilities, provider.display_name);
@@ -263,6 +274,7 @@ const credencialesError = ref('');
 const abrirCredenciales = (provider: ProviderInfo) => {
 	errors.value = '';
 	success.value = '';
+	aviso.value = '';
 	credencialesForm.clientId = '';
 	credencialesForm.clientSecret = '';
 	credencialesError.value = '';
@@ -320,6 +332,7 @@ const quitarCredenciales = async (provider: ProviderInfo) => {
 const abrirFormularioNextcloud = (provider: ProviderInfo) => {
 	errors.value = '';
 	success.value = '';
+	aviso.value = '';
 	nextcloudError.value = '';
 	nextcloudForm.server = '';
 	nextcloudForm.displayName = '';
@@ -373,6 +386,7 @@ const conectarNextcloud = async () => {
 const abrirFormularioPersonalizado = () => {
 	errors.value = '';
 	success.value = '';
+	aviso.value = '';
 	showCustomForm.value = true;
 };
 
@@ -419,6 +433,7 @@ const buscarDav = async () => {
 	buscandoDav.value = true;
 	errors.value = '';
 	success.value = '';
+	aviso.value = '';
 
 	try {
 		// El usuario suele ser el correo, y de ahí sale el dominio contra el que
@@ -438,6 +453,7 @@ const probarConexion = async (): Promise<boolean> => {
 	probando.value = true;
 	errors.value = '';
 	success.value = '';
+	aviso.value = '';
 
 	try {
 		probe.value = await testMailConnection(
@@ -478,6 +494,7 @@ const submitCustomProvider = async () => {
 	loading.value = true;
 	errors.value = '';
 	success.value = '';
+	aviso.value = '';
 
 	try {
 		// El correo siempre; el calendario y los contactos sólo si se los
@@ -551,12 +568,23 @@ const cancelCustomForm = () => {
 const deleteAccount = async (account: AccountInfo) => {
 	try {
 		errors.value = '';
-		await removeAccount(account.id);
-		success.value = t('views.onlineAccounts.accountRemoved').replace(
-			'{0}',
-			account.display_name || account.provider
-		);
+		aviso.value = '';
+		const resultado = await removeAccount(account.id);
+		const nombre = account.display_name || account.provider_type;
+
+		// Recargar primero: `fetchAccounts()` limpia `errors`, y el aviso se
+		// escribe después para que sobreviva a esa limpieza.
 		await fetchAccounts();
+
+		success.value = t('views.onlineAccounts.accountRemoved').replace('{0}', nombre);
+
+		// La cuenta se borró igual, pero del otro lado quedó algo que la persona
+		// puede terminar. Va como aviso y no como error: no falló lo que pidió.
+		if (!resultado.revoked) {
+			aviso.value = t('views.onlineAccounts.errors.notRevoked')
+				.replace('{0}', nombre)
+				.replace('{1}', resultado.detail);
+		}
 	} catch (err) {
 		errors.value = t('views.onlineAccounts.errors.deleteAccount').replace('{0}', String(err));
 	}
@@ -587,6 +615,7 @@ onMounted(async () => {
 		/>
 
 		<AlertMessage v-if="errors" :message="errors" tone="error" />
+		<AlertMessage v-if="aviso" :message="aviso" tone="warning" />
 		<AlertMessage v-if="success" :message="success" tone="success" />
 
 		<SectionCard>

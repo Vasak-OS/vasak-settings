@@ -177,7 +177,27 @@ export const registerPasswordAccount = (
 		secret,
 	});
 
-export const removeAccount = (accountId: string): Promise<void> =>
-	invoke<void>('remove_account', { accountId });
+/** Cómo salió el borrado de una cuenta. */
+export interface AccountRemoval {
+	removed: boolean;
+	/**
+	 * Si se le pudo avisar al proveedor que la autorización terminó.
+	 *
+	 * Cuando es `false` la cuenta **igual se borró**: negarse dejaría a alguien
+	 * sin poder sacar una cuenta por no tener red. Lo que queda es algo que puede
+	 * terminar desde la web del proveedor.
+	 */
+	revoked: boolean;
+	detail: string;
+}
+
+/**
+ * Borra una cuenta y le avisa al proveedor que la autorización terminó.
+ *
+ * Sin ese aviso, borrar la cuenta la escondía en vez de cortar el acceso: la
+ * autorización seguía figurando entre las aplicaciones con permiso.
+ */
+export const removeAccount = (accountId: string): Promise<AccountRemoval> =>
+	invoke<AccountRemoval>('remove_account', { accountId });
 
 export const accountManagerPing = (): Promise<string> => invoke<string>('account_manager_ping');
