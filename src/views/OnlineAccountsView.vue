@@ -343,6 +343,7 @@ onMounted(async () => {
 						:src="customIcon"
 						:alt="t('views.onlineAccounts.customProvider')"
 						class="h-10 w-10"
+						:class="provider.unavailable && 'grayscale'"
 					/>
 					<span class="text-sm font-medium text-tx-primary">
 						{{ t('views.onlineAccounts.customProvider') }}
