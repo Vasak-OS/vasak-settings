@@ -274,3 +274,39 @@ fn el_titulo_de_nextcloud_interpola_el_proveedor() {
         assert!(titulo.contains("{0}"), "falta el marcador en {idioma}.yml: {titulo}");
     }
 }
+
+/// Los textos de la prueba de conexión de una cuenta de correo.
+///
+/// El que más importa es `saveAnywayHint`: una prueba puede dar un falso
+/// negativo —una red que filtra el puerto, un servidor con un mecanismo de
+/// autenticación poco común— y sin ese texto la persona creería que su cuenta
+/// está mal cuando el problema es la prueba.
+#[test]
+fn la_prueba_de_conexion_tiene_todos_sus_textos() {
+    for idioma in ["es", "en"] {
+        let raiz = catalogo(idioma);
+        let prueba = &raiz["views"]["onlineAccounts"]["probe"];
+
+        assert!(prueba.is_mapping(), "views.onlineAccounts.probe falta en {idioma}.yml");
+        for clave in ["test", "testing", "imap", "smtp", "saveAnyway", "saveAnywayHint"] {
+            assert!(
+                prueba[clave].as_str().is_some_and(|t| !t.trim().is_empty()),
+                "falta views.onlineAccounts.probe.{clave} en {idioma}.yml"
+            );
+        }
+    }
+}
+
+/// Las dos puntas se nombran distinto, o el resultado no diría cuál falló —
+/// que es la única razón de mostrarlas por separado.
+#[test]
+fn las_dos_puntas_del_correo_se_nombran_distinto() {
+    for idioma in ["es", "en"] {
+        let raiz = catalogo(idioma);
+        let prueba = &raiz["views"]["onlineAccounts"]["probe"];
+        let entrada = prueba["imap"].as_str().unwrap_or_default();
+        let salida = prueba["smtp"].as_str().unwrap_or_default();
+
+        assert_ne!(entrada, salida, "las dos puntas dicen lo mismo en {idioma}.yml");
+    }
+}

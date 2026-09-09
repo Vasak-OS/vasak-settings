@@ -217,6 +217,7 @@ pub fn run() {
             commands::language::get_available_keyboard_switch_options,
             commands::language::set_keyboard_layouts,
             commands::language::get_keyboard_layouts_from_wayfire,
+            commands::mail_probe::test_mail_connection,
             commands::online_accounts::register_password_account,
             commands::online_accounts::list_providers,
             commands::online_accounts::connect_oauth_account,

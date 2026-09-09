@@ -995,6 +995,16 @@ views:
       connect: Conectar
       waiting: >-
         Esperando que apruebes el acceso en el navegador…
+    probe:
+      test: Probar conexión
+      testing: Probando…
+      imap: Correo entrante (IMAP)
+      smtp: Correo saliente (SMTP)
+      saveAnyway: Guardar igual
+      saveAnywayHint: >-
+        Si estás seguro de que los datos están bien, podés guardar igual: la
+        prueba puede fallar por una red que filtra el puerto o por un servidor
+        poco común.
     linkedAccounts: Cuentas vinculadas
     customDialogDescription: Configura manualmente los datos de tu servidor de correo y sincronización.
     displayName: Nombre para mostrar
@@ -1011,6 +1021,7 @@ views:
     accountRemoved: Cuenta de {0} eliminada.
     errors:
       serverRequired: Hay que escribir la dirección del servidor
+      probeFailed: 'No se pudo probar la conexión: {0}'
       connectProvider: 'No se pudo conectar la cuenta de {0}: {1}'
       loadProviders: 'Error al cargar los proveedores: {0}'
       nameRequired: El nombre es obligatorio

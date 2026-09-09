@@ -12,9 +12,11 @@ import {
 	connectOauthAccount,
 	listAccounts,
 	listProviders,
+	type MailProbe,
 	type ProviderInfo,
 	registerPasswordAccount,
 	removeAccount,
+	testMailConnection,
 } from '@/services/accounts.service';
 
 /**
@@ -268,8 +270,69 @@ const abrirFormularioPersonalizado = () => {
 	showCustomForm.value = true;
 };
 
+/**
+ * El resultado de la última prueba, o `null` si todavía no se probó.
+ *
+ * Se guarda para dos cosas: mostrarlo campo por campo, y saber si la persona ya
+ * vio un fallo — porque después de verlo puede decidir guardar igual.
+ */
+const probe = ref<MailProbe | null>(null);
+const probando = ref(false);
+
+const probeOk = computed(() => probe.value?.imap.ok === true && probe.value?.smtp.ok === true);
+
+/**
+ * Cualquier cambio en los datos invalida la prueba anterior.
+ *
+ * Sin esto, alguien podría probar, corregir el servidor, y guardar apoyándose en
+ * un resultado que ya no corresponde a lo que hay en el formulario.
+ */
+const olvidarPrueba = () => {
+	probe.value = null;
+};
+
+const probarConexion = async (): Promise<boolean> => {
+	if (!validateCustomForm()) return false;
+
+	probando.value = true;
+	errors.value = '';
+	success.value = '';
+
+	try {
+		probe.value = await testMailConnection(
+			customForm.imapServer,
+			customForm.imapPort,
+			customForm.smtpServer,
+			customForm.smtpPort,
+			customForm.username,
+			customForm.password
+		);
+		return probeOk.value;
+	} catch (err) {
+		errors.value = t('views.onlineAccounts.errors.probeFailed').replace('{0}', String(err));
+		return false;
+	} finally {
+		probando.value = false;
+	}
+};
+
+/**
+ * Guarda, probando primero.
+ *
+ * Si la prueba falla **no se bloquea el guardado**: se muestra qué falló y el
+ * botón pasa a decir «guardar igual». Una prueba puede dar un falso negativo
+ * —un servidor que sólo acepta un mecanismo raro, una red que filtra un
+ * puerto— y dejar a alguien sin poder guardar una cuenta que anda sería peor
+ * que el problema que esto viene a resolver.
+ */
 const submitCustomProvider = async () => {
 	if (!validateCustomForm()) return;
+
+	// La primera vez se prueba; si ya se probó y falló, el segundo clic guarda.
+	if (probe.value === null) {
+		const anduvo = await probarConexion();
+		if (!anduvo) return;
+	}
 
 	loading.value = true;
 	errors.value = '';
@@ -293,6 +356,7 @@ const submitCustomProvider = async () => {
 		success.value = t('views.onlineAccounts.customAdded');
 		showCustomForm.value = false;
 		resetCustomForm();
+		probe.value = null;
 		await fetchAccounts();
 	} catch (err) {
 		errors.value = t('views.onlineAccounts.errors.registerCustom').replace('{0}', String(err));
@@ -318,6 +382,7 @@ const resetCustomForm = () => {
 const cancelCustomForm = () => {
 	showCustomForm.value = false;
 	resetCustomForm();
+	probe.value = null;
 };
 
 const deleteAccount = async (account: AccountInfo) => {
@@ -541,6 +606,7 @@ onMounted(async () => {
 						<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.displayName') }}</label>
 						<input
 							v-model="customForm.displayName"
+							@input="olvidarPrueba"
 							type="text"
 							:placeholder="t('views.onlineAccounts.displayNamePlaceholder')"
 							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
@@ -556,6 +622,7 @@ onMounted(async () => {
 							<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.imapServer') }}</label>
 							<input
 								v-model="customForm.imapServer"
+							@input="olvidarPrueba"
 								type="text"
 								placeholder="imap.example.com"
 								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
@@ -569,6 +636,7 @@ onMounted(async () => {
 							<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.port') }}</label>
 							<input
 								v-model.number="customForm.imapPort"
+								@input="olvidarPrueba"
 								type="number"
 								placeholder="993"
 								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
@@ -585,6 +653,7 @@ onMounted(async () => {
 							<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.smtpServer') }}</label>
 							<input
 								v-model="customForm.smtpServer"
+							@input="olvidarPrueba"
 								type="text"
 								placeholder="smtp.example.com"
 								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
@@ -598,6 +667,7 @@ onMounted(async () => {
 							<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.port') }}</label>
 							<input
 								v-model.number="customForm.smtpPort"
+								@input="olvidarPrueba"
 								type="number"
 								placeholder="587"
 								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
@@ -613,6 +683,7 @@ onMounted(async () => {
 						<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.username') }}</label>
 						<input
 							v-model="customForm.username"
+							@input="olvidarPrueba"
 							type="text"
 							:placeholder="t('views.onlineAccounts.usernamePlaceholder')"
 							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
@@ -627,6 +698,7 @@ onMounted(async () => {
 						<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.password') }}</label>
 						<input
 							v-model="customForm.password"
+							@input="olvidarPrueba"
 							type="password"
 							:placeholder="t('views.onlineAccounts.passwordPlaceholder')"
 							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
@@ -638,20 +710,65 @@ onMounted(async () => {
 					</div>
 				</div>
 
+				<!-- El resultado de la prueba, una punta por vez.
+				     Separadas a propósito: es muy común que la entrada funcione y
+				     la salida no, y un «no anda» único mandaría a revisar los seis
+				     campos en vez de los tres que corresponden. -->
+				<div v-if="probe" class="mt-4 flex flex-col gap-2">
+					<div
+						v-for="punta in [
+							{ clave: 'imap', resultado: probe.imap },
+							{ clave: 'smtp', resultado: probe.smtp },
+						]"
+						:key="punta.clave"
+						class="rounded-corner border px-3 py-2 text-xs"
+						:class="
+							punta.resultado.ok
+								? 'border-status-success/30 bg-status-success/10 text-status-success'
+								: 'border-status-error/30 bg-status-error/10 text-status-error'
+						"
+					>
+						<span class="font-medium">
+							{{ punta.resultado.ok ? '✓' : '✕' }}
+							{{ t(`views.onlineAccounts.probe.${punta.clave}`) }}
+						</span>
+						<span v-if="punta.resultado.detail"> — {{ punta.resultado.detail }}</span>
+					</div>
+
+					<!-- Una prueba puede dar un falso negativo, así que el fallo no
+					     bloquea: se avisa y el botón pasa a guardar igual. -->
+					<p v-if="!probeOk" class="text-xs text-tx-muted">
+						{{ t('views.onlineAccounts.probe.saveAnywayHint') }}
+					</p>
+				</div>
+
 				<div class="mt-5 flex justify-end gap-2">
 					<button
 						class="rounded-corner border border-ui-border px-4 py-1.5 text-sm text-tx-muted transition-colors hover:bg-ui-surface"
-						:disabled="loading"
+						:disabled="loading || probando"
 						@click="cancelCustomForm"
 					>
 						{{ t('common.cancel') }}
 					</button>
 					<button
+						class="rounded-corner border border-ui-border px-4 py-1.5 text-sm text-tx-main transition-colors hover:bg-ui-surface"
+						:disabled="loading || probando || !isCustomValid"
+						@click="probarConexion"
+					>
+						{{ probando ? t('views.onlineAccounts.probe.testing') : t('views.onlineAccounts.probe.test') }}
+					</button>
+					<button
 						class="rounded-corner border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/15"
-						:disabled="loading || !isCustomValid"
+						:disabled="loading || probando || !isCustomValid"
 						@click="submitCustomProvider"
 					>
-						{{ loading ? t('common.saving') : t('views.onlineAccounts.addAccount') }}
+						{{
+							loading
+								? t('common.saving')
+								: probe && !probeOk
+									? t('views.onlineAccounts.probe.saveAnyway')
+									: t('views.onlineAccounts.addAccount')
+						}}
 					</button>
 				</div>
 			</div>
