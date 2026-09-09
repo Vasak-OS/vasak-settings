@@ -221,6 +221,7 @@ pub fn run() {
             commands::online_accounts::register_password_account,
             commands::online_accounts::list_providers,
             commands::online_accounts::connect_oauth_account,
+            commands::online_accounts::connect_nextcloud_account,
             commands::online_accounts::list_accounts,
             commands::online_accounts::remove_account,
             commands::online_accounts::account_manager_ping,

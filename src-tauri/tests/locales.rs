@@ -223,6 +223,58 @@ fn proton_no_tiene_textos_porque_no_tiene_api() {
     }
 }
 
+/// La pantalla de Nextcloud pide algo que ninguna otra pide —la dirección de un
+/// servidor— y explica por qué tiene que ser HTTPS.
+///
+/// Esa nota importa más que las otras: quien tiene un Nextcloud casero sin
+/// certificado se tiene que enterar **antes** de escribir todo, no cuando el
+/// servicio lo rechaza. Si la clave falta, el campo queda sin la advertencia y el
+/// fallo aparece al final.
+#[test]
+fn la_pantalla_de_nextcloud_avisa_del_https() {
+    for idioma in ["es", "en"] {
+        let raiz = catalogo(idioma);
+        let nube = &raiz["views"]["onlineAccounts"]["nextcloud"];
+
+        assert!(nube.is_mapping(), "views.onlineAccounts.nextcloud falta en {idioma}.yml");
+        for clave in [
+            "title",
+            "description",
+            "server",
+            "serverPlaceholder",
+            "httpsNote",
+            "name",
+            "namePlaceholder",
+            "connect",
+            "waiting",
+        ] {
+            assert!(
+                nube[clave].as_str().is_some_and(|t| !t.trim().is_empty()),
+                "falta views.onlineAccounts.nextcloud.{clave} en {idioma}.yml"
+            );
+        }
+
+        let nota = nube["httpsNote"].as_str().unwrap();
+        assert!(
+            nota.to_uppercase().contains("HTTPS"),
+            "la nota no nombra HTTPS en {idioma}.yml: {nota}"
+        );
+    }
+}
+
+/// El título lleva el nombre del proveedor interpolado, y el marcador tiene que
+/// estar: sin él el título dice «Conectar» a secas.
+#[test]
+fn el_titulo_de_nextcloud_interpola_el_proveedor() {
+    for idioma in ["es", "en"] {
+        let raiz = catalogo(idioma);
+        let titulo = raiz["views"]["onlineAccounts"]["nextcloud"]["title"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(titulo.contains("{0}"), "falta el marcador en {idioma}.yml: {titulo}");
+    }
+}
+
 /// Los textos de la prueba de conexión de una cuenta de correo.
 ///
 /// El que más importa es `saveAnywayHint`: una prueba puede dar un falso

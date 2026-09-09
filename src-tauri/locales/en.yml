@@ -979,6 +979,21 @@ views:
       chat: Messages
       drive: Cloud files
       tasks: Tasks
+    nextcloud:
+      title: Connect {0}
+      description: >-
+        Enter your server's address. Your browser will open so you can sign in
+        there and approve the access: it is your own server that asks for the
+        password, not VasakOS.
+      server: Server address
+      serverPlaceholder: cloud.example.com
+      httpsNote: >-
+        It has to be HTTPS. Your server is about to hand over a password that
+        does not expire, and without encryption it would travel in the clear.
+      name: Display name
+      namePlaceholder: Optional
+      connect: Connect
+      waiting: Waiting for you to approve the access in the browser…
     probe:
       test: Test connection
       testing: Testing…
@@ -1003,6 +1018,7 @@ views:
     customAdded: Custom account added successfully
     accountRemoved: "{0} account removed."
     errors:
+      serverRequired: The server address is required
       probeFailed: 'Could not test the connection: {0}'
       connectProvider: 'Could not connect the {0} account: {1}'
       loadProviders: 'Error loading providers: {0}'
