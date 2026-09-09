@@ -965,11 +965,6 @@ views:
     description: Conecta tus servicios de correo, calendario y contactos.
     providers: Proveedores
     customProvider: Servidor personalizado
-    unavailable:
-      noClientId: >-
-        Falta configurarlo. VasakOS no incluye credenciales propias para este
-        proveedor: quien administra el equipo tiene que registrar una aplicación
-        y dejar el client_id en /etc/vasak-accounts/providers.d.
     providerConnected: Cuenta de {0} conectada.
     needsReauth: Hay que volver a conectar esta cuenta.
     capabilities:
@@ -1014,6 +1009,31 @@ views:
       nothingFoundHint: >-
         Podés guardar igual: hay servidores que no publican esa información y
         funcionan perfecto para el correo. La dirección se puede agregar después.
+    credentials:
+      own: "Con credenciales propias:"
+      needed: Falta configurarlo — tocá para hacerlo
+      title: Credenciales para {0}
+      why: >-
+        VasakOS no incluye credenciales propias para {0}. Registrar la aplicación
+        cuesta una auditoría de seguridad que se paga todos los años, y la
+        distribución no puede sostenerla — pero vos podés registrar la tuya
+        gratis y usarla acá.
+      how: >-
+        En la consola del proveedor creá un proyecto y un ID de cliente de tipo
+        «aplicación de escritorio». El archivo instalado en
+        /usr/share/vasak-accounts/providers.d explica los pasos de cada uno.
+      clientId: ID de cliente
+      clientSecret: Secreto del cliente
+      clientSecretPlaceholder: Sólo si tu proveedor te dio uno
+      secretNote: >-
+        Google lo llama secreto, pero no lo es: viaja dentro de cualquier
+        programa que lo use. Lo que de verdad protege la conexión es PKCE, que
+        este sistema usa siempre.
+      clear: Quitar credenciales
+      saved: Credenciales de {0} guardadas. Ya podés conectar la cuenta.
+      cleared: >-
+        Credenciales de {0} quitadas. Las cuentas que ya tenías siguen
+        funcionando.
     linkedAccounts: Cuentas vinculadas
     customDialogDescription: Configura manualmente los datos de tu servidor de correo y sincronización.
     displayName: Nombre para mostrar

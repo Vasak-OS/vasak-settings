@@ -8,6 +8,7 @@ import SectionCard from '@/components/ui/SectionCard.vue';
 import { useReactiveSymbol } from '@/composables/useReactiveIcon';
 import {
 	type AccountInfo,
+	clearProviderCredentials,
 	connectNextcloudAccount,
 	connectOauthAccount,
 	type DavDiscovery,
@@ -18,6 +19,7 @@ import {
 	type ProviderInfo,
 	registerPasswordAccount,
 	removeAccount,
+	setProviderCredentials,
 	testMailConnection,
 } from '@/services/accounts.service';
 
@@ -42,8 +44,29 @@ const providers = ref<ProviderInfo[]>([]);
  * motivo es siempre el mismo —falta el `client_id`— y por eso el texto dice qué
  * hacer al respecto.
  */
+/**
+ * Si a este proveedor le falta que le peguen sus credenciales.
+ *
+ * Ya no es un «no se puede»: el botón abre el formulario, así que el texto
+ * invita a tocarlo en vez de mandar a editar un archivo del sistema.
+ */
 const motivoNoDisponible = (provider: ProviderInfo): string | undefined =>
-	provider.configured ? undefined : t('views.onlineAccounts.unavailable.noClientId');
+	provider.configured ? undefined : t('views.onlineAccounts.credentials.needed');
+
+/**
+ * Los proveedores cuyas credenciales se pueden cambiar o quitar.
+ *
+ * Son los OAuth2 que ya están listos. Hace falta una vía propia porque el clic
+ * en la tarjeta de uno configurado **conecta la cuenta**, que es lo que
+ * corresponde: sin esta lista, el botón de quitar credenciales quedaba escrito y
+ * sin forma de llegar a él.
+ */
+const conCredencialesPropias = computed(() =>
+	providers.value.filter((p) => p.kind === 'oauth2' && p.configured)
+);
+
+const tieneCredenciales = (provider: ProviderInfo) =>
+	provider.kind === 'oauth2' && provider.configured;
 
 const iconoDe = (id: string) => `${id}-symbolic`;
 
@@ -180,7 +203,13 @@ const fetchAccounts = async () => {
  * vez por capacidad para terminar con el mismo permiso.
  */
 const conectarProveedor = async (provider: ProviderInfo) => {
-	if (motivoNoDisponible(provider)) return;
+	// Sin credenciales no hay flujo que empezar, pero tampoco es un callejón:
+	// se abre el formulario para pegarlas. Antes el botón estaba apagado y lo
+	// único que se podía hacer era editar un archivo como administrador.
+	if (motivoNoDisponible(provider)) {
+		abrirCredenciales(provider);
+		return;
+	}
 
 	// Nextcloud no puede empezar sin la dirección: no hay un servidor conocido al
 	// que mandar el navegador, porque el servidor es el de la propia persona.
@@ -212,6 +241,81 @@ const conectarProveedor = async (provider: ProviderInfo) => {
 const nextcloudProvider = ref<ProviderInfo | null>(null);
 const nextcloudForm = reactive({ server: '', displayName: '' });
 const nextcloudError = ref('');
+
+/**
+ * El proveedor cuyo formulario de credenciales está abierto, o `null`.
+ *
+ * VasakOS no incluye un `client_id` para Google ni Microsoft, así que el de cada
+ * quien se pega acá en vez de editar un archivo del sistema como administrador.
+ */
+const credencialesDe = ref<ProviderInfo | null>(null);
+const credencialesForm = reactive({ clientId: '', clientSecret: '' });
+const guardandoCredenciales = ref(false);
+/**
+ * El error va **dentro** del formulario y no en el aviso de arriba.
+ *
+ * El aviso general se dibuja encima de la grilla de proveedores y el formulario
+ * queda abajo: quien apreta guardar y falla se queda mirando el formulario sin
+ * ver por qué no pasó nada.
+ */
+const credencialesError = ref('');
+
+const abrirCredenciales = (provider: ProviderInfo) => {
+	errors.value = '';
+	success.value = '';
+	credencialesForm.clientId = '';
+	credencialesForm.clientSecret = '';
+	credencialesError.value = '';
+	credencialesDe.value = provider;
+};
+
+const cerrarCredenciales = () => {
+	credencialesDe.value = null;
+	credencialesError.value = '';
+};
+
+const guardarCredenciales = async () => {
+	const provider = credencialesDe.value;
+	if (!provider || !credencialesForm.clientId.trim()) return;
+
+	guardandoCredenciales.value = true;
+	credencialesError.value = '';
+	try {
+		await setProviderCredentials(
+			provider.id,
+			credencialesForm.clientId,
+			credencialesForm.clientSecret
+		);
+		credencialesDe.value = null;
+		// El catálogo cambió: ese proveedor pasa a estar listo, y el botón se
+		// tiene que encender sin que haya que volver a entrar a la pantalla.
+		await fetchProviders();
+		success.value = t('views.onlineAccounts.credentials.saved').replace(
+			'{0}',
+			provider.display_name
+		);
+	} catch (err) {
+		credencialesError.value = String(err);
+	} finally {
+		guardandoCredenciales.value = false;
+	}
+};
+
+const quitarCredenciales = async (provider: ProviderInfo) => {
+	credencialesError.value = '';
+	success.value = '';
+	try {
+		await clearProviderCredentials(provider.id);
+		credencialesDe.value = null;
+		await fetchProviders();
+		success.value = t('views.onlineAccounts.credentials.cleared').replace(
+			'{0}',
+			provider.display_name
+		);
+	} catch (err) {
+		credencialesError.value = String(err);
+	}
+};
 
 const abrirFormularioNextcloud = (provider: ProviderInfo) => {
 	errors.value = '';
@@ -492,11 +596,11 @@ onMounted(async () => {
 				<button
 					v-for="provider in providers"
 					:key="provider.id"
-					:disabled="loading || !!motivoNoDisponible(provider)"
-					:title="motivoNoDisponible(provider)"
+					:disabled="loading"
+					:title="motivoNoDisponible(provider) && t('views.onlineAccounts.credentials.needed')"
 					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/40 px-4 py-5 text-center transition-colors"
 					:class="
-						loading || motivoNoDisponible(provider)
+						loading
 							? 'opacity-60 cursor-not-allowed'
 							: 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'
 					"
@@ -507,17 +611,16 @@ onMounted(async () => {
 						:src="iconos[provider.id]"
 						:alt="provider.display_name"
 						class="h-10 w-10"
-						:class="motivoNoDisponible(provider) && 'grayscale'"
 					/>
 					<span class="text-sm font-medium text-tx-primary">{{ provider.display_name }}</span>
 					<span class="text-xs text-tx-muted">
 						{{ provider.capabilities.map((c) => t(`views.onlineAccounts.capabilities.${c}`)).join(' · ') }}
 					</span>
-					<!-- El motivo, no un «no disponible» a secas: quien lo lee tiene que
-					     poder saber si le falta hacer algo o si es el sistema el que
-					     todavía no llegó. -->
+					<!-- Ya no está apagado: falta un paso y el botón lleva a darlo.
+					     Antes esto decía «no se puede» y lo único que se podía hacer
+					     era editar un archivo del sistema como administrador. -->
 					<span v-if="motivoNoDisponible(provider)" class="text-xs text-status-warning">
-						{{ motivoNoDisponible(provider) }}
+						{{ t('views.onlineAccounts.credentials.needed') }}
 					</span>
 				</button>
 
@@ -532,7 +635,6 @@ onMounted(async () => {
 						:src="customIcon"
 						:alt="t('views.onlineAccounts.customProvider')"
 						class="h-10 w-10"
-						:class="provider.unavailable && 'grayscale'"
 					/>
 					<span class="text-sm font-medium text-tx-primary">
 						{{ t('views.onlineAccounts.customProvider') }}
@@ -541,6 +643,80 @@ onMounted(async () => {
 				</button>
 			</div>
 
+		</SectionCard>
+
+		<SectionCard v-if="credencialesDe">
+			<h3 class="mb-1 text-lg font-medium text-tx-primary">
+				{{ t('views.onlineAccounts.credentials.title').replace('{0}', credencialesDe.display_name) }}
+			</h3>
+			<p class="mb-2 text-sm text-tx-muted">
+				{{ t('views.onlineAccounts.credentials.why').replace('{0}', credencialesDe.display_name) }}
+			</p>
+			<p class="mb-4 text-xs text-tx-muted">
+				{{ t('views.onlineAccounts.credentials.how') }}
+			</p>
+
+			<AlertMessage v-if="credencialesError" :message="credencialesError" tone="error" />
+
+			<div class="flex flex-col gap-3">
+				<label class="flex flex-col gap-1">
+					<span class="text-sm text-tx-main">
+						{{ t('views.onlineAccounts.credentials.clientId') }}
+					</span>
+					<input
+						v-model="credencialesForm.clientId"
+						type="text"
+						:disabled="guardandoCredenciales"
+						class="rounded-corner border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
+						@keyup.enter="guardarCredenciales"
+					/>
+				</label>
+
+				<label class="flex flex-col gap-1">
+					<span class="text-sm text-tx-main">
+						{{ t('views.onlineAccounts.credentials.clientSecret') }}
+					</span>
+					<input
+						v-model="credencialesForm.clientSecret"
+						type="password"
+						:disabled="guardandoCredenciales"
+						:placeholder="t('views.onlineAccounts.credentials.clientSecretPlaceholder')"
+						class="rounded-corner border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
+						@keyup.enter="guardarCredenciales"
+					/>
+					<!-- Google lo llama secreto y no lo es: viaja dentro de cualquier
+					     programa que lo use. Decirlo evita que alguien no lo pegue
+					     creyendo que se está exponiendo. -->
+					<span class="text-xs text-tx-muted">
+						{{ t('views.onlineAccounts.credentials.secretNote') }}
+					</span>
+				</label>
+
+				<div class="flex gap-2">
+					<button
+						:disabled="guardandoCredenciales || !credencialesForm.clientId.trim()"
+						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+						@click="guardarCredenciales"
+					>
+						{{ guardandoCredenciales ? t('common.saving') : t('common.save') }}
+					</button>
+					<button
+						:disabled="guardandoCredenciales"
+						class="rounded-corner border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
+						@click="cerrarCredenciales"
+					>
+						{{ t('common.cancel') }}
+					</button>
+					<button
+						v-if="tieneCredenciales(credencialesDe)"
+						:disabled="guardandoCredenciales"
+						class="rounded-corner border border-ui-border px-4 py-2 text-sm text-tx-muted transition-colors hover:border-status-error/40 hover:text-status-error disabled:opacity-50"
+						@click="quitarCredenciales(credencialesDe)"
+					>
+						{{ t('views.onlineAccounts.credentials.clear') }}
+					</button>
+				</div>
+			</div>
 		</SectionCard>
 
 		<SectionCard v-if="nextcloudProvider">

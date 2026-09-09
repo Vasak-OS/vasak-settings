@@ -221,6 +221,8 @@ pub fn run() {
             commands::mail_probe::test_mail_connection,
             commands::online_accounts::register_password_account,
             commands::online_accounts::list_providers,
+            commands::online_accounts::set_provider_credentials,
+            commands::online_accounts::clear_provider_credentials,
             commands::online_accounts::connect_oauth_account,
             commands::online_accounts::connect_nextcloud_account,
             commands::online_accounts::list_accounts,

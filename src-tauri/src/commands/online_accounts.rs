@@ -204,6 +204,65 @@ pub async fn remove_account(account_id: String) -> Result<(), String> {
     Ok(())
 }
 
+/// Guarda **tus** credenciales para un proveedor OAuth2.
+///
+/// VasakOS no incluye un `client_id` propio para Google ni para Microsoft:
+/// registrarlo con Google para llegar al correo cuesta una evaluación de
+/// seguridad paga y anual. El de cada quien se saca gratis de la consola del
+/// proveedor, y esto es para pegarlo sin tener que editar un archivo del
+/// sistema.
+///
+/// Sólo el identificador y el secreto: las URLs siguen saliendo de los archivos
+/// que instala el paquete, así que desde acá no se puede apuntar un proveedor a
+/// otro servidor.
+#[tauri::command]
+pub async fn set_provider_credentials(
+    provider_id: String,
+    client_id: String,
+    client_secret: String,
+) -> Result<(), String> {
+    let connection = account_manager().await?;
+    connection
+        .call_method(
+            Some(ACCOUNTS_SERVICE),
+            ACCOUNTS_PATH,
+            Some(ACCOUNTS_INTERFACE),
+            "SetProviderCredentials",
+            &(
+                provider_id.as_str(),
+                client_id.as_str(),
+                client_secret.as_str(),
+            ),
+        )
+        .await
+        .map_err(|e| format!("No se pudieron guardar las credenciales: {e}"))?;
+
+    log_debug(&format!("Credenciales propias guardadas para {provider_id}"));
+    Ok(())
+}
+
+/// Quita las credenciales propias de un proveedor.
+///
+/// Las cuentas ya conectadas siguen funcionando: cada una guarda el `client_id`
+/// con el que se autorizó.
+#[tauri::command]
+pub async fn clear_provider_credentials(provider_id: String) -> Result<(), String> {
+    let connection = account_manager().await?;
+    connection
+        .call_method(
+            Some(ACCOUNTS_SERVICE),
+            ACCOUNTS_PATH,
+            Some(ACCOUNTS_INTERFACE),
+            "ClearProviderCredentials",
+            &(provider_id.as_str(),),
+        )
+        .await
+        .map_err(|e| format!("No se pudieron quitar las credenciales: {e}"))?;
+
+    log_debug(&format!("Credenciales propias de {provider_id} quitadas"));
+    Ok(())
+}
+
 /// Conecta una cuenta OAuth2 de punta a punta.
 ///
 /// Todo el flujo en **un** comando, y eso es deliberado. Ni el código de

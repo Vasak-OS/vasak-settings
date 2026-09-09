@@ -965,11 +965,6 @@ views:
     description: Connect your mail, calendar and contacts services.
     providers: Providers
     customProvider: Custom server
-    unavailable:
-      noClientId: >-
-        Not configured yet. VasakOS ships no credentials of its own for this
-        provider: whoever administers the machine has to register an application
-        and leave the client_id in /etc/vasak-accounts/providers.d.
     providerConnected: '{0} account connected.'
     needsReauth: This account has to be connected again.
     capabilities:
@@ -1012,6 +1007,29 @@ views:
       nothingFoundHint: >-
         You can save anyway: some servers do not publish this and work perfectly
         for mail. The address can be added later.
+    credentials:
+      own: "With your own credentials:"
+      needed: Not configured yet — tap to set it up
+      title: Credentials for {0}
+      why: >-
+        VasakOS ships no credentials of its own for {0}. Registering the
+        application costs a security audit paid every year, and the distribution
+        cannot sustain it — but you can register your own for free and use it
+        here.
+      how: >-
+        In the provider's console create a project and a client ID of type
+        "desktop application". The file installed in
+        /usr/share/vasak-accounts/providers.d explains the steps for each one.
+      clientId: Client ID
+      clientSecret: Client secret
+      clientSecretPlaceholder: Only if your provider gave you one
+      secretNote: >-
+        Google calls it a secret, but it is not one: it travels inside any
+        program that uses it. What actually protects the connection is PKCE,
+        which this system always uses.
+      clear: Remove credentials
+      saved: Credentials for {0} saved. You can connect the account now.
+      cleared: Credentials for {0} removed. Accounts you already had keep working.
     linkedAccounts: Linked accounts
     customDialogDescription: Set up your mail and sync server details manually.
     displayName: Display name
