@@ -135,4 +135,3 @@ export const removeAccount = (accountId: string): Promise<void> =>
 	invoke<void>('remove_account', { accountId });
 
 export const accountManagerPing = (): Promise<string> => invoke<string>('account_manager_ping');
-
