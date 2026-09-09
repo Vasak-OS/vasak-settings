@@ -1005,6 +1005,15 @@ views:
         Si estás seguro de que los datos están bien, podés guardar igual: la
         prueba puede fallar por una red que filtra el puerto o por un servidor
         poco común.
+    dav:
+      search: Buscar calendario y contactos
+      searching: Buscando…
+      hint: >-
+        Le pregunta a tu servidor dónde están, para no tener que pegar la
+        dirección a mano.
+      nothingFoundHint: >-
+        Podés guardar igual: hay servidores que no publican esa información y
+        funcionan perfecto para el correo. La dirección se puede agregar después.
     linkedAccounts: Cuentas vinculadas
     customDialogDescription: Configura manualmente los datos de tu servidor de correo y sincronización.
     displayName: Nombre para mostrar
@@ -1020,6 +1029,7 @@ views:
     customAdded: Cuenta personalizada agregada correctamente
     accountRemoved: Cuenta de {0} eliminada.
     errors:
+      discoverFailed: 'No se pudo buscar: {0}'
       serverRequired: Hay que escribir la dirección del servidor
       probeFailed: 'No se pudo probar la conexión: {0}'
       connectProvider: 'No se pudo conectar la cuenta de {0}: {1}'

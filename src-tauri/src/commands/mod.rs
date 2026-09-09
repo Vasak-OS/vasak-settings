@@ -18,6 +18,7 @@ pub mod power_profiles;
 pub mod monitors;
 pub mod nitidez;
 pub mod language;
+pub mod dav_discover;
 pub mod mail_probe;
 pub mod online_accounts;
 pub mod permissions;

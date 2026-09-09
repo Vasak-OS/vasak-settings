@@ -109,6 +109,32 @@ export const testMailConnection = (
 export const connectNextcloudAccount = (server: string, displayName: string): Promise<string> =>
 	invoke<string>('connect_nextcloud_account', { server, displayName });
 
+/** Dónde vive el calendario o la libreta de contactos, o por qué no se encontró. */
+export interface Hallazgo {
+	url: string | null;
+	detail: string;
+}
+
+export interface DavDiscovery {
+	calendar: Hallazgo;
+	contacts: Hallazgo;
+}
+
+/**
+ * Busca el calendario y los contactos de una cuenta sin que nadie escriba una
+ * URL.
+ *
+ * Recorre lo que dice el estándar: del dominio al servidor por `.well-known`, y
+ * de ahí al lugar donde viven las colecciones de la persona. Los dos resultados
+ * vienen por separado porque es muy común que un servidor tenga uno y no el
+ * otro.
+ */
+export const discoverDav = (
+	account: string,
+	username: string,
+	password: string
+): Promise<DavDiscovery> => invoke<DavDiscovery>('discover_dav', { account, username, password });
+
 /**
  * Registra una cuenta con contraseña: IMAP/SMTP y compañía.
  *
@@ -119,15 +145,13 @@ export const connectNextcloudAccount = (server: string, displayName: string): Pr
 export const registerPasswordAccount = (
 	provider: string,
 	displayName: string,
-	capability: string,
-	metadata: Record<string, unknown>,
+	capabilities: Record<string, Record<string, unknown>>,
 	secret: string
 ): Promise<string> =>
 	invoke<string>('register_password_account', {
 		provider,
 		displayName,
-		capability,
-		metadata,
+		capabilities,
 		secret,
 	});
 

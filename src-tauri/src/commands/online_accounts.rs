@@ -76,8 +76,13 @@ struct AuthStart {
 // Tauri commands
 // ---------------------------------------------------------------------------
 
-/// Registra una cuenta con credenciales de **contraseña**: IMAP/SMTP y
-/// compañía.
+/// Registra una cuenta con credenciales de **contraseña**: IMAP/SMTP, CalDAV,
+/// CardDAV.
+///
+/// Recibe **todas** las capacidades juntas y no una: una cuenta de servidor
+/// propio suele traer el correo, el calendario y los contactos con la misma
+/// contraseña, y registrarlas de a una crearía tres cuentas separadas para lo
+/// que la persona configuró como una sola.
 ///
 /// El secreto va derecho al almacén de root y este proceso no se queda con una
 /// copia. Las cuentas OAuth2 **no** pasan por acá: van por
@@ -87,11 +92,9 @@ struct AuthStart {
 pub async fn register_password_account(
     provider: String,
     display_name: String,
-    capability: String,
-    metadata: serde_json::Value,
+    capabilities: serde_json::Value,
     secret: String,
 ) -> Result<String, String> {
-    let capabilities = serde_json::json!({ capability: metadata });
     let secrets = serde_json::json!({ "access": secret });
 
     let connection = account_manager().await?;

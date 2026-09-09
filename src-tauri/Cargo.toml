@@ -57,6 +57,18 @@ tauri-plugin-bluetooth-manager = "2"
 tauri-plugin-network-manager = "2"
 tauri-plugin-vsk-contextual-menu = "2"
 tauri-plugin-vsk-journal = "2"
+# Para leer las respuestas PROPFIND del autodescubrimiento de CalDAV/CardDAV.
+# Rust puro y sólo lectura: no suma ninguna biblioteca compartida, y un parser
+# de XML es justo lo que no conviene escribir a mano contra un servidor ajeno.
+roxmltree = "0.21"
+# HTTP para el autodescubrimiento de CalDAV/CardDAV. rustls como en el resto:
+# Rust puro, sin bibliotecas compartidas nuevas. La misma versión que usa el
+# servicio de cuentas, para no arrastrar dos árboles distintos a la ISO.
+#
+# Se usa un cliente hecho y no HTTP a mano porque acá hay redirecciones,
+# longitudes y codificación por trozos de por medio — nada de eso conviene
+# escribirlo contra un servidor ajeno.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 #tauri-plugin-network-manager = { path = "../../tauri-plugin-network-manager" }
 
 [profile.dev]

@@ -1003,6 +1003,15 @@ views:
       saveAnywayHint: >-
         If you are sure the details are right, you can save anyway: the test can
         fail because of a network that filters the port, or an unusual server.
+    dav:
+      search: Find calendar and contacts
+      searching: Searching…
+      hint: >-
+        Asks your server where they are, so you do not have to paste the address
+        by hand.
+      nothingFoundHint: >-
+        You can save anyway: some servers do not publish this and work perfectly
+        for mail. The address can be added later.
     linkedAccounts: Linked accounts
     customDialogDescription: Set up your mail and sync server details manually.
     displayName: Display name
@@ -1018,6 +1027,7 @@ views:
     customAdded: Custom account added successfully
     accountRemoved: "{0} account removed."
     errors:
+      discoverFailed: 'Could not search: {0}'
       serverRequired: The server address is required
       probeFailed: 'Could not test the connection: {0}'
       connectProvider: 'Could not connect the {0} account: {1}'

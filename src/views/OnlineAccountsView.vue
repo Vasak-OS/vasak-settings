@@ -10,6 +10,8 @@ import {
 	type AccountInfo,
 	connectNextcloudAccount,
 	connectOauthAccount,
+	type DavDiscovery,
+	discoverDav,
 	listAccounts,
 	listProviders,
 	type MailProbe,
@@ -289,6 +291,41 @@ const probeOk = computed(() => probe.value?.imap.ok === true && probe.value?.smt
  */
 const olvidarPrueba = () => {
 	probe.value = null;
+	// Lo encontrado también deja de valer: si cambió el usuario o el servidor,
+	// esas direcciones son de otra cuenta.
+	dav.value = null;
+};
+
+/**
+ * Lo que el autodescubrimiento encontró, o `null` si todavía no se buscó.
+ *
+ * Es opcional a propósito: una cuenta de sólo correo se guarda igual. Buscar y
+ * no encontrar tampoco impide guardar — hay servidores que no hacen
+ * autodescubrimiento y aun así funcionan perfecto para el correo.
+ */
+const dav = ref<DavDiscovery | null>(null);
+const buscandoDav = ref(false);
+
+const buscarDav = async () => {
+	if (!customForm.username.trim() || !customForm.password) {
+		errors.value = t('views.onlineAccounts.errors.usernameRequired');
+		return;
+	}
+
+	buscandoDav.value = true;
+	errors.value = '';
+	success.value = '';
+
+	try {
+		// El usuario suele ser el correo, y de ahí sale el dominio contra el que
+		// buscar. Si no lo fuera, el servidor IMAP es la mejor pista que hay.
+		const donde = customForm.username.includes('@') ? customForm.username : customForm.imapServer;
+		dav.value = await discoverDav(donde, customForm.username, customForm.password);
+	} catch (err) {
+		errors.value = t('views.onlineAccounts.errors.discoverFailed').replace('{0}', String(err));
+	} finally {
+		buscandoDav.value = false;
+	}
 };
 
 const probarConexion = async (): Promise<boolean> => {
@@ -339,17 +376,37 @@ const submitCustomProvider = async () => {
 	success.value = '';
 
 	try {
-		await registerPasswordAccount(
-			PERSONALIZADO,
-			customForm.displayName,
-			'email',
-			{
+		// El correo siempre; el calendario y los contactos sólo si se los
+		// encontró. Una capacidad sin dirección no serviría de nada: la cuenta
+		// la declararía y la aplicación que la pidiera no tendría adónde ir.
+		const capabilities: Record<string, Record<string, unknown>> = {
+			email: {
 				imap_server: customForm.imapServer,
 				imap_port: customForm.imapPort,
 				smtp_server: customForm.smtpServer,
 				smtp_port: customForm.smtpPort,
 				username: customForm.username,
 			},
+		};
+		if (dav.value?.calendar.url) {
+			capabilities.calendar = {
+				url: dav.value.calendar.url,
+				username: customForm.username,
+				auth: 'basic',
+			};
+		}
+		if (dav.value?.contacts.url) {
+			capabilities.contacts = {
+				url: dav.value.contacts.url,
+				username: customForm.username,
+				auth: 'basic',
+			};
+		}
+
+		await registerPasswordAccount(
+			PERSONALIZADO,
+			customForm.displayName,
+			capabilities,
 			customForm.password
 		);
 
@@ -357,6 +414,7 @@ const submitCustomProvider = async () => {
 		showCustomForm.value = false;
 		resetCustomForm();
 		probe.value = null;
+		dav.value = null;
 		await fetchAccounts();
 	} catch (err) {
 		errors.value = t('views.onlineAccounts.errors.registerCustom').replace('{0}', String(err));
@@ -383,6 +441,7 @@ const cancelCustomForm = () => {
 	showCustomForm.value = false;
 	resetCustomForm();
 	probe.value = null;
+	dav.value = null;
 };
 
 const deleteAccount = async (account: AccountInfo) => {
@@ -742,6 +801,43 @@ onMounted(async () => {
 					</p>
 				</div>
 
+				<!-- Lo que se encontró de calendario y contactos.
+				     Por separado, como la prueba de correo: es muy común que un
+				     servidor tenga uno y no el otro. -->
+				<div v-if="dav" class="mt-4 flex flex-col gap-2">
+					<div
+						v-for="hallazgo in [
+							{ clave: 'calendar', resultado: dav.calendar },
+							{ clave: 'contacts', resultado: dav.contacts },
+						]"
+						:key="hallazgo.clave"
+						class="rounded-corner border px-3 py-2 text-xs"
+						:class="
+							hallazgo.resultado.url
+								? 'border-status-success/30 bg-status-success/10 text-status-success'
+								: 'border-ui-border bg-ui-surface/40 text-tx-muted'
+						"
+					>
+						<span class="font-medium">
+							{{ hallazgo.resultado.url ? '✓' : '—' }}
+							{{ t(`views.onlineAccounts.capabilities.${hallazgo.clave}`) }}
+						</span>
+						<span v-if="hallazgo.resultado.url" class="break-all">
+							— {{ hallazgo.resultado.url }}
+						</span>
+						<span v-else-if="hallazgo.resultado.detail"> — {{ hallazgo.resultado.detail }}</span>
+					</div>
+
+					<!-- No encontrar no impide nada: hay servidores que no hacen
+					     autodescubrimiento y andan perfecto para el correo. -->
+					<p
+						v-if="!dav.calendar.url && !dav.contacts.url"
+						class="text-xs text-tx-muted"
+					>
+						{{ t('views.onlineAccounts.dav.nothingFoundHint') }}
+					</p>
+				</div>
+
 				<div class="mt-5 flex justify-end gap-2">
 					<button
 						class="rounded-corner border border-ui-border px-4 py-1.5 text-sm text-tx-muted transition-colors hover:bg-ui-surface"
@@ -752,14 +848,22 @@ onMounted(async () => {
 					</button>
 					<button
 						class="rounded-corner border border-ui-border px-4 py-1.5 text-sm text-tx-main transition-colors hover:bg-ui-surface"
-						:disabled="loading || probando || !isCustomValid"
+						:disabled="loading || probando || buscandoDav || !isCustomValid"
 						@click="probarConexion"
 					>
 						{{ probando ? t('views.onlineAccounts.probe.testing') : t('views.onlineAccounts.probe.test') }}
 					</button>
 					<button
+						class="rounded-corner border border-ui-border px-4 py-1.5 text-sm text-tx-main transition-colors hover:bg-ui-surface"
+						:disabled="loading || probando || buscandoDav || !isCustomValid"
+						:title="t('views.onlineAccounts.dav.hint')"
+						@click="buscarDav"
+					>
+						{{ buscandoDav ? t('views.onlineAccounts.dav.searching') : t('views.onlineAccounts.dav.search') }}
+					</button>
+					<button
 						class="rounded-corner border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/15"
-						:disabled="loading || probando || !isCustomValid"
+						:disabled="loading || probando || buscandoDav || !isCustomValid"
 						@click="submitCustomProvider"
 					>
 						{{
