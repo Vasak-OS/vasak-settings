@@ -238,8 +238,6 @@ pub fn run() {
             commands::connect::connect_list_known_devices,
             commands::connect::connect_set_alias,
             commands::connect::connect_forget_device,
-            commands::online_accounts::get_account_data,
-            commands::online_accounts::get_access_token,
         ])
         // One setup hook, not two: `Builder::setup` replaces whatever was
         // registered before it, so a second call silently threw the first away.
