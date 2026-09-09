@@ -8,6 +8,7 @@ import SectionCard from '@/components/ui/SectionCard.vue';
 import { useReactiveSymbol } from '@/composables/useReactiveIcon';
 import {
 	type AccountInfo,
+	connectNextcloudAccount,
 	connectOauthAccount,
 	listAccounts,
 	listProviders,
@@ -177,6 +178,13 @@ const fetchAccounts = async () => {
 const conectarProveedor = async (provider: ProviderInfo) => {
 	if (motivoNoDisponible(provider)) return;
 
+	// Nextcloud no puede empezar sin la dirección: no hay un servidor conocido al
+	// que mandar el navegador, porque el servidor es el de la propia persona.
+	if (provider.kind === 'nextcloud') {
+		abrirFormularioNextcloud(provider);
+		return;
+	}
+
 	loading.value = true;
 	errors.value = '';
 	success.value = '';
@@ -194,6 +202,63 @@ const conectarProveedor = async (provider: ProviderInfo) => {
 			.replace('{1}', String(err));
 	} finally {
 		loading.value = false;
+	}
+};
+
+const nextcloudProvider = ref<ProviderInfo | null>(null);
+const nextcloudForm = reactive({ server: '', displayName: '' });
+const nextcloudError = ref('');
+
+const abrirFormularioNextcloud = (provider: ProviderInfo) => {
+	errors.value = '';
+	success.value = '';
+	nextcloudError.value = '';
+	nextcloudForm.server = '';
+	nextcloudForm.displayName = '';
+	nextcloudProvider.value = provider;
+};
+
+const cancelarNextcloud = () => {
+	nextcloudProvider.value = null;
+	nextcloudError.value = '';
+};
+
+/**
+ * Arranca el inicio de sesión y espera.
+ *
+ * `esperando` es su propio estado y no el `loading` general: esto puede tardar
+ * lo que la persona tarde en autenticarse en su servidor, y durante ese rato hay
+ * que decirle que se fue al navegador — con el `loading` general parecería que
+ * la pantalla se colgó.
+ */
+const esperandoNextcloud = ref(false);
+
+const conectarNextcloud = async () => {
+	const provider = nextcloudProvider.value;
+	if (!provider) return;
+
+	if (!nextcloudForm.server.trim()) {
+		nextcloudError.value = t('views.onlineAccounts.errors.serverRequired');
+		return;
+	}
+
+	esperandoNextcloud.value = true;
+	nextcloudError.value = '';
+
+	try {
+		await connectNextcloudAccount(nextcloudForm.server, nextcloudForm.displayName);
+		success.value = t('views.onlineAccounts.providerConnected').replace(
+			'{0}',
+			provider.display_name
+		);
+		nextcloudProvider.value = null;
+		await fetchAccounts();
+	} catch (err) {
+		// Se queda en el formulario: el error más común es una dirección mal
+		// escrita, y cerrarlo obligaría a tipearla de nuevo.
+		nextcloudError.value = String(err);
+	} finally {
+		esperandoNextcloud.value = false;
 	}
 };
 
@@ -352,6 +417,75 @@ onMounted(async () => {
 				</button>
 			</div>
 
+		</SectionCard>
+
+		<SectionCard v-if="nextcloudProvider">
+			<h3 class="mb-1 text-lg font-medium text-tx-primary">
+				{{ t('views.onlineAccounts.nextcloud.title').replace('{0}', nextcloudProvider.display_name) }}
+			</h3>
+			<p class="mb-4 text-sm text-tx-muted">
+				{{ t('views.onlineAccounts.nextcloud.description') }}
+			</p>
+
+			<AlertMessage v-if="nextcloudError" :message="nextcloudError" tone="error" />
+
+			<div class="flex flex-col gap-3">
+				<label class="flex flex-col gap-1">
+					<span class="text-sm text-tx-main">{{ t('views.onlineAccounts.nextcloud.server') }}</span>
+					<input
+						v-model="nextcloudForm.server"
+						type="text"
+						:disabled="esperandoNextcloud"
+						:placeholder="t('views.onlineAccounts.nextcloud.serverPlaceholder')"
+						class="rounded-corner border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
+						@keyup.enter="conectarNextcloud"
+					/>
+					<!-- Se dice antes y no después de fallar: quien tiene un servidor
+					     casero sin certificado tiene que enterarse acá, no cuando ya
+					     escribió todo. -->
+					<span class="text-xs text-tx-muted">
+						{{ t('views.onlineAccounts.nextcloud.httpsNote') }}
+					</span>
+				</label>
+
+				<label class="flex flex-col gap-1">
+					<span class="text-sm text-tx-main">
+						{{ t('views.onlineAccounts.nextcloud.name') }}
+					</span>
+					<input
+						v-model="nextcloudForm.displayName"
+						type="text"
+						:disabled="esperandoNextcloud"
+						:placeholder="t('views.onlineAccounts.nextcloud.namePlaceholder')"
+						class="rounded-corner border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
+						@keyup.enter="conectarNextcloud"
+					/>
+				</label>
+
+				<!-- Mientras espera, se dice dónde está la pelota. Sin esto la
+				     ventana parece colgada durante todo el tiempo que la persona
+				     tarda en autenticarse en su servidor. -->
+				<p v-if="esperandoNextcloud" class="text-sm text-tx-muted">
+					{{ t('views.onlineAccounts.nextcloud.waiting') }}
+				</p>
+
+				<div class="flex gap-2">
+					<button
+						:disabled="esperandoNextcloud"
+						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+						@click="conectarNextcloud"
+					>
+						{{ t('views.onlineAccounts.nextcloud.connect') }}
+					</button>
+					<button
+						:disabled="esperandoNextcloud"
+						class="rounded-corner border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
+						@click="cancelarNextcloud"
+					>
+						{{ t('common.cancel') }}
+					</button>
+				</div>
+			</div>
 		</SectionCard>
 
 		<SectionCard v-if="accounts.length > 0">

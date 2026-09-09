@@ -22,10 +22,18 @@ export interface ProviderInfo {
 	display_name: string;
 	capabilities: string[];
 	/**
-	 * Si tiene `client_id`. Sin él no se puede empezar ningún flujo, y es lo
-	 * único que hace falta para decidir si el botón va encendido.
+	 * Si se puede empezar un flujo tal como está.
+	 *
+	 * Para OAuth2 depende de que alguien haya dejado el `client_id`; los de
+	 * Nextcloud están listos siempre, porque las credenciales las emite el
+	 * servidor de la propia persona.
 	 */
 	configured: boolean;
+	/**
+	 * `oauth2` o `nextcloud`. Decide qué se le pide a la persona: el primero abre
+	 * el navegador directo, el segundo necesita la dirección del servidor antes.
+	 */
+	kind: 'oauth2' | 'nextcloud';
 }
 
 export const listAccounts = (): Promise<AccountInfo[]> => invoke<AccountInfo[]>('list_accounts');
@@ -46,6 +54,17 @@ export const connectOauthAccount = (
 	displayName: string
 ): Promise<string> =>
 	invoke<string>('connect_oauth_account', { providerId, capabilities, displayName });
+
+/**
+ * Conecta una cuenta de Nextcloud.
+ *
+ * La contraseña de aplicación que emite el servidor no pasa por acá ni por el
+ * proceso de la ventana: el servicio de cuentas la recibe, la guarda y devuelve
+ * sólo el identificador. Puede tardar lo que la persona tarde en autenticarse en
+ * su servidor, porque el sondeo corre del otro lado del IPC.
+ */
+export const connectNextcloudAccount = (server: string, displayName: string): Promise<string> =>
+	invoke<string>('connect_nextcloud_account', { server, displayName });
 
 /**
  * Registra una cuenta con contraseña: IMAP/SMTP y compañía.

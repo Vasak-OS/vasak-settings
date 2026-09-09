@@ -979,6 +979,22 @@ views:
       chat: Mensajes
       drive: Archivos en la nube
       tasks: Tareas
+    nextcloud:
+      title: Conectar {0}
+      description: >-
+        Escribí la dirección de tu servidor. Te va a abrir el navegador para que
+        inicies sesión ahí y apruebes el acceso: la contraseña la pide tu propio
+        servidor, no VasakOS.
+      server: Dirección del servidor
+      serverPlaceholder: nube.ejemplo.com
+      httpsNote: >-
+        Tiene que ser HTTPS. Tu servidor va a entregar una contraseña que no
+        caduca, y sin cifrado viajaría a la vista de cualquiera en la red.
+      name: Nombre para mostrar
+      namePlaceholder: Opcional
+      connect: Conectar
+      waiting: >-
+        Esperando que apruebes el acceso en el navegador…
     linkedAccounts: Cuentas vinculadas
     customDialogDescription: Configura manualmente los datos de tu servidor de correo y sincronización.
     displayName: Nombre para mostrar
@@ -994,6 +1010,7 @@ views:
     customAdded: Cuenta personalizada agregada correctamente
     accountRemoved: Cuenta de {0} eliminada.
     errors:
+      serverRequired: Hay que escribir la dirección del servidor
       connectProvider: 'No se pudo conectar la cuenta de {0}: {1}'
       loadProviders: 'Error al cargar los proveedores: {0}'
       nameRequired: El nombre es obligatorio

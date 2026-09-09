@@ -51,9 +51,17 @@ pub struct ProviderInfo {
     pub id: String,
     pub display_name: String,
     pub capabilities: Vec<String>,
-    /// Si tiene client_id. Sin él no se puede empezar ningún flujo, y es lo
-    /// único que la pantalla necesita para decidir si el botón va encendido.
+    /// Si se puede empezar un flujo tal como está. Es lo único que la pantalla
+    /// necesita para decidir si el botón va encendido.
+    ///
+    /// Para OAuth2 depende de que alguien haya dejado el `client_id`; los de
+    /// Nextcloud están listos siempre, porque las credenciales las emite el
+    /// servidor de la propia persona.
     pub configured: bool,
+    /// `oauth2` o `nextcloud`. Decide qué le pide la pantalla a la persona: el
+    /// primero abre el navegador directo, el segundo necesita la dirección del
+    /// servidor antes de poder empezar.
+    pub kind: String,
 }
 
 /// Lo que `BeginAuth` devuelve.
@@ -325,6 +333,113 @@ async fn cancel_auth(connection: &Connection, request_id: &str) {
             &(request_id,),
         )
         .await;
+}
+
+/// Conecta una cuenta de Nextcloud de punta a punta.
+///
+/// Un solo comando, por lo mismo que el de OAuth2: la contraseña de aplicación
+/// no tiene por qué pasar por el webview. Acá tampoco pasa por este proceso —
+/// el servicio de cuentas la recibe del servidor, la guarda, y devuelve nada más
+/// que el identificador de la cuenta.
+///
+/// El bucle de sondeo vive de este lado a propósito. Un método D-Bus que se
+/// queda esperando a que la persona escriba su contraseña en el navegador supera
+/// el tiempo de espera del bus, y lo que llegaría al cliente sería un error de
+/// transporte y no una respuesta.
+#[tauri::command]
+pub async fn connect_nextcloud_account(
+    server: String,
+    display_name: String,
+) -> Result<String, String> {
+    let connection = account_manager().await?;
+
+    let reply = connection
+        .call_method(
+            Some(ACCOUNTS_SERVICE),
+            ACCOUNTS_PATH,
+            Some(ACCOUNTS_INTERFACE),
+            "BeginNextcloudLogin",
+            &(server.as_str(), display_name.as_str()),
+        )
+        .await
+        .map_err(|e| format!("No se pudo iniciar el inicio de sesión: {e}"))?;
+
+    let raw: String = reply
+        .body()
+        .deserialize()
+        .map_err(|e| format!("Respuesta inválida del gestor de cuentas: {e}"))?;
+    let inicio: NextcloudLoginStart =
+        serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))?;
+
+    open::that(&inicio.login_url).map_err(|e| {
+        format!(
+            "no se pudo abrir el navegador: {e}. La dirección era {}",
+            inicio.login_url
+        )
+    })?;
+
+    poll_until_done(&connection, &inicio.request_id).await
+}
+
+#[derive(Debug, Deserialize)]
+struct NextcloudLoginStart {
+    request_id: String,
+    login_url: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct NextcloudPoll {
+    status: String,
+    #[serde(default)]
+    account_id: Option<String>,
+}
+
+/// Cada cuánto se le pregunta al servicio si la persona ya terminó.
+///
+/// Dos segundos: bastante seguido para que la ventana reaccione en cuanto se
+/// aprueba, y bastante espaciado para no golpear el servidor de alguien con
+/// decenas de peticiones por minuto.
+const INTERVALO_DE_SONDEO: std::time::Duration = std::time::Duration::from_secs(2);
+
+/// Sondea hasta que el servidor entregue las credenciales.
+///
+/// El tope es el mismo que el del servicio, que descarta el flujo a los cinco
+/// minutos. Esperar más sería sondear contra un `request_id` que ya no existe, y
+/// el error diría «autorización desconocida» en vez de «se te fue el tiempo».
+async fn poll_until_done(connection: &Connection, request_id: &str) -> Result<String, String> {
+    let limite = std::time::Instant::now() + ESPERA_DEL_CALLBACK;
+
+    while std::time::Instant::now() < limite {
+        tokio::time::sleep(INTERVALO_DE_SONDEO).await;
+
+        let reply = connection
+            .call_method(
+                Some(ACCOUNTS_SERVICE),
+                ACCOUNTS_PATH,
+                Some(ACCOUNTS_INTERFACE),
+                "PollNextcloudLogin",
+                &(request_id,),
+            )
+            .await
+            .map_err(|e| format!("Falló el sondeo: {e}"))?;
+
+        let raw: String = reply
+            .body()
+            .deserialize()
+            .map_err(|e| format!("Respuesta inválida del gestor de cuentas: {e}"))?;
+        let estado: NextcloudPoll = serde_json::from_str(&raw)
+            .map_err(|e| format!("No se pudo interpretar el sondeo: {e}"))?;
+
+        if estado.status == "done" {
+            let account_id = estado
+                .account_id
+                .ok_or_else(|| "el servicio dijo «listo» sin dar la cuenta".to_string())?;
+            log_debug(&format!("Cuenta de Nextcloud conectada (id: {account_id})"));
+            return Ok(account_id);
+        }
+    }
+
+    Err("se agotó el tiempo esperando que apruebes el acceso en el navegador".into())
 }
 
 /// Cuánto se espera a que la persona termine en el navegador.
@@ -616,5 +731,54 @@ mod tests {
         // contra un request_id vencido, y el error diría «autorización
         // desconocida» en vez de «se te fue el tiempo».
         assert_eq!(ESPERA_DEL_CALLBACK, std::time::Duration::from_secs(300));
+    }
+}
+
+#[cfg(test)]
+mod tests_nextcloud {
+    use super::*;
+
+    #[test]
+    fn se_interpreta_el_inicio_de_sesion() {
+        let inicio: NextcloudLoginStart = serde_json::from_str(
+            r#"{"request_id":"abc","login_url":"https://nube.ejemplo.com/index.php/login/v2/flow/xyz"}"#,
+        )
+        .unwrap();
+        assert_eq!(inicio.request_id, "abc");
+        assert!(inicio.login_url.starts_with("https://"));
+    }
+
+    /// El caso normal de los primeros sondeos. Si `account_id` no fuera
+    /// opcional, la respuesta «pendiente» no se podría interpretar y el bucle
+    /// cortaría con un error en el primer intento.
+    #[test]
+    fn un_sondeo_pendiente_no_trae_cuenta_y_esta_bien() {
+        let estado: NextcloudPoll = serde_json::from_str(r#"{"status":"pending"}"#).unwrap();
+        assert_eq!(estado.status, "pending");
+        assert_eq!(estado.account_id, None);
+    }
+
+    #[test]
+    fn un_sondeo_terminado_trae_la_cuenta() {
+        let estado: NextcloudPoll =
+            serde_json::from_str(r#"{"status":"done","account_id":"la-cuenta"}"#).unwrap();
+        assert_eq!(estado.status, "done");
+        assert_eq!(estado.account_id.as_deref(), Some("la-cuenta"));
+    }
+
+    /// El tope del bucle es el mismo que el del servicio, que descarta el flujo
+    /// a los cinco minutos. Sondear más allá sería preguntar por un
+    /// `request_id` que ya no existe, y el error diría «autorización
+    /// desconocida» en vez de «se te fue el tiempo».
+    #[test]
+    fn el_bucle_no_sondea_mas_alla_de_lo_que_el_servicio_recuerda() {
+        assert_eq!(ESPERA_DEL_CALLBACK, std::time::Duration::from_secs(300));
+        assert!(
+            INTERVALO_DE_SONDEO < ESPERA_DEL_CALLBACK,
+            "el intervalo tiene que caber en la espera"
+        );
+        // Y bastante espaciado para no golpear el servidor de alguien con
+        // decenas de peticiones por minuto.
+        assert!(INTERVALO_DE_SONDEO >= std::time::Duration::from_secs(1));
     }
 }
