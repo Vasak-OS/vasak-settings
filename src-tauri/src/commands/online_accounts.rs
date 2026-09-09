@@ -175,10 +175,28 @@ pub async fn list_accounts() -> Result<Vec<AccountInfo>, String> {
     serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la lista: {e}"))
 }
 
-/// Removes an account. The daemon clears its secrets along with it, so nothing
-/// is left holding a live credential.
+/// Cómo salió el borrado de una cuenta.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AccountRemoval {
+    pub removed: bool,
+    /// Si se le pudo avisar al proveedor que la autorización terminó.
+    ///
+    /// Cuando es `false` la cuenta **igual se borró**: negarse dejaría a alguien
+    /// sin poder sacar una cuenta por no tener red. Lo que queda es algo que
+    /// puede terminar desde la web del proveedor, y por eso se informa en vez de
+    /// callarse.
+    pub revoked: bool,
+    pub detail: String,
+}
+
+/// Borra una cuenta y le avisa al proveedor.
+///
+/// El servicio limpia los secretos junto con ella, así que no queda nada
+/// guardando una credencial viva de este lado. Del otro lado, le avisa al
+/// proveedor que la autorización terminó — sin eso, borrar la cuenta la escondía
+/// en vez de cortar el acceso.
 #[tauri::command]
-pub async fn remove_account(account_id: String) -> Result<(), String> {
+pub async fn remove_account(account_id: String) -> Result<AccountRemoval, String> {
     let connection = account_manager().await?;
     let reply = connection
         .call_method(
@@ -191,17 +209,19 @@ pub async fn remove_account(account_id: String) -> Result<(), String> {
         .await
         .map_err(|e| format!("No se pudo eliminar la cuenta: {e}"))?;
 
-    let removed: bool = reply
+    let raw: String = reply
         .body()
         .deserialize()
         .map_err(|e| format!("Respuesta inválida del gestor de cuentas: {e}"))?;
+    let resultado: AccountRemoval =
+        serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))?;
 
-    if !removed {
+    if !resultado.removed {
         return Err(format!("No se encontró la cuenta '{account_id}'"));
     }
 
     log_debug(&format!("Account removed: {account_id}"));
-    Ok(())
+    Ok(resultado)
 }
 
 /// Guarda **tus** credenciales para un proveedor OAuth2.

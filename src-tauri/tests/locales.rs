@@ -428,3 +428,27 @@ fn la_nota_del_secreto_aclara_que_no_es_uno() {
         );
     }
 }
+
+/// El aviso de cuando la cuenta se borró pero no se le pudo avisar al proveedor.
+///
+/// Es el texto que convierte «se borró» en «se borró, y queda esto por hacer».
+/// Sin él, la persona creería que cortó el acceso cuando la autorización sigue
+/// viva del otro lado — que es exactamente el estado que la revocación viene a
+/// evitar.
+#[test]
+fn se_avisa_cuando_no_se_pudo_revocar() {
+    for idioma in ["es", "en"] {
+        let raiz = catalogo(idioma);
+        let texto = raiz["views"]["onlineAccounts"]["errors"]["notRevoked"]
+            .as_str()
+            .unwrap_or_default();
+
+        assert!(
+            !texto.trim().is_empty(),
+            "falta views.onlineAccounts.errors.notRevoked en {idioma}.yml"
+        );
+        // Lleva el nombre de la cuenta y el motivo: sin los dos marcadores el
+        // aviso no dice cuál cuenta ni por qué.
+        assert!(texto.contains("{0}") && texto.contains("{1}"), "{idioma}: {texto}");
+    }
+}

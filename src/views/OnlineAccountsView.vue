@@ -551,11 +551,18 @@ const cancelCustomForm = () => {
 const deleteAccount = async (account: AccountInfo) => {
 	try {
 		errors.value = '';
-		await removeAccount(account.id);
-		success.value = t('views.onlineAccounts.accountRemoved').replace(
-			'{0}',
-			account.display_name || account.provider
-		);
+		const resultado = await removeAccount(account.id);
+		const nombre = account.display_name || account.provider_type;
+
+		success.value = t('views.onlineAccounts.accountRemoved').replace('{0}', nombre);
+
+		// La cuenta se borró igual, pero del otro lado quedó algo que la persona
+		// puede terminar. Va como aviso y no como error: no falló lo que pidió.
+		if (!resultado.revoked) {
+			errors.value = t('views.onlineAccounts.errors.notRevoked')
+				.replace('{0}', nombre)
+				.replace('{1}', resultado.detail);
+		}
 		await fetchAccounts();
 	} catch (err) {
 		errors.value = t('views.onlineAccounts.errors.deleteAccount').replace('{0}', String(err));

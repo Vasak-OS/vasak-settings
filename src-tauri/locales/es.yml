@@ -1049,6 +1049,7 @@ views:
     customAdded: Cuenta personalizada agregada correctamente
     accountRemoved: Cuenta de {0} eliminada.
     errors:
+      notRevoked: 'La cuenta de {0} se borró de este equipo, pero no se le pudo avisar al proveedor ({1}). Conviene quitar el acceso desde su web.'
       discoverFailed: 'No se pudo buscar: {0}'
       serverRequired: Hay que escribir la dirección del servidor
       probeFailed: 'No se pudo probar la conexión: {0}'
