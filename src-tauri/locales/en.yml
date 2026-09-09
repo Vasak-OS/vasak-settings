@@ -965,6 +965,13 @@ views:
     description: Connect your mail, calendar and contacts services.
     providers: Providers
     customProvider: Custom server
+    unavailable:
+      google: >-
+        Not yet. Google requires registering the application, and for mail it
+        also wants a paid audit — so Gmail will come in over IMAP.
+      nextcloud: >-
+        Not yet. It is first in line: your own server hands out the
+        credentials, with nothing to register with anyone.
     linkedAccounts: Linked accounts
     customDialogDescription: Set up your mail and sync server details manually.
     displayName: Display name
@@ -977,9 +984,7 @@ views:
     password: Password
     passwordPlaceholder: App password
     addAccount: Add account
-    googleAdded: Google account added successfully
     customAdded: Custom account added successfully
-    providerRegistered: "{0} account registered."
     accountRemoved: "{0} account removed."
     errors:
       nameRequired: The name is required
@@ -989,8 +994,6 @@ views:
       usernameRequired: The user is required
       passwordRequired: The password is required
       loadAccounts: 'Error loading accounts: {0}'
-      googleAuth: 'Error in Google authentication: {0}'
-      registerProvider: 'Error registering {0}: {1}'
       registerCustom: 'Error registering custom account: {0}'
       deleteAccount: 'Error deleting account: {0}'
     permissions:
@@ -1006,7 +1009,9 @@ views:
       allow: Allow
       deny: Don't allow
       note: >-
-        Changing a permission asks for your password.
+        Changing a permission asks for your password. A permission covers one
+        application and one kind of data: allow mail and it can use the mail
+        from every one of your accounts.
       resources:
         accountEmail: Account email
         accountCalendar: Calendar
