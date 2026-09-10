@@ -56,6 +56,7 @@ sidebar:
     brightness: Brightness and night light
     power: Power
     monitors: Displays
+    actualizaciones: Updates
     privacySecurity: Privacy and security
     networkWifi: Wi-Fi
     networkBluetooth: Bluetooth
@@ -182,6 +183,35 @@ wayfire:
       description: Rotates a window with the mouse.
 
 views:
+  actualizaciones:
+    titulo: "Updates"
+    intro: "What there is to update, and what to look at first."
+    comprobando: "Checking…"
+    alDia: "The system is up to date"
+    alDiaDetalle: "There are no packages to update."
+    hayPaquetes: "{0} packages to update"
+    unPaquete: "1 package to update"
+    antesDeAplicar: "Before applying"
+    kernelCambia: "The kernel changes"
+    kernelCambiaDetalle: >-
+      You will need to restart afterwards. Until then you cannot plug in anything
+      that needs a module that is not loaded yet: a printer, a phone, a USB
+      network card.
+    bootJusto: "Little room on the boot partition"
+    bootJustoDetalle: >-
+      There are {0} free and writing the new boot files safely would take {1}. The
+      update will still work, but if it is interrupted —a power cut, a battery
+      running out— the boot files can be left half written and the machine will
+      not start. Keep it plugged in and do not turn it off while it runs.
+    pacnewTitulo: "Configuration files not applied"
+    pacnewDetalle: >-
+      An earlier update left a new version next to yours without replacing it. It
+      breaks nothing today; it is found months later.
+    comoAplicar: "How to apply"
+    comoAplicarDetalle: "You cannot apply it from here yet. In a terminal:"
+    aplicarNota: >-
+      Applying it from this screen needs administrator privileges, and that will
+      go through a system service rather than this window.
   privacySecurity:
     title: Privacy and security
     description: >-

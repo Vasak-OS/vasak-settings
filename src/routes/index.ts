@@ -135,6 +135,11 @@ const routes = [
 		component: () => import('@/views/LanguageKeyboardView.vue'),
 	},
 	{
+		path: '/actualizaciones',
+		name: 'actualizaciones',
+		component: () => import('@/views/ActualizacionesView.vue'),
+	},
+	{
 		path: '/privacy-security',
 		name: 'privacy-security',
 		component: () => import('@/views/PrivacySecurityView.vue'),

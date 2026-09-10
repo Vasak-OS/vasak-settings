@@ -145,7 +145,7 @@ onMounted(load);
 			</p>
 		</header>
 
-		<AlertMessage v-if="errorMessage" type="error" :message="errorMessage" />
+		<AlertMessage v-if="errorMessage" tone="error" :message="errorMessage" />
 
 		<p v-if="loading" class="text-sm text-tx-muted">{{ t('common.loading') }}</p>
 
