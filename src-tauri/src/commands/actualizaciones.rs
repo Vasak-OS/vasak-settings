@@ -19,8 +19,8 @@
 use std::process::Command;
 
 use crate::tools::actualizaciones::{
-    espacio_necesario_en_boot, es_paquete_de_kernel, parsear_actualizaciones, parsear_pacnew,
-    Actualizacion, Preflight,
+    espacio_necesario_en_boot, es_paquete_de_kernel, ocupado_por_el_mayor,
+    parsear_actualizaciones, parsear_pacnew, Actualizacion, Preflight,
 };
 
 /// Dónde vive el kernel una vez copiado por el hook de mkinitcpio.
@@ -63,7 +63,7 @@ pub fn preflight_actualizacion() -> Preflight {
         .map(|a| a.nombre.clone())
         .collect();
 
-    let necesario = espacio_necesario_en_boot(kernels.len(), ocupado_por_un_kernel());
+    let necesario = espacio_necesario_en_boot(kernels.len(), ocupado_por_el_kernel_mas_grande());
     Preflight::nuevo(
         pendientes.len(),
         kernels,
@@ -73,17 +73,23 @@ pub fn preflight_actualizacion() -> Preflight {
     )
 }
 
-/// Lo que hoy ocupa en `/boot` el juego de archivos de **un** kernel.
+/// Lo que hoy ocupa en `/boot` el juego de archivos del kernel **más grande**.
 ///
-/// Se cuenta lo que hay y se divide por cuántos kernels hay, en vez de sumar
-/// todo: con dos kernels instalados, `/boot` ocupa el doble de lo que hace
-/// falta para actualizar uno.
+/// El más grande y no el promedio: con un `linux` de 600 MiB y un `linux-lts`
+/// de 200, el promedio da 400 y alcanzaría para dejar pasar la actualización
+/// del grande con 400 libres, que es justo la que no entra. Lo que hace falta
+/// acá es una cota superior.
+///
+/// Los archivos se agrupan por kernel usando lo que va después del guion:
+/// `vmlinuz-linux` e `initramfs-linux.img` son del mismo, `initramfs-linux-
+/// fallback.img` también. El microcódigo no es de ninguno —lo comparten— y se
+/// suma aparte, porque una actualización de `intel-ucode` también lo reescribe.
 ///
 /// Si no se puede leer —`/boot` con `fmask=0077` no lo lista quien no es
 /// root—, se devuelve una estimación fija en vez de cero. Cero diría «no hace
 /// falta espacio», que es la respuesta peligrosa: dejaría pasar justo la
 /// actualización que no entra.
-fn ocupado_por_un_kernel() -> u64 {
+fn ocupado_por_el_kernel_mas_grande() -> u64 {
     /// Un kernel con sus dos initramfs y el microcódigo, redondeado para
     /// arriba. Medido sobre una instalación con `linux-cachyos`: 149 MiB el
     /// paquete, y en `/boot` el juego entero da del orden de 250 MiB.
@@ -92,27 +98,17 @@ fn ocupado_por_un_kernel() -> u64 {
     let Ok(entradas) = std::fs::read_dir(DIR_ARRANQUE) else {
         return ESTIMACION;
     };
+    let archivos: Vec<(String, u64)> = entradas
+        .flatten()
+        .map(|e| {
+            (
+                e.file_name().to_string_lossy().into_owned(),
+                e.metadata().map(|m| m.len()).unwrap_or(0),
+            )
+        })
+        .collect();
 
-    let (mut total, mut kernels) = (0u64, 0u64);
-    for entrada in entradas.flatten() {
-        let nombre = entrada.file_name();
-        let nombre = nombre.to_string_lossy();
-        if !(nombre.starts_with("vmlinuz")
-            || nombre.starts_with("initramfs")
-            || nombre.ends_with("-ucode.img"))
-        {
-            continue;
-        }
-        if nombre.starts_with("vmlinuz") {
-            kernels += 1;
-        }
-        total += entrada.metadata().map(|m| m.len()).unwrap_or(0);
-    }
-
-    if kernels == 0 || total == 0 {
-        return ESTIMACION;
-    }
-    total / kernels
+    ocupado_por_el_mayor(&archivos).unwrap_or(ESTIMACION)
 }
 
 /// Lo libre en el sistema de archivos donde está `/boot`.

@@ -107,13 +107,17 @@ fn sin_escapes(linea: &str) -> String {
 /// Recibe la lista de archivos —lo que devuelve `pacman -Qlq`— y no el nombre,
 /// para que la decisión se pueda probar sin tener el paquete instalado.
 pub fn es_paquete_de_kernel(archivos: &str) -> bool {
+    // Con el prefijo, no sólo el nombre del archivo. `usr/share/ejemplo/vmlinuz`
+    // termina igual y no es un kernel: darlo por bueno haría pedir espacio en
+    // `/boot` y avisar que hay que reiniciar por un paquete que no tiene nada
+    // que ver.
+    //
     // El `trim_end_matches('/')` es porque `pacman -Qlq` lista los directorios
-    // con barra al final, y sin sacarla un directorio llamado `vmlinuz/` no
-    // casaría —ni tendría que casar, pero la línea queda más clara así—.
+    // con barra al final.
     archivos
         .lines()
         .map(|l| l.trim().trim_end_matches('/'))
-        .any(|l| l.ends_with("/vmlinuz"))
+        .any(|l| l.trim_start_matches('/').starts_with("usr/lib/modules/") && l.ends_with("/vmlinuz"))
 }
 
 /// El veredicto de la comprobación previa.
@@ -178,14 +182,58 @@ impl Preflight {
 /// vienen en ningún paquete—.
 ///
 /// Así que se estima con lo que hay: para cada kernel que se actualiza, tanto
-/// como ocupa hoy su juego de archivos en `/boot`. Es la mejor estimación
-/// disponible y además va del lado seguro, porque mkinitcpio escribe a un
-/// temporal y renombra: durante ese rato conviven el archivo viejo y el nuevo.
+/// como ocupa hoy el juego de archivos **más grande**. Es la mejor estimación
+/// disponible y va del lado seguro, porque mkinitcpio escribe a un temporal y
+/// renombra: durante ese rato conviven el archivo viejo y el nuevo.
 ///
-/// `ocupado_por_kernel` es lo que hoy ocupan en `/boot` los archivos de **un**
-/// kernel: su `vmlinuz` y sus initramfs.
-pub fn espacio_necesario_en_boot(kernels: usize, ocupado_por_kernel: u64) -> u64 {
-    (kernels as u64).saturating_mul(ocupado_por_kernel)
+/// El más grande y no el promedio. Con un `linux` de 600 MiB y un `linux-lts`
+/// de 200, el promedio da 400 y alcanzaría para dejar pasar la actualización
+/// del grande con 400 libres — que es justo la que no entra. Un promedio no es
+/// una cota superior, y acá lo que hace falta es una cota superior.
+pub fn espacio_necesario_en_boot(kernels: usize, ocupado_por_el_mayor: u64) -> u64 {
+    (kernels as u64).saturating_mul(ocupado_por_el_mayor)
+}
+
+/// Lo que ocupa el juego de archivos del kernel **más grande**, más el
+/// microcódigo.
+///
+/// Recibe los archivos de `/boot` como `(nombre, bytes)` y devuelve `None` si
+/// no hay ninguno reconocible — que el que llama traduce a una estimación fija
+/// en vez de a cero, porque cero diría «no hace falta espacio» y dejaría pasar
+/// justo la actualización que no entra.
+///
+/// Se agrupa por kernel con lo que va después del guion: `vmlinuz-linux` e
+/// `initramfs-linux.img` son del mismo, e `initramfs-linux-fallback.img`
+/// también. El microcódigo no es de ninguno —lo comparten— y se suma aparte,
+/// porque una actualización de `intel-ucode` también lo reescribe.
+pub fn ocupado_por_el_mayor(archivos: &[(String, u64)]) -> Option<u64> {
+    use std::collections::HashMap;
+
+    let mut por_kernel: HashMap<&str, u64> = HashMap::new();
+    let mut microcodigo = 0u64;
+
+    for (nombre, tamano) in archivos {
+        if nombre.ends_with("-ucode.img") {
+            microcodigo += tamano;
+            continue;
+        }
+        let Some(resto) = nombre
+            .strip_prefix("vmlinuz-")
+            .or_else(|| nombre.strip_prefix("initramfs-"))
+        else {
+            continue;
+        };
+        let base = resto
+            .trim_end_matches(".img")
+            .trim_end_matches("-fallback");
+        *por_kernel.entry(base).or_default() += tamano;
+    }
+
+    por_kernel
+        .values()
+        .max()
+        .filter(|m| **m > 0)
+        .map(|m| m + microcodigo)
 }
 
 /// Los archivos `.pacnew` y `.pacsave` que dejó pacman, de la salida de
@@ -272,11 +320,16 @@ paquete 1.0 -> 2.0
         assert_eq!(a[0].version_nueva, "7.2.4-1");
     }
 
-    /// **Un kernel se reconoce por sus archivos, no por su nombre.**
+    /// **Un kernel se reconoce por dónde pone su imagen, no por su nombre ni
+    /// por el nombre del archivo.**
     ///
-    /// Es la diferencia entre funcionar en Arch y funcionar en cualquier
-    /// derivada: `linux-cachyos-bore` es un kernel y `linux-firmware` no, y la
-    /// lista de sabores no termina nunca. Lo invariable es dónde va la imagen.
+    /// Lo primero es la diferencia entre funcionar en Arch y funcionar en
+    /// cualquier derivada: `linux-cachyos-bore` es un kernel y
+    /// `linux-firmware` no, y la lista de sabores no termina nunca.
+    ///
+    /// Lo segundo es que la ruta entera importa: un `vmlinuz` suelto en
+    /// `usr/share` no es un kernel, y darlo por bueno haría pedir espacio en
+    /// `/boot` y avisar que hay que reiniciar por un paquete cualquiera.
     #[test]
     fn un_kernel_se_reconoce_por_donde_pone_su_imagen() {
         let kernel = "\
@@ -298,6 +351,62 @@ usr/lib/firmware/amdgpu/aldebaran_sos.bin
         assert!(!es_paquete_de_kernel("usr/share/doc/foo/vmlinuz.txt\n"));
         assert!(!es_paquete_de_kernel("usr/bin/vmlinuz-tool\n"));
         assert!(!es_paquete_de_kernel(""));
+
+        // Y tampoco un archivo que se llame igual pero esté en otro lado. El
+        // nombre del archivo solo no alcanza: lo que define a un kernel es que
+        // su imagen esté donde el hook de mkinitcpio la va a buscar.
+        assert!(!es_paquete_de_kernel("usr/share/ejemplo/vmlinuz\n"));
+        assert!(!es_paquete_de_kernel("opt/loquesea/vmlinuz\n"));
+        // Con barra al principio, como lo lista `pacman -Qoq`, sí.
+        assert!(es_paquete_de_kernel("/usr/lib/modules/6.1.0/vmlinuz\n"));
+    }
+
+    /// **Del `/boot` se toma el kernel más grande, no el promedio.**
+    ///
+    /// Es el caso que hace la diferencia: con un `linux` de 600 MiB y un
+    /// `linux-lts` de 200, el promedio da 400 y alcanzaría para dejar pasar la
+    /// actualización del grande con 400 libres — que es justo la que no entra.
+    /// Un promedio no es una cota superior, y acá hace falta una cota
+    /// superior.
+    #[test]
+    fn del_boot_se_toma_el_kernel_mas_grande() {
+        let mib = 1024 * 1024;
+        let archivos: Vec<(String, u64)> = vec![
+            ("vmlinuz-linux".into(), 20 * mib),
+            ("initramfs-linux.img".into(), 80 * mib),
+            ("initramfs-linux-fallback.img".into(), 500 * mib),
+            ("vmlinuz-linux-lts".into(), 20 * mib),
+            ("initramfs-linux-lts.img".into(), 60 * mib),
+            ("initramfs-linux-lts-fallback.img".into(), 120 * mib),
+            ("intel-ucode.img".into(), 5 * mib),
+            ("amd-ucode.img".into(), mib),
+            // Lo que no es de ningún kernel no cuenta.
+            ("grub".into(), 900 * mib),
+            ("loader".into(), 900 * mib),
+        ];
+
+        // El mayor es `linux`: 20+80+500 = 600. Más los 6 de microcódigo.
+        assert_eq!(ocupado_por_el_mayor(&archivos), Some(606 * mib));
+
+        // El promedio de los dos daría (600+200)/2 = 400, que es menos que lo
+        // que hace falta para el grande.
+        assert!(ocupado_por_el_mayor(&archivos).unwrap() > 400 * mib);
+    }
+
+    /// **Sin archivos reconocibles no se dice «cero».**
+    ///
+    /// Cero querría decir «no hace falta espacio», que es la respuesta
+    /// peligrosa: dejaría pasar justo la actualización que no entra. El que
+    /// llama lo traduce a una estimación fija.
+    #[test]
+    fn un_boot_ilegible_no_da_cero() {
+        assert_eq!(ocupado_por_el_mayor(&[]), None);
+        assert_eq!(
+            ocupado_por_el_mayor(&[("grub".into(), 900), ("EFI".into(), 100)]),
+            None
+        );
+        // Ni uno donde el único kernel está vacío.
+        assert_eq!(ocupado_por_el_mayor(&[("vmlinuz-linux".into(), 0)]), None);
     }
 
     /// **Los `.pacnew` se leen y los avisos no.**
