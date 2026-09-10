@@ -133,16 +133,21 @@ pub struct Preflight {
     pub boot_disponible_bytes: u64,
     /// Lo que la actualización va a necesitar ahí. Cero si no cambia el kernel.
     pub boot_necesario_bytes: u64,
-    /// Si entra en `/boot`. Es la única comprobación que **frena**: las demás
-    /// avisan. Un `pacman` que se queda sin espacio a mitad de escribir el
-    /// initramfs deja el kernel nuevo sin su initramfs y el viejo ya no está,
-    /// o sea un sistema que no arranca, y eso no se arregla desde el
-    /// escritorio.
+    /// Si en `/boot` hay lugar para escribir el initramfs **con red**.
+    ///
+    /// No es «entra o no entra». mkinitcpio, cuando le sobra espacio, escribe
+    /// a un temporal y renombra, así que un corte a mitad de una actualización
+    /// de kernel deja el initramfs anterior entero. Cuando no le sobra,
+    /// escribe encima del archivo: funciona igual, pero una interrupción deja
+    /// el initramfs truncado y el sistema no arranca.
+    ///
+    /// O sea que esto avisa de un riesgo, no de una imposibilidad — y por eso
+    /// el aviso tiene que decir eso y no «no hay espacio».
     ///
     /// Va calculado y no se recalcula en la pantalla, a propósito: una regla
-    /// que decide si algo se frena y vive en dos lados es una regla que se
-    /// separa, y el lado que quede desactualizado es el que deja pasar.
-    pub entra_en_boot: bool,
+    /// que dice si algo es riesgoso y vive en dos lados es una regla que se
+    /// separa, y el lado que quede desactualizado es el que calla.
+    pub hay_lugar_con_red: bool,
     /// Si hay que reiniciar después. Cambió el kernel: los módulos de una
     /// versión no los carga un kernel de otra, así que hasta reiniciar no se
     /// puede enchufar nada que necesite uno que todavía no esté cargado — una
@@ -164,7 +169,7 @@ impl Preflight {
     ) -> Self {
         Self {
             paquetes,
-            entra_en_boot: boot_disponible_bytes >= boot_necesario_bytes,
+            hay_lugar_con_red: boot_disponible_bytes >= boot_necesario_bytes,
             pide_reinicio: !kernels.is_empty(),
             kernels,
             pacnew,
@@ -174,66 +179,64 @@ impl Preflight {
     }
 }
 
-/// Cuánto espacio va a hacer falta en `/boot` para actualizar los kernels.
+/// Cuánto espacio libre hace falta en `/boot` para que mkinitcpio escriba
+/// **de forma segura**.
 ///
-/// No sale del tamaño del paquete: el kernel moderno pone su imagen en
-/// `/usr/lib/modules`, y lo que va a `/boot` lo escribe después el hook de
-/// mkinitcpio —la imagen copiada y **los dos** initramfs, que se generan y no
-/// vienen en ningún paquete—.
+/// El número no es una invención nuestra: es el criterio que usa mkinitcpio
+/// para decidir cómo escribe (`/usr/bin/mkinitcpio`, en `build_image`):
 ///
-/// Así que se estima con lo que hay: para cada kernel que se actualiza, tanto
-/// como ocupa hoy el juego de archivos **más grande**. Es la mejor estimación
-/// disponible y va del lado seguro, porque mkinitcpio escribe a un temporal y
-/// renombra: durante ese rato conviven el archivo viejo y el nuevo.
+/// ```text
+/// (( $((curr_size + (curr_size/4))) < space_left_on_device )) && compressout="$out".tmp
+/// ```
 ///
-/// El más grande y no el promedio. Con un `linux` de 600 MiB y un `linux-lts`
-/// de 200, el promedio da 400 y alcanzaría para dejar pasar la actualización
-/// del grande con 400 libres — que es justo la que no entra. Un promedio no es
-/// una cota superior, y acá lo que hace falta es una cota superior.
-pub fn espacio_necesario_en_boot(kernels: usize, ocupado_por_el_mayor: u64) -> u64 {
-    (kernels as u64).saturating_mul(ocupado_por_el_mayor)
+/// Con ese espacio escribe a `$out.tmp` y renombra, así que una interrupción
+/// —un corte de luz, un apagón a mitad de una actualización de kernel— deja el
+/// initramfs anterior entero. Sin ese espacio **escribe encima del archivo**:
+/// funciona igual, pero si se corta a la mitad el initramfs queda truncado y
+/// el sistema no arranca.
+///
+/// O sea que la comprobación no es «entra o no entra»: es «se puede escribir
+/// con red o sin red».
+///
+/// # Lo que esto **no** es
+///
+/// La primera versión pedía un juego de archivos de kernel entero por cada
+/// kernel que se actualiza, y estaba mal por sobrada: mkinitcpio no necesita
+/// eso, y con dos o tres kernels en un `/boot` de 1 GiB habría frenado
+/// actualizaciones que funcionan. Un preflight que bloquea lo que anda es peor
+/// que no tenerlo, porque lo primero que se aprende es a saltearlo.
+///
+/// Y es por el initramfs más grande y no por la suma: los kernels se escriben
+/// de a uno y cada renombre libera el anterior, así que el pico lo marca el
+/// más grande, no el total.
+pub fn espacio_necesario_en_boot(hay_kernels: bool, mayor_initramfs: u64) -> u64 {
+    if !hay_kernels {
+        return 0;
+    }
+    mayor_initramfs.saturating_add(mayor_initramfs / 4)
 }
 
-/// Lo que ocupa el juego de archivos del kernel **más grande**, más el
-/// microcódigo.
+/// El initramfs más grande que hay en `/boot`.
+///
+/// Es el archivo que marca el pico de espacio durante una actualización de
+/// kernel: mkinitcpio decide cómo escribir mirando **el tamaño del archivo que
+/// está por reemplazar**, no el total de la partición.
+///
+/// El de respaldo es siempre el más grande —lleva todos los módulos, sin la
+/// detección de hardware que achica al normal—, así que en la práctica es el
+/// que sale de acá.
 ///
 /// Recibe los archivos de `/boot` como `(nombre, bytes)` y devuelve `None` si
-/// no hay ninguno reconocible — que el que llama traduce a una estimación fija
-/// en vez de a cero, porque cero diría «no hace falta espacio» y dejaría pasar
-/// justo la actualización que no entra.
-///
-/// Se agrupa por kernel con lo que va después del guion: `vmlinuz-linux` e
-/// `initramfs-linux.img` son del mismo, e `initramfs-linux-fallback.img`
-/// también. El microcódigo no es de ninguno —lo comparten— y se suma aparte,
-/// porque una actualización de `intel-ucode` también lo reescribe.
-pub fn ocupado_por_el_mayor(archivos: &[(String, u64)]) -> Option<u64> {
-    use std::collections::HashMap;
-
-    let mut por_kernel: HashMap<&str, u64> = HashMap::new();
-    let mut microcodigo = 0u64;
-
-    for (nombre, tamano) in archivos {
-        if nombre.ends_with("-ucode.img") {
-            microcodigo += tamano;
-            continue;
-        }
-        let Some(resto) = nombre
-            .strip_prefix("vmlinuz-")
-            .or_else(|| nombre.strip_prefix("initramfs-"))
-        else {
-            continue;
-        };
-        let base = resto
-            .trim_end_matches(".img")
-            .trim_end_matches("-fallback");
-        *por_kernel.entry(base).or_default() += tamano;
-    }
-
-    por_kernel
-        .values()
+/// no hay ninguno: el que llama lo traduce a una estimación fija en vez de a
+/// cero, porque cero diría «no hace falta espacio» y dejaría pasar justo la
+/// actualización que no tiene lugar.
+pub fn mayor_initramfs(archivos: &[(String, u64)]) -> Option<u64> {
+    archivos
+        .iter()
+        .filter(|(nombre, _)| nombre.starts_with("initramfs-") && nombre.ends_with(".img"))
+        .map(|(_, tamano)| *tamano)
         .max()
-        .filter(|m| **m > 0)
-        .map(|m| m + microcodigo)
+        .filter(|m| *m > 0)
 }
 
 /// Los archivos `.pacnew` y `.pacsave` que dejó pacman, de la salida de
@@ -361,52 +364,42 @@ usr/lib/firmware/amdgpu/aldebaran_sos.bin
         assert!(es_paquete_de_kernel("/usr/lib/modules/6.1.0/vmlinuz\n"));
     }
 
-    /// **Del `/boot` se toma el kernel más grande, no el promedio.**
+    /// **Lo que marca el pico es el initramfs más grande.**
     ///
-    /// Es el caso que hace la diferencia: con un `linux` de 600 MiB y un
-    /// `linux-lts` de 200, el promedio da 400 y alcanzaría para dejar pasar la
-    /// actualización del grande con 400 libres — que es justo la que no entra.
-    /// Un promedio no es una cota superior, y acá hace falta una cota
-    /// superior.
+    /// Y no la suma ni el juego entero de un kernel: mkinitcpio mira el
+    /// tamaño **del archivo que está por reemplazar** para decidir cómo
+    /// escribirlo, y los kernels se escriben de a uno, liberando el anterior
+    /// en cada renombre.
     #[test]
-    fn del_boot_se_toma_el_kernel_mas_grande() {
+    fn el_pico_lo_marca_el_initramfs_mas_grande() {
         let mib = 1024 * 1024;
         let archivos: Vec<(String, u64)> = vec![
             ("vmlinuz-linux".into(), 20 * mib),
             ("initramfs-linux.img".into(), 80 * mib),
             ("initramfs-linux-fallback.img".into(), 500 * mib),
             ("vmlinuz-linux-lts".into(), 20 * mib),
-            ("initramfs-linux-lts.img".into(), 60 * mib),
             ("initramfs-linux-lts-fallback.img".into(), 120 * mib),
             ("intel-ucode.img".into(), 5 * mib),
-            ("amd-ucode.img".into(), mib),
-            // Lo que no es de ningún kernel no cuenta.
+            // Lo que no es un initramfs no cuenta, por grande que sea.
             ("grub".into(), 900 * mib),
-            ("loader".into(), 900 * mib),
         ];
-
-        // El mayor es `linux`: 20+80+500 = 600. Más los 6 de microcódigo.
-        assert_eq!(ocupado_por_el_mayor(&archivos), Some(606 * mib));
-
-        // El promedio de los dos daría (600+200)/2 = 400, que es menos que lo
-        // que hace falta para el grande.
-        assert!(ocupado_por_el_mayor(&archivos).unwrap() > 400 * mib);
+        assert_eq!(mayor_initramfs(&archivos), Some(500 * mib));
     }
 
-    /// **Sin archivos reconocibles no se dice «cero».**
+    /// **Sin initramfs no se dice «cero».**
     ///
     /// Cero querría decir «no hace falta espacio», que es la respuesta
-    /// peligrosa: dejaría pasar justo la actualización que no entra. El que
-    /// llama lo traduce a una estimación fija.
+    /// peligrosa: callaría justo cuando no hay lugar. El que llama lo traduce
+    /// a una estimación fija.
     #[test]
     fn un_boot_ilegible_no_da_cero() {
-        assert_eq!(ocupado_por_el_mayor(&[]), None);
+        assert_eq!(mayor_initramfs(&[]), None);
         assert_eq!(
-            ocupado_por_el_mayor(&[("grub".into(), 900), ("EFI".into(), 100)]),
-            None
+            mayor_initramfs(&[("grub".into(), 900), ("vmlinuz-linux".into(), 100)]),
+            None,
+            "un vmlinuz no es un initramfs"
         );
-        // Ni uno donde el único kernel está vacío.
-        assert_eq!(ocupado_por_el_mayor(&[("vmlinuz-linux".into(), 0)]), None);
+        assert_eq!(mayor_initramfs(&[("initramfs-linux.img".into(), 0)]), None);
     }
 
     /// **Los `.pacnew` se leen y los avisos no.**
@@ -431,14 +424,18 @@ esto no es una ruta
         );
     }
 
-    /// **La comprobación de `/boot` frena, y las demás avisan.**
+    /// **La comprobación de `/boot` avisa de un riesgo, no de un bloqueo.**
     ///
-    /// Es la única que puede dejar un sistema que no arranca: `pacman` sin
-    /// espacio a mitad de escribir el initramfs deja el kernel nuevo sin el
-    /// suyo y el viejo ya no está.
+    /// Con espacio de sobra mkinitcpio escribe a un temporal y renombra: un
+    /// corte a mitad deja el initramfs anterior entero. Sin espacio de sobra
+    /// escribe encima, y una interrupción deja el initramfs truncado y el
+    /// sistema sin arrancar.
     #[test]
     fn el_veredicto_dice_lo_que_frena_y_lo_que_avisa() {
-        let necesario = 300 * 1024 * 1024;
+        let necesario = espacio_necesario_en_boot(true, 240 * 1024 * 1024);
+        // El criterio de mkinitcpio: el archivo más 1/4.
+        assert_eq!(necesario, 300 * 1024 * 1024);
+
         let con = |disponible| {
             Preflight::nuevo(
                 40,
@@ -449,10 +446,10 @@ esto no es una ruta
             )
         };
 
-        assert!(con(400 * 1024 * 1024).entra_en_boot);
-        // Justo al borde entra: lo que hace falta es lo que hace falta.
-        assert!(con(necesario).entra_en_boot);
-        assert!(!con(necesario - 1).entra_en_boot);
+        assert!(con(400 * 1024 * 1024).hay_lugar_con_red);
+        // Justo al borde alcanza: lo que hace falta es lo que hace falta.
+        assert!(con(necesario).hay_lugar_con_red);
+        assert!(!con(necesario - 1).hay_lugar_con_red);
         assert!(con(necesario).pide_reinicio);
 
         // Sin cambio de kernel no hace falta espacio ni reiniciar, aunque se
@@ -462,11 +459,11 @@ esto no es una ruta
             Vec::new(),
             Vec::new(),
             0,
-            espacio_necesario_en_boot(0, necesario),
+            espacio_necesario_en_boot(false, 240 * 1024 * 1024),
         );
         assert!(!sin_kernel.pide_reinicio);
         assert_eq!(sin_kernel.boot_necesario_bytes, 0);
-        assert!(sin_kernel.entra_en_boot, "sin kernel siempre entra");
+        assert!(sin_kernel.hay_lugar_con_red, "sin kernel no hay nada que escribir");
     }
 
     /// **Contra el pacman de este equipo: el formato es el que creemos.**
@@ -537,15 +534,21 @@ esto no es una ruta
         }
     }
 
-    /// **Dos kernels que se actualizan piden el doble.**
+    /// **El espacio que se pide es el criterio de mkinitcpio, no un invento.**
+    ///
+    /// `curr_size + curr_size/4 < space_left` es literalmente lo que mira
+    /// mkinitcpio para decidir si escribe a un temporal o encima del archivo.
+    /// Pedir más —un juego de kernel entero, que fue la primera versión—
+    /// frenaría actualizaciones que funcionan, y un preflight que bloquea lo
+    /// que anda es peor que no tenerlo.
     #[test]
-    fn el_espacio_crece_con_la_cantidad_de_kernels() {
-        let uno = 250 * 1024 * 1024;
-        assert_eq!(espacio_necesario_en_boot(0, uno), 0);
-        assert_eq!(espacio_necesario_en_boot(1, uno), uno);
-        assert_eq!(espacio_necesario_en_boot(2, uno), 2 * uno);
-        // Y no desborda con números absurdos, que darían un valor chico y
-        // dejarían pasar la actualización que no entra.
-        assert_eq!(espacio_necesario_en_boot(usize::MAX, u64::MAX), u64::MAX);
+    fn el_espacio_que_se_pide_es_el_de_mkinitcpio() {
+        let mib = 1024 * 1024;
+        assert_eq!(espacio_necesario_en_boot(false, 240 * mib), 0);
+        assert_eq!(espacio_necesario_en_boot(true, 240 * mib), 300 * mib);
+        assert_eq!(espacio_necesario_en_boot(true, 0), 0);
+        // No desborda con números absurdos, que darían un valor chico y
+        // dejarían pasar el caso riesgoso.
+        assert_eq!(espacio_necesario_en_boot(true, u64::MAX), u64::MAX);
     }
 }

@@ -19,8 +19,8 @@
 use std::process::Command;
 
 use crate::tools::actualizaciones::{
-    espacio_necesario_en_boot, es_paquete_de_kernel, ocupado_por_el_mayor,
-    parsear_actualizaciones, parsear_pacnew, Actualizacion, Preflight,
+    espacio_necesario_en_boot, es_paquete_de_kernel, mayor_initramfs, parsear_actualizaciones,
+    parsear_pacnew, Actualizacion, Preflight,
 };
 
 /// Dónde vive el kernel una vez copiado por el hook de mkinitcpio.
@@ -63,7 +63,7 @@ pub fn preflight_actualizacion() -> Preflight {
         .map(|a| a.nombre.clone())
         .collect();
 
-    let necesario = espacio_necesario_en_boot(kernels.len(), ocupado_por_el_kernel_mas_grande());
+    let necesario = espacio_necesario_en_boot(!kernels.is_empty(), el_mayor_initramfs());
     Preflight::nuevo(
         pendientes.len(),
         kernels,
@@ -89,11 +89,15 @@ pub fn preflight_actualizacion() -> Preflight {
 /// root—, se devuelve una estimación fija en vez de cero. Cero diría «no hace
 /// falta espacio», que es la respuesta peligrosa: dejaría pasar justo la
 /// actualización que no entra.
-fn ocupado_por_el_kernel_mas_grande() -> u64 {
-    /// Un kernel con sus dos initramfs y el microcódigo, redondeado para
-    /// arriba. Medido sobre una instalación con `linux-cachyos`: 149 MiB el
-    /// paquete, y en `/boot` el juego entero da del orden de 250 MiB.
-    const ESTIMACION: u64 = 300 * 1024 * 1024;
+fn el_mayor_initramfs() -> u64 {
+    /// Un initramfs de respaldo, redondeado para arriba. Medido sobre una
+    /// instalación con `linux-cachyos`, donde `/boot` entero ocupa 286 MiB con
+    /// un solo kernel.
+    ///
+    /// Se devuelve esto y no cero cuando `/boot` no se puede leer —con
+    /// `fmask=0077` no lo lista quien no es root—: cero diría «no hace falta
+    /// espacio» y callaría justo cuando no hay lugar.
+    const ESTIMACION: u64 = 200 * 1024 * 1024;
 
     let Ok(entradas) = std::fs::read_dir(DIR_ARRANQUE) else {
         return ESTIMACION;
@@ -108,7 +112,7 @@ fn ocupado_por_el_kernel_mas_grande() -> u64 {
         })
         .collect();
 
-    ocupado_por_el_mayor(&archivos).unwrap_or(ESTIMACION)
+    mayor_initramfs(&archivos).unwrap_or(ESTIMACION)
 }
 
 /// Lo libre en el sistema de archivos donde está `/boot`.
