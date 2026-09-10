@@ -148,8 +148,11 @@ pub fn run() {
         .plugin(tauri_plugin_vsk_journal::init())
         .plugin(tauri_plugin_vsk_contextual_menu::init())
         .invoke_handler(tauri::generate_handler![
-            commands::actualizaciones::actualizaciones_pendientes,
-            commands::actualizaciones::preflight_actualizacion,
+            commands::actualizaciones::informe_de_actualizaciones,
+            commands::actualizaciones::aviso_de_actualizaciones_activo,
+            commands::actualizaciones::activar_aviso_de_actualizaciones,
+            commands::actualizaciones::intervalo_de_comprobacion,
+            commands::actualizaciones::poner_intervalo_de_comprobacion,
             commands::initial_section::initial_section,
             commands::clipboard::clipboard_read_text,
             commands::clipboard::clipboard_write_text,
