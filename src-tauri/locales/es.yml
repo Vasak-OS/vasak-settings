@@ -184,6 +184,20 @@ wayfire:
 
 views:
   actualizaciones:
+    ajustes: "Aviso de actualizaciones"
+    avisar: "Avisar cuando haya actualizaciones"
+    avisarAyuda: >-
+      Se comprueba en segundo plano y aparece un aviso sólo cuando hay algo
+      nuevo. No se aplica nada sin que lo pidas.
+    cadaCuanto: "Cada cuánto comprobar"
+    unDia: "Todos los días"
+    tresDias: "Cada tres días"
+    unaSemana: "Una vez por semana"
+    sinPrograma: "Falta vasak-update"
+    sinProgramaDetalle: >-
+      El programa que comprueba las actualizaciones no está instalado, así que
+      esta pantalla no puede mostrar nada. Se instala con el paquete
+      vasak-update.
     titulo: "Actualizaciones"
     intro: "Qué hay para actualizar y qué conviene mirar antes."
     comprobando: "Comprobando…"

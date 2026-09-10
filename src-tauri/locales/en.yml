@@ -184,6 +184,19 @@ wayfire:
 
 views:
   actualizaciones:
+    ajustes: "Update notice"
+    avisar: "Tell me when there are updates"
+    avisarAyuda: >-
+      It checks in the background and only shows a notice when there is
+      something new. Nothing is applied unless you ask for it.
+    cadaCuanto: "How often to check"
+    unDia: "Every day"
+    tresDias: "Every three days"
+    unaSemana: "Once a week"
+    sinPrograma: "vasak-update is missing"
+    sinProgramaDetalle: >-
+      The program that checks for updates is not installed, so this screen
+      cannot show anything. It comes with the vasak-update package.
     titulo: "Updates"
     intro: "What there is to update, and what to look at first."
     comprobando: "Checking…"

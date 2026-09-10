@@ -29,11 +29,16 @@ import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
+import SelectInput from '@/components/ui/SelectInput.vue';
+import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import {
 	type Actualizacion,
-	actualizacionesPendientes,
+	activarAviso,
+	avisoActivo,
+	informeDeActualizaciones,
+	intervaloDeComprobacion,
 	type Preflight,
-	preflightActualizacion,
+	ponerIntervaloDeComprobacion,
 } from '@/services/actualizaciones.service';
 
 const { t } = useI18n();
@@ -41,6 +46,28 @@ const { t } = useI18n();
 const cargando = ref(true);
 const pendientes = ref<Actualizacion[]>([]);
 const preflight = ref<Preflight | null>(null);
+/** Si `vasak-update` está instalado. Sin él no hay nada que mostrar. */
+const hayPrograma = ref(true);
+
+const avisa = ref(false);
+const intervalo = ref(1);
+
+/**
+ * Cada cuánto se puede elegir comprobar.
+ *
+ * Tres opciones y no un número libre: entre «cada 4 días» y «cada 5» no hay
+ * ninguna diferencia que a alguien le importe, y un campo numérico invita a
+ * pensarlo. Quien de verdad quiera otro valor tiene el archivo de systemd, y
+ * el README lo dice.
+ */
+const INTERVALOS = [1, 3, 7];
+
+/** El nombre de un intervalo, que no es «cada N días» para los tres casos. */
+function nombreDelIntervalo(dias: number): string {
+	if (dias === 1) return t('views.actualizaciones.unDia');
+	if (dias === 3) return t('views.actualizaciones.tresDias');
+	return t('views.actualizaciones.unaSemana');
+}
 
 /** Bytes en algo que se pueda leer de un vistazo. */
 function tamano(bytes: number): string {
@@ -77,21 +104,50 @@ const avisoDelArranque = computed(() =>
 		.replace('{1}', tamano(preflight.value?.boot_necesario_bytes ?? 0))
 );
 
+async function cambiarAviso(activo: boolean) {
+	// Se pinta primero y se corrige si falla: un interruptor que tarda medio
+	// segundo en moverse hace que lo aprieten dos veces.
+	avisa.value = activo;
+	try {
+		await activarAviso(activo);
+	} catch {
+		avisa.value = !activo;
+	}
+}
+
+async function cambiarIntervalo(dias: number) {
+	const anterior = intervalo.value;
+	intervalo.value = dias;
+	try {
+		await ponerIntervaloDeComprobacion(dias);
+	} catch {
+		intervalo.value = anterior;
+	}
+}
+
 onMounted(async () => {
 	// Las dos por separado y no una que devuelva todo: la lista se puede
 	// mostrar en cuanto llega, y el preflight consulta `pacman -Qlq` por cada
 	// paquete que se actualiza y tarda más.
+	// Los ajustes primero: son instantáneos y no dependen de la red, así que
+	// la pantalla tiene algo utilizable mientras se comprueba.
 	try {
-		pendientes.value = await actualizacionesPendientes();
+		avisa.value = await avisoActivo();
+		intervalo.value = await intervaloDeComprobacion();
 	} catch {
-		pendientes.value = [];
+		// Sin systemd los ajustes no se pueden leer ni cambiar; el resto de la
+		// pantalla sigue sirviendo.
+	}
+
+	try {
+		const informe = await informeDeActualizaciones();
+		hayPrograma.value = informe.disponible;
+		pendientes.value = informe.datos?.pendientes ?? [];
+		preflight.value = informe.datos?.preflight ?? null;
+	} catch {
+		hayPrograma.value = false;
 	}
 	cargando.value = false;
-	try {
-		preflight.value = await preflightActualizacion();
-	} catch {
-		preflight.value = null;
-	}
 });
 </script>
 
@@ -104,7 +160,40 @@ onMounted(async () => {
     />
 
     <div class="space-y-4">
-      <EmptyStateBox v-if="cargando" :message="t('views.actualizaciones.comprobando')" />
+      <SectionCard>
+        <header>
+          <h2 class="mb-3 font-medium text-lg text-tx-main">
+            {{ t('views.actualizaciones.ajustes') }}
+          </h2>
+        </header>
+
+        <SwitchToggle
+          :label="t('views.actualizaciones.avisar')"
+          :is-on="avisa"
+          @toggle="cambiarAviso"
+        />
+        <p class="mt-1 text-tx-muted text-xs">{{ t('views.actualizaciones.avisarAyuda') }}</p>
+
+        <div v-if="avisa" class="mt-3 flex flex-wrap items-center gap-3">
+          <label class="text-sm" for="intervalo-actualizaciones">
+            {{ t('views.actualizaciones.cadaCuanto') }}
+          </label>
+          <SelectInput
+            id="intervalo-actualizaciones"
+            :model-value="intervalo"
+            :options="INTERVALOS.map((d) => ({ value: d, label: nombreDelIntervalo(d) }))"
+            @update:model-value="cambiarIntervalo(Number($event))"
+          />
+        </div>
+      </SectionCard>
+
+      <AlertMessage
+        v-if="!hayPrograma"
+        tone="warning"
+        :message="t('views.actualizaciones.sinProgramaDetalle')"
+      />
+
+      <EmptyStateBox v-else-if="cargando" :message="t('views.actualizaciones.comprobando')" />
 
       <EmptyStateBox
         v-else-if="pendientes.length === 0"
