@@ -56,6 +56,7 @@ sidebar:
     brightness: Brillo y luz nocturna
     power: Energía
     monitors: Pantallas
+    actualizaciones: Actualizaciones
     privacySecurity: Privacidad y seguridad
     networkWifi: Wi-Fi
     networkBluetooth: Bluetooth
@@ -182,6 +183,35 @@ wayfire:
       description: Gira una ventana con el ratón.
 
 views:
+  actualizaciones:
+    titulo: "Actualizaciones"
+    intro: "Qué hay para actualizar y qué conviene mirar antes."
+    comprobando: "Comprobando…"
+    alDia: "El sistema está al día"
+    alDiaDetalle: "No hay paquetes para actualizar."
+    hayPaquetes: "{0} paquetes para actualizar"
+    unPaquete: "1 paquete para actualizar"
+    antesDeAplicar: "Antes de aplicar"
+    kernelCambia: "Cambia el kernel"
+    kernelCambiaDetalle: >-
+      Hay que reiniciar después. Hasta entonces no se puede enchufar nada que
+      necesite un módulo que todavía no esté cargado: una impresora, un teléfono,
+      una placa de red USB.
+    bootJusto: "Poco espacio en la partición de arranque"
+    bootJustoDetalle: >-
+      Hay {0} libres y para escribir el arranque nuevo con red harían falta {1}.
+      La actualización va a funcionar igual, pero si se corta —un apagón, una
+      batería que se acaba— el arranque puede quedar a medio escribir y el equipo
+      no encender. Conviene enchufarlo y no apagarlo mientras dure.
+    pacnewTitulo: "Archivos de configuración sin aplicar"
+    pacnewDetalle: >-
+      Una actualización anterior dejó una versión nueva al lado de la tuya, sin
+      reemplazarla. No rompe nada hoy; se descubre meses después.
+    comoAplicar: "Cómo aplicar"
+    comoAplicarDetalle: "Todavía no se puede aplicar desde acá. En una terminal:"
+    aplicarNota: >-
+      Aplicarlo desde esta pantalla necesita privilegios de administrador, y eso
+      va a pasar por un servicio del sistema y no por esta ventana.
   privacySecurity:
     title: Privacidad y seguridad
     description: >-

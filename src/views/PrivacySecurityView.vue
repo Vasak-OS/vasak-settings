@@ -274,9 +274,9 @@ onMounted(load);
 			<!-- El alcance, a la vista y no en una nota al pie: mientras la vía de
 			     PipeWire siga abierta, esta pantalla no puede presentarse como
 			     protección completa. -->
-			<AlertMessage type="info" :message="t('views.privacySecurity.scope')" />
+			<AlertMessage tone="info" :message="t('views.privacySecurity.scope')" />
 
-			<AlertMessage v-if="errorMessage" type="error" :message="errorMessage" />
+			<AlertMessage v-if="errorMessage" tone="error" :message="errorMessage" />
 			<p v-if="loading" class="text-sm text-tx-muted">{{ t('common.loading') }}</p>
 
 			<EmptyStateBox

@@ -152,6 +152,11 @@ const todasLasCategorias = computed<SidebarCategory[]>(() => [
 			{ id: 'power', label: t('sidebar.items.power'), icon: 'battery' },
 			{ id: 'monitors', label: t('sidebar.items.monitors'), icon: 'video-display' },
 			{
+				id: 'actualizaciones',
+				label: t('sidebar.items.actualizaciones'),
+				icon: 'system-software-update',
+			},
+			{
 				id: 'privacy-security',
 				label: t('sidebar.items.privacySecurity'),
 				icon: 'security-high',
