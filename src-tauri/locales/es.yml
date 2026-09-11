@@ -214,6 +214,17 @@ views:
       Hay que reiniciar después. Hasta entonces no se puede enchufar nada que
       necesite un módulo que todavía no esté cargado: una impresora, un teléfono,
       una placa de red USB.
+    motivoSystemd: >-
+      Cambia systemd, que es el proceso que arranca todo lo demás. Al actualizar
+      se releen las unidades pero el proceso en ejecución sigue siendo el
+      anterior, así que hay que reiniciar para que el nuevo tome el control.
+    motivoModulo: >-
+      Cambia un controlador que se carga dentro del kernel, como el de la placa
+      de video. Hasta reiniciar, el que está cargado es el viejo y la biblioteca
+      que lo usa ya es la nueva: esa combinación no funciona.
+    motivoSesion: >-
+      Cambia el escritorio. No hace falta reiniciar el equipo: alcanza con cerrar
+      la sesión y volver a entrar.
     bootJusto: "Poco espacio en la partición de arranque"
     bootJustoDetalle: >-
       Hay {0} libres y para escribir el arranque nuevo con red harían falta {1}.

@@ -39,6 +39,7 @@ import {
 	informeDeActualizaciones,
 	intervaloDeComprobacion,
 	leer,
+	type Motivo,
 	type Preflight,
 	ponerIntervaloDeComprobacion,
 } from '@/services/actualizaciones.service';
@@ -98,9 +99,24 @@ const hayQueMirar = computed(
 	() =>
 		!!preflight.value &&
 		(preflight.value.pide_reinicio ||
+			preflight.value.pide_volver_a_entrar ||
 			!preflight.value.hay_lugar_con_red ||
 			preflight.value.pacnew.length > 0)
 );
+
+/**
+ * La explicación de cada motivo.
+ *
+ * Cada uno tiene la suya porque son cosas distintas: que cambie el kernel y que
+ * cambie systemd llevan al mismo consejo por caminos que no se parecen, y el
+ * del escritorio ni siquiera lleva al mismo consejo.
+ */
+const EXPLICACION: Record<Motivo, string> = {
+	kernel: 'views.actualizaciones.kernelCambiaDetalle',
+	systemd: 'views.actualizaciones.motivoSystemd',
+	modulo: 'views.actualizaciones.motivoModulo',
+	sesion: 'views.actualizaciones.motivoSesion',
+};
 
 /**
  * El aviso del arranque, con los dos números adentro.
@@ -259,10 +275,15 @@ onMounted(async () => {
               :message="avisoDelArranque"
             />
 
-            <template v-if="preflight.pide_reinicio">
-              <AlertMessage tone="info" :message="t('views.actualizaciones.kernelCambiaDetalle')" />
+            <!--
+              Un bloque por motivo, cada uno con su explicación y los paquetes
+              que lo provocan. Antes había uno solo que decía lo del kernel
+              aunque el que cambiara fuera systemd.
+            -->
+            <template v-for="razon in preflight.razones" :key="razon.motivo">
+              <AlertMessage tone="info" :message="t(EXPLICACION[razon.motivo])" />
               <ul class="font-mono text-tx-muted text-xs">
-                <li v-for="k in preflight.kernels" :key="k">{{ k }}</li>
+                <li v-for="p in razon.paquetes" :key="p">{{ p }}</li>
               </ul>
             </template>
 

@@ -16,10 +16,29 @@ export interface Actualizacion {
 	version_nueva: string;
 }
 
+/** Por qué habría que reiniciar o volver a entrar. */
+export type Motivo = 'kernel' | 'systemd' | 'modulo' | 'sesion';
+
+export interface Razon {
+	motivo: Motivo;
+	paquetes: string[];
+}
+
+const MOTIVOS: readonly Motivo[] = ['kernel', 'systemd', 'modulo', 'sesion'];
+
 export interface Preflight {
 	paquetes: number;
 	/** Los kernels que cambian de versión, por nombre. */
 	kernels: string[];
+	/**
+	 * Los motivos, con los paquetes que los provocan.
+	 *
+	 * El motivo va adentro porque «reiniciá» solo no se puede evaluar: no hay
+	 * forma de decidir si conviene hacerlo ahora o si puede esperar.
+	 */
+	razones: Razon[];
+	/** Si alcanza con cerrar la sesión, sin reiniciar el equipo. */
+	pide_volver_a_entrar: boolean;
 	/** Archivos de configuración nuevos sin aplicar. */
 	pacnew: string[];
 	boot_disponible_bytes: number;
@@ -114,16 +133,34 @@ const comoActualizacion = (v: unknown): Actualizacion | null =>
 			}
 		: null;
 
+/**
+ * Un motivo que no está en la lista se descarta.
+ *
+ * Acá sí, y al revés que con el fallo: la pantalla le pone a cada motivo su
+ * explicación, y para uno que no conoce no tiene ninguna. Mostrar la lista de
+ * paquetes sin decir qué les pasa no es información, y un `vasak-update` más
+ * nuevo que agregue un motivo sigue diciendo `pide_reinicio`, que es lo que
+ * cambia la decisión.
+ */
+const comoRazon = (v: unknown): Razon | null =>
+	esObjeto(v) && MOTIVOS.includes(v.motivo as Motivo)
+		? { motivo: v.motivo as Motivo, paquetes: textos(v.paquetes) }
+		: null;
+
 const comoPreflight = (v: unknown): Preflight | null =>
 	esObjeto(v)
 		? {
 				paquetes: Number(v.paquetes ?? 0),
 				kernels: textos(v.kernels),
+				razones: Array.isArray(v.razones)
+					? v.razones.map(comoRazon).filter((x): x is Razon => x !== null)
+					: [],
 				pacnew: textos(v.pacnew),
 				boot_disponible_bytes: Number(v.boot_disponible_bytes ?? 0),
 				boot_necesario_bytes: Number(v.boot_necesario_bytes ?? 0),
 				hay_lugar_con_red: v.hay_lugar_con_red !== false,
 				pide_reinicio: v.pide_reinicio === true,
+				pide_volver_a_entrar: v.pide_volver_a_entrar === true,
 			}
 		: null;
 
