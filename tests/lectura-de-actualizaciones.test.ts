@@ -13,6 +13,12 @@ import { leer } from '../src/services/actualizaciones.service';
  * Importa más en la rama del fallo que en ninguna otra, porque esa rama sólo
  * se dibuja cuando algo ya falló: un error de tipos ahí deja la pantalla en
  * blanco justo cuando tenía que explicar el problema.
+ *
+ * Los fixtures se pasan con `as any` a propósito: son la respuesta cruda del
+ * otro programa, y tiparlos sería afirmar la forma que estos tests existen para
+ * comprobar. No llevan `biome-ignore` porque `noExplicitAny` está en `off` en
+ * `biome.json`, así que suprimirla no hacía nada — y biome avisa de la
+ * supresión inútil, que era lo que trababa el empaquetado.
  */
 
 const FALLO_COMPLETO = {
@@ -35,7 +41,6 @@ describe('leer', () => {
 				pide_reinicio: true,
 			},
 			fallo: null,
-			// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 		} as any);
 
 		expect(lectura.pendientes).toHaveLength(1);
@@ -46,7 +51,6 @@ describe('leer', () => {
 	});
 
 	test('un fallo completo llega entero', () => {
-		// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 		const lectura = leer({ fallo: FALLO_COMPLETO } as any);
 		expect(lectura.fallo?.que.causa).toBe('firma');
 		expect(lectura.fallo?.arreglo).toContain('archlinux-keyring');
@@ -55,13 +59,11 @@ describe('leer', () => {
 	test('el detalle sólo queda si es texto', () => {
 		const lectura = leer({
 			fallo: { que: { causa: 'desconocido', detalle: 'error: algo' } },
-			// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 		} as any);
 		expect(lectura.fallo?.que.detalle).toBe('error: algo');
 
 		const roto = leer({
 			fallo: { que: { causa: 'desconocido', detalle: { a: 1 } } },
-			// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 		} as any);
 		expect(roto.fallo?.que.detalle).toBeUndefined();
 	});
@@ -74,7 +76,6 @@ describe('leer', () => {
 	 */
 	test('un fallo sin «que» sigue siendo un fallo', () => {
 		for (const roto of [{}, { que: null }, { que: 'firma' }, 'firma', 7]) {
-			// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 			const lectura = leer({ fallo: roto } as any);
 			expect(lectura.fallo).not.toBeNull();
 			expect(lectura.fallo?.que.causa).toBe('desconocido');
@@ -82,15 +83,12 @@ describe('leer', () => {
 	});
 
 	test('sin fallo no se inventa uno', () => {
-		// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 		expect(leer({ pendientes: [] } as any).fallo).toBeNull();
-		// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 		expect(leer({ fallo: null } as any).fallo).toBeNull();
 	});
 
 	test('datos que no son un objeto no rompen nada', () => {
 		for (const nada of [null, undefined, 'texto', 7, []]) {
-			// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 			const lectura = leer(nada as any);
 			expect(lectura.pendientes).toEqual([]);
 			expect(lectura.preflight).toBeNull();
@@ -101,7 +99,6 @@ describe('leer', () => {
 	test('las listas del preflight siempre son listas de texto', () => {
 		const lectura = leer({
 			preflight: { kernels: ['linux', 3, null], pacnew: 'no es una lista' },
-			// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 		} as any);
 		expect(lectura.preflight?.kernels).toEqual(['linux']);
 		expect(lectura.preflight?.pacnew).toEqual([]);
@@ -113,10 +110,8 @@ describe('leer', () => {
 	 * falsa enseña a ignorar la de verdad.
 	 */
 	test('hay_lugar_con_red sólo es falso si vino falso', () => {
-		// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 		expect(leer({ preflight: {} } as any).preflight?.hay_lugar_con_red).toBe(true);
 		expect(
-			// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 			leer({ preflight: { hay_lugar_con_red: false } } as any).preflight?.hay_lugar_con_red
 		).toBe(false);
 	});
@@ -124,7 +119,6 @@ describe('leer', () => {
 	test('una actualización sin nombre se descarta', () => {
 		const lectura = leer({
 			pendientes: [{ version_nueva: '6.2' }, { nombre: 'linux' }, null],
-			// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 		} as any);
 		expect(lectura.pendientes).toHaveLength(1);
 		expect(lectura.pendientes[0].version_vieja).toBe('');
@@ -146,7 +140,6 @@ describe('leer', () => {
 					{ paquetes: ['sin motivo'] },
 				],
 			},
-			// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 		} as any);
 
 		expect(lectura.preflight?.razones).toHaveLength(1);
@@ -158,7 +151,6 @@ describe('leer', () => {
 		for (const motivo of ['kernel', 'systemd', 'modulo', 'sesion']) {
 			const lectura = leer({
 				preflight: { razones: [{ motivo, paquetes: ['p'] }] },
-				// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 			} as any);
 			expect(lectura.preflight?.razones[0].motivo).toBe(motivo);
 		}
@@ -170,7 +162,6 @@ describe('leer', () => {
 	 * ignorar el aviso.
 	 */
 	test('reiniciar y volver a entrar sólo si vinieron', () => {
-		// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 		const vacio = leer({ preflight: {} } as any).preflight;
 		expect(vacio?.pide_reinicio).toBe(false);
 		expect(vacio?.pide_volver_a_entrar).toBe(false);
@@ -178,7 +169,6 @@ describe('leer', () => {
 
 		const sesion = leer({
 			preflight: { pide_volver_a_entrar: true },
-			// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 		} as any).preflight;
 		expect(sesion?.pide_reinicio).toBe(false);
 		expect(sesion?.pide_volver_a_entrar).toBe(true);
@@ -194,7 +184,6 @@ describe('leer', () => {
 		for (const url of buenas) {
 			const lectura = leer({
 				pendientes: [{ nombre: 'p', donde_mirar: url }],
-				// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 			} as any);
 			expect(lectura.pendientes[0].donde_mirar).toBe(url);
 		}
@@ -211,7 +200,6 @@ describe('leer', () => {
 		for (const url of malas) {
 			const lectura = leer({
 				pendientes: [{ nombre: 'p', donde_mirar: url }],
-				// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 			} as any);
 			expect(lectura.pendientes[0].donde_mirar).toBeUndefined();
 		}
@@ -222,7 +210,6 @@ describe('leer', () => {
 		// una actualización que igual se va a aplicar.
 		const lectura = leer({
 			pendientes: [{ nombre: 'p', version_nueva: '2' }],
-			// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
 		} as any);
 		expect(lectura.pendientes).toHaveLength(1);
 		expect(lectura.pendientes[0].donde_mirar).toBeUndefined();
