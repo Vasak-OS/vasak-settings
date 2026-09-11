@@ -54,17 +54,13 @@ const motivoNoDisponible = (provider: ProviderInfo): string | undefined =>
 	provider.configured ? undefined : t('views.onlineAccounts.credentials.needed');
 
 /**
- * Los proveedores cuyas credenciales se pueden cambiar o quitar.
+ * Si a este proveedor se le pueden cambiar o quitar las credenciales.
  *
- * Son los OAuth2 que ya están listos. Hace falta una vía propia porque el clic
- * en la tarjeta de uno configurado **conecta la cuenta**, que es lo que
- * corresponde: sin esta lista, el botón de quitar credenciales quedaba escrito y
- * sin forma de llegar a él.
+ * Son los OAuth2 que ya están listos. Hace falta preguntarlo aparte porque el
+ * clic en la tarjeta de uno configurado **conecta la cuenta**, que es lo que
+ * corresponde: sin esto, el botón de quitar credenciales quedaba escrito y sin
+ * forma de llegar a él.
  */
-const conCredencialesPropias = computed(() =>
-	providers.value.filter((p) => p.kind === 'oauth2' && p.configured)
-);
-
 const tieneCredenciales = (provider: ProviderInfo) =>
 	provider.kind === 'oauth2' && provider.configured;
 
