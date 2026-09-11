@@ -14,6 +14,13 @@ export interface Actualizacion {
 	nombre: string;
 	version_vieja: string;
 	version_nueva: string;
+	/**
+	 * La página del proyecto, para ver qué cambia.
+	 *
+	 * Ausente cuando el paquete no declara ninguna, o cuando la que declara no
+	 * es una dirección web — ver `comoActualizacion`.
+	 */
+	donde_mirar?: string;
 }
 
 /** Por qué habría que reiniciar o volver a entrar. */
@@ -124,12 +131,33 @@ const esObjeto = (v: unknown): v is Record<string, unknown> =>
 const textos = (v: unknown): string[] =>
 	Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
 
+/**
+ * Una dirección que se le puede pasar al navegador del sistema.
+ *
+ * Sólo `http` y `https`, y la comprobación va acá y no en `vasak-update`
+ * a propósito: el que decide qué esquemas abre es el que abre, no el que
+ * informa. Este campo sale del campo `URL` de la base de paquetes, o sea que lo
+ * escribe quien empaqueta —no nosotros— y de ahí va derecho al programa que el
+ * sistema tenga asociado. Un `file://` o cualquier otro esquema abriría algo
+ * que nadie pidió.
+ */
+const esPaginaWeb = (v: unknown): v is string => {
+	if (typeof v !== 'string') return false;
+	try {
+		const url = new URL(v);
+		return url.protocol === 'https:' || url.protocol === 'http:';
+	} catch {
+		return false;
+	}
+};
+
 const comoActualizacion = (v: unknown): Actualizacion | null =>
 	esObjeto(v) && typeof v.nombre === 'string'
 		? {
 				nombre: v.nombre,
 				version_vieja: String(v.version_vieja ?? ''),
 				version_nueva: String(v.version_nueva ?? ''),
+				donde_mirar: esPaginaWeb(v.donde_mirar) ? v.donde_mirar : undefined,
 			}
 		: null;
 
