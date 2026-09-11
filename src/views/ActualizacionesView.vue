@@ -23,6 +23,7 @@
  * decirlo como nada sería callar el único fallo de esta lista que deja un
  * equipo que no arranca.
  */
+import { open } from '@tauri-apps/plugin-shell';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
@@ -129,6 +130,22 @@ const avisoDelArranque = computed(() =>
 		.replace('{0}', tamano(preflight.value?.boot_disponible_bytes ?? 0))
 		.replace('{1}', tamano(preflight.value?.boot_necesario_bytes ?? 0))
 );
+
+/**
+ * Abre la página de un paquete en el navegador del sistema.
+ *
+ * La dirección ya vino comprobada de `leer()` —sólo `http` y `https`—, así que
+ * acá no se vuelve a mirar: comprobar lo mismo en dos lados es tener dos reglas
+ * que se pueden separar.
+ */
+async function abrir(url: string) {
+	try {
+		await open(url);
+	} catch {
+		// Sin navegador asociado no hay nada que hacer, y no es un error de esta
+		// pantalla: el resto sigue sirviendo.
+	}
+}
 
 async function cambiarAviso(activo: boolean) {
 	// Se pinta primero y se corrige si falla: un interruptor que tarda medio
@@ -312,12 +329,29 @@ onMounted(async () => {
               :key="a.nombre"
               class="flex flex-wrap items-baseline gap-x-2"
             >
-              <span class="font-medium">{{ a.nombre }}</span>
+              <!--
+                El nombre es el enlace cuando hay adónde ir. Un icono aparte
+                sumaría un objetivo de clic diminuto al lado de cada paquete;
+                el nombre ya está ahí y es lo que alguien quiere apretar.
+              -->
+              <button
+                v-if="a.donde_mirar"
+                type="button"
+                class="cursor-pointer font-medium text-tx-link underline decoration-dotted underline-offset-2"
+                :title="t('views.actualizaciones.verProyecto').replace('{0}', a.donde_mirar)"
+                @click="abrir(a.donde_mirar)"
+              >
+                {{ a.nombre }}
+              </button>
+              <span v-else class="font-medium">{{ a.nombre }}</span>
               <span class="font-mono text-tx-muted text-xs">
                 {{ a.version_vieja }} → {{ a.version_nueva }}
               </span>
             </li>
           </ul>
+          <p class="mt-3 text-tx-muted text-xs">
+            {{ t('views.actualizaciones.queCambiaNota') }}
+          </p>
         </SectionCard>
 
         <SectionCard>

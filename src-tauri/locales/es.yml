@@ -235,6 +235,11 @@ views:
     pacnewDetalle: >-
       Una actualización anterior dejó una versión nueva al lado de la tuya, sin
       reemplazarla. No rompe nada hoy; se descubre meses después.
+    verProyecto: "Ver el proyecto: {0}"
+    queCambiaNota: >-
+      Los nombres con subrayado llevan a la página del proyecto, que es donde se
+      publica qué cambia. Acá no aparece: las notas de una versión vienen dentro
+      del paquete, y hasta que no se instala no están en el equipo.
     comoAplicar: "Cómo aplicar"
     comoAplicarDetalle: "Todavía no se puede aplicar desde acá. En una terminal:"
     aplicarNota: >-

@@ -233,6 +233,11 @@ views:
     pacnewDetalle: >-
       An earlier update left a new version next to yours without replacing it. It
       breaks nothing today; it is found months later.
+    verProyecto: "Open the project page: {0}"
+    queCambiaNota: >-
+      Underlined names open the project page, which is where the changes get
+      published. They are not shown here: a version's release notes ship inside
+      the package, and until it is installed they are not on the machine.
     comoAplicar: "How to apply"
     comoAplicarDetalle: "You cannot apply it from here yet. In a terminal:"
     aplicarNota: >-

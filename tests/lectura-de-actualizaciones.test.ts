@@ -183,4 +183,48 @@ describe('leer', () => {
 		expect(sesion?.pide_reinicio).toBe(false);
 		expect(sesion?.pide_volver_a_entrar).toBe(true);
 	});
+
+	/**
+	 * El campo sale del `URL` de la base de paquetes, o sea que lo escribe quien
+	 * empaqueta y de ahí iría derecho al programa que el sistema tenga asociado
+	 * a ese esquema. Sólo `http` y `https`.
+	 */
+	test('sólo se guardan direcciones web', () => {
+		const buenas = ['https://github.com/Vasak-OS/x', 'http://ejemplo.org/a?b=1'];
+		for (const url of buenas) {
+			const lectura = leer({
+				pendientes: [{ nombre: 'p', donde_mirar: url }],
+				// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
+			} as any);
+			expect(lectura.pendientes[0].donde_mirar).toBe(url);
+		}
+
+		const malas = [
+			'file:///etc/shadow',
+			'javascript:alert(1)',
+			'no-es-una-url',
+			'',
+			42,
+			null,
+			{ href: 'https://ejemplo/' },
+		];
+		for (const url of malas) {
+			const lectura = leer({
+				pendientes: [{ nombre: 'p', donde_mirar: url }],
+				// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
+			} as any);
+			expect(lectura.pendientes[0].donde_mirar).toBeUndefined();
+		}
+	});
+
+	test('un paquete sin página sigue estando en la lista', () => {
+		// Descartar el paquete entero por no tener adónde enlazar sería esconder
+		// una actualización que igual se va a aplicar.
+		const lectura = leer({
+			pendientes: [{ nombre: 'p', version_nueva: '2' }],
+			// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
+		} as any);
+		expect(lectura.pendientes).toHaveLength(1);
+		expect(lectura.pendientes[0].donde_mirar).toBeUndefined();
+	});
 });
