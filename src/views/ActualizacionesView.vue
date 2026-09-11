@@ -38,6 +38,7 @@ import {
 	type Fallo,
 	informeDeActualizaciones,
 	intervaloDeComprobacion,
+	leer,
 	type Preflight,
 	ponerIntervaloDeComprobacion,
 } from '@/services/actualizaciones.service';
@@ -151,9 +152,13 @@ onMounted(async () => {
 	try {
 		const informe = await informeDeActualizaciones();
 		hayPrograma.value = informe.disponible;
-		pendientes.value = informe.datos?.pendientes ?? [];
-		preflight.value = informe.datos?.preflight ?? null;
-		fallo.value = informe.datos?.fallo ?? null;
+		// `leer` comprueba lo que contestó `vasak-update` en vez de confiar en
+		// el tipo: son dos paquetes con versiones distintas, y el JSON llega
+		// sin modelar desde Rust.
+		const lectura = leer(informe.datos);
+		pendientes.value = lectura.pendientes;
+		preflight.value = lectura.preflight;
+		fallo.value = lectura.fallo;
 	} catch {
 		hayPrograma.value = false;
 	}
@@ -216,7 +221,10 @@ onMounted(async () => {
             {{ t('views.actualizaciones.noSePudo') }}
           </h2>
         </header>
-        <AlertMessage tone="warning" :message="fallo.explicacion" />
+        <AlertMessage
+          tone="warning"
+          :message="fallo.explicacion || t('views.actualizaciones.sinExplicacion')"
+        />
         <p v-if="fallo.que.detalle" class="mt-2 font-mono text-tx-muted text-xs">
           {{ fallo.que.detalle }}
         </p>

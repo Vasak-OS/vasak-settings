@@ -185,6 +185,7 @@ wayfire:
 views:
   actualizaciones:
     noSePudo: "Could not check"
+    sinExplicacion: "Updates could not be checked, and the program did not say why."
     elArreglo: "In a terminal:"
     ajustes: "Update notice"
     avisar: "Tell me when there are updates"
