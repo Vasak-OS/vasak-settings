@@ -35,8 +35,28 @@ export interface Preflight {
 	pide_reinicio: boolean;
 }
 
+/**
+ * Por qué no se pudo comprobar.
+ *
+ * `null` cuando sí se pudo. Es la diferencia entre «el sistema está al día» y
+ * «no pude averiguarlo», que son cosas muy distintas y antes se veían igual.
+ */
+export interface Fallo {
+	/** La causa, o `desconocido` con el texto crudo de pacman. */
+	que: { causa: string; detalle?: string };
+	explicacion: string;
+	/** El comando que lo arregla, si hay uno. Se muestra, no se ejecuta. */
+	arreglo: string | null;
+}
+
 export interface Informe {
-	datos: { pendientes: Actualizacion[]; preflight: Preflight } | null;
+	datos: {
+		pendientes: Actualizacion[];
+		/** `null` si no se pudo comprobar: sin saber qué se va a actualizar,
+		 *  decir «hay lugar en /boot» sería contestar otra pregunta. */
+		preflight: Preflight | null;
+		fallo: Fallo | null;
+	} | null;
 	/** Si `vasak-update` está instalado. */
 	disponible: boolean;
 }
@@ -55,3 +75,92 @@ export const intervaloDeComprobacion = (): Promise<number> =>
 
 export const ponerIntervaloDeComprobacion = (dias: number): Promise<void> =>
 	invoke<void>('poner_intervalo_de_comprobacion', { dias });
+
+/**
+ * Lo que la pantalla usa, ya comprobado.
+ *
+ * `informe_de_actualizaciones` pasa el JSON de `vasak-update` tal cual, sin
+ * modelarlo: del lado de Rust es un valor cualquiera, y las interfaces de
+ * arriba son una promesa que TypeScript no tiene cómo comprobar. Son dos
+ * paquetes que se versionan por separado, así que la promesa se puede romper
+ * sin que nadie toque este archivo.
+ *
+ * Importa más acá que en ningún otro lado. La rama del fallo sólo se dibuja
+ * cuando algo ya falló: un error de tipos ahí deja la pantalla en blanco justo
+ * cuando tenía que explicar el problema, y el fallo dentro del manejador de
+ * fallos es el que nadie ve venir.
+ *
+ * Lo que no se entiende se descarta en vez de adivinarse. Media explicación
+ * manda a arreglar lo que no está roto.
+ */
+export interface Lectura {
+	pendientes: Actualizacion[];
+	preflight: Preflight | null;
+	fallo: Fallo | null;
+}
+
+const esObjeto = (v: unknown): v is Record<string, unknown> =>
+	typeof v === 'object' && v !== null && !Array.isArray(v);
+
+const textos = (v: unknown): string[] =>
+	Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+
+const comoActualizacion = (v: unknown): Actualizacion | null =>
+	esObjeto(v) && typeof v.nombre === 'string'
+		? {
+				nombre: v.nombre,
+				version_vieja: String(v.version_vieja ?? ''),
+				version_nueva: String(v.version_nueva ?? ''),
+			}
+		: null;
+
+const comoPreflight = (v: unknown): Preflight | null =>
+	esObjeto(v)
+		? {
+				paquetes: Number(v.paquetes ?? 0),
+				kernels: textos(v.kernels),
+				pacnew: textos(v.pacnew),
+				boot_disponible_bytes: Number(v.boot_disponible_bytes ?? 0),
+				boot_necesario_bytes: Number(v.boot_necesario_bytes ?? 0),
+				hay_lugar_con_red: v.hay_lugar_con_red !== false,
+				pide_reinicio: v.pide_reinicio === true,
+			}
+		: null;
+
+/**
+ * Un fallo que no se entiende sigue siendo un fallo.
+ *
+ * Descartarlo por venir mal formado devolvería la pantalla a decir «el sistema
+ * está al día» cuando en realidad no se pudo averiguar, que es exactamente el
+ * error que esta rama existe para no cometer. Así que lo único que se pierde
+ * es el detalle: queda `desconocido` y sin explicación, y la pantalla pone la
+ * suya.
+ */
+const comoFallo = (v: unknown): Fallo | null => {
+	if (v === null || v === undefined) {
+		return null;
+	}
+	const que = esObjeto(v) && esObjeto(v.que) ? v.que : {};
+	return {
+		que: {
+			causa: typeof que.causa === 'string' ? que.causa : 'desconocido',
+			detalle: typeof que.detalle === 'string' ? que.detalle : undefined,
+		},
+		explicacion: esObjeto(v) && typeof v.explicacion === 'string' ? v.explicacion : '',
+		arreglo: esObjeto(v) && typeof v.arreglo === 'string' ? v.arreglo : null,
+	};
+};
+
+export const leer = (datos: Informe['datos']): Lectura => {
+	const d: unknown = datos;
+	if (!esObjeto(d)) {
+		return { pendientes: [], preflight: null, fallo: null };
+	}
+	return {
+		pendientes: Array.isArray(d.pendientes)
+			? d.pendientes.map(comoActualizacion).filter((x): x is Actualizacion => x !== null)
+			: [],
+		preflight: comoPreflight(d.preflight),
+		fallo: comoFallo(d.fallo),
+	};
+};

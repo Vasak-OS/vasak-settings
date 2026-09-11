@@ -35,8 +35,10 @@ import {
 	type Actualizacion,
 	activarAviso,
 	avisoActivo,
+	type Fallo,
 	informeDeActualizaciones,
 	intervaloDeComprobacion,
+	leer,
 	type Preflight,
 	ponerIntervaloDeComprobacion,
 } from '@/services/actualizaciones.service';
@@ -48,6 +50,14 @@ const pendientes = ref<Actualizacion[]>([]);
 const preflight = ref<Preflight | null>(null);
 /** Si `vasak-update` está instalado. Sin él no hay nada que mostrar. */
 const hayPrograma = ref(true);
+/**
+ * Por qué no se pudo comprobar, si no se pudo.
+ *
+ * Va aparte de «no hay actualizaciones» a propósito: son cosas distintas y
+ * antes se veían igual. Mostrar «el sistema está al día» cuando en realidad
+ * no se pudo averiguar es la peor respuesta posible.
+ */
+const fallo = ref<Fallo | null>(null);
 
 const avisa = ref(false);
 const intervalo = ref(1);
@@ -142,8 +152,13 @@ onMounted(async () => {
 	try {
 		const informe = await informeDeActualizaciones();
 		hayPrograma.value = informe.disponible;
-		pendientes.value = informe.datos?.pendientes ?? [];
-		preflight.value = informe.datos?.preflight ?? null;
+		// `leer` comprueba lo que contestó `vasak-update` en vez de confiar en
+		// el tipo: son dos paquetes con versiones distintas, y el JSON llega
+		// sin modelar desde Rust.
+		const lectura = leer(informe.datos);
+		pendientes.value = lectura.pendientes;
+		preflight.value = lectura.preflight;
+		fallo.value = lectura.fallo;
 	} catch {
 		hayPrograma.value = false;
 	}
@@ -194,6 +209,30 @@ onMounted(async () => {
       />
 
       <EmptyStateBox v-else-if="cargando" :message="t('views.actualizaciones.comprobando')" />
+
+      <!--
+        No se pudo comprobar. Va antes que cualquier otra cosa y en lugar de
+        la lista: decir «el sistema está al día» cuando en realidad no se sabe
+        es exactamente lo que este aviso viene a evitar.
+      -->
+      <SectionCard v-else-if="fallo">
+        <header>
+          <h2 class="mb-2 font-medium text-lg text-tx-main">
+            {{ t('views.actualizaciones.noSePudo') }}
+          </h2>
+        </header>
+        <AlertMessage
+          tone="warning"
+          :message="fallo.explicacion || t('views.actualizaciones.sinExplicacion')"
+        />
+        <p v-if="fallo.que.detalle" class="mt-2 font-mono text-tx-muted text-xs">
+          {{ fallo.que.detalle }}
+        </p>
+        <template v-if="fallo.arreglo">
+          <p class="mt-3 text-sm">{{ t('views.actualizaciones.elArreglo') }}</p>
+          <pre class="mt-1 rounded-corner bg-ui-surface/60 p-2 font-mono text-sm">{{ fallo.arreglo }}</pre>
+        </template>
+      </SectionCard>
 
       <EmptyStateBox
         v-else-if="pendientes.length === 0"
