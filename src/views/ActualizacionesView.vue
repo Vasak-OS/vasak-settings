@@ -35,6 +35,7 @@ import {
 	type Actualizacion,
 	activarAviso,
 	avisoActivo,
+	type Fallo,
 	informeDeActualizaciones,
 	intervaloDeComprobacion,
 	type Preflight,
@@ -48,6 +49,14 @@ const pendientes = ref<Actualizacion[]>([]);
 const preflight = ref<Preflight | null>(null);
 /** Si `vasak-update` está instalado. Sin él no hay nada que mostrar. */
 const hayPrograma = ref(true);
+/**
+ * Por qué no se pudo comprobar, si no se pudo.
+ *
+ * Va aparte de «no hay actualizaciones» a propósito: son cosas distintas y
+ * antes se veían igual. Mostrar «el sistema está al día» cuando en realidad
+ * no se pudo averiguar es la peor respuesta posible.
+ */
+const fallo = ref<Fallo | null>(null);
 
 const avisa = ref(false);
 const intervalo = ref(1);
@@ -144,6 +153,7 @@ onMounted(async () => {
 		hayPrograma.value = informe.disponible;
 		pendientes.value = informe.datos?.pendientes ?? [];
 		preflight.value = informe.datos?.preflight ?? null;
+		fallo.value = informe.datos?.fallo ?? null;
 	} catch {
 		hayPrograma.value = false;
 	}
@@ -194,6 +204,27 @@ onMounted(async () => {
       />
 
       <EmptyStateBox v-else-if="cargando" :message="t('views.actualizaciones.comprobando')" />
+
+      <!--
+        No se pudo comprobar. Va antes que cualquier otra cosa y en lugar de
+        la lista: decir «el sistema está al día» cuando en realidad no se sabe
+        es exactamente lo que este aviso viene a evitar.
+      -->
+      <SectionCard v-else-if="fallo">
+        <header>
+          <h2 class="mb-2 font-medium text-lg text-tx-main">
+            {{ t('views.actualizaciones.noSePudo') }}
+          </h2>
+        </header>
+        <AlertMessage tone="warning" :message="fallo.explicacion" />
+        <p v-if="fallo.que.detalle" class="mt-2 font-mono text-tx-muted text-xs">
+          {{ fallo.que.detalle }}
+        </p>
+        <template v-if="fallo.arreglo">
+          <p class="mt-3 text-sm">{{ t('views.actualizaciones.elArreglo') }}</p>
+          <pre class="mt-1 rounded-corner bg-ui-surface/60 p-2 font-mono text-sm">{{ fallo.arreglo }}</pre>
+        </template>
+      </SectionCard>
 
       <EmptyStateBox
         v-else-if="pendientes.length === 0"

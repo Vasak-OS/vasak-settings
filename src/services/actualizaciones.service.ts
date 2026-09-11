@@ -35,8 +35,28 @@ export interface Preflight {
 	pide_reinicio: boolean;
 }
 
+/**
+ * Por qué no se pudo comprobar.
+ *
+ * `null` cuando sí se pudo. Es la diferencia entre «el sistema está al día» y
+ * «no pude averiguarlo», que son cosas muy distintas y antes se veían igual.
+ */
+export interface Fallo {
+	/** La causa, o `desconocido` con el texto crudo de pacman. */
+	que: { causa: string; detalle?: string };
+	explicacion: string;
+	/** El comando que lo arregla, si hay uno. Se muestra, no se ejecuta. */
+	arreglo: string | null;
+}
+
 export interface Informe {
-	datos: { pendientes: Actualizacion[]; preflight: Preflight } | null;
+	datos: {
+		pendientes: Actualizacion[];
+		/** `null` si no se pudo comprobar: sin saber qué se va a actualizar,
+		 *  decir «hay lugar en /boot» sería contestar otra pregunta. */
+		preflight: Preflight | null;
+		fallo: Fallo | null;
+	} | null;
 	/** Si `vasak-update` está instalado. */
 	disponible: boolean;
 }

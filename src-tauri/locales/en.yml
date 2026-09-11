@@ -184,6 +184,8 @@ wayfire:
 
 views:
   actualizaciones:
+    noSePudo: "Could not check"
+    elArreglo: "In a terminal:"
     ajustes: "Update notice"
     avisar: "Tell me when there are updates"
     avisarAyuda: >-
