@@ -25,7 +25,20 @@ const nombresDeRuta = async (): Promise<string[]> => {
 	// `name:` y no `path:`: la ruta de la portada es `/` y su nombre es `home`,
 	// que es lo que usa el menú. Y va sin anclar al principio de la línea porque
 	// las rutas cortas se declaran enteras en un renglón.
-	return [...fuente.matchAll(/\bname: '([^']+)'/g)].map((m) => m[1]);
+	//
+	// Las dos comillas y el espacio flexible no son por gusto: leyendo sólo
+	// `name: '…'`, una ruta escrita con comillas dobles no la ve **ninguna** de
+	// las dos comprobaciones, así que quedaría fuera del menú sin que esto
+	// dijera nada — que es exactamente el descuido que esta prueba existe para
+	// encontrar.
+	const nombres = [...fuente.matchAll(/\bname\s*:\s*['"]([^'"]+)['"]/g)].map((m) => m[1]);
+
+	// Y si algún día se declaran de una forma que esto no sabe leer, que falle
+	// acá en vez de comprobar de menos en silencio.
+	const cuantos = [...fuente.matchAll(/\bname\s*:/g)].length;
+	expect(nombres.length).toBe(cuantos);
+
+	return nombres;
 };
 
 /**
