@@ -213,6 +213,16 @@ views:
       You will need to restart afterwards. Until then you cannot plug in anything
       that needs a module that is not loaded yet: a printer, a phone, a USB
       network card.
+    motivoSystemd: >-
+      systemd changes, the process that starts everything else. Updating it
+      re-reads the unit files, but the running process is still the old one, so a
+      restart is needed for the new one to take over.
+    motivoModulo: >-
+      A driver that loads inside the kernel changes, such as the graphics card
+      one. Until you restart, the loaded driver is the old one while the library
+      that uses it is already the new one, and that combination does not work.
+    motivoSesion: >-
+      The desktop changes. No restart needed: logging out and back in is enough.
     bootJusto: "Little room on the boot partition"
     bootJustoDetalle: >-
       There are {0} free and writing the new boot files safely would take {1}. The

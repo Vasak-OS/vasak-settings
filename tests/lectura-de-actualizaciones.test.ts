@@ -129,4 +129,58 @@ describe('leer', () => {
 		expect(lectura.pendientes).toHaveLength(1);
 		expect(lectura.pendientes[0].version_vieja).toBe('');
 	});
+
+	/**
+	 * Al revés que con el fallo, un motivo desconocido sí se descarta: la
+	 * pantalla le pone a cada motivo su explicación, y para uno que no conoce
+	 * no tiene ninguna. Una lista de paquetes sin decir qué les pasa no es
+	 * información. Lo que decide —`pide_reinicio`— no depende de esto.
+	 */
+	test('un motivo que la pantalla no conoce se descarta', () => {
+		const lectura = leer({
+			preflight: {
+				pide_reinicio: true,
+				razones: [
+					{ motivo: 'kernel', paquetes: ['linux'] },
+					{ motivo: 'lo-que-venga', paquetes: ['algo'] },
+					{ paquetes: ['sin motivo'] },
+				],
+			},
+			// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
+		} as any);
+
+		expect(lectura.preflight?.razones).toHaveLength(1);
+		expect(lectura.preflight?.razones[0].motivo).toBe('kernel');
+		expect(lectura.preflight?.pide_reinicio).toBe(true);
+	});
+
+	test('los cuatro motivos de vasak-update pasan', () => {
+		for (const motivo of ['kernel', 'systemd', 'modulo', 'sesion']) {
+			const lectura = leer({
+				preflight: { razones: [{ motivo, paquetes: ['p'] }] },
+				// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
+			} as any);
+			expect(lectura.preflight?.razones[0].motivo).toBe(motivo);
+		}
+	});
+
+	/**
+	 * Reiniciar y volver a entrar son consejos distintos, y los dos se asumen
+	 * innecesarios si no vinieron: pedir un reinicio que no hace falta enseña a
+	 * ignorar el aviso.
+	 */
+	test('reiniciar y volver a entrar sólo si vinieron', () => {
+		// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
+		const vacio = leer({ preflight: {} } as any).preflight;
+		expect(vacio?.pide_reinicio).toBe(false);
+		expect(vacio?.pide_volver_a_entrar).toBe(false);
+		expect(vacio?.razones).toEqual([]);
+
+		const sesion = leer({
+			preflight: { pide_volver_a_entrar: true },
+			// biome-ignore lint/suspicious/noExplicitAny: fixture sin tipar a propósito
+		} as any).preflight;
+		expect(sesion?.pide_reinicio).toBe(false);
+		expect(sesion?.pide_volver_a_entrar).toBe(true);
+	});
 });
