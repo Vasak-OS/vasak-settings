@@ -283,7 +283,9 @@ mod tests {
 
     #[test]
     fn lo_de_afuera_del_grupo_se_ignora() {
-        let entrada = leer_entrada("Exec=/usr/bin/colado\nIcon=colado\n[Desktop Entry]\nExec=/usr/bin/app\nIcon=app\n");
+        let entrada = leer_entrada(
+            "Exec=/usr/bin/colado\nIcon=colado\n[Desktop Entry]\nExec=/usr/bin/app\nIcon=app\n",
+        );
         assert_eq!(entrada.unwrap().programa, "/usr/bin/app");
     }
 

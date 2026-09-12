@@ -9,14 +9,20 @@
  * Si el icono no se encuentra queda el hueco con el borde, no un recuadro roto:
  * una fila sin icono se sigue leyendo por su nombre, y una imagen rota llama la
  * atención sobre lo único que no importa de esa fila.
+ *
+ * # Es decorativo, y por eso va sin texto alternativo
+ *
+ * El nombre de la aplicación está en el encabezado de la misma fila. Un `alt`
+ * con ese nombre lo haría anunciar **dos veces** a quien usa un lector de
+ * pantalla: primero la imagen, después el título. El icono no agrega
+ * información, agrega reconocimiento de un vistazo — que es exactamente lo que
+ * un `alt` vacío declara.
  */
 import { useReactiveIcon } from '@/composables/useReactiveIcon';
 
 const props = defineProps<{
 	/** El nombre del icono, ya resuelto por el backend desde el `.desktop`. */
 	nombre: string;
-	/** Para el texto alternativo: el icono no dice nada por sí solo. */
-	aplicacion: string;
 }>();
 
 const [icono] = useReactiveIcon(() => props.nombre);
@@ -26,6 +32,6 @@ const [icono] = useReactiveIcon(() => props.nombre);
 	<span
 		class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-corner-sm border border-ui-border bg-ui-bg/60"
 	>
-		<img v-if="icono" :src="icono" :alt="aplicacion" class="size-7 object-contain">
+		<img v-if="icono" :src="icono" alt="" class="size-7 object-contain">
 	</span>
 </template>

@@ -161,8 +161,14 @@ mod tests {
 
         // Account resources carry a dot in the key; it has to survive as one
         // key rather than being read as a nested structure.
-        assert_eq!(entry.decisions.get("account.email").map(String::as_str), Some("denied"));
-        assert_eq!(entry.decisions.get("camera").map(String::as_str), Some("denied"));
+        assert_eq!(
+            entry.decisions.get("account.email").map(String::as_str),
+            Some("denied")
+        );
+        assert_eq!(
+            entry.decisions.get("camera").map(String::as_str),
+            Some("denied")
+        );
 
         // Este puente vuelve a declarar la forma del servicio, así que un campo
         // que falte acá se pierde sin que nada falle. Con éste, la pantalla
@@ -216,7 +222,13 @@ pub async fn list_blocked() -> Result<Vec<BlockedItem>, String> {
     let connection = service().await?;
 
     let reply = connection
-        .call_method(Some(SERVICE_NAME), SERVICE_PATH, Some(SERVICE_INTERFACE), "ListBlocked", &())
+        .call_method(
+            Some(SERVICE_NAME),
+            SERVICE_PATH,
+            Some(SERVICE_INTERFACE),
+            "ListBlocked",
+            &(),
+        )
         .await
         .map_err(|e| format!("No se pudo leer lo bloqueado: {e}"))?;
 

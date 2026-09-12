@@ -348,10 +348,7 @@ onMounted(load);
 						:key="entrada.application.binary_path"
 						class="flex flex-wrap items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/40 p-3"
 					>
-						<IconoDeApp
-							:nombre="entrada.application.icon"
-							:aplicacion="entrada.application.display_name"
-						/>
+						<IconoDeApp :nombre="entrada.application.icon" />
 
 						<div class="min-w-0 flex-1">
 							<h3 class="truncate font-semibold text-tx-main">
