@@ -71,6 +71,14 @@ roxmltree = "0.21"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 #tauri-plugin-network-manager = { path = "../../tauri-plugin-network-manager" }
 
+[features]
+# Para poder mirar la ventana sin el servidor de desarrollo.
+#
+# Sin esta feature, `tauri` sirve la interfaz desde `devUrl` y un binario
+# compilado a mano abre una ventana que dice «Could not connect to localhost».
+# Con ella la interfaz sale de `dist/`, que es lo que hace el empaquetado.
+custom-protocol = ["tauri/custom-protocol"]
+
 [profile.dev]
 incremental = true # Compile your binary in smaller steps.
 

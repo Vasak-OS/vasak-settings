@@ -266,6 +266,12 @@ views:
       Esta aplicación la instaló el sistema, así que ningún perfil la limita:
       cambiar esto no le quita ni le da acceso.
     forget: Olvidar
+    forgetHint: >-
+      Borra lo decidido sobre esta aplicación para todos los recursos, no sólo
+      para el que estás mirando.
+    sinAppsEnRecurso: >-
+      Ninguna aplicación pidió esto todavía. Las que lo pidan van a aparecer
+      acá para que decidas.
     allow: Permitir
     deny: No permitir
     blocked:
