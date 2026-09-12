@@ -40,6 +40,7 @@
  */
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, ref } from 'vue';
+import IconoDeApp from '@/components/permisos/IconoDeApp.vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
@@ -54,6 +55,7 @@ import {
 	type PermissionEntry,
 	setPermission,
 } from '@/services/permissions.service';
+import { pestanaInicial, porRecurso } from '@/tools/permisos-por-recurso';
 
 const { t } = useI18n();
 
@@ -110,21 +112,37 @@ const load = async (refrescar = false) => {
 	}
 };
 
-const decisionOf = (entry: PermissionEntry, resource: string) =>
-	entry.decisions[resource] ?? 'unknown';
+/**
+ * La lista dada vuelta: un recurso por pestaña, con las aplicaciones adentro.
+ *
+ * El servicio contesta por aplicación porque así es como decide, pero la
+ * pregunta que alguien trae acá es «¿quién puede usar mi cámara?». Con la lista
+ * por aplicación había que abrir una por una y recordar lo que decía la
+ * anterior. La cuenta está en `tools/permisos-por-recurso.ts`, probada aparte.
+ */
+const recursos = computed(() => porRecurso(entries.value, RESOURCES));
 
 /**
- * Sólo las aplicaciones que pidieron alguna de estas tres cosas.
+ * La pestaña abierta.
  *
- * La lista completa incluye permisos de cuentas, que se administran en su
- * propia pantalla: mostrarlos acá sería repetirlos en dos lugares y dejar dudas
- * sobre cuál manda.
+ * `null` hasta que llega la lista: recién ahí se sabe cuál tiene algo, y abrir
+ * en una vacía hace pensar que no hay ningún permiso concedido en todo el
+ * sistema.
  */
-const visible = computed(() =>
-	entries.value.filter((entry) =>
-		RESOURCES.some((resource) => decisionOf(entry, resource) !== 'unknown')
-	)
-);
+const pestana = ref<(typeof RESOURCES)[number] | null>(null);
+
+const pestanaActiva = computed(() => pestana.value ?? pestanaInicial(recursos.value, RESOURCES[0]));
+
+const recursoActivo = computed(() => recursos.value.find((r) => r.id === pestanaActiva.value));
+
+/**
+ * Si hay algo que mostrar en alguna pestaña.
+ *
+ * La lista que da el servicio incluye permisos de cuentas, que se administran
+ * en su propia pantalla: el pivote ya los deja afuera porque sólo mira estos
+ * tres recursos, así que preguntarle a él es preguntar por lo que se ve.
+ */
+const hayAlgo = computed(() => recursos.value.some((r) => r.apps.length > 0));
 
 /**
  * Si cambiar esto acá va a servir de algo.
@@ -280,82 +298,118 @@ onMounted(load);
 			<p v-if="loading" class="text-sm text-tx-muted">{{ t('common.loading') }}</p>
 
 			<EmptyStateBox
-				v-else-if="visible.length === 0"
+				v-else-if="!hayAlgo"
 				padding="lg"
 				:message="t('views.privacySecurity.empty')"
 			/>
 
 			<template v-else>
-			<article
-				v-for="entry in visible"
-				:key="entry.application.binary_path"
-				class="rounded-corner border border-ui-border bg-ui-surface/40 p-4 flex flex-col gap-3"
-			>
-				<header class="flex flex-wrap items-start gap-3">
-					<div class="min-w-0 flex-1">
-						<h3 class="font-semibold text-tx-main truncate">
-							{{ entry.application.display_name }}
-						</h3>
-						<p class="text-xs text-tx-muted break-all">
-							{{ entry.application.binary_path }}
-						</p>
-						<p
-							v-if="!sePuedeDecidir(entry)"
-							class="mt-1 text-xs text-status-warning"
-						>
-							{{ t('views.privacySecurity.notConfined') }}
-						</p>
-					</div>
+				<!-- Una pestaña por recurso, como en Privacidad y seguridad de
+				     macOS: se entra por lo que preocupa —la cámara— y adentro
+				     está quién la tiene. La fila es fija aunque alguna esté
+				     vacía; una pestaña que aparece y desaparece movería a las
+				     otras de lugar entre una visita y la siguiente. -->
+				<div class="flex gap-1 border-b border-ui-border" role="tablist">
 					<button
+						v-for="r in recursos"
+						:key="r.id"
 						type="button"
-						:disabled="busyPath === entry.application.binary_path"
-						class="rounded-corner border border-ui-border px-3 py-1.5 text-sm text-tx-main hover:bg-ui-surface disabled:opacity-50"
-						@click="forget(entry)"
+						role="tab"
+						:aria-selected="r.id === pestanaActiva"
+						class="-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm"
+						:class="
+							r.id === pestanaActiva
+								? 'border-primary font-semibold text-tx-main'
+								: 'border-transparent text-tx-muted hover:text-tx-main'
+						"
+						@click="pestana = r.id"
 					>
-						{{ t('views.privacySecurity.forget') }}
-					</button>
-				</header>
-
-				<ul class="flex flex-col gap-2">
-					<li
-						v-for="resource in RESOURCES"
-						:key="resource"
-						class="flex items-center justify-between gap-3"
-					>
-						<span class="min-w-0 text-sm text-tx-main">
-							{{ t(`views.privacySecurity.resources.${resource}`) }}
+						{{ t(`views.privacySecurity.resources.${r.id}`) }}
+						<!-- Cuántas lo tienen concedido, no cuántas lo pidieron:
+						     es el número que alguien vino a mirar. -->
+						<span
+							v-if="r.permitidas > 0"
+							class="rounded-corner-sm bg-status-success/20 px-1.5 text-xs text-status-success"
+						>
+							{{ r.permitidas }}
 						</span>
+					</button>
+				</div>
+
+				<EmptyStateBox
+					v-if="recursoActivo && recursoActivo.apps.length === 0"
+					padding="lg"
+					:message="t('views.privacySecurity.sinAppsEnRecurso')"
+				/>
+
+				<ul v-else class="flex flex-col gap-2">
+					<li
+						v-for="{ entrada, decision } in recursoActivo?.apps ?? []"
+						:key="entrada.application.binary_path"
+						class="flex flex-wrap items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/40 p-3"
+					>
+						<IconoDeApp
+							:nombre="entrada.application.icon"
+							:aplicacion="entrada.application.display_name"
+						/>
+
+						<div class="min-w-0 flex-1">
+							<h3 class="truncate font-semibold text-tx-main">
+								{{ entrada.application.display_name }}
+							</h3>
+							<p class="truncate text-xs text-tx-muted" :title="entrada.application.binary_path">
+								{{ entrada.application.binary_path }}
+							</p>
+							<p
+								v-if="!sePuedeDecidir(entrada)"
+								class="mt-1 text-xs text-status-warning"
+							>
+								{{ t('views.privacySecurity.notConfined') }}
+							</p>
+						</div>
+
 						<div class="flex shrink-0 gap-1">
 							<button
 								type="button"
-								:disabled="busyPath === entry.application.binary_path || !sePuedeDecidir(entry)"
+								:disabled="busyPath === entrada.application.binary_path || !sePuedeDecidir(entrada)"
 								class="rounded-corner px-3 py-1 text-xs disabled:opacity-50"
 								:class="
-									decisionOf(entry, resource) === 'allowed'
-										? 'bg-status-success/20 text-status-success font-semibold'
+									decision === 'allowed'
+										? 'bg-status-success/20 font-semibold text-status-success'
 										: 'border border-ui-border text-tx-muted hover:bg-ui-surface'
 								"
-								@click="change(entry, resource, true)"
+								@click="change(entrada, pestanaActiva, true)"
 							>
 								{{ t('views.privacySecurity.allow') }}
 							</button>
 							<button
 								type="button"
-								:disabled="busyPath === entry.application.binary_path || !sePuedeDecidir(entry)"
+								:disabled="busyPath === entrada.application.binary_path || !sePuedeDecidir(entrada)"
 								class="rounded-corner px-3 py-1 text-xs disabled:opacity-50"
 								:class="
-									decisionOf(entry, resource) === 'denied'
-										? 'bg-status-error/20 text-status-error font-semibold'
+									decision === 'denied'
+										? 'bg-status-error/20 font-semibold text-status-error'
 										: 'border border-ui-border text-tx-muted hover:bg-ui-surface'
 								"
-								@click="change(entry, resource, false)"
+								@click="change(entrada, pestanaActiva, false)"
 							>
 								{{ t('views.privacySecurity.deny') }}
+							</button>
+							<!-- Olvidar es por aplicación y no por recurso: borra lo
+							     decidido sobre todos. Por eso dice qué hace y va
+							     separado de los dos de arriba. -->
+							<button
+								type="button"
+								:disabled="busyPath === entrada.application.binary_path"
+								:title="t('views.privacySecurity.forgetHint')"
+								class="rounded-corner border border-ui-border px-3 py-1 text-xs text-tx-main hover:bg-ui-surface disabled:opacity-50"
+								@click="forget(entrada)"
+							>
+								{{ t('views.privacySecurity.forget') }}
 							</button>
 						</div>
 					</li>
 				</ul>
-			</article>
 			</template>
 		</SectionCard>
 	</div>

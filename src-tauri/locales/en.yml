@@ -264,6 +264,12 @@ views:
       The system installed this application, so no profile limits it: changing
       this neither grants nor removes access.
     forget: Forget
+    forgetHint: >-
+      Clears what was decided about this application for every resource, not
+      just the one you are looking at.
+    sinAppsEnRecurso: >-
+      No application has asked for this yet. The ones that do will show up
+      here for you to decide.
     allow: Allow
     deny: Don't allow
     blocked:

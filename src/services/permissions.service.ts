@@ -7,6 +7,15 @@ export interface PermissionApplication {
 	binary_path: string;
 	display_name: string;
 	provenance: Provenance;
+	/**
+	 * El nombre del icono, resuelto por el backend desde el `.desktop`.
+	 *
+	 * Lo resuelve `vasak-settings` y no el servicio de permisos: el servicio
+	 * decide política y no sabe de temas de iconos. Cae en
+	 * `application-x-executable` cuando ningún `.desktop` nombra ese binario,
+	 * que es el caso de algo lanzado desde la terminal.
+	 */
+	icon: string;
 }
 
 export interface PermissionEntry {

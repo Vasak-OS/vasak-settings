@@ -1,5 +1,6 @@
 pub mod actualizaciones;
 pub mod clipboard;
+pub mod iconos_de_apps;
 pub mod system_info;
 pub mod system_config;
 pub mod audio;

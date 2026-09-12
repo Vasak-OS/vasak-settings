@@ -17,6 +17,14 @@ pub struct PermissionApplication {
     pub display_name: String,
     /// `"system-installed"` or `"unverified"`.
     pub provenance: String,
+    /// El nombre del icono, resuelto **acá** y no por el servicio.
+    ///
+    /// El servicio decide política y no sabe de temas de iconos ni de archivos
+    /// `.desktop`, que es lo correcto: el icono es presentación. Se completa
+    /// después de leer la respuesta, así que el servicio no lo manda — de ahí el
+    /// `default`, sin el cual `serde` fallaría al leer.
+    #[serde(default)]
+    pub icon: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,7 +75,25 @@ pub async fn list_permissions() -> Result<Vec<PermissionEntry>, String> {
         .deserialize()
         .map_err(|e| format!("Respuesta inválida del servicio de permisos: {e}"))?;
 
-    serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))
+    let mut entradas: Vec<PermissionEntry> = serde_json::from_str(&raw)
+        .map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))?;
+
+    // El icono, en una sola pasada por los `.desktop` para toda la lista. Una
+    // lista de rutas de binarios no se lee de un vistazo: hay que detenerse en
+    // cada línea a descifrar cuál es cuál, y acá se decide quién usa la cámara.
+    let binarios: Vec<String> = entradas
+        .iter()
+        .map(|e| e.application.binary_path.clone())
+        .collect();
+    let iconos = super::iconos_de_apps::iconos_de(&binarios);
+
+    for entrada in &mut entradas {
+        if let Some(icono) = iconos.get(&entrada.application.binary_path) {
+            entrada.application.icon = icono.clone();
+        }
+    }
+
+    Ok(entradas)
 }
 
 /// Grants or revokes one resource for one program.
