@@ -22,6 +22,7 @@ import {
 	setProviderCredentials,
 	testMailConnection,
 } from '@/services/accounts.service';
+import { elegirIcono, ICONO_GENERICO, ICONO_ROTO, iconoDe } from '@/tools/icono-de-proveedor';
 
 /**
  * El proveedor personalizado no está en el catálogo del servicio.
@@ -63,8 +64,6 @@ const motivoNoDisponible = (provider: ProviderInfo): string | undefined =>
  */
 const tieneCredenciales = (provider: ProviderInfo) =>
 	provider.kind === 'oauth2' && provider.configured;
-
-const iconoDe = (id: string) => `${id}-symbolic`;
 
 const errors = ref('');
 const success = ref('');
@@ -124,14 +123,19 @@ const isCustomValid = computed(() => {
  */
 const iconos = ref<Record<string, string>>({});
 const [customIcon, updateCustomIcon] = useReactiveSymbol(() => 'computer-symbolic');
+const [iconoGenerico, actualizarGenerico] = useReactiveSymbol(() => ICONO_GENERICO);
+const [iconoRoto, actualizarRoto] = useReactiveSymbol(() => ICONO_ROTO);
 
 const resolverIconos = async () => {
+	await Promise.all([actualizarRoto(), actualizarGenerico()]);
+
 	const resueltos: Record<string, string> = {};
 	await Promise.all(
 		providers.value.map(async (provider) => {
 			const [icono, actualizar] = useReactiveSymbol(() => iconoDe(provider.id));
 			await actualizar();
-			if (icono.value) resueltos[provider.id] = icono.value;
+			const elegido = elegirIcono(icono.value, iconoGenerico.value, iconoRoto.value);
+			if (elegido) resueltos[provider.id] = elegido;
 		})
 	);
 	iconos.value = resueltos;
