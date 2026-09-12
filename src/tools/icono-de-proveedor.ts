@@ -31,48 +31,53 @@ export const iconoDe = (id: string): string => `${id}-symbolic`;
  */
 export const ICONO_GENERICO = 'goa-account-symbolic';
 
-/**
- * El nombre que el tema devuelve cuando no encuentra el que se pidió.
- *
- * No hay forma de preguntar si un nombre existe: el plugin de iconos resuelve
- * con `FORCE_SYMBOLIC` y, si no encuentra nada, devuelve `image-missing` —el
- * cuadrito— como si fuera el icono pedido. Así que se lo pide a propósito una
- * vez y se lo usa de referencia: lo que venga igual a eso es un icono que no
- * está.
- */
-export const ICONO_ROTO = 'image-missing';
+/** Con qué se pregunta si el tema tiene un nombre. `hasSymbol`, en la aplicación. */
+export type Existe = (nombre: string) => Promise<boolean>;
 
 /**
- * Cuál de los tres dibujar, ya resueltos a `data:` por el plugin.
+ * Qué nombre de icono le corresponde a cada proveedor.
  *
- * @param resuelto Lo que vino al pedir el icono del proveedor.
- * @param generico Lo que vino al pedir {@link ICONO_GENERICO}.
- * @param roto Lo que vino al pedir {@link ICONO_ROTO}, la referencia.
- * @returns El icono a dibujar, o `''` para no dibujar ninguno.
+ * Se pregunta antes de pedir porque pedir no distingue: un nombre que el tema
+ * no tiene vuelve como `image-missing` —el cuadrito— con forma de icono válido.
+ * Hasta `@vasakgroup/plugin-vicons` 2.2.0 no había con qué preguntar, y lo que
+ * se hacía era pedir `image-missing` a propósito y comparar los dos `data:`.
+ * `hasSymbol` hace esa misma búsqueda sin traer el archivo.
+ *
+ * El genérico se pregunta **una sola vez y sólo si falta alguno**, que con el
+ * pack completo es nunca. Antes se resolvía siempre, aunque no hiciera falta.
+ *
+ * @param ids Los `id` de proveedor que dio el servicio de cuentas.
+ * @param existe Con qué preguntarle al tema, normalmente `hasSymbol`.
+ * @returns Un nombre por proveedor. Los que no tienen ninguno no aparecen.
  */
-export function elegirIcono(resuelto: string, generico: string, roto: string): string {
-	// Sin referencia no se puede saber si el icono del proveedor existe —el
-	// plugin devuelve `''` sólo cuando la llamada falla—, así que se dibuja lo
-	// que haya venido en vez de descartarlo por las dudas.
-	if (!roto) return resuelto;
+export async function nombresDeIconos(
+	ids: string[],
+	existe: Existe
+): Promise<Record<string, string>> {
+	const propios = await Promise.all(
+		ids.map(async (id) => [id, (await existe(iconoDe(id))) ? iconoDe(id) : ''] as const)
+	);
 
-	if (resuelto && resuelto !== roto) return resuelto;
+	const generico =
+		propios.some(([, nombre]) => !nombre) && (await existe(ICONO_GENERICO)) ? ICONO_GENERICO : '';
 
-	// El genérico también sale del tema, así que también puede faltar. Si falta,
-	// ningún icono: la tarjeta se lee igual por el nombre del proveedor, y el
-	// cuadrito no aporta nada que el nombre no diga mejor.
-	return generico && generico !== roto ? generico : '';
+	const nombres: Record<string, string> = {};
+	for (const [id, propio] of propios) {
+		const nombre = propio || generico;
+		if (nombre) nombres[id] = nombre;
+	}
+	return nombres;
 }
 
 /**
  * Los iconos de todos los proveedores del catálogo, ya elegidos.
  *
  * Va acá y no en la vista porque es donde se puede probar, y porque lo que hace
- * no tiene nada de visual: pedir los tres nombres de referencia una sola vez
- * —no una por proveedor—, pedir el de cada uno, y aplicarles {@link elegirIcono}.
+ * no tiene nada de visual: elegir el nombre de cada uno con
+ * {@link nombresDeIconos} y después pedir sólo ésos.
  *
- * Recibe `pedir` en vez de importar el plugin de iconos por lo mismo: así la
- * prueba contesta lo que quiere sin levantar Tauri.
+ * Recibe `pedir` y `existe` en vez de importar el plugin de iconos por lo
+ * mismo: así la prueba contesta lo que quiere sin levantar Tauri.
  *
  * No devuelve entradas vacías: la vista dibuja el icono sólo si el proveedor
  * está en el objeto, así que un `''` y un ausente significan lo mismo y es
@@ -80,18 +85,20 @@ export function elegirIcono(resuelto: string, generico: string, roto: string): s
  *
  * @param ids Los `id` de proveedor que dio el servicio de cuentas.
  * @param pedir Cómo se resuelve un nombre de icono, normalmente `getSymbolSource`.
+ * @param existe Cómo se pregunta si el tema lo tiene, normalmente `hasSymbol`.
  */
 export async function resolverIconosDeProveedores(
 	ids: string[],
-	pedir: (nombre: string) => Promise<string>
+	pedir: (nombre: string) => Promise<string>,
+	existe: Existe
 ): Promise<Record<string, string>> {
-	const [roto, generico] = await Promise.all([pedir(ICONO_ROTO), pedir(ICONO_GENERICO)]);
+	const nombres = await nombresDeIconos(ids, existe);
 
 	const iconos: Record<string, string> = {};
 	await Promise.all(
-		ids.map(async (id) => {
-			const elegido = elegirIcono(await pedir(iconoDe(id)), generico, roto);
-			if (elegido) iconos[id] = elegido;
+		Object.entries(nombres).map(async ([id, nombre]) => {
+			const icono = await pedir(nombre);
+			if (icono) iconos[id] = icono;
 		})
 	);
 

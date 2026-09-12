@@ -1,9 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import {
-	elegirIcono,
 	ICONO_GENERICO,
-	ICONO_ROTO,
 	iconoDe,
+	nombresDeIconos,
 	resolverIconosDeProveedores,
 } from '../src/tools/icono-de-proveedor';
 
@@ -24,10 +23,6 @@ import {
  * distinguibles entre sí, porque lo único que se compara es la igualdad.
  */
 
-const PROVEEDOR = 'data:image/svg+xml;base64,ELDELPROVEEDOR';
-const GENERICO = 'data:image/svg+xml;base64,ELGENERICO';
-const ROTO = 'data:image/svg+xml;base64,ELCUADRITO';
-
 describe('iconoDe', () => {
 	test('el nombre sale del id que da el servicio de cuentas', () => {
 		expect(iconoDe('google')).toBe('google-symbolic');
@@ -35,71 +30,88 @@ describe('iconoDe', () => {
 		expect(iconoDe('nextcloud')).toBe('nextcloud-symbolic');
 	});
 
-	test('los nombres de referencia son los del tema', () => {
+	test('el genérico es el que el tema trae para «una cuenta»', () => {
 		expect(ICONO_GENERICO).toBe('goa-account-symbolic');
-		expect(ICONO_ROTO).toBe('image-missing');
 	});
 });
 
-describe('elegirIcono', () => {
-	test('si el proveedor tiene el suyo, ése', () => {
-		expect(elegirIcono(PROVEEDOR, GENERICO, ROTO)).toBe(PROVEEDOR);
+describe('nombresDeIconos', () => {
+	/** Un tema que tiene exactamente estos nombres, y anota qué se le preguntó. */
+	const temaCon = (...nombres: string[]) => {
+		const preguntas: string[] = [];
+		const existe = async (nombre: string) => {
+			preguntas.push(nombre);
+			return nombres.includes(nombre);
+		};
+		return { existe, preguntas };
+	};
+
+	test('si el proveedor tiene el suyo, ése', async () => {
+		const { existe } = temaCon('google-symbolic');
+		expect(await nombresDeIconos(['google'], existe)).toEqual({ google: 'google-symbolic' });
 	});
 
-	test('si el tema no lo tiene, el genérico en vez del cuadrito', () => {
-		expect(elegirIcono(ROTO, GENERICO, ROTO)).toBe(GENERICO);
+	test('si el tema no lo tiene, el genérico', async () => {
+		const { existe } = temaCon(ICONO_GENERICO);
+		expect(await nombresDeIconos(['proton'], existe)).toEqual({ proton: ICONO_GENERICO });
 	});
 
-	test('si el tema tampoco tiene el genérico, ninguno', () => {
-		// Un tema sin `goa-account-symbolic` contesta el cuadrito a las dos
-		// preguntas. Dibujarlo sería volver al síntoma por el otro camino.
-		expect(elegirIcono(ROTO, ROTO, ROTO)).toBe('');
+	test('si el tema tampoco tiene el genérico, ninguno', async () => {
+		const { existe } = temaCon();
+		expect(await nombresDeIconos(['proton'], existe)).toEqual({});
 	});
 
-	test('si la llamada al plugin falla, el genérico', () => {
-		// El plugin devuelve `''` cuando la llamada falla, no cuando el icono no
-		// existe. Es otro problema, pero la tarjeta se dibuja igual.
-		expect(elegirIcono('', GENERICO, ROTO)).toBe(GENERICO);
+	test('con el tema completo no se pregunta por el genérico', async () => {
+		// Es el caso normal desde que el pack tiene los tres iconos, y era una
+		// llamada al plugin por pantalla que no hacía falta.
+		const { existe, preguntas } = temaCon('google-symbolic', 'nextcloud-symbolic');
+		await nombresDeIconos(['google', 'nextcloud'], existe);
+		expect(preguntas).toEqual(['google-symbolic', 'nextcloud-symbolic']);
 	});
 
-	test('sin referencia del cuadrito, lo que haya venido', () => {
-		// Si ni siquiera `image-missing` se pudo resolver no hay con qué comparar,
-		// y descartar el icono del proveedor por las dudas sería peor: es el caso
-		// en el que probablemente esté bien.
-		expect(elegirIcono(PROVEEDOR, GENERICO, '')).toBe(PROVEEDOR);
-		expect(elegirIcono('', '', '')).toBe('');
+	test('y si falta más de uno, se pregunta una sola vez', async () => {
+		const { existe, preguntas } = temaCon(ICONO_GENERICO);
+		await nombresDeIconos(['uno', 'otro', 'tercero'], existe);
+		expect(preguntas.filter((n) => n === ICONO_GENERICO)).toHaveLength(1);
+	});
+
+	test('sin proveedores no se le pregunta nada al tema', async () => {
+		const { existe, preguntas } = temaCon(ICONO_GENERICO);
+		expect(await nombresDeIconos([], existe)).toEqual({});
+		expect(preguntas).toEqual([]);
 	});
 });
 
 describe('resolverIconosDeProveedores', () => {
 	/**
-	 * Un tema que tiene todo lo que se le pida menos lo que diga `faltan`.
+	 * Un tema que tiene todo menos lo que diga `faltan`.
 	 *
-	 * Lo que falta contesta el cuadrito, que es lo que hace el plugin de iconos:
-	 * no falla ni devuelve vacío, devuelve `image-missing` como si fuera el icono
-	 * pedido. También lo contesta al preguntar por el cuadrito mismo, que es de
-	 * dónde sale la referencia con la que se lo reconoce.
+	 * `existe` es lo que ahora decide —`hasSymbol` en la aplicación— y `pedir`
+	 * sólo trae lo ya elegido. Se anota lo que se pide para poder comprobar que
+	 * no se pida de más: traer un icono es leer un archivo y codificarlo en
+	 * base64.
 	 */
 	const temaSin = (faltan: string[]) => {
 		const pedidos: string[] = [];
+		const existe = async (nombre: string) => !faltan.includes(nombre);
 		const pedir = async (nombre: string) => {
 			pedidos.push(nombre);
-			return `data:${faltan.includes(nombre) ? ICONO_ROTO : nombre}`;
+			return `data:${nombre}`;
 		};
-		return { pedir, pedidos };
+		return { pedir, existe, pedidos };
 	};
 
 	test('un icono por proveedor', async () => {
-		const { pedir } = temaSin([]);
-		expect(await resolverIconosDeProveedores(['google', 'nextcloud'], pedir)).toEqual({
+		const { pedir, existe } = temaSin([]);
+		expect(await resolverIconosDeProveedores(['google', 'nextcloud'], pedir, existe)).toEqual({
 			google: 'data:google-symbolic',
 			nextcloud: 'data:nextcloud-symbolic',
 		});
 	});
 
 	test('el que el tema no tiene cae al genérico, y el resto no se entera', async () => {
-		const { pedir } = temaSin(['proton-symbolic']);
-		expect(await resolverIconosDeProveedores(['google', 'proton'], pedir)).toEqual({
+		const { pedir, existe } = temaSin(['proton-symbolic']);
+		expect(await resolverIconosDeProveedores(['google', 'proton'], pedir, existe)).toEqual({
 			google: 'data:google-symbolic',
 			proton: `data:${ICONO_GENERICO}`,
 		});
@@ -108,25 +120,28 @@ describe('resolverIconosDeProveedores', () => {
 	test('el proveedor sin icono ni genérico no entra en el objeto', async () => {
 		// La vista dibuja el icono sólo si el proveedor está, así que una entrada
 		// vacía y una ausente dicen lo mismo: que quede una sola forma de decirlo.
-		const { pedir } = temaSin(['proton-symbolic', ICONO_GENERICO]);
-		expect(await resolverIconosDeProveedores(['proton'], pedir)).toEqual({});
+		const { pedir, existe } = temaSin(['proton-symbolic', ICONO_GENERICO]);
+		expect(await resolverIconosDeProveedores(['proton'], pedir, existe)).toEqual({});
 	});
 
-	test('los nombres de referencia se piden una vez, no una por proveedor', async () => {
-		// Es la mitad del arreglo: antes cada tarjeta resolvía por su cuenta el
-		// genérico y el cuadrito, o sea dos llamadas de más por proveedor.
-		const { pedir, pedidos } = temaSin([]);
-		await resolverIconosDeProveedores(['google', 'microsoft', 'nextcloud'], pedir);
+	test('sólo se pide lo que se va a dibujar', async () => {
+		// Antes se pedían además el genérico y el cuadrito en cada tanda, siempre,
+		// aunque el tema tuviera todo. Ahora eso se pregunta, que es más barato, y
+		// el genérico ni se pregunta si no falta ninguno.
+		const { pedir, existe, pedidos } = temaSin([]);
+		await resolverIconosDeProveedores(['google', 'microsoft', 'nextcloud'], pedir, existe);
 
-		expect(pedidos.filter((n) => n === ICONO_ROTO)).toHaveLength(1);
-		expect(pedidos.filter((n) => n === ICONO_GENERICO)).toHaveLength(1);
-		expect(pedidos).toHaveLength(5);
+		expect(pedidos.toSorted()).toEqual([
+			'google-symbolic',
+			'microsoft-symbolic',
+			'nextcloud-symbolic',
+		]);
 	});
 
 	test('sin proveedores, ningún icono', async () => {
 		// El catálogo puede venir vacío si el servicio no está: la pantalla se
 		// dibuja igual, con la tarjeta del servidor personalizado.
-		const { pedir } = temaSin([]);
-		expect(await resolverIconosDeProveedores([], pedir)).toEqual({});
+		const { pedir, existe } = temaSin([]);
+		expect(await resolverIconosDeProveedores([], pedir, existe)).toEqual({});
 	});
 });
