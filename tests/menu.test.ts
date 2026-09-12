@@ -31,7 +31,12 @@ const nombresDeRuta = async (): Promise<string[]> => {
 	// las dos comprobaciones, así que quedaría fuera del menú sin que esto
 	// dijera nada — que es exactamente el descuido que esta prueba existe para
 	// encontrar.
-	const nombres = [...fuente.matchAll(/\bname\s*:\s*['"]([^'"]+)['"]/g)].map((m) => m[1]);
+	//
+	// La comilla de cierre es la misma que la de apertura —de ahí la
+	// retrorreferencia— para no dar por buena una mezcla de las dos. Una así no
+	// compila, pero si aparece conviene que caiga en el recuento de abajo y no
+	// que pase como un nombre leído.
+	const nombres = [...fuente.matchAll(/\bname\s*:\s*(['"])([^'"]+)\1/g)].map((m) => m[2]);
 
 	// Y si algún día se declaran de una forma que esto no sabe leer, que falle
 	// acá en vez de comprobar de menos en silencio.
