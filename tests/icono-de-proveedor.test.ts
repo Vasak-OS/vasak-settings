@@ -1,5 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { elegirIcono, ICONO_GENERICO, ICONO_ROTO, iconoDe } from '../src/tools/icono-de-proveedor';
+import {
+	elegirIcono,
+	ICONO_GENERICO,
+	ICONO_ROTO,
+	iconoDe,
+	resolverIconosDeProveedores,
+} from '../src/tools/icono-de-proveedor';
 
 /**
  * Que la tarjeta de un proveedor nunca muestre el cuadrito de imagen rota.
@@ -62,5 +68,65 @@ describe('elegirIcono', () => {
 		// en el que probablemente esté bien.
 		expect(elegirIcono(PROVEEDOR, GENERICO, '')).toBe(PROVEEDOR);
 		expect(elegirIcono('', '', '')).toBe('');
+	});
+});
+
+describe('resolverIconosDeProveedores', () => {
+	/**
+	 * Un tema que tiene todo lo que se le pida menos lo que diga `faltan`.
+	 *
+	 * Lo que falta contesta el cuadrito, que es lo que hace el plugin de iconos:
+	 * no falla ni devuelve vacío, devuelve `image-missing` como si fuera el icono
+	 * pedido. También lo contesta al preguntar por el cuadrito mismo, que es de
+	 * dónde sale la referencia con la que se lo reconoce.
+	 */
+	const temaSin = (faltan: string[]) => {
+		const pedidos: string[] = [];
+		const pedir = async (nombre: string) => {
+			pedidos.push(nombre);
+			return `data:${faltan.includes(nombre) ? ICONO_ROTO : nombre}`;
+		};
+		return { pedir, pedidos };
+	};
+
+	test('un icono por proveedor', async () => {
+		const { pedir } = temaSin([]);
+		expect(await resolverIconosDeProveedores(['google', 'nextcloud'], pedir)).toEqual({
+			google: 'data:google-symbolic',
+			nextcloud: 'data:nextcloud-symbolic',
+		});
+	});
+
+	test('el que el tema no tiene cae al genérico, y el resto no se entera', async () => {
+		const { pedir } = temaSin(['proton-symbolic']);
+		expect(await resolverIconosDeProveedores(['google', 'proton'], pedir)).toEqual({
+			google: 'data:google-symbolic',
+			proton: `data:${ICONO_GENERICO}`,
+		});
+	});
+
+	test('el proveedor sin icono ni genérico no entra en el objeto', async () => {
+		// La vista dibuja el icono sólo si el proveedor está, así que una entrada
+		// vacía y una ausente dicen lo mismo: que quede una sola forma de decirlo.
+		const { pedir } = temaSin(['proton-symbolic', ICONO_GENERICO]);
+		expect(await resolverIconosDeProveedores(['proton'], pedir)).toEqual({});
+	});
+
+	test('los nombres de referencia se piden una vez, no una por proveedor', async () => {
+		// Es la mitad del arreglo: antes cada tarjeta resolvía por su cuenta el
+		// genérico y el cuadrito, o sea dos llamadas de más por proveedor.
+		const { pedir, pedidos } = temaSin([]);
+		await resolverIconosDeProveedores(['google', 'microsoft', 'nextcloud'], pedir);
+
+		expect(pedidos.filter((n) => n === ICONO_ROTO)).toHaveLength(1);
+		expect(pedidos.filter((n) => n === ICONO_GENERICO)).toHaveLength(1);
+		expect(pedidos).toHaveLength(5);
+	});
+
+	test('sin proveedores, ningún icono', async () => {
+		// El catálogo puede venir vacío si el servicio no está: la pantalla se
+		// dibuja igual, con la tarjeta del servidor personalizado.
+		const { pedir } = temaSin([]);
+		expect(await resolverIconosDeProveedores([], pedir)).toEqual({});
 	});
 });

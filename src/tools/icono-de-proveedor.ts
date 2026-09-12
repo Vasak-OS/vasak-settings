@@ -63,3 +63,37 @@ export function elegirIcono(resuelto: string, generico: string, roto: string): s
 	// cuadrito no aporta nada que el nombre no diga mejor.
 	return generico && generico !== roto ? generico : '';
 }
+
+/**
+ * Los iconos de todos los proveedores del catálogo, ya elegidos.
+ *
+ * Va acá y no en la vista porque es donde se puede probar, y porque lo que hace
+ * no tiene nada de visual: pedir los tres nombres de referencia una sola vez
+ * —no una por proveedor—, pedir el de cada uno, y aplicarles {@link elegirIcono}.
+ *
+ * Recibe `pedir` en vez de importar el plugin de iconos por lo mismo: así la
+ * prueba contesta lo que quiere sin levantar Tauri.
+ *
+ * No devuelve entradas vacías: la vista dibuja el icono sólo si el proveedor
+ * está en el objeto, así que un `''` y un ausente significan lo mismo y es
+ * mejor que haya una sola forma de decirlo.
+ *
+ * @param ids Los `id` de proveedor que dio el servicio de cuentas.
+ * @param pedir Cómo se resuelve un nombre de icono, normalmente `getSymbolSource`.
+ */
+export async function resolverIconosDeProveedores(
+	ids: string[],
+	pedir: (nombre: string) => Promise<string>
+): Promise<Record<string, string>> {
+	const [roto, generico] = await Promise.all([pedir(ICONO_ROTO), pedir(ICONO_GENERICO)]);
+
+	const iconos: Record<string, string> = {};
+	await Promise.all(
+		ids.map(async (id) => {
+			const elegido = elegirIcono(await pedir(iconoDe(id)), generico, roto);
+			if (elegido) iconos[id] = elegido;
+		})
+	);
+
+	return iconos;
+}

@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+import { getSymbolSource } from '@vasakgroup/plugin-vicons';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import AccountPermissionsSection from '@/components/accounts/AccountPermissionsSection.vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
@@ -22,7 +24,7 @@ import {
 	setProviderCredentials,
 	testMailConnection,
 } from '@/services/accounts.service';
-import { elegirIcono, ICONO_GENERICO, ICONO_ROTO, iconoDe } from '@/tools/icono-de-proveedor';
+import { resolverIconosDeProveedores } from '@/tools/icono-de-proveedor';
 
 /**
  * El proveedor personalizado no está en el catálogo del servicio.
@@ -122,23 +124,26 @@ const isCustomValid = computed(() => {
  * decide el servicio, así que acá no se puede saber de antemano cuáles hay.
  */
 const iconos = ref<Record<string, string>>({});
-const [customIcon, updateCustomIcon] = useReactiveSymbol(() => 'computer-symbolic');
-const [iconoGenerico, actualizarGenerico] = useReactiveSymbol(() => ICONO_GENERICO);
-const [iconoRoto, actualizarRoto] = useReactiveSymbol(() => ICONO_ROTO);
+const [customIcon] = useReactiveSymbol(() => 'computer-symbolic');
 
+/**
+ * Se piden derecho al plugin, sin pasar por `useReactiveSymbol`.
+ *
+ * El composable da un `ref` que se actualiza solo al cambiar el tema, y eso acá
+ * no sirve: los proveedores no se saben hasta que llega el catálogo, así que los
+ * `ref` habría que crearlos dentro de esta función —fuera del `setup`— y ahí ni
+ * se pueden desenganchar ni los mira nadie, porque lo que la plantilla dibuja es
+ * este objeto. Era una fuga por recarga del catálogo y, de paso, tarjetas que se
+ * quedaban con el icono de la variante anterior.
+ *
+ * El cambio de tema lo atiende la vista una vez, más abajo, volviendo a correr
+ * esto: un icono por proveedor, resueltos todos juntos.
+ */
 const resolverIconos = async () => {
-	await Promise.all([actualizarRoto(), actualizarGenerico()]);
-
-	const resueltos: Record<string, string> = {};
-	await Promise.all(
-		providers.value.map(async (provider) => {
-			const [icono, actualizar] = useReactiveSymbol(() => iconoDe(provider.id));
-			await actualizar();
-			const elegido = elegirIcono(icono.value, iconoGenerico.value, iconoRoto.value);
-			if (elegido) resueltos[provider.id] = elegido;
-		})
+	iconos.value = await resolverIconosDeProveedores(
+		providers.value.map((provider) => provider.id),
+		getSymbolSource
 	);
-	iconos.value = resueltos;
 };
 
 const validateCustomForm = (): boolean => {
@@ -601,8 +606,34 @@ const fetchProviders = async () => {
 	}
 };
 
+/**
+ * Un solo oyente del cambio de tema para todas las tarjetas de proveedor.
+ *
+ * `useReactiveSymbol` se encarga del icono del servidor personalizado, que es
+ * uno y se sabe de antemano. Los del catálogo no, y por eso este oyente: cuando
+ * el tema pasa de claro a oscuro —o al revés— hay que volver a pedirlos, o las
+ * tarjetas siguen dibujando la variante vieja.
+ */
+let dejarDeEscucharElTema: UnlistenFn | null = null;
+let desmontada = false;
+
 onMounted(async () => {
-	await Promise.all([fetchAccounts(), fetchProviders(), updateCustomIcon()]);
+	// `listen` tarda en resolver, y en ese rato se puede haber cambiado de
+	// sección: sin la bandera, el oyente llegaría cuando ya no hay a quién
+	// avisarle y nadie lo sacaría nunca — que es la misma fuga que esto arregla.
+	listen('vicons:theme-changed', () => {
+		resolverIconos();
+	}).then((parar) => {
+		if (desmontada) parar();
+		else dejarDeEscucharElTema = parar;
+	});
+
+	await Promise.all([fetchAccounts(), fetchProviders()]);
+});
+
+onUnmounted(() => {
+	desmontada = true;
+	dejarDeEscucharElTema?.();
 });
 </script>
 
