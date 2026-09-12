@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import { getSymbolSource } from '@vasakgroup/plugin-vicons';
+import { getSymbolSource, hasSymbol } from '@vasakgroup/plugin-vicons';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import AccountPermissionsSection from '@/components/accounts/AccountPermissionsSection.vue';
@@ -138,11 +138,16 @@ const [customIcon] = useReactiveSymbol(() => 'computer-symbolic');
  *
  * El cambio de tema lo atiende la vista una vez, más abajo, volviendo a correr
  * esto: un icono por proveedor, resueltos todos juntos.
+ *
+ * `hasSymbol` va aparte de `getSymbolSource` porque son dos preguntas distintas
+ * —si el tema lo tiene, y traerlo— y pedir no contesta la primera: un nombre que
+ * no está vuelve como el cuadrito de imagen rota, con forma de icono válido.
  */
 const resolverIconos = async () => {
 	iconos.value = await resolverIconosDeProveedores(
 		providers.value.map((provider) => provider.id),
-		getSymbolSource
+		getSymbolSource,
+		hasSymbol
 	);
 };
 
