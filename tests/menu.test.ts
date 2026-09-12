@@ -22,6 +22,22 @@ const idsDelMenu = (): string[] =>
 
 const nombresDeRuta = async (): Promise<string[]> => {
 	const fuente = await Bun.file(new URL('../src/routes/index.ts', import.meta.url)).text();
+
+	// Se mira **sólo el arreglo `routes`**, no el archivo entero. Más abajo hay
+	// un `beforeEach` que redirige con `{ name: 'home' }`, y ese `name:` no es
+	// una pantalla: es a dónde mandar a alguien que quiso entrar a una sección
+	// cuyo hardware no está. Hoy no molesta porque `home` también es una ruta de
+	// verdad, así que el duplicado no se nota; el día que esa redirección apunte
+	// a otro lado, esto inventaría una pantalla huérfana que no existe —o, peor,
+	// daría por buena una entrada del menú sin ruta—.
+	const desde = fuente.indexOf('const routes = [');
+	expect(desde).toBeGreaterThanOrEqual(0);
+	// El arreglo cierra con `];` al principio de una línea. Si algún día se
+	// escribe de otra forma, esto falla en vez de leer el archivo entero.
+	const hasta = fuente.indexOf('\n];', desde);
+	expect(hasta).toBeGreaterThan(desde);
+	const registro = fuente.slice(desde, hasta);
+
 	// `name:` y no `path:`: la ruta de la portada es `/` y su nombre es `home`,
 	// que es lo que usa el menú. Y va sin anclar al principio de la línea porque
 	// las rutas cortas se declaran enteras en un renglón.
@@ -36,11 +52,11 @@ const nombresDeRuta = async (): Promise<string[]> => {
 	// retrorreferencia— para no dar por buena una mezcla de las dos. Una así no
 	// compila, pero si aparece conviene que caiga en el recuento de abajo y no
 	// que pase como un nombre leído.
-	const nombres = [...fuente.matchAll(/\bname\s*:\s*(['"])([^'"]+)\1/g)].map((m) => m[2]);
+	const nombres = [...registro.matchAll(/\bname\s*:\s*(['"])([^'"]+)\1/g)].map((m) => m[2]);
 
 	// Y si algún día se declaran de una forma que esto no sabe leer, que falle
 	// acá en vez de comprobar de menos en silencio.
-	const cuantos = [...fuente.matchAll(/\bname\s*:/g)].length;
+	const cuantos = [...registro.matchAll(/\bname\s*:/g)].length;
 	expect(nombres.length).toBe(cuantos);
 
 	return nombres;
