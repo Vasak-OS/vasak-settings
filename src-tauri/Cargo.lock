@@ -4492,9 +4492,9 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-vicons"
-version = "2.1.2"
+version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "480910827f8ef55d24c717f3063b888bdcf5fd6ac041a01907bb7c102502e1c3"
+checksum = "3baee65d814984040415ad41c22bf67580e2562c3ef72da3b3e43f7a9eac78fd"
 dependencies = [
  "base64 0.22.1",
  "glib",
