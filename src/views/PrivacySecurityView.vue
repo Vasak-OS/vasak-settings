@@ -68,7 +68,40 @@ const { t } = useI18n();
  * sin segundo factor— y lo que la persona menos espera que una aplicación
  * cualquiera pueda leer.
  */
-const RESOURCES = ['credentials', 'camera', 'microphone'] as const;
+const RESOURCES = [
+	'credentials',
+	// Las cuentas van acá y no en su propia pantalla: son lo único de esta lista
+	// que se hace cumplir de verdad —`vasak-accounts` le pregunta a este
+	// servicio por cada acceso, así que negar acá niega—, y quien abre
+	// «Privacidad» viene justamente a preguntar quién puede leer su correo.
+	'account.email',
+	'account.calendar',
+	'account.contacts',
+	'account.chat',
+	'account.drive',
+	'account.tasks',
+	'camera',
+	'microphone',
+] as const;
+
+/**
+ * La clave de traducción de cada recurso.
+ *
+ * Aparte del id porque los de cuenta llevan un punto (`account.email`) y las
+ * claves se resuelven partiendo por punto: usar el id tal cual bajaría a una
+ * clave que no existe y se dibujaría cruda. Ya había costado eso una vez.
+ */
+const ETIQUETA: Record<string, string> = {
+	'account.email': 'accountEmail',
+	'account.calendar': 'accountCalendar',
+	'account.contacts': 'accountContacts',
+	'account.chat': 'accountChat',
+	'account.drive': 'accountDrive',
+	'account.tasks': 'accountTasks',
+};
+
+const nombreDe = (recurso: string) =>
+	t(`views.privacySecurity.resources.${ETIQUETA[recurso] ?? recurso}`);
 
 const entries = ref<PermissionEntry[]>([]);
 /**
@@ -324,7 +357,7 @@ onMounted(load);
 						"
 						@click="pestana = r.id"
 					>
-						{{ t(`views.privacySecurity.resources.${r.id}`) }}
+						{{ nombreDe(r.id) }}
 						<!-- Cuántas lo tienen concedido, no cuántas lo pidieron:
 						     es el número que alguien vino a mirar. -->
 						<span

@@ -17,6 +17,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-shell": "^2.3.6",
+    "@tauri-apps/plugin-dialog": "^2.7.3",
     "@vasakgroup/plugin-bluetooth-manager": "^2.0.0",
     "@vasakgroup/plugin-config-manager": "^2.6.0",
     "@vasakgroup/plugin-network-manager": "^2.2.0",

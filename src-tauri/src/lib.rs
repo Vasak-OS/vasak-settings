@@ -132,6 +132,7 @@ pub fn run() {
             }
         }))
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_config_manager::init())
         .plugin(tauri_plugin_system_fonts::init())
         .plugin(tauri_plugin_i18n_vsk::init_with_path(

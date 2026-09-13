@@ -281,6 +281,12 @@ views:
       veces: 'intentado {0} veces'
       descartar: 'Descartar'
     resources:
+      accountEmail: Correo de tus cuentas
+      accountCalendar: Calendario de tus cuentas
+      accountContacts: Contactos de tus cuentas
+      accountChat: Mensajes de tus cuentas
+      accountDrive: Archivos en la nube
+      accountTasks: Tareas de tus cuentas
       camera: Cámara
       microphone: Micrófono
       credentials: Claves y accesos guardados
@@ -742,7 +748,11 @@ views:
     accountLocked: Cuenta bloqueada
     accountUnlocked: Cuenta desbloqueada
     deleted: Cuenta «{0}» eliminada
-
+    changePhoto: Cambiar la foto de perfil
+    changePhotoShort: Cambiar
+    pickPhoto: Elegí una imagen para tu perfil
+    images: Imágenes
+    photoChanged: Foto de perfil actualizada.
   datetime:
     title: Fecha y hora
     description: Zona horaria y sincronización del reloj del sistema.
@@ -1134,29 +1144,6 @@ views:
       loadAccounts: 'Error al cargar cuentas: {0}'
       registerCustom: 'Error al registrar cuenta personalizada: {0}'
       deleteAccount: 'Error al eliminar cuenta: {0}'
-    permissions:
-      title: Aplicaciones con acceso
-      description: Qué programas pueden usar estas cuentas, y qué parte de ellas.
-      emptyDescription: >-
-        Cuando una aplicación quiera usar alguna de tus cuentas, te lo vamos a
-        preguntar y la respuesta va a aparecer acá.
-      unverified: >-
-        Este programa no está instalado por el sistema, así que no podemos
-        garantizar que siga siendo el mismo más adelante.
-      forget: Preguntar de nuevo
-      allow: Permitir
-      deny: No permitir
-      note: >-
-        Cambiar un permiso pide tu contraseña. El permiso es por aplicación y
-        por tipo de dato: si le permitís el correo, lo puede usar de todas tus
-        cuentas de correo.
-      resources:
-        accountEmail: Correo de tus cuentas
-        accountCalendar: Calendario
-        accountContacts: Contactos
-        accountChat: Mensajes
-        accountDrive: Archivos en la nube
-        accountTasks: Tareas
   multimediaAudio:
     title: Audio de Salida
     description: Administra parlantes y volumen de reproducción del sistema.

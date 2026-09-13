@@ -27,6 +27,7 @@
           "$HOME/**",
           "/usr/share/backgrounds/vasakos/**",
           "/usr/share/icons/**",
+          "/var/lib/AccountsService/icons/**",
           "$CACHE/vasak/**",
           "$HOME/.cache/vasak/**"
         ]

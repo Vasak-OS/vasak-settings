@@ -20,6 +20,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
 # Una sola ventana de configuración: la segunda invocación navega la que ya está
 # abierta en vez de apilar otra encima. Ver `lib.rs`.
 tauri-plugin-single-instance = "2"

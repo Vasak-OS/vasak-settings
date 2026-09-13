@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { invoke } from '@tauri-apps/api/core';
+import { convertFileSrc, invoke } from '@tauri-apps/api/core';
+import { open as abrirDialogo } from '@tauri-apps/plugin-dialog';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, onMounted, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
@@ -37,6 +38,52 @@ const deleteTarget = ref<UserAccount | null>(null);
 const deleteFiles = ref(false);
 
 const MIN_PASSWORD = 8;
+
+/**
+ * La foto de perfil, lista para un `<img>`.
+ *
+ * `convertFileSrc` y no la ruta pelada: el WebView no lee del disco, y el
+ * archivo vive en `/var/lib/AccountsService/icons/`, que es de root. Esa ruta
+ * está en el alcance del protocolo de assets.
+ *
+ * Vacío cuando la cuenta no tiene foto —AccountsService devuelve `''`— y
+ * entonces se dibujan las iniciales, que es mejor que un cuadrito roto.
+ */
+const fotoDe = (user: UserAccount) => (user.icon_file ? convertFileSrc(user.icon_file) : '');
+
+/** Las iniciales, para cuando no hay foto. */
+const inicialesDe = (user: UserAccount) =>
+	(user.real_name || user.username)
+		.split(/\s+/)
+		.filter(Boolean)
+		.slice(0, 2)
+		.map((parte) => parte[0]?.toUpperCase() ?? '')
+		.join('');
+
+/**
+ * Cambia la foto de perfil.
+ *
+ * El diálogo del sistema y no un `<input type="file">`: es el que respeta el
+ * portal, el que recuerda la última carpeta y el que se ve como el resto del
+ * escritorio. La ruta la elige la persona ahí, que es lo que la hace suya.
+ *
+ * `SetIconFile` de AccountsService copia el archivo a su propio directorio y
+ * pide autorización por polkit cuando la cuenta no es la de quien pide — así
+ * que cambiar la foto de otro usuario pregunta, y la propia no.
+ */
+const cambiarFoto = async (user: UserAccount) => {
+	const elegida = await abrirDialogo({
+		multiple: false,
+		directory: false,
+		title: t('views.users.pickPhoto'),
+		filters: [{ name: t('views.users.images'), extensions: ['png', 'jpg', 'jpeg', 'webp'] }],
+	});
+	// `null` cuando se cierra el diálogo sin elegir: no es un error ni hay nada
+	// que informar, se vuelve como si no se hubiera tocado nada.
+	if (typeof elegida !== 'string') return;
+
+	await run('set_user_icon', { uid: user.uid, iconPath: elegida }, t('views.users.photoChanged'));
+};
 
 const adminCount = computed(() => users.value.filter((user) => user.is_admin).length);
 
@@ -247,6 +294,30 @@ function canDemote(user: UserAccount): boolean {
 
 		<SectionCard v-for="user in users" :key="user.uid">
 			<div class="flex items-center gap-3">
+				<!-- La foto abre el selector con un clic. Es el objetivo obvio: quien
+				     quiere cambiarla la busca acá antes que en ningún menú. -->
+				<button
+					type="button"
+					:disabled="busy"
+					:title="t('views.users.changePhoto')"
+					:aria-label="t('views.users.changePhoto')"
+					class="group relative size-12 shrink-0 overflow-hidden rounded-full border border-ui-border bg-ui-surface/70 disabled:opacity-50"
+					@click="cambiarFoto(user)"
+				>
+					<img
+						v-if="fotoDe(user)"
+						:src="fotoDe(user)"
+						:alt="user.real_name || user.username"
+						class="size-full object-cover"
+					/>
+					<span v-else class="text-sm font-medium text-tx-muted">{{ inicialesDe(user) }}</span>
+					<span
+						class="absolute inset-0 hidden items-center justify-center bg-black/45 text-[10px] font-medium text-white group-hover:flex group-focus-visible:flex"
+					>
+						{{ t('views.users.changePhotoShort') }}
+					</span>
+				</button>
+
 				<div class="min-w-0 flex-1">
 					<div class="flex flex-wrap items-center gap-2">
 						<span class="truncate text-base font-medium text-tx-primary">
