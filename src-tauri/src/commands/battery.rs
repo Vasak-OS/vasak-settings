@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use zbus::Connection;
 use zbus::zvariant::{OwnedValue, Value};
+use zbus::Connection;
 
 use crate::logger::{log_debug, log_error, log_info};
 
@@ -36,9 +36,9 @@ async fn get_prop(conn: &Connection, path: &str, prop: &str) -> Result<OwnedValu
         .await
         .map_err(|e| format!("D-Bus Properties.Get {prop} on {path} failed: {e}"))?;
 
-    msg.body().deserialize::<OwnedValue>().map_err(|e| {
-        format!("Deserialize Properties.Get response for {prop}: {e}")
-    })
+    msg.body()
+        .deserialize::<OwnedValue>()
+        .map_err(|e| format!("Deserialize Properties.Get response for {prop}: {e}"))
 }
 
 fn unvariant<'a>(value: &'a Value<'a>) -> &'a Value<'a> {
@@ -176,16 +176,36 @@ pub async fn get_battery_info() -> BatteryInfo {
 
     log_debug(&format!("Found battery at UPower path: {battery_path}"));
 
-    let state = read_prop_u32(&conn, &battery_path, "State").await.unwrap_or(0);
+    let state = read_prop_u32(&conn, &battery_path, "State")
+        .await
+        .unwrap_or(0);
     let status = map_state(state);
-    let percentage = read_prop_f64(&conn, &battery_path, "Percentage").await.unwrap_or(0.0);
-    let energy_rate = read_prop_f64(&conn, &battery_path, "EnergyRate").await.unwrap_or(0.0);
-    let technology = map_technology(read_prop_u32(&conn, &battery_path, "Technology").await.unwrap_or(0));
-    let model = read_prop_str(&conn, &battery_path, "Model").await.unwrap_or_default();
-    let manufacturer = read_prop_str(&conn, &battery_path, "Manufacturer").await.unwrap_or_default();
-    let time_to_empty = read_prop_i64(&conn, &battery_path, "TimeToEmpty").await.unwrap_or(0);
-    let time_to_full = read_prop_i64(&conn, &battery_path, "TimeToFull").await.unwrap_or(0);
-    let cycle_count = read_prop_u32(&conn, &battery_path, "CycleCount").await.unwrap_or(0);
+    let percentage = read_prop_f64(&conn, &battery_path, "Percentage")
+        .await
+        .unwrap_or(0.0);
+    let energy_rate = read_prop_f64(&conn, &battery_path, "EnergyRate")
+        .await
+        .unwrap_or(0.0);
+    let technology = map_technology(
+        read_prop_u32(&conn, &battery_path, "Technology")
+            .await
+            .unwrap_or(0),
+    );
+    let model = read_prop_str(&conn, &battery_path, "Model")
+        .await
+        .unwrap_or_default();
+    let manufacturer = read_prop_str(&conn, &battery_path, "Manufacturer")
+        .await
+        .unwrap_or_default();
+    let time_to_empty = read_prop_i64(&conn, &battery_path, "TimeToEmpty")
+        .await
+        .unwrap_or(0);
+    let time_to_full = read_prop_i64(&conn, &battery_path, "TimeToFull")
+        .await
+        .unwrap_or(0);
+    let cycle_count = read_prop_u32(&conn, &battery_path, "CycleCount")
+        .await
+        .unwrap_or(0);
     let health = calculate_health(&conn, &battery_path).await;
 
     BatteryInfo {
@@ -233,7 +253,9 @@ async fn find_present_battery(conn: &Connection, devices: &[String]) -> Option<S
         if dev_type != 2 {
             continue;
         }
-        let present = read_prop_bool(conn, path, "IsPresent").await.unwrap_or(false);
+        let present = read_prop_bool(conn, path, "IsPresent")
+            .await
+            .unwrap_or(false);
         if present {
             return Some(path.clone());
         }
@@ -266,21 +288,31 @@ async fn raw_property(conn: &Connection, path: &str, prop: &str) -> Option<Owned
 }
 
 async fn read_prop_u32(conn: &Connection, path: &str, prop: &str) -> Option<u32> {
-    raw_property(conn, path, prop).await.and_then(|v| read_u32(&v))
+    raw_property(conn, path, prop)
+        .await
+        .and_then(|v| read_u32(&v))
 }
 
 async fn read_prop_f64(conn: &Connection, path: &str, prop: &str) -> Option<f64> {
-    raw_property(conn, path, prop).await.and_then(|v| read_f64(&v))
+    raw_property(conn, path, prop)
+        .await
+        .and_then(|v| read_f64(&v))
 }
 
 async fn read_prop_i64(conn: &Connection, path: &str, prop: &str) -> Option<i64> {
-    raw_property(conn, path, prop).await.and_then(|v| read_i64(&v))
+    raw_property(conn, path, prop)
+        .await
+        .and_then(|v| read_i64(&v))
 }
 
 async fn read_prop_str(conn: &Connection, path: &str, prop: &str) -> Option<String> {
-    raw_property(conn, path, prop).await.and_then(|v| read_string(&v))
+    raw_property(conn, path, prop)
+        .await
+        .and_then(|v| read_string(&v))
 }
 
 async fn read_prop_bool(conn: &Connection, path: &str, prop: &str) -> Option<bool> {
-    raw_property(conn, path, prop).await.and_then(|v| read_bool(&v))
+    raw_property(conn, path, prop)
+        .await
+        .and_then(|v| read_bool(&v))
 }

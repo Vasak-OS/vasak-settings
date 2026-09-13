@@ -52,7 +52,9 @@ fn get_default_name(marker: &str) -> Result<String, String> {
         .lines()
         .find_map(|line| {
             let t = line.trim();
-            t.strip_prefix("Default Sink:").or_else(|| t.strip_prefix("default sink:")).map(|s| s.trim().to_string())
+            t.strip_prefix("Default Sink:")
+                .or_else(|| t.strip_prefix("default sink:"))
+                .map(|s| s.trim().to_string())
         })
         .ok_or_else(|| {
             log_error("No se encontró Default Sink en pactl info");
@@ -63,7 +65,9 @@ fn get_default_name(marker: &str) -> Result<String, String> {
         .lines()
         .find_map(|line| {
             let t = line.trim();
-            t.strip_prefix("Default Source:").or_else(|| t.strip_prefix("default source:")).map(|s| s.trim().to_string())
+            t.strip_prefix("Default Source:")
+                .or_else(|| t.strip_prefix("default source:"))
+                .map(|s| s.trim().to_string())
         })
         .ok_or_else(|| {
             log_error("No se encontró Default Source en pactl info");
@@ -95,9 +99,9 @@ fn parse_first_percent(output: &str) -> Result<i64, String> {
         .find_map(|line| {
             let trimmed = line.trim();
             if trimmed.starts_with("Volume:") || trimmed.starts_with("volume:") {
-                trimmed.split_whitespace().find_map(|part| {
-                    part.strip_suffix('%').and_then(|s| s.parse::<i64>().ok())
-                })
+                trimmed
+                    .split_whitespace()
+                    .find_map(|part| part.strip_suffix('%').and_then(|s| s.parse::<i64>().ok()))
             } else {
                 None
             }
@@ -140,15 +144,18 @@ fn parse_volume_and_mute(output: &str, default_name: &str) -> Result<(i64, bool)
         }
 
         if trimmed.starts_with("Volume:") || trimmed.starts_with("volume:") {
-            if let Some(pct) = trimmed.split_whitespace().find_map(|part| {
-                part.strip_suffix('%').and_then(|s| s.parse::<i64>().ok())
-            }) {
+            if let Some(pct) = trimmed
+                .split_whitespace()
+                .find_map(|part| part.strip_suffix('%').and_then(|s| s.parse::<i64>().ok()))
+            {
                 volume_pct = Some(pct);
             }
         }
     }
 
-    let current = volume_pct.or_else(|| parse_first_percent(output).ok()).unwrap_or(0);
+    let current = volume_pct
+        .or_else(|| parse_first_percent(output).ok())
+        .unwrap_or(0);
     Ok((current, is_muted))
 }
 
@@ -201,9 +208,10 @@ fn parse_devices(output: &str, default_name: Option<&str>, prefix: &str) -> Vec<
         }
 
         if trimmed.starts_with("Volume:") || trimmed.starts_with("volume:") {
-            if let Some(pct) = trimmed.split_whitespace().find_map(|part| {
-                part.strip_suffix('%').and_then(|s| s.parse::<f64>().ok())
-            }) {
+            if let Some(pct) = trimmed
+                .split_whitespace()
+                .find_map(|part| part.strip_suffix('%').and_then(|s| s.parse::<f64>().ok()))
+            {
                 current_volume = pct / 100.0;
             }
             continue;
@@ -342,7 +350,10 @@ pub fn list_audio_devices() -> Result<Vec<AudioDevice>, String> {
     let default_sink = get_default_sink_name().ok();
     let output = run_pactl(&["list", "sinks"])?;
     let devices = parse_devices(&output, default_sink.as_deref(), "Sink");
-    log_debug(&format!("Encontrados {} dispositivos de audio", devices.len()));
+    log_debug(&format!(
+        "Encontrados {} dispositivos de audio",
+        devices.len()
+    ));
     Ok(devices)
 }
 
@@ -352,13 +363,19 @@ pub fn list_audio_input_devices() -> Result<Vec<AudioDevice>, String> {
     let default_source = get_default_source_name().ok();
     let output = run_pactl(&["list", "sources"])?;
     let devices = parse_devices(&output, default_source.as_deref(), "Source");
-    log_debug(&format!("Encontrados {} dispositivos de entrada", devices.len()));
+    log_debug(&format!(
+        "Encontrados {} dispositivos de entrada",
+        devices.len()
+    ));
     Ok(devices)
 }
 
 /// Establece el dispositivo de salida de audio por defecto
 pub fn set_default_audio_device(device_id: &str, app: AppHandle) -> Result<(), String> {
-    log_info(&format!("Estableciendo dispositivo de audio por defecto: {}", device_id));
+    log_info(&format!(
+        "Estableciendo dispositivo de audio por defecto: {}",
+        device_id
+    ));
     run_pactl(&["set-default-sink", device_id])?;
     clear_cache();
 
@@ -372,7 +389,10 @@ pub fn set_default_audio_device(device_id: &str, app: AppHandle) -> Result<(), S
 
 /// Establece el dispositivo de entrada por defecto
 pub fn set_default_audio_input_device(device_id: &str, app: AppHandle) -> Result<(), String> {
-    log_info(&format!("Estableciendo dispositivo de entrada por defecto: {}", device_id));
+    log_info(&format!(
+        "Estableciendo dispositivo de entrada por defecto: {}",
+        device_id
+    ));
     run_pactl(&["set-default-source", device_id])?;
     clear_cache();
 

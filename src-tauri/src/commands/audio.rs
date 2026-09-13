@@ -1,19 +1,12 @@
 use tauri::AppHandle;
 
 use crate::audio::{
-    get_input_volume,
-    get_volume,
-    list_audio_devices,
-    list_audio_input_devices,
-    set_default_audio_device,
-    set_default_audio_input_device,
-    set_input_volume,
-    set_volume,
-    toggle_input_mute,
-    toggle_mute,
+    get_input_volume, get_volume, list_audio_devices, list_audio_input_devices,
+    set_default_audio_device, set_default_audio_input_device, set_input_volume, set_volume,
+    toggle_input_mute, toggle_mute,
 };
-use crate::logger::{log_info, log_error, log_debug};
-use crate::structs::{VolumeInfo, AudioDevice};
+use crate::logger::{log_debug, log_error, log_info};
+use crate::structs::{AudioDevice, VolumeInfo};
 
 #[tauri::command]
 pub fn get_audio_volume() -> Result<VolumeInfo, String> {

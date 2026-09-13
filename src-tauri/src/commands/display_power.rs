@@ -293,9 +293,7 @@ pub fn get_night_light() -> Result<NightLight, String> {
 #[tauri::command]
 pub fn set_night_light(config: NightLight) -> Result<NightLight, String> {
     if config.enabled && !wlsunset_available() {
-        return Err(
-            "wlsunset no está instalado. Instalalo para usar la luz nocturna.".to_string(),
-        );
+        return Err("wlsunset no está instalado. Instalalo para usar la luz nocturna.".to_string());
     }
 
     let path = unit_path()?;
@@ -353,7 +351,10 @@ mod tests {
 
         let unit = render_unit(&config);
         assert!(unit.contains("-l -34.6 -L -58.4"));
-        assert!(!unit.contains(" -S "), "location mode must not emit fixed times");
+        assert!(
+            !unit.contains(" -S "),
+            "location mode must not emit fixed times"
+        );
     }
 
     #[test]

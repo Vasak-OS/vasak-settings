@@ -1,11 +1,8 @@
-use crate::logger::{log_info, log_debug};
+use crate::logger::{log_debug, log_info};
+use crate::structs::{CpuInfo, SystemInfo};
 use crate::tools::system_info_tools::{
-    get_cpu_model, get_cpu_cores, get_cpu_usage, get_cpu_frequency,
-    get_memory_info, get_swap_info, get_disks_info, get_gpu_info,
-    get_system_details, get_temperature_info,
-};
-use crate::structs::{
-    CpuInfo, SystemInfo,
+    get_cpu_cores, get_cpu_frequency, get_cpu_model, get_cpu_usage, get_disks_info, get_gpu_info,
+    get_memory_info, get_swap_info, get_system_details, get_temperature_info,
 };
 
 #[tauri::command]
@@ -25,10 +22,13 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
         system: get_system_details(),
         temperature: get_temperature_info(),
     };
-    log_info(&format!("Info del sistema: CPU={} ({}%), Mem={}GB/{:.1}GB, Discos={}", 
-        info.cpu.model, info.cpu.usage as u32, 
-        info.memory.used_gb as u32, info.memory.total_gb,
-        info.disks.len()));
+    log_info(&format!(
+        "Info del sistema: CPU={} ({}%), Mem={}GB/{:.1}GB, Discos={}",
+        info.cpu.model,
+        info.cpu.usage as u32,
+        info.memory.used_gb as u32,
+        info.memory.total_gb,
+        info.disks.len()
+    ));
     Ok(info)
 }
-

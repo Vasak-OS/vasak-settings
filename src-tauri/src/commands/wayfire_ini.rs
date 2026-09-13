@@ -10,146 +10,143 @@ use crate::commands::wayfire_config::WayfireConfig;
 use crate::logger::log_debug;
 
 fn is_header(trimmed: &str) -> bool {
-	trimmed.starts_with('[') && trimmed.ends_with(']')
+    trimmed.starts_with('[') && trimmed.ends_with(']')
 }
 
 fn header_name(trimmed: &str) -> &str {
-	trimmed[1..trimmed.len() - 1].trim()
+    trimmed[1..trimmed.len() - 1].trim()
 }
 
 /// A `key = value` entry, which may span several physical lines when the value
 /// uses backslash continuations (wayfire writes its plugin list that way).
 struct Entry {
-	key: String,
-	value: String,
-	/// Inclusive range of physical line indices the entry occupies.
-	start: usize,
-	end: usize,
+    key: String,
+    value: String,
+    /// Inclusive range of physical line indices the entry occupies.
+    start: usize,
+    end: usize,
 }
 
 /// Where a section lives inside the file, and the entries it contains.
 struct SectionSpan {
-	header: usize,
-	entries: Vec<Entry>,
+    header: usize,
+    entries: Vec<Entry>,
 }
 
 /// Joins a continued value, dropping the trailing backslashes and collapsing the
 /// physical lines into the single logical value wayfire sees.
 fn join_continuation(lines: &[&str], start: usize) -> (String, usize) {
-	let mut parts: Vec<String> = Vec::new();
-	let mut index = start;
+    let mut parts: Vec<String> = Vec::new();
+    let mut index = start;
 
-	loop {
-		let raw = lines[index].trim_end();
-		let continues = raw.ends_with('\\');
-		let piece = if continues {
-			raw[..raw.len() - 1].trim_end()
-		} else {
-			raw
-		};
+    loop {
+        let raw = lines[index].trim_end();
+        let continues = raw.ends_with('\\');
+        let piece = if continues {
+            raw[..raw.len() - 1].trim_end()
+        } else {
+            raw
+        };
 
-		parts.push(piece.trim().to_string());
+        parts.push(piece.trim().to_string());
 
-		if !continues || index + 1 >= lines.len() {
-			break;
-		}
+        if !continues || index + 1 >= lines.len() {
+            break;
+        }
 
-		index += 1;
-	}
+        index += 1;
+    }
 
-	let joined = parts
-		.into_iter()
-		.filter(|part| !part.is_empty())
-		.collect::<Vec<String>>()
-		.join(" ");
+    let joined = parts
+        .into_iter()
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<String>>()
+        .join(" ");
 
-	(joined, index)
+    (joined, index)
 }
 
 fn find_section(lines: &[&str], section: &str) -> Option<SectionSpan> {
-	let mut header_index: Option<usize> = None;
-	let mut end = lines.len();
+    let mut header_index: Option<usize> = None;
+    let mut end = lines.len();
 
-	for (index, line) in lines.iter().enumerate() {
-		let trimmed = line.trim();
-		if !is_header(trimmed) {
-			continue;
-		}
+    for (index, line) in lines.iter().enumerate() {
+        let trimmed = line.trim();
+        if !is_header(trimmed) {
+            continue;
+        }
 
-		if header_index.is_some() {
-			end = index;
-			break;
-		}
+        if header_index.is_some() {
+            end = index;
+            break;
+        }
 
-		if header_name(trimmed).eq_ignore_ascii_case(section) {
-			header_index = Some(index);
-		}
-	}
+        if header_name(trimmed).eq_ignore_ascii_case(section) {
+            header_index = Some(index);
+        }
+    }
 
-	let header = header_index?;
-	let mut entries = Vec::new();
-	let mut index = header + 1;
+    let header = header_index?;
+    let mut entries = Vec::new();
+    let mut index = header + 1;
 
-	while index < end {
-		let trimmed = lines[index].trim();
+    while index < end {
+        let trimmed = lines[index].trim();
 
-		if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with(';') {
-			index += 1;
-			continue;
-		}
+        if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with(';') {
+            index += 1;
+            continue;
+        }
 
-		let Some(eq_pos) = trimmed.find('=') else {
-			index += 1;
-			continue;
-		};
+        let Some(eq_pos) = trimmed.find('=') else {
+            index += 1;
+            continue;
+        };
 
-		let key = trimmed[..eq_pos].trim().to_string();
-		let first_value = trimmed[eq_pos + 1..].trim();
+        let key = trimmed[..eq_pos].trim().to_string();
+        let first_value = trimmed[eq_pos + 1..].trim();
 
-		// Re-run the continuation join over the value part only.
-		let (value, last_line) = if let Some(sin_barra) = first_value.strip_suffix('\\') {
-			let mut parts = vec![sin_barra.trim().to_string()];
-			let (rest, last) = join_continuation(lines, index + 1);
-			parts.push(rest);
-			(
-				parts
-					.into_iter()
-					.filter(|part| !part.is_empty())
-					.collect::<Vec<String>>()
-					.join(" "),
-				last,
-			)
-		} else {
-			(first_value.to_string(), index)
-		};
+        // Re-run the continuation join over the value part only.
+        let (value, last_line) = if let Some(sin_barra) = first_value.strip_suffix('\\') {
+            let mut parts = vec![sin_barra.trim().to_string()];
+            let (rest, last) = join_continuation(lines, index + 1);
+            parts.push(rest);
+            (
+                parts
+                    .into_iter()
+                    .filter(|part| !part.is_empty())
+                    .collect::<Vec<String>>()
+                    .join(" "),
+                last,
+            )
+        } else {
+            (first_value.to_string(), index)
+        };
 
-		entries.push(Entry {
-			key,
-			value,
-			start: index,
-			end: last_line,
-		});
+        entries.push(Entry {
+            key,
+            value,
+            start: index,
+            end: last_line,
+        });
 
-		index = last_line + 1;
-	}
+        index = last_line + 1;
+    }
 
-	Some(SectionSpan {
-		header,
-		entries,
-	})
+    Some(SectionSpan { header, entries })
 }
 
 pub fn parse_section(content: &str, section: &str) -> HashMap<String, String> {
-	let lines: Vec<&str> = content.lines().collect();
-	let mut values = HashMap::new();
+    let lines: Vec<&str> = content.lines().collect();
+    let mut values = HashMap::new();
 
-	if let Some(span) = find_section(&lines, section) {
-		for entry in span.entries {
-			values.insert(entry.key, entry.value);
-		}
-	}
+    if let Some(span) = find_section(&lines, section) {
+        for entry in span.entries {
+            values.insert(entry.key, entry.value);
+        }
+    }
 
-	values
+    values
 }
 
 /// Applies `values` onto a section **without touching anything else**: existing
@@ -160,94 +157,94 @@ pub fn parse_section(content: &str, section: &str) -> HashMap<String, String> {
 /// When `prune` is set, keys present in the file but absent from `values` are
 /// removed instead; that is only for sections the UI owns entirely (autostart).
 pub fn update_section(
-	content: &str,
-	section: &str,
-	values: &HashMap<String, String>,
-	prune: bool,
+    content: &str,
+    section: &str,
+    values: &HashMap<String, String>,
+    prune: bool,
 ) -> String {
-	let lines: Vec<&str> = content.lines().collect();
+    let lines: Vec<&str> = content.lines().collect();
 
-	let Some(span) = find_section(&lines, section) else {
-		return append_section(content, section, values);
-	};
+    let Some(span) = find_section(&lines, section) else {
+        return append_section(content, section, values);
+    };
 
-	// Line index -> replacement (None means "drop this line").
-	let mut rewritten: HashMap<usize, Option<String>> = HashMap::new();
-	let mut handled: HashSet<&str> = HashSet::new();
-	let mut insert_after = span.header;
+    // Line index -> replacement (None means "drop this line").
+    let mut rewritten: HashMap<usize, Option<String>> = HashMap::new();
+    let mut handled: HashSet<&str> = HashSet::new();
+    let mut insert_after = span.header;
 
-	for entry in &span.entries {
-		insert_after = insert_after.max(entry.end);
+    for entry in &span.entries {
+        insert_after = insert_after.max(entry.end);
 
-		match values.get(&entry.key) {
-			// Handing back the value that is already there is not an edit, and
-			// rewriting it is not free: the pages read a whole section and write
-			// the whole section back, so saving the Windows page used to collapse
-			// [core]'s twenty-six line plugin list — documented and one plugin per
-			// line — into a single line, every time, without changing a plugin.
-			Some(value) if value == &entry.value => {
-				handled.insert(entry.key.as_str());
-			}
-			Some(value) => {
-				handled.insert(entry.key.as_str());
-				rewritten.insert(entry.start, Some(render_entry(&entry.key, value)));
+        match values.get(&entry.key) {
+            // Handing back the value that is already there is not an edit, and
+            // rewriting it is not free: the pages read a whole section and write
+            // the whole section back, so saving the Windows page used to collapse
+            // [core]'s twenty-six line plugin list — documented and one plugin per
+            // line — into a single line, every time, without changing a plugin.
+            Some(value) if value == &entry.value => {
+                handled.insert(entry.key.as_str());
+            }
+            Some(value) => {
+                handled.insert(entry.key.as_str());
+                rewritten.insert(entry.start, Some(render_entry(&entry.key, value)));
 
-				for line in (entry.start + 1)..=entry.end {
-					rewritten.insert(line, None);
-				}
-			}
-			None if prune => {
-				for line in entry.start..=entry.end {
-					rewritten.insert(line, None);
-				}
-			}
-			None => {}
-		}
-	}
+                for line in (entry.start + 1)..=entry.end {
+                    rewritten.insert(line, None);
+                }
+            }
+            None if prune => {
+                for line in entry.start..=entry.end {
+                    rewritten.insert(line, None);
+                }
+            }
+            None => {}
+        }
+    }
 
-	let mut additions: Vec<String> = values
-		.iter()
-		.filter(|(key, _)| !handled.contains(key.as_str()))
-		.map(|(key, value)| render_entry(key, value))
-		.collect();
-	additions.sort();
+    let mut additions: Vec<String> = values
+        .iter()
+        .filter(|(key, _)| !handled.contains(key.as_str()))
+        .map(|(key, value)| render_entry(key, value))
+        .collect();
+    additions.sort();
 
-	let mut output = String::new();
+    let mut output = String::new();
 
-	for (index, line) in lines.iter().enumerate() {
-		match rewritten.get(&index) {
-			Some(None) => {}
-			Some(Some(replacement)) => {
-				output.push_str(replacement);
-				output.push('\n');
-			}
-			None => {
-				output.push_str(line);
-				output.push('\n');
-			}
-		}
+    for (index, line) in lines.iter().enumerate() {
+        match rewritten.get(&index) {
+            Some(None) => {}
+            Some(Some(replacement)) => {
+                output.push_str(replacement);
+                output.push('\n');
+            }
+            None => {
+                output.push_str(line);
+                output.push('\n');
+            }
+        }
 
-		if index == insert_after && !additions.is_empty() {
-			for addition in &additions {
-				output.push_str(addition);
-				output.push('\n');
-			}
-			additions.clear();
-		}
-	}
+        if index == insert_after && !additions.is_empty() {
+            for addition in &additions {
+                output.push_str(addition);
+                output.push('\n');
+            }
+            additions.clear();
+        }
+    }
 
-	if !additions.is_empty() {
-		for addition in &additions {
-			output.push_str(addition);
-			output.push('\n');
-		}
-	}
+    if !additions.is_empty() {
+        for addition in &additions {
+            output.push_str(addition);
+            output.push('\n');
+        }
+    }
 
-	output
+    output
 }
 
 fn render_entry(key: &str, value: &str) -> String {
-	format!("{} = {}", key, value)
+    format!("{} = {}", key, value)
 }
 
 /// Deletes `keys` from the section, leaving every other line untouched.
@@ -258,180 +255,183 @@ fn render_entry(key: &str, value: &str) -> String {
 /// UI manages and wants gone (an unset keyboard variant, a switching shortcut
 /// that no longer has a second layout to switch to).
 pub fn remove_keys(content: &str, section: &str, keys: &[&str]) -> String {
-	if keys.is_empty() {
-		return content.to_string();
-	}
+    if keys.is_empty() {
+        return content.to_string();
+    }
 
-	let lines: Vec<&str> = content.lines().collect();
+    let lines: Vec<&str> = content.lines().collect();
 
-	let Some(span) = find_section(&lines, section) else {
-		return content.to_string();
-	};
+    let Some(span) = find_section(&lines, section) else {
+        return content.to_string();
+    };
 
-	let mut dropped: HashSet<usize> = HashSet::new();
-	for entry in &span.entries {
-		if keys.contains(&entry.key.as_str()) {
-			for line in entry.start..=entry.end {
-				dropped.insert(line);
-			}
-		}
-	}
+    let mut dropped: HashSet<usize> = HashSet::new();
+    for entry in &span.entries {
+        if keys.contains(&entry.key.as_str()) {
+            for line in entry.start..=entry.end {
+                dropped.insert(line);
+            }
+        }
+    }
 
-	if dropped.is_empty() {
-		return content.to_string();
-	}
+    if dropped.is_empty() {
+        return content.to_string();
+    }
 
-	let mut output = String::new();
-	for (index, line) in lines.iter().enumerate() {
-		if dropped.contains(&index) {
-			continue;
-		}
-		output.push_str(line);
-		output.push('\n');
-	}
+    let mut output = String::new();
+    for (index, line) in lines.iter().enumerate() {
+        if dropped.contains(&index) {
+            continue;
+        }
+        output.push_str(line);
+        output.push('\n');
+    }
 
-	output
+    output
 }
 
 /// Replaces `key` with pre-rendered text that may span several physical lines,
 /// so callers can keep wayfire's readable backslash-continued style for long
 /// values instead of collapsing them onto one line.
 pub fn set_key_raw(content: &str, section: &str, key: &str, rendered: &str) -> String {
-	let lines: Vec<&str> = content.lines().collect();
+    let lines: Vec<&str> = content.lines().collect();
 
-	let Some(span) = find_section(&lines, section) else {
-		let mut output = content.to_string();
+    let Some(span) = find_section(&lines, section) else {
+        let mut output = content.to_string();
 
-		if !output.is_empty() && !output.ends_with('\n') {
-			output.push('\n');
-		}
-		if !output.is_empty() {
-			output.push('\n');
-		}
+        if !output.is_empty() && !output.ends_with('\n') {
+            output.push('\n');
+        }
+        if !output.is_empty() {
+            output.push('\n');
+        }
 
-		output.push_str(&format!("[{}]\n{}\n", section, rendered));
-		return output;
-	};
+        output.push_str(&format!("[{}]\n{}\n", section, rendered));
+        return output;
+    };
 
-	let target = span.entries.iter().find(|entry| entry.key == key);
-	let mut output = String::new();
-	let mut placed = false;
+    let target = span.entries.iter().find(|entry| entry.key == key);
+    let mut output = String::new();
+    let mut placed = false;
 
-	for (index, line) in lines.iter().enumerate() {
-		if let Some(entry) = target {
-			if index == entry.start {
-				output.push_str(rendered);
-				output.push('\n');
-				placed = true;
-				continue;
-			}
+    for (index, line) in lines.iter().enumerate() {
+        if let Some(entry) = target {
+            if index == entry.start {
+                output.push_str(rendered);
+                output.push('\n');
+                placed = true;
+                continue;
+            }
 
-			if index > entry.start && index <= entry.end {
-				continue;
-			}
-		}
+            if index > entry.start && index <= entry.end {
+                continue;
+            }
+        }
 
-		output.push_str(line);
-		output.push('\n');
+        output.push_str(line);
+        output.push('\n');
 
-		if !placed && target.is_none() && index == span.header {
-			output.push_str(rendered);
-			output.push('\n');
-			placed = true;
-		}
-	}
+        if !placed && target.is_none() && index == span.header {
+            output.push_str(rendered);
+            output.push('\n');
+            placed = true;
+        }
+    }
 
-	output
+    output
 }
 
 fn append_section(content: &str, section: &str, values: &HashMap<String, String>) -> String {
-	if values.is_empty() {
-		return content.to_string();
-	}
+    if values.is_empty() {
+        return content.to_string();
+    }
 
-	let mut output = content.to_string();
+    let mut output = content.to_string();
 
-	if !output.is_empty() && !output.ends_with('\n') {
-		output.push('\n');
-	}
-	if !output.is_empty() {
-		output.push('\n');
-	}
+    if !output.is_empty() && !output.ends_with('\n') {
+        output.push('\n');
+    }
+    if !output.is_empty() {
+        output.push('\n');
+    }
 
-	output.push_str(&format!("[{}]\n", section));
+    output.push_str(&format!("[{}]\n", section));
 
-	let mut keys: Vec<&String> = values.keys().collect();
-	keys.sort();
+    let mut keys: Vec<&String> = values.keys().collect();
+    keys.sort();
 
-	for key in keys {
-		if let Some(value) = values.get(key) {
-			output.push_str(&render_entry(key, value));
-			output.push('\n');
-		}
-	}
+    for key in keys {
+        if let Some(value) = values.get(key) {
+            output.push_str(&render_entry(key, value));
+            output.push('\n');
+        }
+    }
 
-	output
+    output
 }
 
 /// The section names in the file, in the order they appear.
 pub fn section_names(content: &str) -> Vec<String> {
-	let mut seen = HashSet::new();
-	let mut sections = Vec::new();
+    let mut seen = HashSet::new();
+    let mut sections = Vec::new();
 
-	for line in content.lines() {
-		let trimmed = line.trim();
-		if is_header(trimmed) {
-			let name = header_name(trimmed).to_string();
-			if !name.is_empty() && seen.insert(name.clone()) {
-				sections.push(name);
-			}
-		}
-	}
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if is_header(trimmed) {
+            let name = header_name(trimmed).to_string();
+            if !name.is_empty() && seen.insert(name.clone()) {
+                sections.push(name);
+            }
+        }
+    }
 
-	sections
+    sections
 }
 
 #[tauri::command]
 pub async fn read_wayfire_section(section: String) -> Result<HashMap<String, String>, String> {
-	log_debug(&format!("Leyendo sección [{}] de wayfire.ini", section));
-	WayfireConfig::global().section(&section)
+    log_debug(&format!("Leyendo sección [{}] de wayfire.ini", section));
+    WayfireConfig::global().section(&section)
 }
 
 /// Merges `values` into the section, preserving keys the UI doesn't manage.
 #[tauri::command]
 pub async fn write_wayfire_section(
-	section: String,
-	values: HashMap<String, String>,
+    section: String,
+    values: HashMap<String, String>,
 ) -> Result<(), String> {
-	log_debug(&format!("Escribiendo sección [{}] en wayfire.ini", section));
-	WayfireConfig::global()
-		.edit(|content| update_section(content, &section, &values, false))
-		.map(|_| ())
+    log_debug(&format!("Escribiendo sección [{}] en wayfire.ini", section));
+    WayfireConfig::global()
+        .edit(|content| update_section(content, &section, &values, false))
+        .map(|_| ())
 }
 
 /// Replaces the section outright: any key not in `values` is removed. Only for
 /// sections the UI owns completely, where removing an entry must actually stick.
 #[tauri::command]
 pub async fn replace_wayfire_section(
-	section: String,
-	values: HashMap<String, String>,
+    section: String,
+    values: HashMap<String, String>,
 ) -> Result<(), String> {
-	log_debug(&format!("Reemplazando sección [{}] en wayfire.ini", section));
-	WayfireConfig::global()
-		.edit(|content| update_section(content, &section, &values, true))
-		.map(|_| ())
+    log_debug(&format!(
+        "Reemplazando sección [{}] en wayfire.ini",
+        section
+    ));
+    WayfireConfig::global()
+        .edit(|content| update_section(content, &section, &values, true))
+        .map(|_| ())
 }
 
 #[tauri::command]
 pub async fn get_all_wayfire_sections() -> Result<Vec<String>, String> {
-	Ok(section_names(&WayfireConfig::global().content()?))
+    Ok(section_names(&WayfireConfig::global().content()?))
 }
 
 #[cfg(test)]
 mod tests {
-	use super::*;
+    use super::*;
 
-	const SAMPLE: &str = r#"# Core options
+    const SAMPLE: &str = r#"# Core options
 [core]
 
 # Enabled plugins.
@@ -450,205 +450,222 @@ type = regular
 slot_c = <super> KEY_UP
 "#;
 
-	fn values(pairs: &[(&str, &str)]) -> HashMap<String, String> {
-		pairs
-			.iter()
-			.map(|(k, v)| (k.to_string(), v.to_string()))
-			.collect()
-	}
+    fn values(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
+    }
 
-	#[test]
-	fn parses_a_continued_value_as_one_logical_value() {
-		let core = parse_section(SAMPLE, "core");
+    #[test]
+    fn parses_a_continued_value_as_one_logical_value() {
+        let core = parse_section(SAMPLE, "core");
 
-		assert_eq!(
-			core.get("plugins").map(String::as_str),
-			Some("animate autostart blur ipc"),
-			"the backslash continuation must collapse into a single value"
-		);
-		assert_eq!(core.get("vwidth").map(String::as_str), Some("3"));
-		assert_eq!(
-			core.get("close_top_view").map(String::as_str),
-			Some("<super> KEY_Q | <alt> KEY_F4")
-		);
-	}
+        assert_eq!(
+            core.get("plugins").map(String::as_str),
+            Some("animate autostart blur ipc"),
+            "the backslash continuation must collapse into a single value"
+        );
+        assert_eq!(core.get("vwidth").map(String::as_str), Some("3"));
+        assert_eq!(
+            core.get("close_top_view").map(String::as_str),
+            Some("<super> KEY_Q | <alt> KEY_F4")
+        );
+    }
 
-	#[test]
-	fn writing_another_section_leaves_the_plugin_list_intact() {
-		let updated = update_section(SAMPLE, "grid", &values(&[("duration", "300")]), false);
+    #[test]
+    fn writing_another_section_leaves_the_plugin_list_intact() {
+        let updated = update_section(SAMPLE, "grid", &values(&[("duration", "300")]), false);
 
-		let core = parse_section(&updated, "core");
-		assert_eq!(
-			core.get("plugins").map(String::as_str),
-			Some("animate autostart blur ipc"),
-			"editing [grid] must not corrupt [core]"
-		);
-		assert!(updated.contains("  animate \\"), "continuation lines survive");
-	}
+        let core = parse_section(&updated, "core");
+        assert_eq!(
+            core.get("plugins").map(String::as_str),
+            Some("animate autostart blur ipc"),
+            "editing [grid] must not corrupt [core]"
+        );
+        assert!(
+            updated.contains("  animate \\"),
+            "continuation lines survive"
+        );
+    }
 
-	#[test]
-	fn merging_preserves_keys_the_ui_does_not_know() {
-		let updated = update_section(SAMPLE, "grid", &values(&[("duration", "300")]), false);
-		let grid = parse_section(&updated, "grid");
+    #[test]
+    fn merging_preserves_keys_the_ui_does_not_know() {
+        let updated = update_section(SAMPLE, "grid", &values(&[("duration", "300")]), false);
+        let grid = parse_section(&updated, "grid");
 
-		assert_eq!(grid.get("duration").map(String::as_str), Some("300"));
-		assert_eq!(
-			grid.get("type").map(String::as_str),
-			Some("regular"),
-			"a key no view exposes must not be dropped on save"
-		);
-		assert_eq!(
-			grid.get("slot_c").map(String::as_str),
-			Some("<super> KEY_UP")
-		);
-	}
+        assert_eq!(grid.get("duration").map(String::as_str), Some("300"));
+        assert_eq!(
+            grid.get("type").map(String::as_str),
+            Some("regular"),
+            "a key no view exposes must not be dropped on save"
+        );
+        assert_eq!(
+            grid.get("slot_c").map(String::as_str),
+            Some("<super> KEY_UP")
+        );
+    }
 
-	#[test]
-	fn comments_and_ordering_survive_a_write() {
-		let updated = update_section(SAMPLE, "core", &values(&[("vwidth", "4")]), false);
+    #[test]
+    fn comments_and_ordering_survive_a_write() {
+        let updated = update_section(SAMPLE, "core", &values(&[("vwidth", "4")]), false);
 
-		assert!(updated.contains("# Core options"));
-		assert!(updated.contains("# Enabled plugins."));
-		assert!(updated.contains("vwidth = 4"));
-		assert!(
-			updated.find("close_top_view").unwrap() < updated.find("vwidth = 4").unwrap(),
-			"existing keys keep their position instead of being re-sorted"
-		);
-	}
+        assert!(updated.contains("# Core options"));
+        assert!(updated.contains("# Enabled plugins."));
+        assert!(updated.contains("vwidth = 4"));
+        assert!(
+            updated.find("close_top_view").unwrap() < updated.find("vwidth = 4").unwrap(),
+            "existing keys keep their position instead of being re-sorted"
+        );
+    }
 
-	/// The workspaces and windows pages both edit [core] now, which is the very
-	/// section holding the continued plugin list.
-	#[test]
-	fn editing_core_itself_preserves_the_continued_plugin_list() {
-		let updated = update_section(
-			SAMPLE,
-			"core",
-			&values(&[("vwidth", "4"), ("vheight", "3")]),
-			false,
-		);
+    /// The workspaces and windows pages both edit [core] now, which is the very
+    /// section holding the continued plugin list.
+    #[test]
+    fn editing_core_itself_preserves_the_continued_plugin_list() {
+        let updated = update_section(
+            SAMPLE,
+            "core",
+            &values(&[("vwidth", "4"), ("vheight", "3")]),
+            false,
+        );
 
-		let core = parse_section(&updated, "core");
-		assert_eq!(
-			core.get("plugins").map(String::as_str),
-			Some("animate autostart blur ipc")
-		);
-		assert_eq!(core.get("vwidth").map(String::as_str), Some("4"));
-		assert_eq!(core.get("vheight").map(String::as_str), Some("3"));
-		assert_eq!(
-			core.get("close_top_view").map(String::as_str),
-			Some("<super> KEY_Q | <alt> KEY_F4"),
-			"unmanaged core keys stay"
-		);
-		assert!(updated.contains("  animate \\"), "continuation lines intact");
-	}
+        let core = parse_section(&updated, "core");
+        assert_eq!(
+            core.get("plugins").map(String::as_str),
+            Some("animate autostart blur ipc")
+        );
+        assert_eq!(core.get("vwidth").map(String::as_str), Some("4"));
+        assert_eq!(core.get("vheight").map(String::as_str), Some("3"));
+        assert_eq!(
+            core.get("close_top_view").map(String::as_str),
+            Some("<super> KEY_Q | <alt> KEY_F4"),
+            "unmanaged core keys stay"
+        );
+        assert!(
+            updated.contains("  animate \\"),
+            "continuation lines intact"
+        );
+    }
 
-	#[test]
-	fn new_keys_are_appended_inside_the_section() {
-		let updated = update_section(SAMPLE, "grid", &values(&[("restore", "<super> KEY_DOWN")]), false);
-		let grid = parse_section(&updated, "grid");
+    #[test]
+    fn new_keys_are_appended_inside_the_section() {
+        let updated = update_section(
+            SAMPLE,
+            "grid",
+            &values(&[("restore", "<super> KEY_DOWN")]),
+            false,
+        );
+        let grid = parse_section(&updated, "grid");
 
-		assert_eq!(
-			grid.get("restore").map(String::as_str),
-			Some("<super> KEY_DOWN")
-		);
-		assert_eq!(grid.get("type").map(String::as_str), Some("regular"));
-	}
+        assert_eq!(
+            grid.get("restore").map(String::as_str),
+            Some("<super> KEY_DOWN")
+        );
+        assert_eq!(grid.get("type").map(String::as_str), Some("regular"));
+    }
 
-	/// The shipped wayfire.ini declares the keyboard keys with no value, so that
-	/// wayfire stops applying its hardcoded `us` and the system keymap gets
-	/// through. Saving a layout has to fill those in, not add a second copy of
-	/// the section further down the file.
-	#[test]
-	fn an_empty_key_is_filled_in_where_it_already_is() {
-		let file = "[input]\nxkb_layout =\nxkb_variant =\n\n[grid]\nduration = 300\n";
+    /// The shipped wayfire.ini declares the keyboard keys with no value, so that
+    /// wayfire stops applying its hardcoded `us` and the system keymap gets
+    /// through. Saving a layout has to fill those in, not add a second copy of
+    /// the section further down the file.
+    #[test]
+    fn an_empty_key_is_filled_in_where_it_already_is() {
+        let file = "[input]\nxkb_layout =\nxkb_variant =\n\n[grid]\nduration = 300\n";
 
-		let updated = update_section(file, "input", &values(&[("xkb_layout", "es")]), false);
-		let input = parse_section(&updated, "input");
+        let updated = update_section(file, "input", &values(&[("xkb_layout", "es")]), false);
+        let input = parse_section(&updated, "input");
 
-		assert_eq!(input.get("xkb_layout").map(String::as_str), Some("es"));
-		assert_eq!(input.get("xkb_variant").map(String::as_str), Some(""));
-		assert_eq!(updated.matches("[input]").count(), 1, "{}", updated);
-	}
+        assert_eq!(input.get("xkb_layout").map(String::as_str), Some("es"));
+        assert_eq!(input.get("xkb_variant").map(String::as_str), Some(""));
+        assert_eq!(updated.matches("[input]").count(), 1, "{}", updated);
+    }
 
-	#[test]
-	fn prune_removes_keys_absent_from_the_payload() {
-		let updated = update_section(SAMPLE, "grid", &values(&[("duration", "150")]), true);
-		let grid = parse_section(&updated, "grid");
+    #[test]
+    fn prune_removes_keys_absent_from_the_payload() {
+        let updated = update_section(SAMPLE, "grid", &values(&[("duration", "150")]), true);
+        let grid = parse_section(&updated, "grid");
 
-		assert_eq!(grid.len(), 1, "pruning drops unmanaged keys: {:?}", grid);
-		assert_eq!(grid.get("duration").map(String::as_str), Some("150"));
-	}
+        assert_eq!(grid.len(), 1, "pruning drops unmanaged keys: {:?}", grid);
+        assert_eq!(grid.get("duration").map(String::as_str), Some("150"));
+    }
 
-	#[test]
-	fn a_missing_section_is_appended() {
-		let updated = update_section(SAMPLE, "wobbly", &values(&[("friction", "3")]), false);
+    #[test]
+    fn a_missing_section_is_appended() {
+        let updated = update_section(SAMPLE, "wobbly", &values(&[("friction", "3")]), false);
 
-		assert!(updated.contains("[wobbly]"));
-		assert_eq!(
-			parse_section(&updated, "wobbly")
-				.get("friction")
-				.map(String::as_str),
-			Some("3")
-		);
-		assert_eq!(
-			parse_section(&updated, "core")
-				.get("plugins")
-				.map(String::as_str),
-			Some("animate autostart blur ipc")
-		);
-	}
+        assert!(updated.contains("[wobbly]"));
+        assert_eq!(
+            parse_section(&updated, "wobbly")
+                .get("friction")
+                .map(String::as_str),
+            Some("3")
+        );
+        assert_eq!(
+            parse_section(&updated, "core")
+                .get("plugins")
+                .map(String::as_str),
+            Some("animate autostart blur ipc")
+        );
+    }
 
-	#[test]
-	fn remove_keys_drops_only_what_it_is_asked_for() {
-		let updated = remove_keys(SAMPLE, "grid", &["type", "slot_c"]);
-		let grid = parse_section(&updated, "grid");
+    #[test]
+    fn remove_keys_drops_only_what_it_is_asked_for() {
+        let updated = remove_keys(SAMPLE, "grid", &["type", "slot_c"]);
+        let grid = parse_section(&updated, "grid");
 
-		assert_eq!(grid.get("duration").map(String::as_str), Some("150"));
-		assert!(!grid.contains_key("type"), "the key is gone: {:?}", grid);
-		assert!(!grid.contains_key("slot_c"));
-		assert!(updated.contains("# Core options"), "comments survive");
-		assert_eq!(
-			parse_section(&updated, "core")
-				.get("plugins")
-				.map(String::as_str),
-			Some("animate autostart blur ipc"),
-			"other sections are untouched"
-		);
-	}
+        assert_eq!(grid.get("duration").map(String::as_str), Some("150"));
+        assert!(!grid.contains_key("type"), "the key is gone: {:?}", grid);
+        assert!(!grid.contains_key("slot_c"));
+        assert!(updated.contains("# Core options"), "comments survive");
+        assert_eq!(
+            parse_section(&updated, "core")
+                .get("plugins")
+                .map(String::as_str),
+            Some("animate autostart blur ipc"),
+            "other sections are untouched"
+        );
+    }
 
-	#[test]
-	fn removing_an_absent_key_changes_nothing() {
-		let updated = remove_keys(SAMPLE, "grid", &["gap"]);
-		assert_eq!(updated, SAMPLE);
-		assert_eq!(remove_keys(SAMPLE, "wobbly", &["friction"]), SAMPLE);
-	}
+    #[test]
+    fn removing_an_absent_key_changes_nothing() {
+        let updated = remove_keys(SAMPLE, "grid", &["gap"]);
+        assert_eq!(updated, SAMPLE);
+        assert_eq!(remove_keys(SAMPLE, "wobbly", &["friction"]), SAMPLE);
+    }
 
-	/// The pages read a whole section and write the whole section back, so
-	/// almost every key in a save is being "written" with the value it already
-	/// has. Rewriting those is what flattened the plugin list.
-	#[test]
-	fn a_value_that_did_not_change_keeps_the_lines_it_was_on() {
-		let core = parse_section(SAMPLE, "core");
-		let updated = update_section(SAMPLE, "core", &core, false);
+    /// The pages read a whole section and write the whole section back, so
+    /// almost every key in a save is being "written" with the value it already
+    /// has. Rewriting those is what flattened the plugin list.
+    #[test]
+    fn a_value_that_did_not_change_keeps_the_lines_it_was_on() {
+        let core = parse_section(SAMPLE, "core");
+        let updated = update_section(SAMPLE, "core", &core, false);
 
-		assert_eq!(updated, SAMPLE, "saving a section unchanged must be a no-op");
-		assert!(updated.contains("  animate \\"), "the plugin list keeps its shape");
-	}
+        assert_eq!(
+            updated, SAMPLE,
+            "saving a section unchanged must be a no-op"
+        );
+        assert!(
+            updated.contains("  animate \\"),
+            "the plugin list keeps its shape"
+        );
+    }
 
-	#[test]
-	fn changing_one_key_leaves_the_others_alone() {
-		let mut core = parse_section(SAMPLE, "core");
-		core.insert("vwidth".to_string(), "4".to_string());
-		let updated = update_section(SAMPLE, "core", &core, false);
+    #[test]
+    fn changing_one_key_leaves_the_others_alone() {
+        let mut core = parse_section(SAMPLE, "core");
+        core.insert("vwidth".to_string(), "4".to_string());
+        let updated = update_section(SAMPLE, "core", &core, false);
 
-		assert_eq!(updated, SAMPLE.replace("vwidth = 3", "vwidth = 4"));
-	}
+        assert_eq!(updated, SAMPLE.replace("vwidth = 3", "vwidth = 4"));
+    }
 
-	#[test]
-	fn repeated_writes_are_stable() {
-		let once = update_section(SAMPLE, "grid", &values(&[("duration", "300")]), false);
-		let twice = update_section(&once, "grid", &values(&[("duration", "300")]), false);
+    #[test]
+    fn repeated_writes_are_stable() {
+        let once = update_section(SAMPLE, "grid", &values(&[("duration", "300")]), false);
+        let twice = update_section(&once, "grid", &values(&[("duration", "300")]), false);
 
-		assert_eq!(once, twice, "saving twice must not keep growing the file");
-	}
+        assert_eq!(once, twice, "saving twice must not keep growing the file");
+    }
 }

@@ -1,9 +1,9 @@
+mod audio;
 mod commands;
 mod logger;
 mod structs;
 mod tools;
 mod utils;
-mod audio;
 
 use std::path::PathBuf;
 

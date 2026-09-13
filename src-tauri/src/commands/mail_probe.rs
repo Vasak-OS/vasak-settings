@@ -55,10 +55,16 @@ pub struct ProbeOutcome {
 
 impl ProbeOutcome {
     fn ok() -> Self {
-        Self { ok: true, detail: String::new() }
+        Self {
+            ok: true,
+            detail: String::new(),
+        }
     }
     fn fallo(detalle: impl Into<String>) -> Self {
-        Self { ok: false, detail: detalle.into() }
+        Self {
+            ok: false,
+            detail: detalle.into(),
+        }
     }
 }
 
@@ -166,7 +172,12 @@ pub fn mecanismos_de_auth(ehlo: &str) -> Vec<String> {
             let resto = sin_codigo
                 .strip_prefix("AUTH ")
                 .or_else(|| sin_codigo.strip_prefix("auth "))?;
-            Some(resto.split_whitespace().map(str::to_uppercase).collect::<Vec<_>>())
+            Some(
+                resto
+                    .split_whitespace()
+                    .map(str::to_uppercase)
+                    .collect::<Vec<_>>(),
+            )
         })
         .flatten()
         .collect()
@@ -190,7 +201,10 @@ pub fn explicar(error: &std::io::Error, host: &str, puerto: u16) -> String {
     // El certificado se comprueba contra las CA del sistema, así que este caso
     // es habitual en un servidor casero — y no tiene nada que ver con la
     // contraseña, que es adonde la gente mira primero.
-    if texto.contains("certificate") || texto.contains("CertificateError") || texto.contains("UnknownIssuer") {
+    if texto.contains("certificate")
+        || texto.contains("CertificateError")
+        || texto.contains("UnknownIssuer")
+    {
         return format!(
             "el certificado de {host} no es de confianza para este equipo ({texto}). \
              No es un problema de tu contraseña"
@@ -380,7 +394,10 @@ fn rechazar_bye(saludo: &str) -> std::io::Result<()> {
 }
 
 /// Lo mismo para SMTP: siempre termina cifrado.
-async fn abrir_smtp(host: &str, puerto: u16) -> std::io::Result<(BufReader<Box<dyn Flujo>>, String)> {
+async fn abrir_smtp(
+    host: &str,
+    puerto: u16,
+) -> std::io::Result<(BufReader<Box<dyn Flujo>>, String)> {
     let mut tcp = TcpStream::connect((host, puerto)).await?;
 
     if tls_implicito(puerto, Protocolo::Smtp) {
@@ -602,14 +619,21 @@ mod tests {
     #[test]
     fn una_contrasena_con_salto_de_linea_no_se_manda() {
         for veneno in ["a\r\nA1 LOGOUT", "a\nb", "a\rb", "a\0b"] {
-            assert_eq!(comillas_imap(veneno), None, "{veneno:?} tenía que rechazarse");
+            assert_eq!(
+                comillas_imap(veneno),
+                None,
+                "{veneno:?} tenía que rechazarse"
+            );
         }
     }
 
     #[test]
     fn las_comillas_y_las_barras_se_escapan() {
         assert_eq!(comillas_imap("simple").unwrap(), "\"simple\"");
-        assert_eq!(comillas_imap(r#"con"comilla"#).unwrap(), r#""con\"comilla""#);
+        assert_eq!(
+            comillas_imap(r#"con"comilla"#).unwrap(),
+            r#""con\"comilla""#
+        );
         assert_eq!(comillas_imap(r"con\barra").unwrap(), r#""con\\barra""#);
         // El orden importa: escapar la comilla primero dejaría la barra que
         // acaba de agregarse sin escapar.
@@ -618,7 +642,10 @@ mod tests {
 
     #[test]
     fn se_reconoce_la_respuesta_con_etiqueta() {
-        assert_eq!(estado_imap("a1 OK LOGIN completed", "a1"), Some(EstadoImap::Ok));
+        assert_eq!(
+            estado_imap("a1 OK LOGIN completed", "a1"),
+            Some(EstadoImap::Ok)
+        );
         assert_eq!(
             estado_imap("a1 NO [AUTHENTICATIONFAILED] mal", "a1"),
             Some(EstadoImap::No("[AUTHENTICATIONFAILED] mal".into()))
@@ -643,7 +670,11 @@ mod tests {
             "a2 OK otra etiqueta",
             "",
         ] {
-            assert_eq!(estado_imap(suelta, "a1"), None, "{suelta:?} no es la respuesta de a1");
+            assert_eq!(
+                estado_imap(suelta, "a1"),
+                None,
+                "{suelta:?} no es la respuesta de a1"
+            );
         }
     }
 
@@ -661,7 +692,10 @@ mod tests {
             linea_smtp("250-PIPELINING"),
             Some((250, true, "PIPELINING".into()))
         );
-        assert_eq!(linea_smtp("535 5.7.8 mal"), Some((535, false, "5.7.8 mal".into())));
+        assert_eq!(
+            linea_smtp("535 5.7.8 mal"),
+            Some((535, false, "5.7.8 mal".into()))
+        );
     }
 
     /// Sin distinguir el `-` del espacio, la lectura cortaría en la primera
@@ -706,7 +740,9 @@ mod tests {
     #[test]
     fn la_carga_de_auth_plain_lleva_bytes_nulos() {
         let carga = carga_auth_plain("ana", "secreto");
-        let crudo = base64::engine::general_purpose::STANDARD.decode(&carga).unwrap();
+        let crudo = base64::engine::general_purpose::STANDARD
+            .decode(&carga)
+            .unwrap();
         assert_eq!(crudo, b"\0ana\0secreto");
     }
 
@@ -814,6 +850,9 @@ mod tests {
     fn un_puerto_que_no_contesta_lo_dice() {
         let error = std::io::Error::from(std::io::ErrorKind::TimedOut);
         let mensaje = explicar(&error, "correo.ejemplo.com", 9999);
-        assert!(mensaje.contains("callado") || mensaje.contains("contestó"), "{mensaje}");
+        assert!(
+            mensaje.contains("callado") || mensaje.contains("contestó"),
+            "{mensaje}"
+        );
     }
 }
