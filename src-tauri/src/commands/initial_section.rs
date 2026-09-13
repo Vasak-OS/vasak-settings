@@ -95,13 +95,19 @@ mod tests {
     fn sin_argumento_no_hay_seccion() {
         // Es cómo la abre el menú de aplicaciones: sin nada, va a la portada.
         let solo_el_programa = ["/usr/bin/vasak-settings"];
-        assert_eq!(seccion_pedida(solo_el_programa.iter().map(|s| s.to_string())), None);
+        assert_eq!(
+            seccion_pedida(solo_el_programa.iter().map(|s| s.to_string())),
+            None
+        );
     }
 
     #[test]
     fn un_argumento_que_no_es_seccion_no_pasa_el_puente() {
         let con_basura = ["vasak-settings", "/etc/passwd"];
-        assert_eq!(seccion_pedida(con_basura.iter().map(|s| s.to_string())), None);
+        assert_eq!(
+            seccion_pedida(con_basura.iter().map(|s| s.to_string())),
+            None
+        );
     }
 
     #[test]

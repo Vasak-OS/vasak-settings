@@ -133,7 +133,11 @@ fn cache_dir() -> Option<PathBuf> {
     let base = std::env::var("XDG_CACHE_HOME")
         .ok()
         .map(PathBuf::from)
-        .or_else(|| std::env::var("HOME").ok().map(|h| PathBuf::from(h).join(".cache")))?;
+        .or_else(|| {
+            std::env::var("HOME")
+                .ok()
+                .map(|h| PathBuf::from(h).join(".cache"))
+        })?;
     Some(base.join("vasak").join("wallpapers"))
 }
 
@@ -266,7 +270,11 @@ pub async fn wallpaper_thumbnail(path: String) -> Result<String, String> {
     // salto hace que ffmpeg escriba un archivo **vacío y devuelva éxito**, que
     // es la peor forma de fallar: el chequeo de «terminó bien y el archivo
     // existe» lo daba por bueno y la previsualización quedaba en blanco.
-    let salto: &[&str] = if es_video(&source) { &["-ss", "1"] } else { &[] };
+    let salto: &[&str] = if es_video(&source) {
+        &["-ss", "1"]
+    } else {
+        &[]
+    };
 
     if !extraer_cuadro(&path, &parcial, salto).await? && es_video(&source) {
         // Un video más corto que el salto: se reintenta desde el principio.
@@ -299,7 +307,9 @@ pub fn es_video(path: &Path) -> bool {
 /// Que el archivo exista no alcanza: ffmpeg puede dejar uno vacío y terminar
 /// bien. Un JPEG de menos de cien bytes no es una imagen.
 pub fn archivo_con_contenido(path: &Path) -> bool {
-    std::fs::metadata(path).map(|m| m.len() > 100).unwrap_or(false)
+    std::fs::metadata(path)
+        .map(|m| m.len() > 100)
+        .unwrap_or(false)
 }
 
 /// Corre ffmpeg una vez. Devuelve si dejó una miniatura de verdad.
@@ -354,7 +364,10 @@ pub fn thumbnail_name(source: &Path, size: u64, modified_secs: u64) -> String {
 }
 
 #[tauri::command]
-pub async fn prepare_wallpaper_video(app: AppHandle, path: String) -> Result<PreparedWallpaper, String> {
+pub async fn prepare_wallpaper_video(
+    app: AppHandle,
+    path: String,
+) -> Result<PreparedWallpaper, String> {
     let source = PathBuf::from(&path);
     let sin_cambios = |detail: &str| PreparedWallpaper {
         path: path.clone(),
@@ -579,7 +592,11 @@ mod tests {
     fn la_clave_de_cache_cambia_si_cambia_el_archivo() {
         let ruta = Path::new("/home/pato/fondo.mp4");
         let a = cache_key(ruta, 1000, 111, (1920, 1080));
-        assert_eq!(a, cache_key(ruta, 1000, 111, (1920, 1080)), "misma entrada, misma clave");
+        assert_eq!(
+            a,
+            cache_key(ruta, 1000, 111, (1920, 1080)),
+            "misma entrada, misma clave"
+        );
         assert_ne!(a, cache_key(ruta, 2000, 111, (1920, 1080)), "otro tamaño");
         assert_ne!(a, cache_key(ruta, 1000, 222, (1920, 1080)), "otra fecha");
         assert_ne!(a, cache_key(ruta, 1000, 111, (3840, 2160)), "otra pantalla");
@@ -590,8 +607,13 @@ mod tests {
     #[test]
     fn distingue_imagen_de_video_por_la_extension() {
         assert!(es_video(Path::new("/home/pato/fondo.mp4")));
-        assert!(es_video(Path::new("/home/pato/fondo.WEBM")), "sin importar mayúsculas");
-        assert!(!es_video(Path::new("/usr/share/backgrounds/vasakos/wallpaper-1.jpg")));
+        assert!(
+            es_video(Path::new("/home/pato/fondo.WEBM")),
+            "sin importar mayúsculas"
+        );
+        assert!(!es_video(Path::new(
+            "/usr/share/backgrounds/vasakos/wallpaper-1.jpg"
+        )));
         assert!(!es_video(Path::new("/home/pato/sin-extension")));
     }
 
@@ -609,7 +631,10 @@ mod tests {
 
         let recortado = dir.join("recortado.jpg");
         std::fs::write(&recortado, b"apenas unos bytes").unwrap();
-        assert!(!archivo_con_contenido(&recortado), "un JPEG no pesa 17 bytes");
+        assert!(
+            !archivo_con_contenido(&recortado),
+            "un JPEG no pesa 17 bytes"
+        );
 
         let bueno = dir.join("bueno.jpg");
         std::fs::write(&bueno, vec![0u8; 4096]).unwrap();

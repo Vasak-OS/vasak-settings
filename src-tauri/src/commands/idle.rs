@@ -16,8 +16,7 @@ const UNIT: &str = "vasak-idle.service";
 /// inside this unit's cgroup: saving this very page restarts the unit, and that
 /// would kill an active lock. A lock client that dies with the session locked
 /// leaves the compositor locked with nothing to type into.
-const LOCKER: &str =
-    "systemd-run --user --scope --collect --quiet /usr/bin/vasak-lock-screen";
+const LOCKER: &str = "systemd-run --user --scope --collect --quiet /usr/bin/vasak-lock-screen";
 /// Before suspending, -d returns as soon as the screen is covered. Without it
 /// swayidle waits for the unlock and the machine never gets to sleep.
 const SLEEP_LOCKER: &str =
@@ -130,7 +129,9 @@ fn tokenize(line: &str) -> Vec<String> {
 /// vasak-lock existed name gtklock directly, and reading them as "no lock
 /// configured" would silently turn the lock off on the next save.
 fn locks_the_screen(action: &str) -> bool {
-    action.contains("vasak-lock-screen") || action.contains("vasak-lock") || action.contains("gtklock")
+    action.contains("vasak-lock-screen")
+        || action.contains("vasak-lock")
+        || action.contains("gtklock")
 }
 
 /// Rebuilds the settings from a swayidle command line. Used both for the unit
@@ -271,7 +272,11 @@ pub fn get_idle_config() -> Result<IdleConfig, String> {
 
     // Prefer the user's own unit; fall back to whatever wayfire is still
     // launching so the page opens showing the settings actually in effect.
-    let mut config = match fs::read_to_string(&path).ok().as_deref().and_then(exec_start_of) {
+    let mut config = match fs::read_to_string(&path)
+        .ok()
+        .as_deref()
+        .and_then(exec_start_of)
+    {
         Some(exec) => parse_swayidle(&exec),
         None => match legacy.as_deref() {
             Some(command) => parse_swayidle(command),
@@ -331,7 +336,8 @@ mod tests {
 
     #[test]
     fn tokenizer_keeps_quoted_commands_together() {
-        let tokens = tokenize("swayidle -w timeout 300 'gtklock -s /path/x.css' before-sleep 'gtklock'");
+        let tokens =
+            tokenize("swayidle -w timeout 300 'gtklock -s /path/x.css' before-sleep 'gtklock'");
 
         assert_eq!(tokens[3], "300");
         assert_eq!(tokens[4], "gtklock -s /path/x.css");
@@ -425,7 +431,10 @@ mod tests {
     fn a_sub_minute_timeout_never_rounds_down_to_zero() {
         let parsed = parse_swayidle("swayidle -w timeout 30 'gtklock'");
 
-        assert_eq!(parsed.lock_minutes, 1, "0 minutes would mean 'lock instantly'");
+        assert_eq!(
+            parsed.lock_minutes, 1,
+            "0 minutes would mean 'lock instantly'"
+        );
     }
 
     #[test]

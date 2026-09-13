@@ -88,9 +88,7 @@ pub fn validate_username(username: &str) -> Result<(), String> {
     }
 
     if !chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-') {
-        return Err(
-            "El nombre de usuario solo admite minúsculas, números, «-» y «_».".to_string(),
-        );
+        return Err("El nombre de usuario solo admite minúsculas, números, «-» y «_».".to_string());
     }
 
     Ok(())
@@ -105,7 +103,9 @@ pub fn validate_password(password: &str) -> Result<(), String> {
     }
 
     if password.chars().any(|c| c.is_control()) {
-        return Err("La contraseña no puede contener saltos de línea ni caracteres de control.".to_string());
+        return Err(
+            "La contraseña no puede contener saltos de línea ni caracteres de control.".to_string(),
+        );
     }
 
     Ok(())
@@ -206,7 +206,10 @@ pub async fn list_users() -> Result<Vec<UserAccount>, String> {
                 .get_property::<String>("HomeDirectory")
                 .await
                 .unwrap_or_default(),
-            shell: user.get_property::<String>("Shell").await.unwrap_or_default(),
+            shell: user
+                .get_property::<String>("Shell")
+                .await
+                .unwrap_or_default(),
         });
     }
 
@@ -372,8 +375,20 @@ mod tests {
 
     #[test]
     fn rejects_usernames_useradd_would_refuse() {
-        for name in ["", "1user", "-user", "Pato", "user name", "usuário", "a".repeat(33).as_str()] {
-            assert!(validate_username(name).is_err(), "{:?} should be invalid", name);
+        for name in [
+            "",
+            "1user",
+            "-user",
+            "Pato",
+            "user name",
+            "usuário",
+            "a".repeat(33).as_str(),
+        ] {
+            assert!(
+                validate_username(name).is_err(),
+                "{:?} should be invalid",
+                name
+            );
         }
     }
 
@@ -400,13 +415,18 @@ mod tests {
             return;
         };
 
-        assert!(hash.starts_with("$6$"), "expected SHA-512 crypt, got {}", hash);
+        assert!(
+            hash.starts_with("$6$"),
+            "expected SHA-512 crypt, got {}",
+            hash
+        );
         assert!(hash.len() > 20);
     }
 
     #[test]
     fn salts_make_each_hash_unique() {
-        let (Ok(first), Ok(second)) = (crypt_password("misma clave"), crypt_password("misma clave"))
+        let (Ok(first), Ok(second)) =
+            (crypt_password("misma clave"), crypt_password("misma clave"))
         else {
             eprintln!("openssl no disponible; se omite");
             return;

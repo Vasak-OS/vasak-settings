@@ -110,7 +110,10 @@ pub async fn set_ntp(enabled: bool) -> Result<(), String> {
         .await
         .map_err(|e| call_error("la sincronización automática", e))?;
 
-    log_debug(&format!("NTP {}", if enabled { "activado" } else { "desactivado" }));
+    log_debug(&format!(
+        "NTP {}",
+        if enabled { "activado" } else { "desactivado" }
+    ));
     Ok(())
 }
 
@@ -156,13 +159,28 @@ mod tests {
     #[ignore]
     fn reads_the_live_clock_configuration() {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        let info = rt.block_on(get_datetime_info()).expect("timedated should answer");
+        let info = rt
+            .block_on(get_datetime_info())
+            .expect("timedated should answer");
 
         assert!(!info.timezone.is_empty(), "timezone should not be empty");
-        assert!(info.time_usec > 1_600_000_000_000_000, "clock looks wrong: {}", info.time_usec);
+        assert!(
+            info.time_usec > 1_600_000_000_000_000,
+            "clock looks wrong: {}",
+            info.time_usec
+        );
 
-        let zones = rt.block_on(list_timezones()).expect("ListTimezones should answer");
-        assert!(zones.len() > 100, "expected the full tz database, got {}", zones.len());
-        assert!(zones.contains(&info.timezone), "current zone must be in the list");
+        let zones = rt
+            .block_on(list_timezones())
+            .expect("ListTimezones should answer");
+        assert!(
+            zones.len() > 100,
+            "expected the full tz database, got {}",
+            zones.len()
+        );
+        assert!(
+            zones.contains(&info.timezone),
+            "current zone must be in the list"
+        );
     }
 }

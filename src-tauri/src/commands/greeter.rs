@@ -432,8 +432,14 @@ fn validate_scheme_document(content: &str) -> Result<String, String> {
         .filter(|id| !id.trim().is_empty())
         .ok_or_else(|| "El esquema no trae un «id».".to_string())?;
 
-    if document.get("colors").and_then(|colors| colors.get("dark")).is_none()
-        || document.get("colors").and_then(|colors| colors.get("light")).is_none()
+    if document
+        .get("colors")
+        .and_then(|colors| colors.get("dark"))
+        .is_none()
+        || document
+            .get("colors")
+            .and_then(|colors| colors.get("light"))
+            .is_none()
     {
         return Err("El esquema no trae los colores claros y oscuros.".to_string());
     }
@@ -527,10 +533,7 @@ fn stage_config(
         let nombre = format!("{BACKGROUND_FILE}.{}", copy_extension(&origen));
 
         std::fs::copy(&origen, stage.join(&nombre)).map_err(|error| {
-            format!(
-                "No se pudo copiar el fondo «{}»: {error}",
-                origen.display()
-            )
+            format!("No se pudo copiar el fondo «{}»: {error}", origen.display())
         })?;
 
         format!("{CONFIG_DIR}/{nombre}")
@@ -770,7 +773,10 @@ mod tests {
     fn la_copia_del_guardado_anterior_se_vuelve_a_copiar() {
         let instalada = PathBuf::from(format!("{CONFIG_DIR}/{BACKGROUND_FILE}.jpg"));
         assert!(needs_copy(&instalada, true));
-        assert!(needs_copy(&PathBuf::from(format!("{CONFIG_DIR}/{BACKGROUND_FILE}")), true));
+        assert!(needs_copy(
+            &PathBuf::from(format!("{CONFIG_DIR}/{BACKGROUND_FILE}")),
+            true
+        ));
 
         // Un fondo que un administrador dejó en el mismo directorio con otro
         // nombre no lo borra la instalación, así que se apunta donde está.
@@ -806,7 +812,9 @@ mod tests {
         );
 
         assert!(validate_scheme_document(r#"{"colors":{"dark":{},"light":{}}}"#).is_err());
-        assert!(validate_scheme_document(r#"{"id":"  ","colors":{"dark":{},"light":{}}}"#).is_err());
+        assert!(
+            validate_scheme_document(r#"{"id":"  ","colors":{"dark":{},"light":{}}}"#).is_err()
+        );
         assert!(validate_scheme_document(r#"{"id":"x","colors":{"dark":{}}}"#).is_err());
         assert!(validate_scheme_document("no soy json").is_err());
     }
@@ -843,7 +851,10 @@ mod tests {
             guardado,
             Some(format!("{CONFIG_DIR}/{BACKGROUND_FILE}.png"))
         );
-        assert!(stage.join("background.png").is_file(), "se copió el archivo");
+        assert!(
+            stage.join("background.png").is_file(),
+            "se copió el archivo"
+        );
         assert_eq!(
             std::fs::read_to_string(stage.join(BACKGROUND_FILE)).unwrap(),
             format!("{CONFIG_DIR}/{BACKGROUND_FILE}.png\n")

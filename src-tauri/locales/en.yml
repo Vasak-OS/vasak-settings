@@ -279,6 +279,12 @@ views:
       veces: 'tried {0} times'
       descartar: 'Dismiss'
     resources:
+      accountEmail: Account email
+      accountCalendar: Account calendar
+      accountContacts: Account contacts
+      accountChat: Account messages
+      accountDrive: Cloud files
+      accountTasks: Account tasks
       camera: Camera
       microphone: Microphone
       credentials: Keys and saved logins
@@ -740,7 +746,11 @@ views:
     accountLocked: Account locked
     accountUnlocked: Account unlocked
     deleted: Account “{0}” deleted
-
+    changePhoto: Change profile photo
+    changePhotoShort: Change
+    pickPhoto: Choose a picture for your profile
+    images: Images
+    photoChanged: Profile photo updated.
   datetime:
     title: Date and time
     description: Time zone and system clock synchronization.
@@ -1128,29 +1138,6 @@ views:
       loadAccounts: 'Error loading accounts: {0}'
       registerCustom: 'Error registering custom account: {0}'
       deleteAccount: 'Error deleting account: {0}'
-    permissions:
-      title: Applications with access
-      description: Which programs may use these accounts, and which parts of them.
-      emptyDescription: >-
-        When an application wants to use one of your accounts, you will be asked,
-        and the answer will show up here.
-      unverified: >-
-        This program was not installed by the system, so we cannot guarantee it
-        will still be the same program later on.
-      forget: Ask again
-      allow: Allow
-      deny: Don't allow
-      note: >-
-        Changing a permission asks for your password. A permission covers one
-        application and one kind of data: allow mail and it can use the mail
-        from every one of your accounts.
-      resources:
-        accountEmail: Account email
-        accountCalendar: Calendar
-        accountContacts: Contacts
-        accountChat: Messages
-        accountDrive: Cloud files
-        accountTasks: Tasks
   multimediaAudio:
     title: Output Audio
     description: Manage speakers and system playback volume.

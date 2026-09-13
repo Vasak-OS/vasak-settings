@@ -1,6 +1,6 @@
+use zbus::zvariant::{OwnedValue, Value};
 use zbus::Connection;
 use zbus::ProxyBuilder;
-use zbus::zvariant::{OwnedValue, Value};
 
 use crate::logger::{log_debug, log_error};
 
@@ -152,9 +152,9 @@ pub async fn set_power_profile(profile: String) -> Result<(), String> {
     })?;
 
     // Verify that the profile is in the list before applying it
-    let raw = get_property(&conn, "Profiles").await.map_err(|e| {
-        format!("Error reading available profiles: {e}")
-    })?;
+    let raw = get_property(&conn, "Profiles")
+        .await
+        .map_err(|e| format!("Error reading available profiles: {e}"))?;
     let available = read_str_vec(&raw);
 
     if !available.contains(&profile) {
@@ -166,11 +166,13 @@ pub async fn set_power_profile(profile: String) -> Result<(), String> {
         return Err(msg);
     }
 
-    set_property(&conn, "ActiveProfile", &profile).await.map_err(|e| {
-        let msg = format!("Error aplicando perfil '{profile}': {e}");
-        log_error(&msg);
-        msg
-    })?;
+    set_property(&conn, "ActiveProfile", &profile)
+        .await
+        .map_err(|e| {
+            let msg = format!("Error aplicando perfil '{profile}': {e}");
+            log_error(&msg);
+            msg
+        })?;
 
     log_debug(&format!("Power profile changed to '{profile}'"));
     Ok(())

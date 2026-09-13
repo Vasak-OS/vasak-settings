@@ -52,7 +52,10 @@ impl CommandExecutor {
                     || e.contains("not permitted")
                     || e.contains("Operation not permitted");
                 if is_perm_error {
-                    log_info(&format!("Permiso denegado, reintentando con pkexec: {} {:?}", cmd, args));
+                    log_info(&format!(
+                        "Permiso denegado, reintentando con pkexec: {} {:?}",
+                        cmd, args
+                    ));
                     Self::run_elevated(cmd, args)
                 } else {
                     Err(e)
@@ -78,21 +81,26 @@ impl CommandExecutor {
     }
 
     /// Ejecuta un comando y retorna el resultado completo
-    pub fn execute(level: PrivilegeLevel, cmd: &str, args: &[&str]) -> Result<CommandResult, String> {
+    pub fn execute(
+        level: PrivilegeLevel,
+        cmd: &str,
+        args: &[&str],
+    ) -> Result<CommandResult, String> {
         let level_label = match level {
             PrivilegeLevel::User => "usuario",
             PrivilegeLevel::Elevated => "elevado (pkexec)",
         };
 
-        log_debug(&format!("Ejecutando comando ({}): {} {:?}", level_label, cmd, args));
+        log_debug(&format!(
+            "Ejecutando comando ({}): {} {:?}",
+            level_label, cmd, args
+        ));
 
         let output = match level {
-            PrivilegeLevel::User => {
-                Command::new(cmd)
-                    .args(args)
-                    .output()
-                    .map_err(|e| format!("Error al ejecutar {}: {}", cmd, e))?
-            }
+            PrivilegeLevel::User => Command::new(cmd)
+                .args(args)
+                .output()
+                .map_err(|e| format!("Error al ejecutar {}: {}", cmd, e))?,
             PrivilegeLevel::Elevated => {
                 // Verificar que pkexec esté disponible
                 if which_pkexec().is_err() {
@@ -148,9 +156,7 @@ impl CommandExecutor {
 
         std::thread::spawn(move || {
             let result = match level {
-                PrivilegeLevel::User => {
-                    Command::new(&cmd_owned).args(&args_owned).output()
-                }
+                PrivilegeLevel::User => Command::new(&cmd_owned).args(&args_owned).output(),
                 PrivilegeLevel::Elevated => {
                     let mut c = Command::new("pkexec");
                     c.arg(&cmd_owned);

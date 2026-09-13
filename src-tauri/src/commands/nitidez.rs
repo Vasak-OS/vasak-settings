@@ -37,7 +37,8 @@ const ARCHIVO: &str = "50-vasakos-fuentes.conf";
 /// valor apagado no es «quitar la variable» sino ponerla en `1`: si la variable
 /// no está, FreeType usa su valor de fábrica, que hoy es apagado — pero apagar
 /// explícitamente deja escrito que fue una elección.
-const ENCENDIDO: &str = "FREETYPE_PROPERTIES=cff:no-stem-darkening=0 autofitter:no-stem-darkening=0";
+const ENCENDIDO: &str =
+    "FREETYPE_PROPERTIES=cff:no-stem-darkening=0 autofitter:no-stem-darkening=0";
 const APAGADO: &str = "FREETYPE_PROPERTIES=cff:no-stem-darkening=1 autofitter:no-stem-darkening=1";
 
 /// El contenido que se escribe en la carpeta del usuario.

@@ -1,9 +1,9 @@
-use std::fs;
-use std::process::Command;
-use std::collections::HashMap;
 use crate::structs::{
     DiskInfo, GpuInfo, MemoryInfo, SensorReading, SwapInfo, SystemDetails, TemperatureInfo,
 };
+use std::collections::HashMap;
+use std::fs;
+use std::process::Command;
 
 /// Obtiene el modelo de CPU desde /proc/cpuinfo
 pub(crate) fn get_cpu_model() -> String {
@@ -23,7 +23,12 @@ pub(crate) fn get_cpu_model() -> String {
 pub(crate) fn get_cpu_cores() -> u32 {
     fs::read_to_string("/proc/cpuinfo")
         .ok()
-        .map(|content| content.lines().filter(|line| line.starts_with("processor")).count() as u32)
+        .map(|content| {
+            content
+                .lines()
+                .filter(|line| line.starts_with("processor"))
+                .count() as u32
+        })
         .unwrap_or(1)
 }
 
@@ -70,15 +75,23 @@ pub(crate) fn get_cpu_frequency() -> Option<f32> {
 /// Obtiene información de memoria desde /proc/meminfo
 pub(crate) fn get_memory_info() -> MemoryInfo {
     let content = fs::read_to_string("/proc/meminfo").unwrap_or_default();
-    
+
     let mut total_kb = 0u64;
     let mut available_kb = 0u64;
 
     for line in content.lines() {
         if line.starts_with("MemTotal:") {
-            total_kb = line.split_whitespace().nth(1).and_then(|s| s.parse().ok()).unwrap_or(0);
+            total_kb = line
+                .split_whitespace()
+                .nth(1)
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0);
         } else if line.starts_with("MemAvailable:") {
-            available_kb = line.split_whitespace().nth(1).and_then(|s| s.parse().ok()).unwrap_or(0);
+            available_kb = line
+                .split_whitespace()
+                .nth(1)
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0);
         }
     }
 
@@ -108,9 +121,17 @@ pub(crate) fn get_swap_info() -> Option<SwapInfo> {
 
     for line in content.lines() {
         if line.starts_with("SwapTotal:") {
-            total_kb = line.split_whitespace().nth(1).and_then(|s| s.parse().ok()).unwrap_or(0);
+            total_kb = line
+                .split_whitespace()
+                .nth(1)
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0);
         } else if line.starts_with("SwapFree:") {
-            free_kb = line.split_whitespace().nth(1).and_then(|s| s.parse().ok()).unwrap_or(0);
+            free_kb = line
+                .split_whitespace()
+                .nth(1)
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(0);
         }
     }
 
@@ -121,7 +142,11 @@ pub(crate) fn get_swap_info() -> Option<SwapInfo> {
     let total_gb = total_kb as f64 / 1024.0 / 1024.0;
     let free_gb = free_kb as f64 / 1024.0 / 1024.0;
     let used_gb = (total_kb - free_kb) as f64 / 1024.0 / 1024.0;
-    let usage_percent = if total_gb > 0.0 { ((used_gb / total_gb) * 100.0) as f32 } else { 0.0 };
+    let usage_percent = if total_gb > 0.0 {
+        ((used_gb / total_gb) * 100.0) as f32
+    } else {
+        0.0
+    };
 
     Some(SwapInfo {
         total_gb,
@@ -141,10 +166,14 @@ pub(crate) fn get_disks_info() -> Vec<DiskInfo> {
 
         for (i, line) in stdout.lines().enumerate() {
             // Saltar cabecera
-            if i == 0 { continue; }
+            if i == 0 {
+                continue;
+            }
 
             let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() < 7 { continue; }
+            if parts.len() < 7 {
+                continue;
+            }
 
             let device = parts[0].to_string();
             let fstype = parts[1].to_string();
@@ -172,12 +201,22 @@ pub(crate) fn get_disks_info() -> Vec<DiskInfo> {
                 continue;
             }
 
-            let grouping_key = (device.clone(), fstype.clone(), total_bytes, used_bytes, avail_bytes);
+            let grouping_key = (
+                device.clone(),
+                fstype.clone(),
+                total_bytes,
+                used_bytes,
+                avail_bytes,
+            );
 
             if let Some(existing_index) = grouped_indexes.get(&grouping_key) {
                 let grouped_disk = &mut disks[*existing_index];
 
-                if !grouped_disk.mountpoints.iter().any(|existing_mount| existing_mount == &mountpoint) {
+                if !grouped_disk
+                    .mountpoints
+                    .iter()
+                    .any(|existing_mount| existing_mount == &mountpoint)
+                {
                     grouped_disk.mountpoints.push(mountpoint);
                 }
 
@@ -213,38 +252,39 @@ pub(crate) fn get_disks_info() -> Vec<DiskInfo> {
 
 /// Obtiene información de GPU usando lspci
 pub(crate) fn get_gpu_info() -> Option<GpuInfo> {
-    Command::new("lspci")
-        .output()
-        .ok()
-        .and_then(|output| {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            stdout
-                .lines()
-                .find(|line| line.to_lowercase().contains("vga compatible") || line.to_lowercase().contains("3d controller"))
-                .map(|line| {
-                    let parts: Vec<&str> = line.split(':').collect();
-                    let info = if parts.len() >= 3 {
-                        parts[2].trim()
-                    } else {
-                        line
-                    };
+    Command::new("lspci").output().ok().and_then(|output| {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        stdout
+            .lines()
+            .find(|line| {
+                line.to_lowercase().contains("vga compatible")
+                    || line.to_lowercase().contains("3d controller")
+            })
+            .map(|line| {
+                let parts: Vec<&str> = line.split(':').collect();
+                let info = if parts.len() >= 3 {
+                    parts[2].trim()
+                } else {
+                    line
+                };
 
-                    let vendor = if info.to_lowercase().contains("nvidia") {
-                        "NVIDIA"
-                    } else if info.to_lowercase().contains("amd") || info.to_lowercase().contains("ati") {
-                        "AMD"
-                    } else if info.to_lowercase().contains("intel") {
-                        "Intel"
-                    } else {
-                        "Unknown"
-                    };
+                let vendor = if info.to_lowercase().contains("nvidia") {
+                    "NVIDIA"
+                } else if info.to_lowercase().contains("amd") || info.to_lowercase().contains("ati")
+                {
+                    "AMD"
+                } else if info.to_lowercase().contains("intel") {
+                    "Intel"
+                } else {
+                    "Unknown"
+                };
 
-                    GpuInfo {
-                        model: info.to_string(),
-                        vendor: vendor.to_string(),
-                    }
-                })
-        })
+                GpuInfo {
+                    model: info.to_string(),
+                    vendor: vendor.to_string(),
+                }
+            })
+    })
 }
 
 /// Obtiene detalles del sistema
@@ -268,7 +308,11 @@ pub(crate) fn get_system_details() -> SystemDetails {
             content
                 .lines()
                 .find(|line| line.starts_with("PRETTY_NAME="))
-                .map(|line| line.trim_start_matches("PRETTY_NAME=\"").trim_end_matches('"').to_string())
+                .map(|line| {
+                    line.trim_start_matches("PRETTY_NAME=\"")
+                        .trim_end_matches('"')
+                        .to_string()
+                })
         })
         .unwrap_or_else(|| "Linux".to_string());
 
@@ -278,7 +322,11 @@ pub(crate) fn get_system_details() -> SystemDetails {
             content
                 .lines()
                 .find(|line| line.starts_with("VERSION="))
-                .map(|line| line.trim_start_matches("VERSION=\"").trim_end_matches('"').to_string())
+                .map(|line| {
+                    line.trim_start_matches("VERSION=\"")
+                        .trim_end_matches('"')
+                        .to_string()
+                })
         })
         .unwrap_or_else(|| "Unknown".to_string());
 
@@ -320,22 +368,33 @@ pub(crate) fn get_temperature_info() -> Option<TemperatureInfo> {
     if let Ok(entries) = fs::read_dir("/sys/class/thermal") {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_dir() && path.file_name().and_then(|n| n.to_str()).map(|n| n.starts_with("thermal_zone")).unwrap_or(false) {
+            if path.is_dir()
+                && path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .map(|n| n.starts_with("thermal_zone"))
+                    .unwrap_or(false)
+            {
                 if let Ok(temp_str) = fs::read_to_string(path.join("temp")) {
                     if let Ok(temp_millis) = temp_str.trim().parse::<i32>() {
                         let temp = temp_millis as f32 / 1000.0;
-                        
+
                         let type_name = fs::read_to_string(path.join("type"))
                             .ok()
                             .map(|s| s.trim().to_string())
                             .unwrap_or_else(|| "Unknown".to_string());
 
-                        if type_name.to_lowercase().contains("cpu") || type_name.to_lowercase().contains("x86") {
+                        if type_name.to_lowercase().contains("cpu")
+                            || type_name.to_lowercase().contains("x86")
+                        {
                             cpu_temp = Some(temp);
                         }
 
                         sensors.push(SensorReading {
-                            name: path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "Unknown".to_string()),
+                            name: path
+                                .file_name()
+                                .map(|n| n.to_string_lossy().to_string())
+                                .unwrap_or_else(|| "Unknown".to_string()),
                             temp,
                             label: type_name,
                         });

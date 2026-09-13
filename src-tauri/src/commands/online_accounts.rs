@@ -119,7 +119,9 @@ pub async fn register_password_account(
         .deserialize()
         .map_err(|e| format!("Respuesta inválida del gestor de cuentas: {e}"))?;
 
-    log_debug(&format!("Cuenta registrada (proveedor: {provider}, id: {account_id})"));
+    log_debug(&format!(
+        "Cuenta registrada (proveedor: {provider}, id: {account_id})"
+    ));
     Ok(account_id)
 }
 
@@ -213,8 +215,8 @@ pub async fn remove_account(account_id: String) -> Result<AccountRemoval, String
         .body()
         .deserialize()
         .map_err(|e| format!("Respuesta inválida del gestor de cuentas: {e}"))?;
-    let resultado: AccountRemoval =
-        serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))?;
+    let resultado: AccountRemoval = serde_json::from_str(&raw)
+        .map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))?;
 
     if !resultado.removed {
         return Err(format!("No se encontró la cuenta '{account_id}'"));
@@ -257,7 +259,9 @@ pub async fn set_provider_credentials(
         .await
         .map_err(|e| format!("No se pudieron guardar las credenciales: {e}"))?;
 
-    log_debug(&format!("Credenciales propias guardadas para {provider_id}"));
+    log_debug(&format!(
+        "Credenciales propias guardadas para {provider_id}"
+    ));
     Ok(())
 }
 
@@ -321,7 +325,10 @@ pub async fn connect_oauth_account(
     let inicio = begin_auth(&connection, &provider_id, &capabilities, &redirect_uri).await?;
 
     open::that(&inicio.auth_url).map_err(|e| {
-        format!("no se pudo abrir el navegador: {e}. La dirección era {}", inicio.auth_url)
+        format!(
+            "no se pudo abrir el navegador: {e}. La dirección era {}",
+            inicio.auth_url
+        )
     })?;
 
     // Si la espera termina mal, el flujo queda ocupando lugar en el servicio
@@ -345,7 +352,14 @@ pub async fn connect_oauth_account(
         );
     }
 
-    complete_auth(&connection, &inicio.request_id, &code, &state, &display_name).await
+    complete_auth(
+        &connection,
+        &inicio.request_id,
+        &code,
+        &state,
+        &display_name,
+    )
+    .await
 }
 
 async fn begin_auth(
@@ -450,8 +464,8 @@ pub async fn connect_nextcloud_account(
         .body()
         .deserialize()
         .map_err(|e| format!("Respuesta inválida del gestor de cuentas: {e}"))?;
-    let inicio: NextcloudLoginStart =
-        serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))?;
+    let inicio: NextcloudLoginStart = serde_json::from_str(&raw)
+        .map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))?;
 
     open::that(&inicio.login_url).map_err(|e| {
         format!(
@@ -535,9 +549,7 @@ const ESPERA_DEL_CALLBACK: std::time::Duration = std::time::Duration::from_secs(
 async fn wait_for_callback(listener: tokio::net::TcpListener) -> Result<(String, String), String> {
     let (mut stream, _) = tokio::time::timeout(ESPERA_DEL_CALLBACK, listener.accept())
         .await
-        .map_err(|_| {
-            "se agotó el tiempo esperando la respuesta del navegador".to_string()
-        })?
+        .map_err(|_| "se agotó el tiempo esperando la respuesta del navegador".to_string())?
         .map_err(|e| format!("falló la conexión de retorno: {e}"))?;
 
     let mut buffer = vec![0u8; 8192];
@@ -708,7 +720,10 @@ mod tests {
     fn cancelar_en_el_proveedor_no_suena_a_fallo() {
         let error = parse_callback(&pedido("error=access_denied&state=xyz")).unwrap_err();
         assert_eq!(error, "no se autorizó el acceso a la cuenta");
-        assert!(!error.contains("código"), "no es un problema del código: {error}");
+        assert!(
+            !error.contains("código"),
+            "no es un problema del código: {error}"
+        );
     }
 
     #[test]
@@ -733,7 +748,10 @@ mod tests {
     #[test]
     fn un_pedido_que_no_es_http_se_rechaza() {
         for basura in ["", "\r\n\r\n", "basura"] {
-            assert!(parse_callback(basura).is_err(), "{basura:?} tenía que rechazarse");
+            assert!(
+                parse_callback(basura).is_err(),
+                "{basura:?} tenía que rechazarse"
+            );
         }
     }
 

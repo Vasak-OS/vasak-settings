@@ -95,7 +95,13 @@ pub async fn connect_list_known_devices() -> Result<Vec<KnownDevice>, String> {
 pub async fn connect_set_alias(serial: String, alias: String) -> Result<bool, String> {
     let connection = connect_service().await?;
     let reply = connection
-        .call_method(Some(SERVICE), PATH, Some(SERVICE), "SetAlias", &(serial, alias))
+        .call_method(
+            Some(SERVICE),
+            PATH,
+            Some(SERVICE),
+            "SetAlias",
+            &(serial, alias),
+        )
         .await
         .map_err(|e| format!("No se pudo renombrar el dispositivo: {e}"))?;
 
@@ -111,7 +117,13 @@ pub async fn connect_set_alias(serial: String, alias: String) -> Result<bool, St
 pub async fn connect_forget_device(serial: String) -> Result<bool, String> {
     let connection = connect_service().await?;
     let reply = connection
-        .call_method(Some(SERVICE), PATH, Some(SERVICE), "ForgetDevice", &(serial,))
+        .call_method(
+            Some(SERVICE),
+            PATH,
+            Some(SERVICE),
+            "ForgetDevice",
+            &(serial,),
+        )
         .await
         .map_err(|e| format!("No se pudo olvidar el dispositivo: {e}"))?;
 

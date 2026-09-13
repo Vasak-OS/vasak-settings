@@ -1,7 +1,7 @@
+use crate::logger::{log_debug, log_error, log_info, log_warning};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::process::Command;
-use crate::logger::{log_info, log_error, log_debug, log_warning};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SystemConfig {
@@ -44,9 +44,11 @@ pub async fn get_current_system_state() -> Result<SystemConfig, String> {
         .unwrap_or_else(|_| "Adwaita".to_string());
     let dark_mode = get_current_dark_mode().await.unwrap_or(false);
 
-    log_debug(&format!("Estado actual: GTK={}, Icons={}, Cursor={}, Dark={}", 
-        gtk_theme, icon_pack, cursor_theme, dark_mode));
-    
+    log_debug(&format!(
+        "Estado actual: GTK={}, Icons={}, Cursor={}, Dark={}",
+        gtk_theme, icon_pack, cursor_theme, dark_mode
+    ));
+
     Ok(SystemConfig {
         dark_mode,
         icon_pack,
@@ -144,7 +146,7 @@ async fn apply_system_config(config: &SystemConfig) -> Result<(), String> {
     log_info(&format!("  Icon Pack: {}", config.icon_pack));
     log_info(&format!("  Cursor: {}", config.cursor_theme));
     log_info(&format!("  Dark Mode: {}", config.dark_mode));
-    
+
     if let Err(e) = set_gtk_theme(&config.gtk_theme, config.dark_mode).await {
         log_warning(&format!("Error GTK (no crítico): {}", e));
     }
@@ -163,12 +165,7 @@ async fn apply_system_config(config: &SystemConfig) -> Result<(), String> {
 pub async fn set_gtk_theme(theme: &str, _dark_mode: bool) -> Result<(), String> {
     log_debug(&format!("Estableciendo tema GTK: {}", theme));
     let output = Command::new("gsettings")
-        .args([
-            "set",
-            "org.gnome.desktop.interface",
-            "gtk-theme",
-            theme,
-        ])
+        .args(["set", "org.gnome.desktop.interface", "gtk-theme", theme])
         .output()
         .map_err(|e| {
             log_error(&format!("Error ejecutando gsettings para GTK theme: {}", e));
@@ -177,7 +174,10 @@ pub async fn set_gtk_theme(theme: &str, _dark_mode: bool) -> Result<(), String> 
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        log_error(&format!("Error al aplicar tema GTK '{}': {}", theme, stderr));
+        log_error(&format!(
+            "Error al aplicar tema GTK '{}': {}",
+            theme, stderr
+        ));
         return Err(format!("Error al aplicar tema GTK: {}", stderr));
     }
 
@@ -241,7 +241,10 @@ pub async fn set_icon_pack(icon_pack: &str) -> Result<(), String> {
             stdout
         );
         eprintln!("{}", err_msg);
-        log_error(&format!("Error al aplicar pack de iconos '{}': {}", icon_pack, stderr));
+        log_error(&format!(
+            "Error al aplicar pack de iconos '{}': {}",
+            icon_pack, stderr
+        ));
         return Err(format!("Error al aplicar pack de iconos: {}", stderr));
     }
     log_info(&format!("Pack de iconos aplicado: {}", icon_pack));
@@ -254,20 +257,29 @@ pub async fn set_dark_mode(dark_mode: bool) -> Result<(), String> {
     } else {
         "prefer-light"
     };
-    
-    log_debug(&format!("Estableciendo modo oscuro: {} (scheme: {})", dark_mode, scheme));
+
+    log_debug(&format!(
+        "Estableciendo modo oscuro: {} (scheme: {})",
+        dark_mode, scheme
+    ));
 
     let output = Command::new("gsettings")
         .args(["set", "org.gnome.desktop.interface", "color-scheme", scheme])
         .output()
         .map_err(|e| {
-            log_error(&format!("Error ejecutando gsettings para color scheme: {}", e));
+            log_error(&format!(
+                "Error ejecutando gsettings para color scheme: {}",
+                e
+            ));
             format!("Error setting color scheme: {}", e)
         })?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        log_error(&format!("Error al aplicar esquema de color '{}': {}", scheme, stderr));
+        log_error(&format!(
+            "Error al aplicar esquema de color '{}': {}",
+            scheme, stderr
+        ));
         return Err(format!("Error al aplicar esquema de color: {}", stderr));
     }
     log_info(&format!("Modo oscuro establecido: {}", dark_mode));
@@ -427,14 +439,15 @@ pub async fn get_icon_pack_icons(icon_pack: String) -> Result<IconPackPreview, S
     let mut icons = Vec::new();
     let mut seen = std::collections::HashSet::new();
 
-    let push_icon = |path: PathBuf, icons: &mut Vec<String>, seen: &mut std::collections::HashSet<String>| {
-        if path.is_file() {
-            let icon_path = path.to_string_lossy().to_string();
-            if seen.insert(icon_path.clone()) {
-                icons.push(icon_path);
+    let push_icon =
+        |path: PathBuf, icons: &mut Vec<String>, seen: &mut std::collections::HashSet<String>| {
+            if path.is_file() {
+                let icon_path = path.to_string_lossy().to_string();
+                if seen.insert(icon_path.clone()) {
+                    icons.push(icon_path);
+                }
             }
-        }
-    };
+        };
 
     let preferred_basenames = [
         "default-folder",
@@ -449,7 +462,10 @@ pub async fn get_icon_pack_icons(icon_pack: String) -> Result<IconPackPreview, S
     ];
 
     let preferred_aliases: &[(&str, &[&str])] = &[
-        ("default-folder", &["folder", "folder-default", "folder-documents"]),
+        (
+            "default-folder",
+            &["folder", "folder-default", "folder-documents"],
+        ),
         (
             "emptytrash",
             &["user-trash", "user-trash-full", "trash-empty", "trash-can"],
@@ -466,54 +482,60 @@ pub async fn get_icon_pack_icons(icon_pack: String) -> Result<IconPackPreview, S
 
     let image_extensions = ["svg", "png", "xpm", "jpg", "jpeg", "webp"];
 
-    let find_matching_icon = |root: &PathBuf, base_names: &[&str], icons: &mut Vec<String>, seen: &mut std::collections::HashSet<String>| {
-        let mut stack = vec![root.clone()];
+    let find_matching_icon =
+        |root: &PathBuf,
+         base_names: &[&str],
+         icons: &mut Vec<String>,
+         seen: &mut std::collections::HashSet<String>| {
+            let mut stack = vec![root.clone()];
 
-        while let Some(current_dir) = stack.pop() {
-            if icons.len() >= 4 {
-                break;
-            }
-
-            let entries = match std::fs::read_dir(&current_dir) {
-                Ok(entries) => entries,
-                Err(_) => continue,
-            };
-
-            for entry in entries.flatten() {
+            while let Some(current_dir) = stack.pop() {
                 if icons.len() >= 4 {
                     break;
                 }
 
-                let entry_path = entry.path();
-                if entry_path.is_dir() {
-                    stack.push(entry_path);
-                    continue;
-                }
-
-                let stem = match entry_path.file_stem().and_then(|stem| stem.to_str()) {
-                    Some(stem) => stem.to_ascii_lowercase(),
-                    None => continue,
+                let entries = match std::fs::read_dir(&current_dir) {
+                    Ok(entries) => entries,
+                    Err(_) => continue,
                 };
 
-                let extension_ok = entry_path
-                    .extension()
-                    .and_then(|ext| ext.to_str())
-                    .map(|ext| image_extensions.contains(&ext.to_ascii_lowercase().as_str()))
-                    .unwrap_or(false);
+                for entry in entries.flatten() {
+                    if icons.len() >= 4 {
+                        break;
+                    }
 
-                if !extension_ok {
-                    continue;
-                }
+                    let entry_path = entry.path();
+                    if entry_path.is_dir() {
+                        stack.push(entry_path);
+                        continue;
+                    }
 
-                if base_names.iter().any(|base_name| {
-                    let base_name = base_name.to_ascii_lowercase();
-                    stem == base_name || stem.starts_with(&format!("{}-", base_name)) || stem.ends_with(&format!("-{}", base_name))
-                }) {
-                    push_icon(entry_path, icons, seen);
+                    let stem = match entry_path.file_stem().and_then(|stem| stem.to_str()) {
+                        Some(stem) => stem.to_ascii_lowercase(),
+                        None => continue,
+                    };
+
+                    let extension_ok = entry_path
+                        .extension()
+                        .and_then(|ext| ext.to_str())
+                        .map(|ext| image_extensions.contains(&ext.to_ascii_lowercase().as_str()))
+                        .unwrap_or(false);
+
+                    if !extension_ok {
+                        continue;
+                    }
+
+                    if base_names.iter().any(|base_name| {
+                        let base_name = base_name.to_ascii_lowercase();
+                        stem == base_name
+                            || stem.starts_with(&format!("{}-", base_name))
+                            || stem.ends_with(&format!("-{}", base_name))
+                    }) {
+                        push_icon(entry_path, icons, seen);
+                    }
                 }
             }
-        }
-    };
+        };
 
     for base_name in preferred_basenames {
         if icons.len() >= 4 {
@@ -521,7 +543,10 @@ pub async fn get_icon_pack_icons(icon_pack: String) -> Result<IconPackPreview, S
         }
 
         let mut search_names = vec![base_name];
-        if let Some((_, aliases)) = preferred_aliases.iter().find(|(name, _)| *name == base_name) {
+        if let Some((_, aliases)) = preferred_aliases
+            .iter()
+            .find(|(name, _)| *name == base_name)
+        {
             search_names.extend_from_slice(aliases);
         }
 

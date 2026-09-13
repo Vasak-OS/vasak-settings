@@ -1,10 +1,10 @@
+use crate::structs::{LogLevel, LogSource, VasakLogger};
+use chrono::Local;
+use once_cell::sync::Lazy;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use chrono::Local;
-use once_cell::sync::Lazy;
-use crate::structs::{LogLevel, LogSource, VasakLogger};
 
 impl LogLevel {
     pub fn as_str(&self) -> &'static str {
@@ -31,71 +31,76 @@ pub static LOGGER: Lazy<Mutex<VasakLogger>> = Lazy::new(|| {
     Mutex::new(logger)
 });
 
-
 impl VasakLogger {
     /// Crea una nueva instancia del logger
     pub fn new() -> Self {
         let is_dev_mode = cfg!(debug_assertions);
-        
+
         // Determinar la ruta del archivo de log
         let log_path = Self::get_log_path();
-        
+
         // Crear el directorio si no existe
         if let Some(parent) = log_path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        
+
         // Abrir o crear el archivo de log
         let log_file = OpenOptions::new()
             .create(true)
             .append(true)
             .open(&log_path)
             .ok();
-        
+
         if log_file.is_none() {
             eprintln!("⚠️ No se pudo crear el archivo de log en: {:?}", log_path);
         }
-        
+
         let mut logger = Self {
             log_file,
             log_path,
             is_dev_mode,
         };
-        
+
         // Escribir encabezado de sesión
         logger.log_session_start();
-        
+
         logger
     }
-    
+
     /// Obtiene la ruta del archivo de log
     fn get_log_path() -> PathBuf {
         // Usar XDG_DATA_HOME o ~/.local/share como base
-        let base_dir = dirs::data_local_dir()
-            .unwrap_or_else(|| {
-                let home = dirs::home_dir().expect("No se pudo obtener el directorio home");
-                home.join(".local/share")
-            });
-        
+        let base_dir = dirs::data_local_dir().unwrap_or_else(|| {
+            let home = dirs::home_dir().expect("No se pudo obtener el directorio home");
+            home.join(".local/share")
+        });
+
         let log_dir = base_dir.join("vasak-settings").join("logs");
-        
+
         // Nombre del archivo con fecha
         let date = Local::now().format("%Y-%m-%d");
         log_dir.join(format!("vasak-settings-{}.log", date))
     }
-    
+
     /// Escribe el encabezado de inicio de sesión
     fn log_session_start(&mut self) {
-        let mode = if self.is_dev_mode { "DESARROLLO" } else { "PRODUCCIÓN" };
+        let mode = if self.is_dev_mode {
+            "DESARROLLO"
+        } else {
+            "PRODUCCIÓN"
+        };
         let separator = "=".repeat(80);
-        
+
         self.write_to_file(&format!("\n{}\n", separator));
-        self.write_to_file(&format!("Nueva sesión iniciada: {}\n", Local::now().format("%Y-%m-%d %H:%M:%S")));
+        self.write_to_file(&format!(
+            "Nueva sesión iniciada: {}\n",
+            Local::now().format("%Y-%m-%d %H:%M:%S")
+        ));
         self.write_to_file(&format!("Modo: {}\n", mode));
         self.write_to_file(&format!("Archivo de log: {:?}\n", self.log_path));
         self.write_to_file(&format!("{}\n\n", separator));
     }
-    
+
     /// Escribe un mensaje en el archivo
     fn write_to_file(&mut self, message: &str) {
         if let Some(ref mut file) = self.log_file {
@@ -103,7 +108,7 @@ impl VasakLogger {
             let _ = file.flush();
         }
     }
-    
+
     /// Registra un mensaje
     pub fn log(&mut self, level: LogLevel, source: LogSource, message: &str) {
         // En producción se omiten solo los Debug.
@@ -119,10 +124,10 @@ impl VasakLogger {
             source.as_str(),
             message
         );
-        
+
         // Escribir al archivo
         self.write_to_file(&formatted_message);
-        
+
         // En modo desarrollo, también imprimir en consola
         if self.is_dev_mode {
             match level {
@@ -132,7 +137,7 @@ impl VasakLogger {
             }
         }
     }
-    
+
     /// Obtiene la ruta actual del log
     /// Sin usar todavía: es la mitad de Rust del camino por el que el frontend
     /// escribiría en el mismo archivo de registro que el backend. Se deja hecha, no
@@ -192,7 +197,7 @@ pub fn log_from_js(level: &str, message: &str) {
         "ERROR" => LogLevel::Error,
         _ => LogLevel::Info,
     };
-    
+
     if let Ok(mut logger) = LOGGER.lock() {
         logger.log(log_level, LogSource::JavaScript, message);
     }

@@ -321,8 +321,7 @@ async fn propfind(
     // autodescubrimiento. Es el caso más común de los que fallan —muchos
     // proveedores redirigen su dominio a una página web que no habla DAV— y
     // merece un mensaje que diga qué hacer, no un código.
-    if estado == reqwest::StatusCode::METHOD_NOT_ALLOWED
-        || estado == reqwest::StatusCode::NOT_FOUND
+    if estado == reqwest::StatusCode::METHOD_NOT_ALLOWED || estado == reqwest::StatusCode::NOT_FOUND
     {
         return Err(format!(
             "{final_url} no ofrece búsqueda automática. Tu proveedor puede tener \
@@ -392,8 +391,14 @@ async fn hallazgo(
     contrasena: &str,
 ) -> Hallazgo {
     match descubrir(cliente, dominio, tipo, usuario, contrasena).await {
-        Ok(url) => Hallazgo { url: Some(url), detail: String::new() },
-        Err(detalle) => Hallazgo { url: None, detail: detalle },
+        Ok(url) => Hallazgo {
+            url: Some(url),
+            detail: String::new(),
+        },
+        Err(detalle) => Hallazgo {
+            url: None,
+            detail: detalle,
+        },
     }
 }
 
@@ -408,9 +413,8 @@ pub async fn discover_dav(
     username: String,
     password: String,
 ) -> Result<DavDiscovery, String> {
-    let dominio = dominio_de(&account).ok_or_else(|| {
-        format!("«{account}» no parece un correo ni la dirección de un servidor")
-    })?;
+    let dominio = dominio_de(&account)
+        .ok_or_else(|| format!("«{account}» no parece un correo ni la dirección de un servidor"))?;
 
     let cliente = cliente(dominio.clone())?;
 
@@ -430,8 +434,14 @@ mod tests {
 
     #[test]
     fn de_un_correo_sale_su_dominio() {
-        assert_eq!(dominio_de("ana@ejemplo.com").as_deref(), Some("ejemplo.com"));
-        assert_eq!(dominio_de("  Ana@Ejemplo.COM  ").as_deref(), Some("ejemplo.com"));
+        assert_eq!(
+            dominio_de("ana@ejemplo.com").as_deref(),
+            Some("ejemplo.com")
+        );
+        assert_eq!(
+            dominio_de("  Ana@Ejemplo.COM  ").as_deref(),
+            Some("ejemplo.com")
+        );
     }
 
     /// La parte local de un correo puede llevar arrobas entre comillas, así que
@@ -439,7 +449,10 @@ mod tests {
     /// `"a@b"@ejemplo.com` daría `b"@ejemplo.com`.
     #[test]
     fn el_dominio_se_corta_por_la_ultima_arroba() {
-        assert_eq!(dominio_de(r#""a@b"@ejemplo.com"#).as_deref(), Some("ejemplo.com"));
+        assert_eq!(
+            dominio_de(r#""a@b"@ejemplo.com"#).as_deref(),
+            Some("ejemplo.com")
+        );
     }
 
     #[test]
@@ -456,7 +469,15 @@ mod tests {
     /// en vez de «eso no es un dominio», que es lo que la persona necesita leer.
     #[test]
     fn lo_que_no_es_un_dominio_se_rechaza() {
-        for malo in ["", "   ", "ana", "ana@", "@ejemplo", "localhost", "con espacio.com"] {
+        for malo in [
+            "",
+            "   ",
+            "ana",
+            "ana@",
+            "@ejemplo",
+            "localhost",
+            "con espacio.com",
+        ] {
             assert_eq!(dominio_de(malo), None, "{malo:?} tenía que rechazarse");
         }
     }
@@ -464,9 +485,18 @@ mod tests {
     /// El caso normal del estándar: el dominio manda a un subdominio suyo.
     #[test]
     fn se_sigue_una_redireccion_dentro_del_mismo_dominio() {
-        assert!(redireccion_segura("ejemplo.com", "https://ejemplo.com/dav/"));
-        assert!(redireccion_segura("ejemplo.com", "https://dav.ejemplo.com/dav/"));
-        assert!(redireccion_segura("ejemplo.com", "https://a.b.ejemplo.com/x"));
+        assert!(redireccion_segura(
+            "ejemplo.com",
+            "https://ejemplo.com/dav/"
+        ));
+        assert!(redireccion_segura(
+            "ejemplo.com",
+            "https://dav.ejemplo.com/dav/"
+        ));
+        assert!(redireccion_segura(
+            "ejemplo.com",
+            "https://a.b.ejemplo.com/x"
+        ));
     }
 
     /// Y el que importa: después de este paso se manda la contraseña, así que
@@ -493,7 +523,11 @@ mod tests {
     #[test]
     fn una_ruta_absoluta_se_resuelve_contra_el_servidor() {
         assert_eq!(
-            resolver_href("https://ejemplo.com/.well-known/caldav", "/dav/principals/ana/").as_deref(),
+            resolver_href(
+                "https://ejemplo.com/.well-known/caldav",
+                "/dav/principals/ana/"
+            )
+            .as_deref(),
             Some("https://ejemplo.com/dav/principals/ana/")
         );
     }
@@ -521,7 +555,10 @@ mod tests {
 
     #[test]
     fn se_encuentra_el_principal() {
-        assert_eq!(principal_de(PRINCIPAL).as_deref(), Some("/dav/principals/ana/"));
+        assert_eq!(
+            principal_de(PRINCIPAL).as_deref(),
+            Some("/dav/principals/ana/")
+        );
     }
 
     /// Los servidores usan prefijos distintos —`d:`, `D:`, ninguno— y emparejar
@@ -627,7 +664,9 @@ mod tests {
     #[test]
     fn la_cabecera_basica_es_usuario_dos_puntos_contrasena() {
         let cabecera = cabecera_basica("ana", "secreto");
-        let codificado = cabecera.strip_prefix("Basic ").expect("tiene que decir Basic");
+        let codificado = cabecera
+            .strip_prefix("Basic ")
+            .expect("tiene que decir Basic");
         let crudo = base64::engine::general_purpose::STANDARD
             .decode(codificado)
             .unwrap();
