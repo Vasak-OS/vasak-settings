@@ -23,7 +23,7 @@ import {
 	setProviderCredentials,
 	testMailConnection,
 } from '@/services/accounts.service';
-import { resolverIconosDeProveedores } from '@/tools/icono-de-proveedor';
+import { ICONO_DE_CAPACIDAD, resolverIconosDeProveedores } from '@/tools/icono-de-proveedor';
 
 /**
  * El proveedor personalizado no está en el catálogo del servicio.
@@ -122,6 +122,20 @@ const isCustomValid = computed(() => {
  * Se resuelven cuando llega el catálogo y no antes: la lista de proveedores la
  * decide el servicio, así que acá no se puede saber de antemano cuáles hay.
  */
+/**
+ * El icono de cada capacidad, resuelto una vez.
+ *
+ * En el `setup` y no dentro de una función que corre después: la lista de
+ * capacidades es fija —sale de la tabla compartida— y fuera del `setup` el
+ * composable no se puede desenganchar. Es la fuga que tuvo esta misma pantalla.
+ */
+const iconoCapacidad = Object.fromEntries(
+	Object.entries(ICONO_DE_CAPACIDAD).map(([capacidad, icono]) => [
+		capacidad,
+		useReactiveSymbol(() => icono)[0],
+	])
+) as Record<string, ReturnType<typeof useReactiveSymbol>[0]>;
+
 const iconos = ref<Record<string, string>>({});
 const [customIcon] = useReactiveSymbol(() => 'computer-symbolic');
 
@@ -653,60 +667,50 @@ onUnmounted(() => {
 		<AlertMessage v-if="aviso" :message="aviso" tone="warning" />
 		<AlertMessage v-if="success" :message="success" tone="success" />
 
-		<SectionCard>
-			<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.onlineAccounts.providers') }}</h3>
+		<SectionCard v-if="accounts.length > 0">
+			<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.onlineAccounts.linkedAccounts') }}</h3>
 
-			<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-				<button
-					v-for="provider in providers"
-					:key="provider.id"
-					:disabled="loading"
-					:title="motivoNoDisponible(provider) && t('views.onlineAccounts.credentials.needed')"
-					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/40 px-4 py-5 text-center transition-colors"
-					:class="
-						loading
-							? 'opacity-60 cursor-not-allowed'
-							: 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'
-					"
-					@click="conectarProveedor(provider)"
+			<ul class="flex flex-col gap-2">
+				<li
+					v-for="account in accounts"
+					:key="account.id"
+					class="flex items-center justify-between rounded-corner border border-ui-border bg-ui-surface/40 px-4 py-3"
 				>
-					<img
-						v-if="iconos[provider.id]"
-						:src="iconos[provider.id]"
-						:alt="provider.display_name"
-						class="h-10 w-10"
-					/>
-					<span class="text-sm font-medium text-tx-primary">{{ provider.display_name }}</span>
-					<span class="text-xs text-tx-muted">
-						{{ provider.capabilities.map((c) => t(`views.onlineAccounts.capabilities.${c}`)).join(' · ') }}
-					</span>
-					<!-- Ya no está apagado: falta un paso y el botón lleva a darlo.
-					     Antes esto decía «no se puede» y lo único que se podía hacer
-					     era editar un archivo del sistema como administrador. -->
-					<span v-if="motivoNoDisponible(provider)" class="text-xs text-status-warning">
-						{{ t('views.onlineAccounts.credentials.needed') }}
-					</span>
-				</button>
+					<div class="flex min-w-0 flex-col">
+						<span class="truncate text-sm font-medium text-tx-primary">
+							{{ account.display_name || account.provider_type }}
+						</span>
+						<span class="text-xs text-tx-muted">{{ account.provider_type }}</span>
 
-				<button
-					:disabled="loading"
-					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/40 px-4 py-5 text-center transition-colors"
-					:class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'"
-					@click="abrirFormularioPersonalizado"
-				>
-					<img
-						v-if="customIcon"
-						:src="customIcon"
-						:alt="t('views.onlineAccounts.customProvider')"
-						class="h-10 w-10"
-					/>
-					<span class="text-sm font-medium text-tx-primary">
-						{{ t('views.onlineAccounts.customProvider') }}
-					</span>
-					<span class="text-xs text-tx-muted">IMAP / SMTP / CardDAV / CalDAV</span>
-				</button>
-			</div>
+						<!-- Qué le dio la persona a esta cuenta. Con icono porque es
+						     lo que se recorre con la vista: seis capacidades en texto
+						     separado por puntos se leen palabra por palabra. -->
+						<ul v-if="account.capabilities.length" class="mt-1 flex flex-wrap gap-2">
+							<li
+								v-for="c in account.capabilities"
+								:key="c"
+								class="flex items-center gap-1 rounded-corner-sm bg-ui-surface/70 px-1.5 py-0.5 text-xs text-tx-muted"
+							>
+								<img v-if="iconoCapacidad[c]?.value" :src="iconoCapacidad[c].value" alt="" class="size-3.5" />
+								{{ t(`views.onlineAccounts.capabilities.${c}`) }}
+							</li>
+						</ul>
+						<!-- Sin esto la cuenta queda en la lista fallando en silencio:
+						     el proveedor dejó de aceptarla y cada intento de usarla da
+						     un error que la persona nunca ve. -->
+						<span v-if="account.needs_reauth" class="mt-1 text-xs text-status-warning">
+							{{ t('views.onlineAccounts.needsReauth') }}
+						</span>
+					</div>
 
+					<button
+						class="rounded-corner border border-ui-border px-3 py-1.5 text-xs text-tx-muted transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
+						@click="deleteAccount(account)"
+					>
+						{{ t('common.delete') }}
+					</button>
+				</li>
+			</ul>
 		</SectionCard>
 
 		<SectionCard v-if="credencialesDe">
@@ -852,42 +856,68 @@ onUnmounted(() => {
 			</div>
 		</SectionCard>
 
-		<SectionCard v-if="accounts.length > 0">
-			<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.onlineAccounts.linkedAccounts') }}</h3>
+		<SectionCard>
+			<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.onlineAccounts.providers') }}</h3>
 
-			<ul class="flex flex-col gap-2">
-				<li
-					v-for="account in accounts"
-					:key="account.id"
-					class="flex items-center justify-between rounded-corner border border-ui-border bg-ui-surface/40 px-4 py-3"
+			<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+				<button
+					v-for="provider in providers"
+					:key="provider.id"
+					:disabled="loading"
+					:title="motivoNoDisponible(provider) && t('views.onlineAccounts.credentials.needed')"
+					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/40 px-4 py-5 text-center transition-colors"
+					:class="
+						loading
+							? 'opacity-60 cursor-not-allowed'
+							: 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'
+					"
+					@click="conectarProveedor(provider)"
 				>
-					<div class="flex min-w-0 flex-col">
-						<span class="truncate text-sm font-medium text-tx-primary">
-							{{ account.display_name || account.provider_type }}
-						</span>
-						<span class="text-xs text-tx-muted">
-							{{ account.provider_type }}
-							<template v-if="account.capabilities.length">
-								&middot;
-								{{ account.capabilities.map((c) => t(`views.onlineAccounts.capabilities.${c}`)).join(' · ') }}
-							</template>
-						</span>
-						<!-- Sin esto la cuenta queda en la lista fallando en silencio:
-						     el proveedor dejó de aceptarla y cada intento de usarla da
-						     un error que la persona nunca ve. -->
-						<span v-if="account.needs_reauth" class="mt-1 text-xs text-status-warning">
-							{{ t('views.onlineAccounts.needsReauth') }}
-						</span>
-					</div>
+					<img
+						v-if="iconos[provider.id]"
+						:src="iconos[provider.id]"
+						:alt="provider.display_name"
+						class="h-10 w-10"
+					/>
+					<span class="text-sm font-medium text-tx-primary">{{ provider.display_name }}</span>
+					<ul class="flex flex-wrap justify-center gap-1.5">
+						<li
+							v-for="c in provider.capabilities"
+							:key="c"
+							class="flex items-center gap-1 text-xs text-tx-muted"
+							:title="t(`views.onlineAccounts.capabilities.${c}`)"
+						>
+							<img v-if="iconoCapacidad[c]?.value" :src="iconoCapacidad[c].value" alt="" class="size-3.5" />
+							{{ t(`views.onlineAccounts.capabilities.${c}`) }}
+						</li>
+					</ul>
+					<!-- Ya no está apagado: falta un paso y el botón lleva a darlo.
+					     Antes esto decía «no se puede» y lo único que se podía hacer
+					     era editar un archivo del sistema como administrador. -->
+					<span v-if="motivoNoDisponible(provider)" class="text-xs text-status-warning">
+						{{ t('views.onlineAccounts.credentials.needed') }}
+					</span>
+				</button>
 
-					<button
-						class="rounded-corner border border-ui-border px-3 py-1.5 text-xs text-tx-muted transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
-						@click="deleteAccount(account)"
-					>
-						{{ t('common.delete') }}
-					</button>
-				</li>
-			</ul>
+				<button
+					:disabled="loading"
+					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/40 px-4 py-5 text-center transition-colors"
+					:class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'"
+					@click="abrirFormularioPersonalizado"
+				>
+					<img
+						v-if="customIcon"
+						:src="customIcon"
+						:alt="t('views.onlineAccounts.customProvider')"
+						class="h-10 w-10"
+					/>
+					<span class="text-sm font-medium text-tx-primary">
+						{{ t('views.onlineAccounts.customProvider') }}
+					</span>
+					<span class="text-xs text-tx-muted">IMAP / SMTP / CardDAV / CalDAV</span>
+				</button>
+			</div>
+
 		</SectionCard>
 
 		<div

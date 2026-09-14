@@ -256,7 +256,6 @@ views:
       camera and the microphone it covers only the direct path to the device:
       one that asks PipeWire for them is not stopped yet. Screen capture is not
       covered.
-    empty: >-
       Nothing here yet. When an application tries to use the camera or the
       microphone, or to read your keys, without permission, it will show up here
       for you to decide.
@@ -288,6 +287,8 @@ views:
       camera: Camera
       microphone: Microphone
       credentials: Keys and saved logins
+    ninguna: None
+    volver: Permissions
   wayfirePlugins:
     title: Compositor plugins
     description: 'Enable only what you use: every plugin turned off is memory and work Wayfire does not spend.'
