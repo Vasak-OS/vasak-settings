@@ -45,6 +45,7 @@ import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
+import { useReactiveSymbol } from '@/composables/useReactiveIcon';
 import {
 	allowBlocked,
 	type BlockedItem,
@@ -55,7 +56,8 @@ import {
 	type PermissionEntry,
 	setPermission,
 } from '@/services/permissions.service';
-import { pestanaInicial, porRecurso } from '@/tools/permisos-por-recurso';
+import { ICONO_DE_CAPACIDAD } from '@/tools/icono-de-proveedor';
+import { porRecurso } from '@/tools/permisos-por-recurso';
 
 const { t } = useI18n();
 
@@ -102,6 +104,42 @@ const ETIQUETA: Record<string, string> = {
 
 const nombreDe = (recurso: string) =>
 	t(`views.privacySecurity.resources.${ETIQUETA[recurso] ?? recurso}`);
+
+/**
+ * El icono de cada permiso en la lista.
+ *
+ * Del tema, no dibujados acá: son los nombres que el escritorio ya usa para
+ * esas mismas cosas —el sobre del correo, la cámara web, el micrófono—, así que
+ * siguen la variante clara u oscura y cambian con el pack de iconos.
+ *
+ * Ninguno es el logo de un proveedor: acá el permiso es sobre *el tipo de
+ * dato*, no sobre una cuenta. «Correo de tus cuentas» vale para todas las que
+ * haya conectadas.
+ */
+const ICONO: Record<string, string> = {
+	credentials: 'dialog-password',
+	camera: 'camera-web',
+	microphone: 'audio-input-microphone',
+	// Los de cuenta salen de la misma tabla que usa «Cuentas en Línea», con el
+	// prefijo del recurso: el id de capacidad `email` es el recurso
+	// `account.email`. Dos tablas se separan y la misma cosa termina dibujada
+	// distinta según por dónde se entre.
+	...Object.fromEntries(
+		Object.entries(ICONO_DE_CAPACIDAD).map(([capacidad, icono]) => [`account.${capacidad}`, icono])
+	),
+};
+
+/**
+ * Resueltos de una vez y en el `setup`.
+ *
+ * La lista de recursos es fija, así que no hace falta —ni conviene— pedirlos
+ * dentro de una función que corre más tarde: fuera del `setup` el composable no
+ * se puede desenganchar y deja una suscripción por llamada, que es lo que pasó
+ * en «Cuentas en Línea».
+ */
+const iconos = Object.fromEntries(
+	RESOURCES.map((id) => [id, useReactiveSymbol(() => ICONO[id] ?? 'security-high')[0]])
+) as Record<string, ReturnType<typeof useReactiveSymbol>[0]>;
 
 const entries = ref<PermissionEntry[]>([]);
 /**
@@ -156,26 +194,20 @@ const load = async (refrescar = false) => {
 const recursos = computed(() => porRecurso(entries.value, RESOURCES));
 
 /**
- * La pestaña abierta.
+ * Qué permiso se está mirando, o `null` para la lista.
  *
- * `null` hasta que llega la lista: recién ahí se sabe cuál tiene algo, y abrir
- * en una vacía hace pensar que no hay ningún permiso concedido en todo el
- * sistema.
- */
-const pestana = ref<(typeof RESOURCES)[number] | null>(null);
-
-const pestanaActiva = computed(() => pestana.value ?? pestanaInicial(recursos.value, RESOURCES[0]));
-
-const recursoActivo = computed(() => recursos.value.find((r) => r.id === pestanaActiva.value));
-
-/**
- * Si hay algo que mostrar en alguna pestaña.
+ * La pantalla entra por la lista y no por una pestaña abierta. Con nueve
+ * recursos la fila de pestañas no entraba, y las que quedaban vacías —la cámara
+ * y el micrófono lo están hasta que una aplicación confinada las pide— se leían
+ * como «acá no hay nada» en vez de «todavía nadie pidió esto».
  *
- * La lista que da el servicio incluye permisos de cuentas, que se administran
- * en su propia pantalla: el pivote ya los deja afuera porque sólo mira estos
- * tres recursos, así que preguntarle a él es preguntar por lo que se ve.
+ * En la lista cada permiso dice cuántas aplicaciones lo tienen concedido, que
+ * es el número que alguien vino a mirar, y ninguno desaparece por estar en
+ * cero: la lista es también el inventario de lo que el sistema sabe decidir.
  */
-const hayAlgo = computed(() => recursos.value.some((r) => r.apps.length > 0));
+const abierto = ref<(typeof RESOURCES)[number] | null>(null);
+
+const recursoActivo = computed(() => recursos.value.find((r) => r.id === abierto.value));
 
 /**
  * Si cambiar esto acá va a servir de algo.
@@ -330,43 +362,60 @@ onMounted(load);
 			<AlertMessage v-if="errorMessage" tone="error" :message="errorMessage" />
 			<p v-if="loading" class="text-sm text-tx-muted">{{ t('common.loading') }}</p>
 
-			<EmptyStateBox
-				v-else-if="!hayAlgo"
-				padding="lg"
-				:message="t('views.privacySecurity.empty')"
-			/>
-
-			<template v-else>
-				<!-- Una pestaña por recurso, como en Privacidad y seguridad de
-				     macOS: se entra por lo que preocupa —la cámara— y adentro
-				     está quién la tiene. La fila es fija aunque alguna esté
-				     vacía; una pestaña que aparece y desaparece movería a las
-				     otras de lugar entre una visita y la siguiente. -->
-				<div class="flex gap-1 border-b border-ui-border" role="tablist">
+			<!-- La lista de permisos, que es por donde se entra. Antes era una
+			     fila de pestañas: con nueve recursos no entraba, y las vacías
+			     —cámara y micrófono, hasta que una aplicación confinada las
+			     pide— se leían como «acá no hay nada». -->
+			<ul v-else-if="!abierto" class="flex flex-col gap-2">
+				<li v-for="r in recursos" :key="r.id">
 					<button
-						v-for="r in recursos"
-						:key="r.id"
 						type="button"
-						role="tab"
-						:aria-selected="r.id === pestanaActiva"
-						class="-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm"
-						:class="
-							r.id === pestanaActiva
-								? 'border-primary font-semibold text-tx-main'
-								: 'border-transparent text-tx-muted hover:text-tx-main'
-						"
-						@click="pestana = r.id"
+						class="flex w-full items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/40 p-3 text-left hover:bg-ui-surface"
+						@click="abierto = r.id"
 					>
-						{{ nombreDe(r.id) }}
-						<!-- Cuántas lo tienen concedido, no cuántas lo pidieron:
-						     es el número que alguien vino a mirar. -->
+						<img v-if="iconos[r.id]?.value" :src="iconos[r.id].value" alt="" class="size-6 shrink-0" />
+
+						<span class="min-w-0 flex-1 truncate font-medium text-tx-main">{{ nombreDe(r.id) }}</span>
+
+						<!-- Cuántas lo tienen concedido, no cuántas lo pidieron: es
+						     el número que alguien vino a mirar. En cero no se
+						     dibuja nada, para que el ojo vaya a los que sí. -->
 						<span
 							v-if="r.permitidas > 0"
-							class="rounded-corner-sm bg-status-success/20 px-1.5 text-xs text-status-success"
+							class="shrink-0 rounded-corner-sm bg-status-success/20 px-1.5 text-xs text-status-success"
 						>
 							{{ r.permitidas }}
 						</span>
+						<span v-else class="shrink-0 text-xs text-tx-muted">
+							{{ t('views.privacySecurity.ninguna') }}
+						</span>
+
+						<span class="shrink-0 text-tx-muted" aria-hidden="true">›</span>
 					</button>
+				</li>
+			</ul>
+
+			<template v-else>
+				<!-- Volver arriba de todo, antes del nombre: es lo primero que se
+				     busca al entrar por error en el permiso equivocado. -->
+				<div class="flex items-center gap-3 border-b border-ui-border pb-3">
+					<button
+						type="button"
+						class="rounded-corner border border-ui-border px-3 py-1.5 text-sm text-tx-muted hover:bg-ui-surface"
+						@click="abierto = null"
+					>
+						‹ {{ t('views.privacySecurity.volver') }}
+					</button>
+
+					<img
+						v-if="abierto && iconos[abierto]?.value"
+						:src="iconos[abierto].value"
+						alt=""
+						class="size-6 shrink-0"
+					/>
+					<h3 class="min-w-0 flex-1 truncate font-semibold text-tx-main">
+						{{ abierto ? nombreDe(abierto) : '' }}
+					</h3>
 				</div>
 
 				<EmptyStateBox
@@ -408,7 +457,7 @@ onMounted(load);
 										? 'bg-status-success/20 font-semibold text-status-success'
 										: 'border border-ui-border text-tx-muted hover:bg-ui-surface'
 								"
-								@click="change(entrada, pestanaActiva, true)"
+								@click="change(entrada, abierto ?? '', true)"
 							>
 								{{ t('views.privacySecurity.allow') }}
 							</button>
@@ -421,7 +470,7 @@ onMounted(load);
 										? 'bg-status-error/20 font-semibold text-status-error'
 										: 'border border-ui-border text-tx-muted hover:bg-ui-surface'
 								"
-								@click="change(entrada, pestanaActiva, false)"
+								@click="change(entrada, abierto ?? '', false)"
 							>
 								{{ t('views.privacySecurity.deny') }}
 							</button>

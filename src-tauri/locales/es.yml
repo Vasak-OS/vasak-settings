@@ -258,7 +258,6 @@ views:
       Con la cámara y el micrófono cubre nada más que la vía directa al
       dispositivo; una que se los pida a PipeWire todavía no se detiene. La
       captura de pantalla no está cubierta.
-    empty: >-
       Todavía no hay ninguna. Cuando una aplicación intente usar la cámara o el
       micrófono, o leer tus claves, y no tenga permiso, va a aparecer acá para
       que decidas.
@@ -290,6 +289,8 @@ views:
       camera: Cámara
       microphone: Micrófono
       credentials: Claves y accesos guardados
+    ninguna: Ninguna
+    volver: Permisos
   wayfirePlugins:
     title: Plugins del compositor
     description: 'Activá solo lo que uses: cada plugin apagado es memoria y trabajo que Wayfire no hace.'

@@ -104,3 +104,24 @@ export async function resolverIconosDeProveedores(
 
 	return iconos;
 }
+
+/**
+ * El icono de cada capacidad de una cuenta.
+ *
+ * Una sola tabla para las dos pantallas que la necesitan: «Cuentas en Línea»
+ * la usa por el id de capacidad (`email`) y «Privacidad y seguridad» por el id
+ * de recurso (`account.email`), que es el mismo con prefijo. Dos tablas se
+ * separan, y entonces la misma cosa se dibuja distinta según por dónde se
+ * entre.
+ *
+ * Son nombres del tema, no logos: la capacidad es el tipo de dato, no el
+ * proveedor. El sobre vale para el correo de Google y para el de Disroot.
+ */
+export const ICONO_DE_CAPACIDAD: Record<string, string> = {
+	email: 'internet-mail',
+	calendar: 'office-calendar',
+	contacts: 'x-office-address-book',
+	chat: 'internet-chat',
+	drive: 'folder-remote',
+	tasks: 'task-due',
+};
