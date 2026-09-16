@@ -252,8 +252,9 @@ views:
     scope: >-
       This covers the camera, the microphone and your credentials — SSH and GPG
       keys along with the agents that sign with them, the keyring and saved
-      logins — and only for applications the system did not install: whatever
-      came from the package manager has no profile limiting it. For the camera
+      logins — and only for AppImages in your home folder, the only ones a
+      security profile confines: neither what the package manager installed nor
+      a loose program you downloaded has one. For the camera
       and the microphone it covers only the direct path to the device: one that
       asks PipeWire for them is not stopped yet. What goes through the portal —
       screen sharing, and the camera in browser video calls — is recorded here

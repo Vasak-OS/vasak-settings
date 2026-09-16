@@ -102,4 +102,24 @@ describe('los recursos de privacidad', () => {
 
 		expect(sinIcono).toEqual([]);
 	});
+
+	test('el alcance nombra lo que el perfil cubre de verdad', () => {
+		// Sólo `vasak-appimage` niega la cámara, el micrófono y las credenciales,
+		// y se engancha a `@{HOME}/**/*.AppImage`. El texto decía «las
+		// aplicaciones que no instaló el sistema», que es más ancho: un binario
+		// suelto en la carpeta del usuario tampoco tiene perfil.
+		//
+		// Prometer de más en esta pantalla es la falla que ya costó que se la
+		// borrara una vez, así que el texto tiene que nombrar el caso real.
+		for (const idioma of ['es', 'en']) {
+			const texto = catalogo(idioma);
+			const scope = texto.match(/scope: >-\n([\s\S]*?)\n {4}\w+:/)?.[1] ?? '';
+
+			expect(scope).toContain('AppImage');
+			// Y no puede volver a decir que alcanza a todo lo que el sistema no
+			// instaló, que es la afirmación que sobra.
+			expect(scope).not.toContain('que no instaló el sistema');
+			expect(scope).not.toContain('the system did not install');
+		}
+	});
 });

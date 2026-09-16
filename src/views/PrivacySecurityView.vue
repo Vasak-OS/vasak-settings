@@ -21,9 +21,15 @@
  * que **no** cubre está dicho en la pantalla y no acá:
  *
  *  - Un perfil de AppArmor le niega la cámara, el micrófono y tus credenciales
- *    a las aplicaciones que el sistema no instaló, y permitir acá le escribe
- *    una excepción. Eso el kernel lo hace cumplir sin importar quién la haya
+ *    a los AppImage de la carpeta del usuario, y permitir acá le escribe una
+ *    excepción. Eso el kernel lo hace cumplir sin importar quién la haya
  *    abierto.
+ *
+ *    **A ésos y a nadie más**, que es más angosto de lo que parece y de lo que
+ *    esta pantalla decía. `vasak-appimage` es el único perfil que niega estas
+ *    tres cosas y se engancha a los AppImage de `@{HOME}`: un binario suelto en
+ *    la carpeta del usuario tampoco tiene perfil, aunque el sistema no lo haya
+ *    instalado. Decir «lo que no instaló el sistema» prometía de más.
  *  - Con la cámara y el micrófono sólo cubre el acceso **directo** al
  *    dispositivo. Una aplicación que se los pida a PipeWire —que es como los
  *    piden las aplicaciones modernas— todavía no se detiene.
