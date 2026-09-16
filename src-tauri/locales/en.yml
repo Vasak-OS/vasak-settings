@@ -259,7 +259,9 @@ views:
       asks PipeWire for them is not stopped yet. What goes through the portal —
       screen sharing, and the camera in browser video calls — is recorded here
       and can be taken back, with the caveat that on that path an application
-      identifies itself with a name it declares.
+      identifies itself with a name it declares. And screen sharing is decided
+      here only when an application asks through the portal: a program can
+      capture the screen on its own without anything showing up.
     notConfined: >-
       The system installed this application, so no profile limits it: changing
       this neither grants nor removes access.

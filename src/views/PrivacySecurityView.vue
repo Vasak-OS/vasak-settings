@@ -375,11 +375,6 @@ onMounted(load);
 		</SectionCard>
 
 		<SectionCard>
-			<!-- El alcance, a la vista y no en una nota al pie: mientras la vía de
-			     PipeWire siga abierta, esta pantalla no puede presentarse como
-			     protección completa. -->
-			<AlertMessage tone="info" :message="t('views.privacySecurity.scope')" />
-
 			<AlertMessage v-if="errorMessage" tone="error" :message="errorMessage" />
 			<p v-if="loading" class="text-sm text-tx-muted">{{ t('common.loading') }}</p>
 
@@ -511,6 +506,21 @@ onMounted(load);
 					</li>
 				</ul>
 			</template>
+
+			<!-- El alcance, al pie y en letra chica.
+			     Tiene que estar —mientras las vías de PipeWire y de screencopy
+			     sigan abiertas, esta pantalla no puede presentarse como
+			     protección completa— pero no arriba de todo: un párrafo largo
+			     encima de los permisos se lee una vez y después estorba cada vez
+			     que se entra a cambiar algo, que es a lo que se viene.
+			     Al pie sigue estando para quien lo busca.
+
+			     Va en los dos lados, la lista y el detalle, y no sólo en la
+			     lista: la salvedad importa más justo donde están los
+			     interruptores. -->
+			<p class="border-t border-ui-border pt-3 text-xs leading-relaxed text-tx-muted">
+				{{ t('views.privacySecurity.scope') }}
+			</p>
 		</SectionCard>
 	</div>
 </template>
