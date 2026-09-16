@@ -12,6 +12,7 @@ import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
+import { escribirIndicadoresDelPanel, indicadoresDelPanel } from '@/tools/valores-de-config';
 
 const { t } = useI18n();
 
@@ -44,12 +45,12 @@ onMounted(async () => {
 		await configStore.value.loadConfig();
 		vskConfig.value = await readConfig();
 
-		const panel = (vskConfig.value as any)?.panel ?? {};
-		weather.value = panel.weather !== false;
-		music.value = panel.music !== false;
-		transfer.value = panel.transfer !== false;
-		tray.value = panel.tray !== false;
-		privacy.value = panel.privacy !== false;
+		const panel = indicadoresDelPanel(vskConfig.value);
+		weather.value = panel.weather;
+		music.value = panel.music;
+		transfer.value = panel.transfer;
+		tray.value = panel.tray;
+		privacy.value = panel.privacy;
 	} catch (err) {
 		error.value = t('views.appearancePanel.errorLoading').replace('{0}', String(err));
 	} finally {
@@ -65,14 +66,13 @@ const saveConfig = async () => {
 	try {
 		if (!vskConfig.value) return;
 
-		(vskConfig.value as any).panel = {
-			...((vskConfig.value as any).panel ?? {}),
+		escribirIndicadoresDelPanel(vskConfig.value as any, {
 			weather: weather.value,
 			music: music.value,
 			transfer: transfer.value,
 			tray: tray.value,
 			privacy: privacy.value,
-		};
+		});
 
 		await writeConfig(vskConfig.value);
 
