@@ -31,9 +31,13 @@
  *    sockets y no hay un servicio intermedio que las reparta. Van los agentes
  *    de SSH y GPG además de las claves: con el socket del agente se firma sin
  *    leer ningún archivo, así que negar sólo la carpeta no serviría de nada.
- *  - Y la captura de pantalla, que era la tercera cosa que la gente esperaba
- *    encontrar acá, sigue sin control: el compositor se la entrega a cualquier
- *    cliente que la pida.
+ *  - Compartir la pantalla era la tercera cosa que la gente esperaba encontrar
+ *    acá, y ahora está: el backend del portal pregunta, guarda la respuesta y
+ *    la respeta, así que lo concedido se ve y se retira desde esta pantalla.
+ *    Con una salvedad que la propia pantalla dice — por el portal la
+ *    aplicación se identifica con un nombre que declara ella misma, no con la
+ *    ruta de su ejecutable, así que vale menos que las otras identidades de
+ *    esta lista.
  *
  * Callar cualquiera de esas tres cosas sería repetir el error que llevó a
  * quitar la pantalla anterior.
@@ -84,6 +88,11 @@ const RESOURCES = [
 	'account.tasks',
 	'camera',
 	'microphone',
+	// Compartir la pantalla llega sólo por el portal, así que sus entradas son
+	// las únicas de esta lista identificadas por un nombre que declara la propia
+	// aplicación. Va acá igual: el criterio de esta pantalla es que todo lo que
+	// se concede se tiene que poder retirar, y antes esto no se podía.
+	'screen-capture',
 ] as const;
 
 /**
@@ -100,6 +109,11 @@ const ETIQUETA: Record<string, string> = {
 	'account.chat': 'accountChat',
 	'account.drive': 'accountDrive',
 	'account.tasks': 'accountTasks',
+	// Sin punto, pero con guion: la clave iría a `resources.screen-capture`, que
+	// existiría si se escribiera así en el catálogo. Se mapea igual para que las
+	// claves de traducción sigan todas la misma forma y no haya que recordar
+	// cuál de ellas lleva guion.
+	'screen-capture': 'screenCapture',
 };
 
 const nombreDe = (recurso: string) =>
@@ -120,6 +134,7 @@ const ICONO: Record<string, string> = {
 	credentials: 'dialog-password',
 	camera: 'camera-web',
 	microphone: 'audio-input-microphone',
+	'screen-capture': 'video-display',
 	// Los de cuenta salen de la misma tabla que usa «Cuentas en Línea», con el
 	// prefijo del recurso: el id de capacidad `email` es el recurso
 	// `account.email`. Dos tablas se separan y la misma cosa termina dibujada
