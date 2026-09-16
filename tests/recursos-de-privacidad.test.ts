@@ -120,6 +120,24 @@ describe('los recursos de privacidad', () => {
 			// instaló, que es la afirmación que sobra.
 			expect(scope).not.toContain('que no instaló el sistema');
 			expect(scope).not.toContain('the system did not install');
+			// La otra puerta de atrás, la de compartir pantalla: el permiso sólo
+			// alcanza a lo que pasa por el portal, y cualquier cliente puede
+			// capturar con `zwlr_screencopy` sin pedirle nada a nadie. Medido con
+			// `grim` sobre una sesión de verdad. Sin esta frase, la pestaña de
+			// compartir pantalla se lee como una protección completa.
+			expect(scope).toMatch(/portal/);
+			expect(scope).toMatch(/por su cuenta|on its own/);
 		}
+	});
+
+	test('el alcance no vuelve al aviso grande de arriba', () => {
+		// Estaba como `AlertMessage` encima de los permisos: un párrafo largo que
+		// se lee una vez y después estorba cada vez que se entra a cambiar algo,
+		// que es a lo que se viene. Ahora va al pie y en letra chica.
+		//
+		// El texto tiene que seguir estando —la pantalla no puede presentarse
+		// como protección completa— así que lo que se comprueba es dónde, no si.
+		expect(VISTA).toContain("t('views.privacySecurity.scope')");
+		expect(VISTA).not.toMatch(/AlertMessage[^>]*privacySecurity\.scope/);
 	});
 });
