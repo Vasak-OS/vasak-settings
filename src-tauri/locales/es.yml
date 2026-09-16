@@ -254,13 +254,15 @@ views:
     scope: >-
       Esto alcanza a la cámara, al micrófono y a tus credenciales —las claves de
       SSH y GPG junto con los agentes que firman con ellas, el llavero y los
-      accesos guardados—, y sólo en las aplicaciones que no instaló el sistema.
+      accesos guardados—, y sólo en los AppImage de tu carpeta personal, que son
+      los únicos que un perfil de seguridad limita: ni lo que instaló el gestor
+      de paquetes ni un programa suelto que hayas descargado tienen ninguno.
       Con la cámara y el micrófono cubre nada más que la vía directa al
-      dispositivo; una que se los pida a PipeWire todavía no se detiene. La
-      captura de pantalla no está cubierta.
-      Todavía no hay ninguna. Cuando una aplicación intente usar la cámara o el
-      micrófono, o leer tus claves, y no tenga permiso, va a aparecer acá para
-      que decidas.
+      dispositivo; una que se los pida a PipeWire todavía no se detiene. Lo que
+      pasa por el portal —compartir la pantalla, y la cámara en las
+      videollamadas del navegador— sí queda anotado acá y se puede retirar, con
+      la salvedad de que por ese camino la aplicación se identifica con un
+      nombre que declara ella misma.
     notConfined: >-
       Esta aplicación la instaló el sistema, así que ningún perfil la limita:
       cambiar esto no le quita ni le da acceso.
@@ -288,6 +290,7 @@ views:
       accountTasks: Tareas de tus cuentas
       camera: Cámara
       microphone: Micrófono
+      screenCapture: Compartir pantalla
       credentials: Claves y accesos guardados
     ninguna: Ninguna
     volver: Permisos

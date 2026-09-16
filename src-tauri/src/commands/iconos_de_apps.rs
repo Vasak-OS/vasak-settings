@@ -28,6 +28,14 @@ pub const ICONO_GENERICO: &str = "application-x-executable";
 /// Una entrada `.desktop`, reducida a lo que hace falta.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Entrada {
+    /// El identificador de la entrada: el nombre del archivo sin `.desktop`.
+    ///
+    /// Hace falta desde que la lista de permisos trae identidades del portal.
+    /// Ésas no son rutas de ejecutables —son `com.google.Chrome`, el nombre que
+    /// la aplicación declara— y no hay `Exec` con el que emparejarlas; lo que
+    /// coincide es justamente este identificador, porque es de donde el portal
+    /// saca el suyo.
+    pub id: String,
     /// El programa que ejecuta, sin argumentos.
     pub programa: String,
     pub icono: String,
@@ -65,7 +73,7 @@ pub fn programa_de_exec(exec: &str) -> Option<String> {
 /// Sólo del grupo `[Desktop Entry]`: las acciones —`[Desktop Action nueva]`—
 /// traen su propio `Exec`, y tomarlo haría que «abrir una ventana nueva» se
 /// confundiera con la aplicación.
-pub fn leer_entrada(contenido: &str) -> Option<Entrada> {
+pub fn leer_entrada(id: &str, contenido: &str) -> Option<Entrada> {
     let mut en_el_grupo = false;
     let mut exec = None;
     let mut icono = None;
@@ -99,6 +107,7 @@ pub fn leer_entrada(contenido: &str) -> Option<Entrada> {
     }
 
     Some(Entrada {
+        id: id.to_string(),
         programa: exec?,
         icono,
     })
@@ -116,6 +125,37 @@ pub fn icono_de(binario: &str, entradas: &[Entrada]) -> Option<String> {
     entradas
         .iter()
         .find(|e| nombre_de_archivo(&e.programa).as_deref() == Some(nombre.as_str()))
+        .map(|e| e.icono.clone())
+}
+
+/// El prefijo con el que el servicio de permisos marca una identidad del portal.
+///
+/// Repetido acá en vez de importarlo del crate del protocolo: este puente sólo
+/// habla con el servicio por D-Bus y no lo compila. Si cambiara, esta resolución
+/// dejaría de encontrar iconos —no rompería nada más— y hay una prueba que lo
+/// dice.
+const PREFIJO_DEL_PORTAL: &str = "portal:";
+
+/// El icono de una aplicación que llegó por el portal.
+///
+/// Se empareja por el identificador de la entrada `.desktop` y no por `Exec`:
+/// `com.google.Chrome` no nombra ningún ejecutable, y es exactamente el nombre
+/// del archivo `com.google.Chrome.desktop`. Sin esto, todo lo que se decida por
+/// el portal se dibuja con el icono genérico, y una lista de identificadores de
+/// tipo DNS invertido es tan ilegible como una de rutas — que es la razón de ser
+/// de este módulo.
+///
+/// Sin distinguir mayúsculas: los identificadores del portal se escriben con la
+/// capitalización que trae el `.desktop`, y basta un sistema de archivos que la
+/// haya cambiado para perder la coincidencia.
+pub fn icono_de_app_id(app_id: &str, entradas: &[Entrada]) -> Option<String> {
+    if app_id.is_empty() {
+        return None;
+    }
+
+    entradas
+        .iter()
+        .find(|e| e.id.eq_ignore_ascii_case(app_id))
         .map(|e| e.icono.clone())
 }
 
@@ -165,9 +205,14 @@ fn entradas() -> Vec<Entrada> {
             if ruta.extension().and_then(|e| e.to_str()) != Some("desktop") {
                 continue;
             }
+            let id = ruta
+                .file_stem()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+
             if let Some(entrada) = std::fs::read_to_string(&ruta)
                 .ok()
-                .and_then(|c| leer_entrada(&c))
+                .and_then(|c| leer_entrada(&id, &c))
             {
                 encontradas.push(entrada);
             }
@@ -191,8 +236,14 @@ pub fn iconos_de(binarios: &[String]) -> HashMap<String, String> {
     binarios
         .iter()
         .map(|b| {
-            let icono = icono_de(b, &entradas).unwrap_or_else(|| ICONO_GENERICO.to_string());
-            (b.clone(), icono)
+            let icono = match b.strip_prefix(PREFIJO_DEL_PORTAL) {
+                Some(app_id) => icono_de_app_id(app_id, &entradas),
+                None => icono_de(b, &entradas),
+            };
+            (
+                b.clone(),
+                icono.unwrap_or_else(|| ICONO_GENERICO.to_string()),
+            )
         })
         .collect()
 }
@@ -244,11 +295,13 @@ mod tests {
     #[test]
     fn se_leen_las_dos_claves_del_grupo() {
         let entrada = leer_entrada(
+            "ar.net.vasak.os.Text",
             "[Desktop Entry]\nType=Application\nName=Editor\nExec=/usr/bin/vasak-text %F\nIcon=accessories-text-editor\n",
         );
         assert_eq!(
             entrada,
             Some(Entrada {
+                id: "ar.net.vasak.os.Text".into(),
                 programa: "/usr/bin/vasak-text".into(),
                 icono: "accessories-text-editor".into(),
             })
@@ -260,6 +313,7 @@ mod tests {
         // «Abrir una ventana nueva» trae su propio Exec. Tomarlo haría que la
         // acción reemplazara a la aplicación.
         let entrada = leer_entrada(
+            "app",
             "[Desktop Entry]\nExec=/usr/bin/app\nIcon=app\n\n[Desktop Action nueva]\nExec=/usr/bin/app --new\nIcon=otro\n",
         );
         assert_eq!(entrada.unwrap().icono, "app");
@@ -269,21 +323,25 @@ mod tests {
     fn sin_icono_no_hay_entrada() {
         // Una entrada sin icono no aporta nada a esta pantalla, y dejarla haría
         // que coincidiera con el binario y devolviera una cadena vacía.
-        assert_eq!(leer_entrada("[Desktop Entry]\nExec=/usr/bin/app\n"), None);
         assert_eq!(
-            leer_entrada("[Desktop Entry]\nExec=/usr/bin/app\nIcon=\n"),
+            leer_entrada("app", "[Desktop Entry]\nExec=/usr/bin/app\n"),
+            None
+        );
+        assert_eq!(
+            leer_entrada("app", "[Desktop Entry]\nExec=/usr/bin/app\nIcon=\n"),
             None
         );
     }
 
     #[test]
     fn sin_exec_tampoco() {
-        assert_eq!(leer_entrada("[Desktop Entry]\nIcon=app\n"), None);
+        assert_eq!(leer_entrada("app", "[Desktop Entry]\nIcon=app\n"), None);
     }
 
     #[test]
     fn lo_de_afuera_del_grupo_se_ignora() {
         let entrada = leer_entrada(
+            "app",
             "Exec=/usr/bin/colado\nIcon=colado\n[Desktop Entry]\nExec=/usr/bin/app\nIcon=app\n",
         );
         assert_eq!(entrada.unwrap().programa, "/usr/bin/app");
@@ -295,6 +353,7 @@ mod tests {
         // decir el nombre a secas, resuelto por PATH. Comparar rutas enteras no
         // encontraría ninguno de esos.
         let entradas = vec![Entrada {
+            id: String::new(),
             programa: "grim".into(),
             icono: "applets-screenshooter".into(),
         }];
@@ -310,6 +369,7 @@ mod tests {
         // Es el caso normal de un programa sin `.desktop` —algo lanzado desde
         // la terminal—, y quien llama pone el genérico.
         let entradas = vec![Entrada {
+            id: String::new(),
             programa: "/usr/bin/otra".into(),
             icono: "otra".into(),
         }];
@@ -321,5 +381,112 @@ mod tests {
     fn una_ruta_sin_nombre_no_rompe() {
         assert_eq!(icono_de("/", &[]), None);
         assert_eq!(icono_de("", &[]), None);
+    }
+
+    fn una_entrada(id: &str, programa: &str, icono: &str) -> Entrada {
+        Entrada {
+            id: id.into(),
+            programa: programa.into(),
+            icono: icono.into(),
+        }
+    }
+
+    /// Lo que llega por el portal se empareja por el identificador, no por `Exec`.
+    ///
+    /// `com.google.Chrome` no nombra ningún ejecutable, así que `icono_de` no lo
+    /// encuentra por ningún camino: sin esta búsqueda, todo lo que se decida por
+    /// el portal sale con el icono genérico.
+    #[test]
+    fn una_identidad_del_portal_se_busca_por_el_identificador() {
+        let entradas = vec![
+            una_entrada(
+                "com.google.Chrome",
+                "/usr/bin/google-chrome-stable",
+                "google-chrome",
+            ),
+            una_entrada(
+                "vasak-text",
+                "/usr/bin/vasak-text",
+                "accessories-text-editor",
+            ),
+        ];
+
+        assert_eq!(
+            icono_de_app_id("com.google.Chrome", &entradas).as_deref(),
+            Some("google-chrome")
+        );
+        // Y el `Exec` no cuenta acá: emparejar por ahí haría que un `app_id`
+        // que se parezca al nombre de un binario se lleve el icono de otra.
+        assert_eq!(icono_de_app_id("google-chrome-stable", &entradas), None);
+    }
+
+    /// Sin distinguir mayúsculas.
+    #[test]
+    fn el_identificador_no_distingue_mayusculas() {
+        let entradas = vec![una_entrada(
+            "com.google.Chrome",
+            "/usr/bin/chrome",
+            "google-chrome",
+        )];
+
+        assert_eq!(
+            icono_de_app_id("com.google.chrome", &entradas).as_deref(),
+            Some("google-chrome")
+        );
+    }
+
+    /// Un `app_id` vacío no se lleva el icono de una entrada sin identificador.
+    ///
+    /// `leer_entrada` recibe el identificador de quien lee el archivo, y si ese
+    /// nombre no se pudo sacar llega vacío. Sin este corte, las dos cadenas
+    /// vacías coincidirían y el primer `.desktop` roto le daría su icono a
+    /// cualquier pedido sin identidad.
+    #[test]
+    fn un_app_id_vacio_no_coincide_con_nada() {
+        let entradas = vec![una_entrada("", "/usr/bin/app", "app")];
+        assert_eq!(icono_de_app_id("", &entradas), None);
+    }
+
+    /// El prefijo con el que se reconoce una identidad del portal.
+    ///
+    /// Está escrito acá y en el crate del protocolo del servicio de permisos,
+    /// que este puente no compila. Esta prueba es lo único que ata las dos
+    /// copias: si allá cambia, acá se dejan de encontrar los iconos y nada más
+    /// falla, o sea que el fallo sería invisible.
+    #[test]
+    fn el_prefijo_del_portal_es_el_que_usa_el_servicio() {
+        assert_eq!(PREFIJO_DEL_PORTAL, "portal:");
+    }
+
+    /// Y el reparto: cada clave va por el camino que le toca.
+    #[test]
+    fn cada_clave_se_resuelve_por_donde_corresponde() {
+        let entradas = vec![
+            una_entrada(
+                "com.google.Chrome",
+                "/usr/bin/google-chrome-stable",
+                "google-chrome",
+            ),
+            una_entrada(
+                "vasak-text",
+                "/usr/bin/vasak-text",
+                "accessories-text-editor",
+            ),
+        ];
+
+        // Una ruta, por `Exec`.
+        assert_eq!(
+            icono_de("/usr/bin/vasak-text", &entradas).as_deref(),
+            Some("accessories-text-editor")
+        );
+        // Una identidad del portal, por el identificador.
+        assert_eq!(
+            icono_de_app_id("com.google.Chrome", &entradas).as_deref(),
+            Some("google-chrome")
+        );
+        // Y una identidad del portal **no** se busca como si fuera una ruta:
+        // `nombre_de_archivo("portal:com.google.Chrome")` devuelve la cadena
+        // entera, que no es el nombre de ningún ejecutable.
+        assert_eq!(icono_de("portal:com.google.Chrome", &entradas), None);
     }
 }

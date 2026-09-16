@@ -252,13 +252,14 @@ views:
     scope: >-
       This covers the camera, the microphone and your credentials — SSH and GPG
       keys along with the agents that sign with them, the keyring and saved
-      logins — and only for applications the system did not install. For the
-      camera and the microphone it covers only the direct path to the device:
-      one that asks PipeWire for them is not stopped yet. Screen capture is not
-      covered.
-      Nothing here yet. When an application tries to use the camera or the
-      microphone, or to read your keys, without permission, it will show up here
-      for you to decide.
+      logins — and only for AppImages in your home folder, the only ones a
+      security profile confines: neither what the package manager installed nor
+      a loose program you downloaded has one. For the camera
+      and the microphone it covers only the direct path to the device: one that
+      asks PipeWire for them is not stopped yet. What goes through the portal —
+      screen sharing, and the camera in browser video calls — is recorded here
+      and can be taken back, with the caveat that on that path an application
+      identifies itself with a name it declares.
     notConfined: >-
       The system installed this application, so no profile limits it: changing
       this neither grants nor removes access.
@@ -286,6 +287,7 @@ views:
       accountTasks: Account tasks
       camera: Camera
       microphone: Microphone
+      screenCapture: Screen sharing
       credentials: Keys and saved logins
     ninguna: None
     volver: Permissions
