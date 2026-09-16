@@ -35,6 +35,7 @@ const weather = ref(true);
 const music = ref(true);
 const transfer = ref(true);
 const tray = ref(true);
+const privacy = ref(true);
 
 onMounted(async () => {
 	try {
@@ -48,6 +49,7 @@ onMounted(async () => {
 		music.value = panel.music !== false;
 		transfer.value = panel.transfer !== false;
 		tray.value = panel.tray !== false;
+		privacy.value = panel.privacy !== false;
 	} catch (err) {
 		error.value = t('views.appearancePanel.errorLoading').replace('{0}', String(err));
 	} finally {
@@ -69,6 +71,7 @@ const saveConfig = async () => {
 			music: music.value,
 			transfer: transfer.value,
 			tray: tray.value,
+			privacy: privacy.value,
 		};
 
 		await writeConfig(vskConfig.value);
@@ -166,6 +169,18 @@ const saveConfig = async () => {
 							</span>
 						</div>
 						<SwitchToggle :label="t('views.appearancePanel.tray')" :is-on="tray" @toggle="(val) => (tray = val)" />
+					</div>
+
+					<div class="flex items-start justify-between gap-4">
+						<div class="flex flex-col">
+							<label class="text-sm font-medium text-tx-primary">
+								{{ t('views.appearancePanel.privacy') }}
+							</label>
+							<span class="text-xs text-tx-muted">
+								{{ t('views.appearancePanel.privacyHint') }}
+							</span>
+						</div>
+						<SwitchToggle :label="t('views.appearancePanel.privacy')" :is-on="privacy" @toggle="(val) => (privacy = val)" />
 					</div>
 				</div>
 			</SectionCard>
