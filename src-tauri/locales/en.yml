@@ -523,6 +523,8 @@ views:
     transferHint: How much comes down and goes up per second.
     tray: Application icons
     trayHint: The icons applications put in the system tray.
+    privacy: Camera and microphone
+    privacyHint: Warns while an application is using the camera or the microphone.
   appearanceDesktop:
     title: Desktop Files
     description: Adjust the visibility and size of the icons on the desktop background.

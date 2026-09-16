@@ -59,3 +59,45 @@ export function limpiarEstilo(style: Record<string, unknown>): void {
 		delete style[clave];
 	}
 }
+
+/** Lo que el panel muestra y se puede apagar, en el orden en que aparece. */
+export const INDICADORES_DEL_PANEL = ['weather', 'music', 'transfer', 'tray', 'privacy'] as const;
+
+export type IndicadorDelPanel = (typeof INDICADORES_DEL_PANEL)[number];
+
+export type IndicadoresDelPanel = Record<IndicadorDelPanel, boolean>;
+
+/**
+ * Qué indicadores del panel están encendidos.
+ *
+ * La sección `panel` no existe en el archivo hasta que alguien apaga algo, así
+ * que **la clave ausente significa «mostralo»**. El escritorio lee con este
+ * mismo criterio; leerlo al revés haría que el panel muestre el indicador y la
+ * pantalla de configuración diga que está apagado, en cada instalación nueva.
+ */
+export function indicadoresDelPanel(config: unknown): IndicadoresDelPanel {
+	const seccion =
+		config && typeof config === 'object'
+			? ((config as Record<string, unknown>).panel as Record<string, unknown> | undefined)
+			: undefined;
+
+	const leidos = {} as IndicadoresDelPanel;
+	for (const clave of INDICADORES_DEL_PANEL) {
+		leidos[clave] = booleanoDeConfig(seccion?.[clave], true);
+	}
+	return leidos;
+}
+
+/**
+ * Deja la sección `panel` con los interruptores puestos.
+ *
+ * Conserva lo que no son interruptores: ahí viven claves de otras pantallas, y
+ * reemplazar la sección entera las borraría.
+ */
+export function escribirIndicadoresDelPanel(
+	config: Record<string, unknown>,
+	valores: IndicadoresDelPanel
+): void {
+	const anterior = (config.panel as Record<string, unknown> | undefined) ?? {};
+	config.panel = { ...anterior, ...valores };
+}

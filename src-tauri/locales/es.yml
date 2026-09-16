@@ -526,6 +526,8 @@ views:
     transferHint: Cuánto baja y cuánto sube por segundo.
     tray: Iconos de aplicaciones
     trayHint: Los iconos que las aplicaciones ponen en la bandeja del sistema.
+    privacy: Cámara y micrófono
+    privacyHint: Avisa mientras una aplicación está usando la cámara o el micrófono.
   appearanceDesktop:
     title: Archivos del Escritorio
     description: Ajusta la visibilidad y el tamaño de los iconos en el fondo de escritorio.
