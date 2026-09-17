@@ -209,16 +209,74 @@ fn idioma() -> String {
         .to_string()
 }
 
+/// Los directorios de datos del sistema, de `XDG_DATA_DIRS`.
+///
+/// Estaban escritos a mano —`/usr/local/share` y `/usr/share`— y eso deja afuera
+/// todo lo que se exporte por esa variable: Flatpak publica ahí sus
+/// aplicaciones, y también lo hacen Nix y varios entornos de escritorio. Una
+/// aplicación que no aparece en esta lista no se puede elegir, y la pantalla no
+/// da ninguna pista de por qué falta.
+///
+/// La variable llega por parámetro para poder probarla.
+pub fn directorios_de_datos(valor: &str) -> Vec<PathBuf> {
+    let rutas: Vec<PathBuf> = valor
+        .split(':')
+        .map(str::trim)
+        .filter(|p| !p.is_empty())
+        .map(PathBuf::from)
+        .collect();
+
+    // Los de la especificación, para cuando no está o está vacía.
+    if rutas.is_empty() {
+        return vec!["/usr/local/share".into(), "/usr/share".into()];
+    }
+
+    rutas
+}
+
 fn directorios() -> Vec<PathBuf> {
     let mut dirs = Vec::new();
 
     if let Some(casa) = dirs::data_dir() {
         dirs.push(casa.join("applications"));
     }
-    dirs.push("/usr/local/share/applications".into());
-    dirs.push("/usr/share/applications".into());
+
+    let del_sistema = std::env::var("XDG_DATA_DIRS").unwrap_or_default();
+    dirs.extend(
+        directorios_de_datos(&del_sistema)
+            .into_iter()
+            .map(|base| base.join("applications")),
+    );
 
     dirs
+}
+
+/// Las entradas que quedan, de una lista **en orden de precedencia**.
+///
+/// El identificador se marca como visto antes de mirar el contenido, y ahí está
+/// la diferencia: un `.desktop` del usuario con `Hidden=true` significa «para mí
+/// este archivo no existe», y tiene que tapar al del sistema con el mismo
+/// nombre. Descartándolo antes de anotarlo —que es lo que hacía— la entrada del
+/// sistema se procesaba igual y la aplicación que alguien ocultó volvía a
+/// aparecer en la lista.
+pub fn resolver_precedencia(
+    archivos: impl IntoIterator<Item = (String, String)>,
+    idioma: &str,
+) -> Vec<Entrada> {
+    let mut vistos: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut encontradas = Vec::new();
+
+    for (id, contenido) in archivos {
+        if !vistos.insert(id.clone()) {
+            continue;
+        }
+
+        if let Some(entrada) = leer_entrada(&id, &contenido, idioma) {
+            encontradas.push(entrada);
+        }
+    }
+
+    encontradas
 }
 
 /// Todas las entradas del sistema.
@@ -228,15 +286,15 @@ fn directorios() -> Vec<PathBuf> {
 /// que la aplicación arrancó. Son unos cientos de archivos y se leen en
 /// milisegundos.
 fn entradas() -> Vec<Entrada> {
-    let idioma = idioma();
-    let mut encontradas: Vec<Entrada> = Vec::new();
+    let mut archivos: Vec<(String, String)> = Vec::new();
 
+    // En orden de precedencia: el del usuario primero.
     for dir in directorios() {
-        let Ok(archivos) = std::fs::read_dir(&dir) else {
+        let Ok(leidos) = std::fs::read_dir(&dir) else {
             continue;
         };
 
-        for archivo in archivos.flatten() {
+        for archivo in leidos.flatten() {
             let ruta = archivo.path();
 
             if ruta.extension().and_then(|e| e.to_str()) != Some("desktop") {
@@ -246,23 +304,16 @@ fn entradas() -> Vec<Entrada> {
             let Some(id) = ruta.file_name().and_then(|n| n.to_str()) else {
                 continue;
             };
-            // El primero gana: los directorios vienen por precedencia, así que
-            // un `.desktop` del usuario le gana al del sistema con el mismo
-            // nombre — que es la regla de XDG.
-            if encontradas.iter().any(|e| e.id == id) {
-                continue;
-            }
 
             let Ok(contenido) = std::fs::read_to_string(&ruta) else {
                 continue;
             };
 
-            if let Some(entrada) = leer_entrada(id, &contenido, &idioma) {
-                encontradas.push(entrada);
-            }
+            archivos.push((id.to_string(), contenido));
         }
     }
 
+    let mut encontradas = resolver_precedencia(archivos, &idioma());
     encontradas.sort_by(|a, b| a.nombre.to_lowercase().cmp(&b.nombre.to_lowercase()));
     encontradas
 }
@@ -289,20 +340,26 @@ pub fn terminales_disponibles() -> Vec<Candidata> {
 
 /// Qué abre hoy este tipo, según el sistema.
 #[tauri::command]
-pub fn aplicacion_por_defecto(tipo: String) -> Option<String> {
+pub fn aplicacion_por_defecto(tipo: String) -> Result<Option<String>, String> {
     let salida = std::process::Command::new("xdg-mime")
         .args(["query", "default", &tipo])
         .output()
-        .ok()?;
+        .map_err(|e| format!("No se pudo ejecutar xdg-mime: {e}"))?;
+
+    // Un fallo devolvía «ninguna elegida», que es una respuesta legítima: la
+    // pantalla mostraba la primera candidata como si nadie hubiera elegido nada,
+    // sin decir que no pudo preguntar.
+    if !salida.status.success() {
+        return Err(format!(
+            "xdg-mime falló consultando {tipo}: {}",
+            String::from_utf8_lossy(&salida.stderr).trim()
+        ));
+    }
 
     let id = String::from_utf8_lossy(&salida.stdout).trim().to_string();
 
-    // `xdg-mime` contesta vacío y con éxito cuando no hay ninguna elegida.
-    if id.is_empty() {
-        None
-    } else {
-        Some(id)
-    }
+    // Vacío y con éxito es la forma en que contesta «no hay ninguna elegida».
+    Ok(if id.is_empty() { None } else { Some(id) })
 }
 
 /// Elige la aplicación para todos esos tipos.
@@ -355,13 +412,50 @@ pub fn terminal_por_defecto() -> Option<String> {
 pub fn definir_terminal(id: String, programa: String) -> Result<(), String> {
     let lista = ruta_de_config("xdg-terminals.list")
         .ok_or_else(|| "No se encontró el directorio de configuración".to_string())?;
-
-    escribir(&lista, &contenido_de_xdg_terminals(&id))?;
-
     let entorno = ruta_de_config("environment.d/50-vasak-terminal.conf")
         .ok_or_else(|| "No se encontró el directorio de configuración".to_string())?;
 
-    escribir(&entorno, &contenido_de_environment_d(&programa))
+    // Son dos archivos y hacen falta los dos. Si el primero se escribe y el
+    // segundo falla, `xdg-terminals.list` nombra a la terminal nueva y
+    // `TERMINAL` a la vieja: los programas que miran uno abren una y los que
+    // miran el otro abren otra, sin que nada lo diga. La vista devuelve el
+    // selector a su valor anterior, así que además la pantalla mentiría.
+    //
+    // No se puede hacer atómico entre dos archivos, pero sí se puede dejar todo
+    // como estaba: se guarda lo que había y se restaura si la segunda falla.
+    escribir_los_dos(&lista, &entorno, &id, &programa)
+}
+
+/// Las dos escrituras, con los caminos dichos.
+///
+/// Aparte para poder probarla: `definir_terminal` los saca de `XDG_CONFIG_HOME`,
+/// y cambiar una variable de entorno en una prueba se lleva puestas a las que
+/// corren en paralelo.
+pub fn escribir_los_dos(
+    lista: &Path,
+    entorno: &Path,
+    id: &str,
+    programa: &str,
+) -> Result<(), String> {
+    let antes = std::fs::read(lista).ok();
+
+    escribir(lista, &contenido_de_xdg_terminals(id))?;
+
+    if let Err(fallo) = escribir(entorno, &contenido_de_environment_d(programa)) {
+        match antes {
+            Some(contenido) => {
+                let _ = std::fs::write(lista, contenido);
+            }
+            // No existía: se borra el que acabamos de crear.
+            None => {
+                let _ = std::fs::remove_file(lista);
+            }
+        }
+
+        return Err(fallo);
+    }
+
+    Ok(())
 }
 
 fn escribir(ruta: &Path, contenido: &str) -> Result<(), String> {
@@ -501,6 +595,166 @@ mod pruebas {
         let entrada = leer_entrada("g.desktop", contenido, "es").unwrap();
 
         assert!(!entrada.es_terminal());
+    }
+
+    #[test]
+    fn los_directorios_de_datos_salen_de_la_variable() {
+        assert_eq!(
+            directorios_de_datos("/var/lib/flatpak/exports/share:/usr/share"),
+            vec![
+                PathBuf::from("/var/lib/flatpak/exports/share"),
+                PathBuf::from("/usr/share")
+            ]
+        );
+    }
+
+    #[test]
+    fn sin_variable_valen_los_dos_de_la_especificacion() {
+        for vacia in ["", "   ", ":", "::"] {
+            assert_eq!(
+                directorios_de_datos(vacia),
+                vec![
+                    PathBuf::from("/usr/local/share"),
+                    PathBuf::from("/usr/share")
+                ],
+                "«{vacia}» no cayó a los directorios por omisión"
+            );
+        }
+    }
+
+    #[test]
+    fn el_del_usuario_le_gana_al_del_sistema() {
+        let archivos = [
+            (
+                "x.desktop".to_string(),
+                "[Desktop Entry]\nName=El mío\nExec=mio\n".to_string(),
+            ),
+            (
+                "x.desktop".to_string(),
+                "[Desktop Entry]\nName=El del sistema\nExec=sistema\n".to_string(),
+            ),
+        ];
+        let entradas = resolver_precedencia(archivos, "es");
+
+        assert_eq!(entradas.len(), 1);
+        assert_eq!(entradas[0].nombre, "El mío");
+    }
+
+    #[test]
+    fn una_entrada_oculta_por_el_usuario_tapa_a_la_del_sistema() {
+        // `Hidden=true` significa «para mí este archivo no existe», y eso incluye
+        // al del sistema con el mismo nombre. Descartándolo antes de anotarlo, la
+        // aplicación que alguien ocultó volvía a aparecer en la lista.
+        let archivos = [
+            (
+                "x.desktop".to_string(),
+                "[Desktop Entry]\nName=Oculta\nExec=x\nHidden=true\n".to_string(),
+            ),
+            (
+                "x.desktop".to_string(),
+                "[Desktop Entry]\nName=La del sistema\nExec=x\n".to_string(),
+            ),
+        ];
+
+        assert_eq!(resolver_precedencia(archivos, "es"), vec![]);
+    }
+
+    #[test]
+    fn dos_identificadores_distintos_conviven() {
+        let archivos = [
+            (
+                "a.desktop".to_string(),
+                "[Desktop Entry]\nName=A\nExec=a\n".to_string(),
+            ),
+            (
+                "b.desktop".to_string(),
+                "[Desktop Entry]\nName=B\nExec=b\n".to_string(),
+            ),
+        ];
+
+        assert_eq!(resolver_precedencia(archivos, "es").len(), 2);
+    }
+
+    /// Un directorio de prueba con el `environment.d` escribible o no.
+    fn un_config_de_prueba(nombre: &str, entorno_escribible: bool) -> (PathBuf, PathBuf, PathBuf) {
+        use std::os::unix::fs::PermissionsExt;
+
+        let base = std::env::temp_dir().join(format!(
+            "vasak-settings-terminal-{}-{nombre}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).unwrap();
+
+        let entorno_dir = base.join("environment.d");
+        std::fs::create_dir_all(&entorno_dir).unwrap();
+        std::fs::set_permissions(
+            &entorno_dir,
+            std::fs::Permissions::from_mode(if entorno_escribible { 0o700 } else { 0o500 }),
+        )
+        .unwrap();
+
+        (
+            base.clone(),
+            base.join("xdg-terminals.list"),
+            entorno_dir.join("50-vasak-terminal.conf"),
+        )
+    }
+
+    fn limpiar(base: &Path) {
+        use std::os::unix::fs::PermissionsExt;
+
+        let _ = std::fs::set_permissions(
+            base.join("environment.d"),
+            std::fs::Permissions::from_mode(0o700),
+        );
+        let _ = std::fs::remove_dir_all(base);
+    }
+
+    #[test]
+    fn la_terminal_se_escribe_en_los_dos_archivos() {
+        let (base, lista, entorno) = un_config_de_prueba("bien", true);
+
+        escribir_los_dos(&lista, &entorno, "vasak-terminal.desktop", "vasak-terminal").unwrap();
+
+        assert_eq!(
+            std::fs::read_to_string(&lista).unwrap(),
+            "vasak-terminal.desktop\n"
+        );
+        assert!(std::fs::read_to_string(&entorno)
+            .unwrap()
+            .contains("TERMINAL=vasak-terminal"));
+
+        limpiar(&base);
+    }
+
+    #[test]
+    fn si_falla_el_segundo_se_deshace_el_primero() {
+        // Con uno escrito y el otro no, los programas que miran uno abren una
+        // terminal y los que miran el otro abren otra, sin que nada lo diga.
+        let (base, lista, entorno) = un_config_de_prueba("falla", false);
+        std::fs::write(&lista, "la-de-antes.desktop\n").unwrap();
+
+        let resultado = escribir_los_dos(&lista, &entorno, "la-nueva.desktop", "la-nueva");
+
+        assert!(resultado.is_err(), "tenía que fallar el segundo archivo");
+        assert_eq!(
+            std::fs::read_to_string(&lista).unwrap(),
+            "la-de-antes.desktop\n",
+            "el primero quedó con la terminal nueva y el segundo con la vieja"
+        );
+
+        limpiar(&base);
+    }
+
+    #[test]
+    fn si_falla_el_segundo_y_el_primero_no_existia_no_queda_ninguno() {
+        let (base, lista, entorno) = un_config_de_prueba("sin-previo", false);
+
+        assert!(escribir_los_dos(&lista, &entorno, "la-nueva.desktop", "la-nueva").is_err());
+        assert!(!lista.exists(), "quedó una lista que antes no existía");
+
+        limpiar(&base);
     }
 
     #[test]

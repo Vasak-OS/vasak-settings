@@ -43,6 +43,16 @@ interface Fila {
 	candidatas: Candidata[];
 	/** El `.desktop` elegido, o vacío si no hay ninguno. */
 	elegida: string;
+	/**
+	 * Si hay una escritura en curso para esta fila.
+	 *
+	 * Mientras la hay, el selector queda deshabilitado. Sin eso se puede cambiar
+	 * la misma fila dos veces antes de que termine la primera: las dos llamadas
+	 * son independientes, así que la primera puede terminar **después** de la
+	 * segunda y dejar guardada la elección vieja — y si la primera falla, su
+	 * vuelta atrás pisa la segunda elección, que ya se había dibujado.
+	 */
+	guardando: boolean;
 }
 
 const { t } = useI18n();
@@ -64,7 +74,7 @@ async function cargarFila(categoria: CategoriaDeAplicacion): Promise<Fila> {
 			terminalPorDefecto(),
 		]);
 
-		return { categoria, candidatas, elegida: elegida ?? '' };
+		return { categoria, candidatas, elegida: elegida ?? '', guardando: false };
 	}
 
 	const tipo = tipoPrincipal(categoria);
@@ -73,7 +83,7 @@ async function cargarFila(categoria: CategoriaDeAplicacion): Promise<Fila> {
 		tipo ? aplicacionPorDefecto(tipo) : Promise.resolve(null),
 	]);
 
-	return { categoria, candidatas, elegida: elegida ?? '' };
+	return { categoria, candidatas, elegida: elegida ?? '', guardando: false };
 }
 
 onMounted(async () => {
@@ -88,10 +98,13 @@ onMounted(async () => {
 });
 
 async function elegir(fila: Fila, id: string) {
+	if (fila.guardando) return;
+
 	const anterior = fila.elegida;
 	// Se mueve el selector antes de guardar y se vuelve atrás si falla: dejarlo
 	// en el valor viejo mientras se escribe hace que el clic parezca ignorado.
 	fila.elegida = id;
+	fila.guardando = true;
 	error.value = '';
 	aviso.value = '';
 
@@ -113,6 +126,8 @@ async function elegir(fila: Fila, id: string) {
 		fila.elegida = anterior;
 		error.value = t('views.defaultApps.errorGuardando').replace('{0}', String(err));
 		console.error(err);
+	} finally {
+		fila.guardando = false;
 	}
 }
 </script>
@@ -142,6 +157,7 @@ async function elegir(fila: Fila, id: string) {
 							v-if="fila.candidatas.length"
 							:id="`app-${fila.categoria.id}`"
 							:model-value="fila.elegida"
+							:disabled="fila.guardando"
 							:options="fila.candidatas.map((c) => ({ label: c.nombre, value: c.id }))"
 							@update:model-value="elegir(fila, $event)" />
 
