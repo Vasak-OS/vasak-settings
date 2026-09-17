@@ -10,6 +10,11 @@ const routes = [
 		component: () => import('@/views/ShortcutsView.vue'),
 	},
 	{
+		path: '/default-apps',
+		name: 'default-apps',
+		component: () => import('@/views/DefaultAppsView.vue'),
+	},
+	{
 		path: '/appearance-theme',
 		name: 'appearance-theme',
 		component: () => import('@/views/AppearanceThemeView.vue'),

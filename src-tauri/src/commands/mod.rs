@@ -1,4 +1,5 @@
 pub mod actualizaciones;
+pub mod aplicaciones_por_defecto;
 pub mod audio;
 pub mod battery;
 pub mod brightness;

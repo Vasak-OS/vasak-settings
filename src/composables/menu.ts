@@ -29,6 +29,11 @@ export function categoriasDelMenu(t: Traductor): SidebarCategory[] {
 					label: t('sidebar.items.shortcuts'),
 					icon: 'preferences-desktop-keyboard',
 				},
+				{
+					id: 'default-apps',
+					label: t('sidebar.items.defaultApps'),
+					icon: 'preferences-desktop-default-applications',
+				},
 			],
 		},
 		{

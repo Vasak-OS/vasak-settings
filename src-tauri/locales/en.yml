@@ -35,6 +35,7 @@ sidebar:
   items:
     home: Home
     shortcuts: Shortcuts
+    defaultApps: Default applications
     appearanceTheme: Theme
     appearanceFonts: Fonts
     appearanceIconPacks: Icons
@@ -184,6 +185,23 @@ wayfire:
       description: Rotates a window with the mouse.
 
 views:
+  defaultApps:
+    title: "Default applications"
+    description: "What the system opens each thing with."
+    errorCargando: "Could not read the applications: {0}"
+    errorGuardando: "Could not save the choice: {0}"
+    sinCandidatas: "No installed application can open this."
+    terminalEnLaProxima: "The terminal is set. Programs that open a console will find it from the next login on."
+    categorias:
+      navegador: "Web browser"
+      correo: "Mail"
+      archivos: "Files"
+      terminal: "Terminal"
+      musica: "Music"
+      video: "Video"
+      imagenes: "Images"
+      texto: "Text"
+      pdf: "PDF"
   actualizaciones:
     noSePudo: "Could not check"
     sinExplicacion: "Updates could not be checked, and the program did not say why."
