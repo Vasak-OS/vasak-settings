@@ -88,11 +88,18 @@ fn ningun_texto_esta_vacio() {
             for parte in clave.split('.') {
                 actual = &actual[parte];
             }
-            if actual.as_str().map(|s| s.trim().is_empty()).unwrap_or(false) {
+            if actual
+                .as_str()
+                .map(|s| s.trim().is_empty())
+                .unwrap_or(false)
+            {
                 vacias.push(clave.clone());
             }
         }
-        assert!(vacias.is_empty(), "textos vacíos en {idioma}.yml: {vacias:?}");
+        assert!(
+            vacias.is_empty(),
+            "textos vacíos en {idioma}.yml: {vacias:?}"
+        );
     }
 }
 
@@ -109,7 +116,11 @@ fn los_marcadores_de_interpolacion_coinciden() {
         let texto = v.as_str().unwrap_or_default();
         let mut encontrados: Vec<String> = texto
             .match_indices('{')
-            .filter_map(|(i, _)| texto[i..].find('}').map(|j| texto[i..i + j + 1].to_string()))
+            .filter_map(|(i, _)| {
+                texto[i..]
+                    .find('}')
+                    .map(|j| texto[i..i + j + 1].to_string())
+            })
             .collect();
         encontrados.sort();
         encontrados
@@ -144,7 +155,15 @@ fn los_permisos_cuelgan_de_las_cuentas_en_linea() {
             permisos.is_mapping(),
             "views.onlineAccounts.permissions falta en {idioma}.yml"
         );
-        for esperada in ["title", "description", "allow", "deny", "forget", "note", "resources"] {
+        for esperada in [
+            "title",
+            "description",
+            "allow",
+            "deny",
+            "forget",
+            "note",
+            "resources",
+        ] {
             assert!(
                 !permisos[esperada].is_null(),
                 "falta views.onlineAccounts.permissions.{esperada} en {idioma}.yml"
@@ -226,7 +245,10 @@ fn proton_no_tiene_textos_porque_no_tiene_api() {
             .iter()
             .filter(|clave| clave.to_lowercase().contains("proton"))
             .collect();
-        assert!(restos.is_empty(), "quedaron textos de Proton en {idioma}.yml: {restos:?}");
+        assert!(
+            restos.is_empty(),
+            "quedaron textos de Proton en {idioma}.yml: {restos:?}"
+        );
     }
 }
 
@@ -243,7 +265,10 @@ fn la_pantalla_de_nextcloud_avisa_del_https() {
         let raiz = catalogo(idioma);
         let nube = &raiz["views"]["onlineAccounts"]["nextcloud"];
 
-        assert!(nube.is_mapping(), "views.onlineAccounts.nextcloud falta en {idioma}.yml");
+        assert!(
+            nube.is_mapping(),
+            "views.onlineAccounts.nextcloud falta en {idioma}.yml"
+        );
         for clave in [
             "title",
             "description",
@@ -278,7 +303,10 @@ fn el_titulo_de_nextcloud_interpola_el_proveedor() {
         let titulo = raiz["views"]["onlineAccounts"]["nextcloud"]["title"]
             .as_str()
             .unwrap_or_default();
-        assert!(titulo.contains("{0}"), "falta el marcador en {idioma}.yml: {titulo}");
+        assert!(
+            titulo.contains("{0}"),
+            "falta el marcador en {idioma}.yml: {titulo}"
+        );
     }
 }
 
@@ -294,8 +322,18 @@ fn la_prueba_de_conexion_tiene_todos_sus_textos() {
         let raiz = catalogo(idioma);
         let prueba = &raiz["views"]["onlineAccounts"]["probe"];
 
-        assert!(prueba.is_mapping(), "views.onlineAccounts.probe falta en {idioma}.yml");
-        for clave in ["test", "testing", "imap", "smtp", "saveAnyway", "saveAnywayHint"] {
+        assert!(
+            prueba.is_mapping(),
+            "views.onlineAccounts.probe falta en {idioma}.yml"
+        );
+        for clave in [
+            "test",
+            "testing",
+            "imap",
+            "smtp",
+            "saveAnyway",
+            "saveAnywayHint",
+        ] {
             assert!(
                 prueba[clave].as_str().is_some_and(|t| !t.trim().is_empty()),
                 "falta views.onlineAccounts.probe.{clave} en {idioma}.yml"
@@ -314,7 +352,10 @@ fn las_dos_puntas_del_correo_se_nombran_distinto() {
         let entrada = prueba["imap"].as_str().unwrap_or_default();
         let salida = prueba["smtp"].as_str().unwrap_or_default();
 
-        assert_ne!(entrada, salida, "las dos puntas dicen lo mismo en {idioma}.yml");
+        assert_ne!(
+            entrada, salida,
+            "las dos puntas dicen lo mismo en {idioma}.yml"
+        );
     }
 }
 
@@ -329,7 +370,10 @@ fn el_autodescubrimiento_tiene_todos_sus_textos() {
         let raiz = catalogo(idioma);
         let dav = &raiz["views"]["onlineAccounts"]["dav"];
 
-        assert!(dav.is_mapping(), "views.onlineAccounts.dav falta en {idioma}.yml");
+        assert!(
+            dav.is_mapping(),
+            "views.onlineAccounts.dav falta en {idioma}.yml"
+        );
         for clave in ["search", "searching", "hint", "nothingFoundHint"] {
             assert!(
                 dav[clave].as_str().is_some_and(|t| !t.trim().is_empty()),
@@ -349,7 +393,9 @@ fn lo_encontrado_se_rotula_con_los_nombres_de_capacidad() {
         let nombres = &raiz["views"]["onlineAccounts"]["capabilities"];
         for capacidad in ["calendar", "contacts"] {
             assert!(
-                nombres[capacidad].as_str().is_some_and(|t| !t.trim().is_empty()),
+                nombres[capacidad]
+                    .as_str()
+                    .is_some_and(|t| !t.trim().is_empty()),
                 "falta el nombre de '{capacidad}', que rotula lo que se encontró"
             );
         }
@@ -386,7 +432,9 @@ fn las_credenciales_propias_explican_por_que_hacen_falta() {
             "cleared",
         ] {
             assert!(
-                credenciales[clave].as_str().is_some_and(|t| !t.trim().is_empty()),
+                credenciales[clave]
+                    .as_str()
+                    .is_some_and(|t| !t.trim().is_empty()),
                 "falta views.onlineAccounts.credentials.{clave} en {idioma}.yml"
             );
         }
@@ -449,6 +497,9 @@ fn se_avisa_cuando_no_se_pudo_revocar() {
         );
         // Lleva el nombre de la cuenta y el motivo: sin los dos marcadores el
         // aviso no dice cuál cuenta ni por qué.
-        assert!(texto.contains("{0}") && texto.contains("{1}"), "{idioma}: {texto}");
+        assert!(
+            texto.contains("{0}") && texto.contains("{1}"),
+            "{idioma}: {texto}"
+        );
     }
 }

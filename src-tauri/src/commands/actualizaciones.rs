@@ -37,14 +37,41 @@ pub struct Informe {
     pub disponible: bool,
 }
 
+/// Lo que hay para actualizar.
+///
+/// # Por qué es `async`, y por qué eso no es un detalle
+///
+/// Medido: `vasak-update --json` tarda **un minuto largo** —comprueba contra
+/// los servidores— y este comando es el único de la pantalla que hace algo
+/// lento.
+///
+/// Escrito sin `async`, la macro de Tauri lo compila por la vía `Blocking`, que
+/// corre el cuerpo dentro del manejador de IPC — o sea, en el hilo principal,
+/// que en Linux es el de GTK y el que dibuja. El resultado era que entrar a
+/// Actualizaciones **congelaba la aplicación entera** por ese minuto: ni la
+/// barra lateral respondía, y no se veía como «está cargando» sino como que se
+/// colgó.
+///
+/// Con `async`, la macro lo despacha con `async_runtime::spawn` y el hilo
+/// principal sigue libre. El trabajo que bloquea va adentro de `spawn_blocking`
+/// y no suelto en la tarea: `Command::output()` espera al proceso sin ceder, y
+/// dejarlo en un hilo del ejecutor asíncrono taparía uno de esos durante el
+/// mismo minuto. Se vería mejor —la ventana responde— pero cualquier otro
+/// comando encolado atrás seguiría esperando.
 #[tauri::command]
-pub fn informe_de_actualizaciones() -> Informe {
-    let salida = Command::new("vasak-update")
-        .arg("--json")
-        .stderr(Stdio::null())
-        .output();
+pub async fn informe_de_actualizaciones() -> Informe {
+    let salida = tauri::async_runtime::spawn_blocking(|| {
+        Command::new("vasak-update")
+            .arg("--json")
+            .stderr(Stdio::null())
+            .output()
+    })
+    .await;
 
-    let Ok(salida) = salida else {
+    // Dos fallos distintos, y los dos significan lo mismo para la pantalla: no
+    // se pudo preguntar. El de afuera es que la tarea no llegó a terminar; el
+    // de adentro, que no se pudo lanzar el programa.
+    let Ok(Ok(salida)) = salida else {
         return Informe {
             datos: serde_json::Value::Null,
             disponible: false,
