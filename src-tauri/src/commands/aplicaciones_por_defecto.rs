@@ -314,7 +314,7 @@ fn entradas() -> Vec<Entrada> {
     }
 
     let mut encontradas = resolver_precedencia(archivos, &idioma());
-    encontradas.sort_by(|a, b| a.nombre.to_lowercase().cmp(&b.nombre.to_lowercase()));
+    encontradas.sort_by_key(|aplicacion| aplicacion.nombre.to_lowercase());
     encontradas
 }
 
