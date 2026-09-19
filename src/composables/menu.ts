@@ -12,7 +12,7 @@
  * pueda mirar los identificadores sin levantar medio plugin de traducciones.
  */
 
-import type { SidebarCategory } from '@/types/sidebar';
+import type { SidebarCategory } from '@vasakgroup/vue-libvasak';
 
 /** Cómo se traduce una etiqueta. */
 export type Traductor = (clave: string) => string;

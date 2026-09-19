@@ -347,7 +347,7 @@ const isFormValid = computed(() => {
 					</FormGroup>
 
 					<div v-if="selectedScheme" class="grid gap-4 xl:grid-cols-[1.15fr_1fr]">
-						<div class="rounded-corner border border-ui-border bg-ui-surface/40 p-4">
+						<div class="rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 							<div class="mb-4 flex flex-col gap-1">
 								<div class="flex items-center justify-between gap-3">
 									<h4 class="text-base font-medium text-tx-primary">{{ selectedScheme.scheme.name }}</h4>
@@ -368,7 +368,7 @@ const isFormValid = computed(() => {
 										<div
 											v-for="swatch in selectedDarkPreview"
 											:key="`dark-${swatch.label}`"
-											class="flex items-center gap-2 rounded-corner border border-ui-border/70 bg-ui-surface/40 p-2"
+											class="flex items-center gap-2 rounded-corner border border-ui-border/70 bg-ui-surface/70 p-2"
 										>
 											<div class="h-8 w-8 rounded-corner border border-ui-border/60" :style="{ backgroundColor: swatch.value }" />
 											<div class="min-w-0 flex-1">
@@ -388,7 +388,7 @@ const isFormValid = computed(() => {
 										<div
 											v-for="swatch in selectedLightPreview"
 											:key="`light-${swatch.label}`"
-											class="flex items-center gap-2 rounded-corner border border-ui-border/70 bg-ui-surface/40 p-2"
+											class="flex items-center gap-2 rounded-corner border border-ui-border/70 bg-ui-surface/70 p-2"
 										>
 											<div class="h-8 w-8 rounded-corner border border-ui-border/60" :style="{ backgroundColor: swatch.value }" />
 											<div class="min-w-0 flex-1">

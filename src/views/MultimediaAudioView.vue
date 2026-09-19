@@ -175,7 +175,7 @@ onUnmounted(() => {
 			<!-- Slider Volumen -->
 			<SectionCard>
 				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.multimediaAudio.masterVolume') }}</h3>
-				<div class="flex items-center gap-4 rounded-corner border border-ui-border bg-ui-surface/40 p-4">
+				<div class="flex items-center gap-4 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 					<button 
 						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner bg-ui-surface transition-colors hover:bg-primary hover:text-white"
 						:class="volumeInfo.is_muted ? 'text-status-error border border-status-error/40' : 'text-tx-primary border border-ui-border'"
@@ -227,7 +227,7 @@ onUnmounted(() => {
 						class="group flex cursor-pointer items-center justify-between gap-3 rounded-corner border px-4 py-3 transition-colors"
 						:class="selectedDeviceId === device.id 
 							? 'border-primary/50 bg-primary/5 shadow-sm' 
-							: 'border-ui-border bg-ui-surface/40 hover:border-ui-border.hover hover:bg-ui-surface'"
+							: 'border-ui-border bg-ui-surface/70 hover:border-ui-border.hover hover:bg-ui-surface'"
 						@click="selectDevice(device.id)"
 					>
 						<!-- Selector Circle -->

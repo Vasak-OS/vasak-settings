@@ -1,14 +1,13 @@
 <script lang="ts" setup>
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { SideBar, type SidebarCategory } from '@vasakgroup/vue-libvasak';
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import SidebarComponent from '@/components/sidebar/SidebarComponent.vue';
 import TopBarComponent from '@/components/topbar/TopBarComponent.vue';
 import { categoriasDelMenu } from '@/composables/menu';
 import { menuSegunHardware } from '@/composables/secciones-por-hardware';
 import { useHardwareDeRed } from '@/composables/useHardwareDeRed';
 import { useReactiveIcon } from '@/composables/useReactiveIcon';
-import { SidebarCategory } from '@/types/sidebar';
 
 const route = useRoute();
 const router = useRouter();
@@ -60,14 +59,19 @@ const sidebarCategories = computed<SidebarCategory[]>(() =>
       <div></div>
     </TopBarComponent>
     <div class="relative flex flex-1 overflow-hidden p-1">
-      <SidebarComponent
+      <!-- La barra es la de `@vasakgroup/vue-libvasak`. Nació acá y la copiaron
+           la tienda y el monitor a mano; ahora vive en un solo lugar y cuando
+           cambie cambia en todas las ventanas a la vez. -->
+      <SideBar
         v-model="selectedSection"
         :title="t('views.app.title')"
         :subtitle="t('views.app.subtitle')"
         :categories="sidebarCategories"
+        :collapse-label="t('sidebar.collapse')"
+        :expand-label="t('sidebar.expand')"
       />
 
-			<main class="min-h-0 min-w-0 flex-1 rounded-corner border border-ui-border bg-ui-bg/80 p-4 md:ml-1 overflow-y-auto overflow-x-hidden">
+			<main class="min-h-0 min-w-0 flex-1 rounded-corner border border-ui-border bg-ui-surface/70 p-4 md:ml-1 overflow-y-auto overflow-x-hidden">
 				<slot />
 			</main>
     </div>

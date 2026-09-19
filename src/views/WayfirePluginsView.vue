@@ -37,7 +37,7 @@ function etiquetaDe(plugin: { id: string; unknown?: boolean }) {
 				{{ t(`wayfire.plugins.categories.${group.category}`) }}
 			</h2>
 
-			<ul class="divide-y divide-ui-border overflow-hidden rounded-corner border border-ui-border bg-ui-surface/40">
+			<ul class="divide-y divide-ui-border overflow-hidden rounded-corner border border-ui-border bg-ui-surface/70">
 				<li
 					v-for="plugin in group.items"
 					:key="plugin.id"

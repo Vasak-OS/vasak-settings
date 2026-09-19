@@ -21,7 +21,7 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 
 <template>
 	<SectionCard class="p-0">
-		<div class="rounded-corner border border-ui-border bg-ui-surface/40 p-4">
+		<div class="rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 			<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
 				<div class="min-w-0">
 					<p class="truncate font-medium">{{ disk.mountpoint }}</p>

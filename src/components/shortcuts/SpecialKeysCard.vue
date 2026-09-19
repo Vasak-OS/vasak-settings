@@ -64,7 +64,7 @@ const handleEdit = (entry: SpecialKeyEntry) => {
 </script>
 
 <template>
-	<div class="rounded-corner border border-ui-border bg-ui-surface/40 p-4">
+	<div class="rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 		<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.shortcuts.specialKeys.title') }}</h3>
 		<p class="mb-4 text-sm text-tx-muted">
 			{{ t('views.shortcuts.specialKeys.description') }}

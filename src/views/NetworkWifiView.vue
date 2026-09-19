@@ -341,7 +341,7 @@ onUnmounted(() => {
 						:class="
 							network.is_connected
 								? 'border-status-success/40 bg-status-success/10'
-								: 'border-ui-border bg-ui-surface/40 hover:border-ui-border.hover hover:bg-ui-surface'
+								: 'border-ui-border bg-ui-surface/70 hover:border-ui-border.hover hover:bg-ui-surface'
 						"
 						@click="openConnectDialog(network)"
 					>

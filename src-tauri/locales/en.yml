@@ -25,6 +25,8 @@ common:
   saveSectionError: "Error saving section [{0}]"
 
 sidebar:
+  collapse: Collapse the sidebar
+  expand: Expand the sidebar
   noCategories: No categories available.
   general: General
   appearance: Appearance
