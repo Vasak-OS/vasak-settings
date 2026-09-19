@@ -83,3 +83,25 @@ describe('el token de fondo', () => {
 		expect(rezagadas).toEqual([]);
 	});
 });
+
+describe('la versión de la librería', () => {
+	test('trae el arreglo de la barra que abría plegada', () => {
+		// En WebKitGTK el `change` de `matchMedia` no llega cuando la ventana
+		// pasa de angosta a ancha al terminar de abrirse: la barra se montaba
+		// con el WebView todavía sin tamaño y se quedaba plegada para siempre
+		// en una ventana de 1280 que nadie había plegado. Se arregló en la
+		// 0.3.5 de la librería, así que volver atrás de ahí lo trae de vuelta.
+		const manifiesto = JSON.parse(leer('package.json')) as {
+			dependencies: Record<string, string>;
+		};
+		const pedido = manifiesto.dependencies['@vasakgroup/vue-libvasak'];
+		expect(pedido).toBeDefined();
+
+		const [mayor, menor, parche] = pedido
+			.replace(/^[^\d]*/, '')
+			.split('.')
+			.map(Number);
+		const numero = mayor * 1_000_000 + menor * 1_000 + parche;
+		expect(numero).toBeGreaterThanOrEqual(0 * 1_000_000 + 3 * 1_000 + 5);
+	});
+});
