@@ -1,9 +1,8 @@
 <script lang="ts" setup>
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { SideBar, type SidebarCategory } from '@vasakgroup/vue-libvasak';
+import { SideBar, type SidebarCategory, WindowFrame } from '@vasakgroup/vue-libvasak';
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import TopBarComponent from '@/components/topbar/TopBarComponent.vue';
 import { categoriasDelMenu } from '@/composables/menu';
 import { menuSegunHardware } from '@/composables/secciones-por-hardware';
 import { useHardwareDeRed } from '@/composables/useHardwareDeRed';
@@ -51,14 +50,24 @@ const sidebarCategories = computed<SidebarCategory[]>(() =>
 );
 </script>
 <template>
-  <div
-    class="h-screen w-screen bg-ui-bg/80 rounded-corner-window flex flex-col border border-ui-border overflow-hidden">
-    <TopBarComponent>
-      <div><img :src="appIcon" class="w-8 h-8" :alt="t('views.app.iconAlt')"></div>
-      <div class="text-lg font-semibold">{{ t('views.app.title') }}</div>
-      <div></div>
-    </TopBarComponent>
-    <div class="relative flex flex-1 overflow-hidden p-1">
+  <WindowFrame
+    :minimize-label="t('windowControls.minimize')"
+    :maximize-label="t('windowControls.maximize')"
+    :close-label="t('windowControls.close')">
+    <template #identidad>
+      <img :src="appIcon" class="h-8 w-8" :alt="t('views.app.iconAlt')">
+    </template>
+
+    <!-- El nombre al medio de la ventana entera. Estaba centrado con un tercer
+         `div` vacío tirando contra el `justify-between` de la barra propia, y
+         eso lo deja centrado respecto de lo que sobra entre el icono y los
+         controles: los tres botones ocupan bastante más que el icono, así que
+         se corría. -->
+    <template #centro>
+      <span class="font-title font-semibold text-lg">{{ t('views.app.title') }}</span>
+    </template>
+
+    <div class="relative flex min-h-0 min-w-0 flex-1 overflow-hidden p-1">
       <!-- La barra es la de `@vasakgroup/vue-libvasak`. Nació acá y la copiaron
            la tienda y el monitor a mano; ahora vive en un solo lugar y cuando
            cambie cambia en todas las ventanas a la vez. -->
@@ -75,5 +84,5 @@ const sidebarCategories = computed<SidebarCategory[]>(() =>
 				<slot />
 			</main>
     </div>
-  </div>
+  </WindowFrame>
 </template>

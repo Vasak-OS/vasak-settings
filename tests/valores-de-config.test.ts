@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { booleanoDeConfig, escribirEsquema, limpiarEstilo } from '../src/tools/valores-de-config';
+import {
+	booleanoDeConfig,
+	escribirEsquema,
+	escribirPosicionDeLaBarra,
+	limpiarEstilo,
+	POSICIONES_DE_LA_BARRA,
+	posicionDeLaBarra,
+} from '../src/tools/valores-de-config';
 
 /**
  * Las claves que el plugin de configuración transporta sin conocer llegan como
@@ -97,5 +104,48 @@ describe('limpiarEstilo', () => {
 		limpiarEstilo(style);
 
 		expect(style).toEqual({ darkmode: true, 'color-scheme': 'x', radius: 8 });
+	});
+});
+
+describe('posicionDeLaBarra', () => {
+	test('sin nada puesto, la barra va arriba', () => {
+		// Es donde estuvo siempre y donde la gente la busca.
+		expect(posicionDeLaBarra({})).toBe('top');
+		expect(posicionDeLaBarra(null)).toBe('top');
+		expect(posicionDeLaBarra({ window: {} })).toBe('top');
+	});
+
+	test('los cuatro lados se leen', () => {
+		for (const lado of POSICIONES_DE_LA_BARRA) {
+			expect(posicionDeLaBarra({ window: { barPosition: lado } })).toBe(lado);
+		}
+	});
+
+	test('cualquier otra cosa vale por arriba', () => {
+		// El archivo se edita a mano. Con una aserción de tipo, un `"izquierda"`
+		// llegaría hasta el marco y ahí no coincide con ninguna dirección: la
+		// ventana quedaría sin acomodo.
+		expect(posicionDeLaBarra({ window: { barPosition: 'izquierda' } })).toBe('top');
+		expect(posicionDeLaBarra({ window: { barPosition: 3 } })).toBe('top');
+		expect(posicionDeLaBarra({ window: 'left' })).toBe('top');
+	});
+});
+
+describe('escribirPosicionDeLaBarra', () => {
+	test('deja la posición elegida', () => {
+		const config: Record<string, unknown> = {};
+
+		escribirPosicionDeLaBarra(config, 'left');
+
+		expect(config.window).toEqual({ barPosition: 'left' });
+	});
+
+	test('y no se lleva puesto lo que ya hubiera en la sección', () => {
+		// `window` es una sección compartida con lo que venga después.
+		const config: Record<string, unknown> = { window: { otraCosa: 1, barPosition: 'top' } };
+
+		escribirPosicionDeLaBarra(config, 'bottom');
+
+		expect(config.window).toEqual({ otraCosa: 1, barPosition: 'bottom' });
 	});
 });
