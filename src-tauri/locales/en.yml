@@ -44,6 +44,7 @@ sidebar:
     appearanceWallpaper: Wallpapers
     appearanceDesktop: Desktop
     appearancePanel: Panel
+    appearanceWindows: Windows
     multimediaAudio: Audio output
     multimediaAudioInput: Audio input
     wayfireInput: Keyboard and Mouse
@@ -545,6 +546,25 @@ views:
     trayHint: The icons applications put in the system tray.
     privacy: Camera and microphone
     privacyHint: Warns while an application is using the camera or the microphone.
+  appearanceWindows:
+    title: Windows
+    description: Where the application bar goes, the one with the icon and the buttons.
+    applyChanges: Apply Changes
+    loading: Loading configuration...
+    errorLoading: 'Error loading the window configuration: {0}'
+    errorSaving: 'Error saving the window configuration: {0}'
+    saved: Window configuration saved
+    bar: Window bar
+    barPosition: Position
+    barPositionHint: >-
+      Open windows rearrange themselves; nothing needs restarting. On the sides
+      the bar narrows and what it holds shrinks: tabs become button-sized and
+      the search becomes a magnifier.
+    lados:
+      top: Top
+      bottom: Bottom
+      left: Left
+      right: Right
   appearanceDesktop:
     title: Desktop Files
     description: Adjust the visibility and size of the icons on the desktop background.

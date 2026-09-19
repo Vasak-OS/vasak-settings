@@ -101,3 +101,49 @@ export function escribirIndicadoresDelPanel(
 	const anterior = (config.panel as Record<string, unknown> | undefined) ?? {};
 	config.panel = { ...anterior, ...valores };
 }
+
+/** Los cuatro lados donde puede quedar la barra de una ventana. */
+export const POSICIONES_DE_LA_BARRA = ['top', 'bottom', 'left', 'right'] as const;
+
+export type PosicionDeLaBarra = (typeof POSICIONES_DE_LA_BARRA)[number];
+
+/** Arriba, que es donde estuvo siempre y donde la gente la busca. */
+export const POSICION_DE_LA_BARRA_POR_OMISION: PosicionDeLaBarra = 'top';
+
+/**
+ * De qué lado va la barra de las ventanas, según `window.barPosition`.
+ *
+ * Lo lee el marco compartido de `@vasakgroup/vue-libvasak`, que es el que
+ * dibuja la barra en todas las aplicaciones. Acá se lee con el **mismo**
+ * criterio: cualquier cosa que no sea uno de los cuatro lados vale por arriba.
+ * Leerlo distinto haría que esta pantalla diga una cosa y las ventanas hagan
+ * otra, que es exactamente lo que pasó con el esquema de color.
+ *
+ * El archivo se puede editar a mano, así que el valor no viene de nuestro
+ * código: se comprueba en lugar de afirmarlo con una aserción.
+ */
+export function posicionDeLaBarra(config: unknown): PosicionDeLaBarra {
+	const seccion =
+		config && typeof config === 'object'
+			? ((config as Record<string, unknown>).window as Record<string, unknown> | undefined)
+			: undefined;
+	const puesta = seccion?.barPosition;
+	return POSICIONES_DE_LA_BARRA.includes(puesta as PosicionDeLaBarra)
+		? (puesta as PosicionDeLaBarra)
+		: POSICION_DE_LA_BARRA_POR_OMISION;
+}
+
+/**
+ * Deja la sección `window` con la posición elegida.
+ *
+ * Conserva lo que ya hubiera: es una sección compartida con lo que venga
+ * después, y reemplazarla entera borraría claves ajenas. Lo mismo que hace
+ * `escribirIndicadoresDelPanel`.
+ */
+export function escribirPosicionDeLaBarra(
+	config: Record<string, unknown>,
+	posicion: PosicionDeLaBarra
+): void {
+	const anterior = (config.window as Record<string, unknown> | undefined) ?? {};
+	config.window = { ...anterior, barPosition: posicion };
+}

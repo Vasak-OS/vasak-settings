@@ -44,6 +44,7 @@ sidebar:
     appearanceWallpaper: Fondos
     appearanceDesktop: Escritorio
     appearancePanel: Panel
+    appearanceWindows: Ventanas
     multimediaAudio: Audio salida
     multimediaAudioInput: Audio entrada
     wayfireInput: Teclado y Ratón
@@ -548,6 +549,25 @@ views:
     trayHint: Los iconos que las aplicaciones ponen en la bandeja del sistema.
     privacy: Cámara y micrófono
     privacyHint: Avisa mientras una aplicación está usando la cámara o el micrófono.
+  appearanceWindows:
+    title: Ventanas
+    description: Dónde va la barra de las aplicaciones, la que lleva el icono y los botones.
+    applyChanges: Aplicar Cambios
+    loading: Cargando configuración...
+    errorLoading: 'Error cargando la configuración de las ventanas: {0}'
+    errorSaving: 'Error guardando la configuración de las ventanas: {0}'
+    saved: Configuración de las ventanas guardada
+    bar: Barra de la ventana
+    barPosition: Posición
+    barPositionHint: >-
+      Las ventanas abiertas se acomodan solas; no hace falta reiniciar nada. A
+      los costados la barra se angosta y lo que lleva adentro se encoge: las
+      pestañas quedan del tamaño de un botón y el buscador, de una lupa.
+    lados:
+      top: Arriba
+      bottom: Abajo
+      left: A la izquierda
+      right: A la derecha
   appearanceDesktop:
     title: Archivos del Escritorio
     description: Ajusta la visibilidad y el tamaño de los iconos en el fondo de escritorio.

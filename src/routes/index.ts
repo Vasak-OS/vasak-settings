@@ -35,6 +35,11 @@ const routes = [
 		component: () => import('@/views/AppearancePanelView.vue'),
 	},
 	{
+		path: '/appearance-windows',
+		name: 'appearance-windows',
+		component: () => import('@/views/AppearanceWindowsView.vue'),
+	},
+	{
 		path: '/appearance-fonts',
 		name: 'appearance-fonts',
 		component: () => import('@/views/AppearanceFontsView.vue'),
