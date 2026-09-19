@@ -39,7 +39,7 @@ function handleToggle(value: boolean) {
 </script>
 
 <template>
-	<article class="rounded-corner border border-ui-border bg-ui-surface/40">
+	<article class="rounded-corner border border-ui-border bg-ui-surface/70">
 		<header class="flex items-start gap-3 p-4">
 			<img :src="iconSrc" alt="" class="mt-0.5 h-5 w-5 shrink-0" />
 

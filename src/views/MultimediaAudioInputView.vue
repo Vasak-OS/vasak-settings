@@ -169,7 +169,7 @@ onUnmounted(() => {
 		<div class="mt-2 grid gap-6 xl:grid-cols-2">
 			<SectionCard>
 				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.multimediaAudioInput.inputLevel') }}</h3>
-				<div class="flex items-center gap-4 rounded-corner border border-ui-border bg-ui-surface/40 p-4">
+				<div class="flex items-center gap-4 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 					<button
 						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner border transition-colors hover:bg-primary hover:text-white"
 						:class="
@@ -243,7 +243,7 @@ onUnmounted(() => {
 						:class="
 							selectedInputDeviceId === device.id
 								? 'border-primary/50 bg-primary/5 shadow-sm'
-								: 'border-ui-border bg-ui-surface/40 hover:border-ui-border.hover hover:bg-ui-surface'
+								: 'border-ui-border bg-ui-surface/70 hover:border-ui-border.hover hover:bg-ui-surface'
 						"
 						@click="selectInputDevice(device.id)"
 					>

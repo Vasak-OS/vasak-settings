@@ -7,7 +7,7 @@
  * la ventana en la máquina de quien programa, que tiene las dos cosas.
  */
 
-import type { SidebarCategory } from '@/types/sidebar';
+import type { SidebarCategory } from '@vasakgroup/vue-libvasak';
 
 /** Hay, no hay, o no se pudo averiguar. */
 export type Disponibilidad = 'si' | 'no' | 'desconocido';

@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import type { SidebarCategory } from '@vasakgroup/vue-libvasak';
 import {
 	type Disponibilidad,
 	HARDWARE_POR_SECCION,
@@ -6,7 +7,6 @@ import {
 	menuSegunHardware,
 	seccionInaccesible,
 } from '../src/composables/secciones-por-hardware';
-import type { SidebarCategory } from '../src/types/sidebar';
 
 /**
  * Un equipo de escritorio sin placa inalámbrica mostraba igual la sección de

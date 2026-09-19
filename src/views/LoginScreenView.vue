@@ -314,7 +314,7 @@ const save = async () => {
 							"
 							@click="applyBackgroundPath(wallpaperPath)"
 						>
-							<div class="aspect-video w-full overflow-hidden bg-ui-surface/40">
+							<div class="aspect-video w-full overflow-hidden bg-ui-surface/70">
 								<img
 									v-if="thumbnailFor(wallpaperPath)"
 									:src="thumbnailFor(wallpaperPath)"

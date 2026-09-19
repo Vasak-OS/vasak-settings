@@ -25,6 +25,8 @@ common:
   saveSectionError: "Error guardando sección [{0}]"
 
 sidebar:
+  collapse: Plegar la barra lateral
+  expand: Desplegar la barra lateral
   noCategories: No hay categorías disponibles.
   general: General
   appearance: Apariencia

@@ -336,7 +336,7 @@ onMounted(load);
 			<article
 				v-for="b in bloqueados"
 				:key="claveDe(b)"
-				class="rounded-corner border border-ui-border bg-ui-surface/40 p-4 flex flex-col gap-3"
+				class="rounded-corner border border-ui-border bg-ui-surface/70 p-4 flex flex-col gap-3"
 			>
 				<div class="min-w-0">
 					<h3 class="font-semibold text-tx-main truncate">{{ b.perfil }}</h3>
@@ -386,7 +386,7 @@ onMounted(load);
 				<li v-for="r in recursos" :key="r.id">
 					<button
 						type="button"
-						class="flex w-full items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/40 p-3 text-left hover:bg-ui-surface"
+						class="flex w-full items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 p-3 text-left hover:bg-ui-surface"
 						@click="abierto = r.id"
 					>
 						<img v-if="iconos[r.id]?.value" :src="iconos[r.id].value" alt="" class="size-6 shrink-0" />
@@ -444,7 +444,7 @@ onMounted(load);
 					<li
 						v-for="{ entrada, decision } in recursoActivo?.apps ?? []"
 						:key="entrada.application.binary_path"
-						class="flex flex-wrap items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/40 p-3"
+						class="flex flex-wrap items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 p-3"
 					>
 						<IconoDeApp :nombre="entrada.application.icon" />
 

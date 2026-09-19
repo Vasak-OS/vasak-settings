@@ -216,7 +216,7 @@ onMounted(loadShortcuts);
 						<div
 							v-for="item in visibleShortcuts"
 							:key="`${item.index}-${item.shortcut.keys}-${item.shortcut.target}`"
-							class="rounded-corner border border-ui-border bg-ui-surface/40 p-4"
+							class="rounded-corner border border-ui-border bg-ui-surface/70 p-4"
 						>
 							<div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
 								<div class="min-w-0 flex-1">

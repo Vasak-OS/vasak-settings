@@ -674,7 +674,7 @@ onUnmounted(() => {
 				<li
 					v-for="account in accounts"
 					:key="account.id"
-					class="flex items-center justify-between rounded-corner border border-ui-border bg-ui-surface/40 px-4 py-3"
+					class="flex items-center justify-between rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-3"
 				>
 					<div class="flex min-w-0 flex-col">
 						<span class="truncate text-sm font-medium text-tx-primary">
@@ -865,7 +865,7 @@ onUnmounted(() => {
 					:key="provider.id"
 					:disabled="loading"
 					:title="motivoNoDisponible(provider) && t('views.onlineAccounts.credentials.needed')"
-					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/40 px-4 py-5 text-center transition-colors"
+					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-5 text-center transition-colors"
 					:class="
 						loading
 							? 'opacity-60 cursor-not-allowed'
@@ -901,7 +901,7 @@ onUnmounted(() => {
 
 				<button
 					:disabled="loading"
-					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/40 px-4 py-5 text-center transition-colors"
+					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-5 text-center transition-colors"
 					:class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'"
 					@click="abrirFormularioPersonalizado"
 				>
@@ -1085,7 +1085,7 @@ onUnmounted(() => {
 						:class="
 							hallazgo.resultado.url
 								? 'border-status-success/30 bg-status-success/10 text-status-success'
-								: 'border-ui-border bg-ui-surface/40 text-tx-muted'
+								: 'border-ui-border bg-ui-surface/70 text-tx-muted'
 						"
 					>
 						<span class="font-medium">
