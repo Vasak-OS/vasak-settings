@@ -1,7 +1,7 @@
 {
   "name": "vasak-settings",
   "private": true,
-  "version": "0.14.1",
+  "version": "0.14.2",
   "type": "module",
   "scripts": {
     "dev": "bunx --bun vite",
@@ -25,7 +25,7 @@
     "@vasakgroup/plugin-vsk-contextual-menu": "^2.0.2",
     "@vasakgroup/plugin-vsk-journal": "^2.0.0",
     "@vasakgroup/tauri-plugin-i18n": "^2.3.0",
-    "@vasakgroup/vue-libvasak": "^0.3.5",
+    "@vasakgroup/vue-libvasak": "^0.3.6",
     "path": "^0.12.7",
     "pinia": "^3.0.4",
     "url": "^0.11.4",
