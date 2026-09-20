@@ -284,8 +284,11 @@ views:
       videollamadas del navegador— sí queda anotado acá y se puede retirar, con
       la salvedad de que por ese camino la aplicación se identifica con un
       nombre que declara ella misma. Y compartir la pantalla se decide acá sólo
-      cuando la aplicación lo pide por el portal: un programa puede capturarla
-      por su cuenta sin que aparezca nada.
+      cuando la aplicación lo pide por el portal. Por fuera de ese camino el
+      escritorio ya no le entrega la pantalla a cualquier programa —sólo las
+      herramientas que la necesitan para funcionar pueden tomarla—, pero
+      cualquiera puede pedirle a una de ellas que la tome por él, y eso no queda
+      anotado en ningún lado.
     notConfined: >-
       Esta aplicación la instaló el sistema, así que ningún perfil la limita:
       cambiar esto no le quita ni le da acceso.
