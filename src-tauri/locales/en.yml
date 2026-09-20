@@ -529,12 +529,23 @@ views:
 
   appearancePanel:
     title: Panel
-    description: Choose what the bar at the top of the screen shows.
+    description: Where the desktop bar sits and what it shows.
     applyChanges: Apply Changes
     loading: Loading configuration...
     errorLoading: 'Error loading the panel configuration: {0}'
     errorSaving: 'Error saving the panel configuration: {0}'
     saved: Panel configuration saved
+    bar: Desktop bar
+    position: Position
+    positionHint: >-
+      Top, bottom or on a side. The panel is the same size on all four: on the
+      sides it stands up and the icons stack. It moves right away, on the main
+      screen, and maximised windows make room for it.
+    lados:
+      top: Top
+      bottom: Bottom
+      left: Left
+      right: Right
     indicators: Indicators
     weather: Weather
     weatherHint: The icon and the temperature for your city, next to the player.

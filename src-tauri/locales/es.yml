@@ -532,12 +532,23 @@ views:
 
   appearancePanel:
     title: Panel
-    description: Elegí qué muestra la barra que está siempre arriba de la pantalla.
+    description: Dónde va la barra del escritorio y qué muestra.
     applyChanges: Aplicar Cambios
     loading: Cargando configuración...
     errorLoading: 'Error cargando la configuración del panel: {0}'
     errorSaving: 'Error guardando la configuración del panel: {0}'
     saved: Configuración del panel guardada
+    bar: Barra del escritorio
+    position: Posición
+    positionHint: >-
+      Arriba, abajo o de costado. El panel mide lo mismo de los cuatro lados: a
+      los costados se pone de pie y los iconos se apilan. Se mueve en el acto,
+      en la pantalla principal, y las ventanas maximizadas le dejan el lugar.
+    lados:
+      top: Arriba
+      bottom: Abajo
+      left: A la izquierda
+      right: A la derecha
     indicators: Indicadores
     weather: Clima
     weatherHint: El icono y la temperatura de tu ciudad, al lado del reproductor.

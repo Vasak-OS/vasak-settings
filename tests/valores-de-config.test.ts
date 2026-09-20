@@ -3,9 +3,12 @@ import {
 	booleanoDeConfig,
 	escribirEsquema,
 	escribirPosicionDeLaBarra,
+	escribirPosicionDelPanel,
 	limpiarEstilo,
 	POSICIONES_DE_LA_BARRA,
+	POSICIONES_DEL_PANEL,
 	posicionDeLaBarra,
+	posicionDelPanel,
 } from '../src/tools/valores-de-config';
 
 /**
@@ -147,5 +150,55 @@ describe('escribirPosicionDeLaBarra', () => {
 		escribirPosicionDeLaBarra(config, 'bottom');
 
 		expect(config.window).toEqual({ otraCosa: 1, barPosition: 'bottom' });
+	});
+});
+
+describe('posicionDelPanel', () => {
+	test('sin nada puesto, el panel va arriba', () => {
+		// La sección `panel` existe desde antes que esta clave —lleva los
+		// interruptores de los indicadores—, así que lo normal en una
+		// instalación que viene de antes es que la sección esté y la clave no.
+		expect(posicionDelPanel({})).toBe('top');
+		expect(posicionDelPanel(null)).toBe('top');
+		expect(posicionDelPanel({ panel: {} })).toBe('top');
+		expect(posicionDelPanel({ panel: { weather: false } })).toBe('top');
+	});
+
+	test('los cuatro lados se leen', () => {
+		for (const lado of POSICIONES_DEL_PANEL) {
+			expect(posicionDelPanel({ panel: { position: lado } })).toBe(lado);
+		}
+	});
+
+	test('cualquier otra cosa vale por arriba', () => {
+		// El escritorio lee esta clave con el mismo criterio. Si acá se afirmara
+		// el tipo, esta pantalla mostraría «izquierda» y el panel seguiría
+		// arriba, que es la contradicción que ya pasó con el esquema de color.
+		expect(posicionDelPanel({ panel: { position: 'izquierda' } })).toBe('top');
+		expect(posicionDelPanel({ panel: { position: 3 } })).toBe('top');
+		expect(posicionDelPanel({ panel: 'left' })).toBe('top');
+	});
+});
+
+describe('escribirPosicionDelPanel', () => {
+	test('deja la posición elegida', () => {
+		const config: Record<string, unknown> = {};
+
+		escribirPosicionDelPanel(config, 'bottom');
+
+		expect(config.panel).toEqual({ position: 'bottom' });
+	});
+
+	test('y no apaga los indicadores que ya estaban', () => {
+		// Los interruptores viven en la misma sección: reemplazarla entera los
+		// dejaría todos en blanco, o sea todos encendidos, cada vez que alguien
+		// mueve el panel.
+		const config: Record<string, unknown> = {
+			panel: { weather: false, tray: false, position: 'top' },
+		};
+
+		escribirPosicionDelPanel(config, 'left');
+
+		expect(config.panel).toEqual({ weather: false, tray: false, position: 'left' });
 	});
 });

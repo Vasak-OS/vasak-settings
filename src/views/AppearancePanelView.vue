@@ -6,13 +6,21 @@ import {
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { SelectField } from '@vasakgroup/vue-libvasak';
 import { onMounted, type Ref, ref } from 'vue';
 import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SwitchToggle from '@/components/ui/SwitchToggle.vue';
-import { escribirIndicadoresDelPanel, indicadoresDelPanel } from '@/tools/valores-de-config';
+import {
+	escribirIndicadoresDelPanel,
+	escribirPosicionDelPanel,
+	indicadoresDelPanel,
+	POSICIONES_DEL_PANEL,
+	type PosicionDelPanel,
+	posicionDelPanel,
+} from '@/tools/valores-de-config';
 
 const { t } = useI18n();
 
@@ -38,6 +46,15 @@ const transfer = ref(true);
 const tray = ref(true);
 const privacy = ref(true);
 
+/**
+ * De qué lado queda la barra.
+ *
+ * Arriba por omisión, que es donde estuvo siempre. El escritorio la reancla y
+ * reacomoda lo de adentro al recibir `config-changed`, así que moverla no pide
+ * reiniciar la sesión.
+ */
+const posicion = ref<PosicionDelPanel>('top');
+
 onMounted(async () => {
 	try {
 		configStore.value = useConfigStore();
@@ -51,6 +68,7 @@ onMounted(async () => {
 		transfer.value = panel.transfer;
 		tray.value = panel.tray;
 		privacy.value = panel.privacy;
+		posicion.value = posicionDelPanel(vskConfig.value);
 	} catch (err) {
 		error.value = t('views.appearancePanel.errorLoading').replace('{0}', String(err));
 	} finally {
@@ -73,6 +91,8 @@ const saveConfig = async () => {
 			tray: tray.value,
 			privacy: privacy.value,
 		});
+
+		escribirPosicionDelPanel(vskConfig.value as unknown as Record<string, unknown>, posicion.value);
 
 		await writeConfig(vskConfig.value);
 
@@ -116,6 +136,33 @@ const saveConfig = async () => {
 			<AlertMessage v-if="error" :message="error" tone="error" />
 
 			<AlertMessage v-if="successMessage" :message="successMessage" tone="success" />
+
+			<SectionCard>
+				<h3 class="mb-4 text-lg font-medium text-tx-primary">
+					{{ t('views.appearancePanel.bar') }}
+				</h3>
+
+				<div class="flex items-start justify-between gap-4">
+					<!-- Sólo la explicación: el nombre del control lo dice el `label`
+					     del propio desplegable, y repetirlo acá lo escribe dos veces
+					     una al lado de la otra. -->
+					<p class="text-xs text-tx-muted">
+						{{ t('views.appearancePanel.positionHint') }}
+					</p>
+					<!-- La etiqueta va **dentro** del componente: un `<label>` suelto
+					     al lado no está asociado a nada, y un lector de pantalla
+					     anuncia un desplegable sin nombre. -->
+					<SelectField
+						v-model="posicion"
+						:label="t('views.appearancePanel.position')"
+						class="w-48 shrink-0"
+					>
+						<option v-for="lado in POSICIONES_DEL_PANEL" :key="lado" :value="lado">
+							{{ t(`views.appearancePanel.lados.${lado}`) }}
+						</option>
+					</SelectField>
+				</div>
+			</SectionCard>
 
 			<SectionCard>
 				<h3 class="mb-4 text-lg font-medium text-tx-primary">

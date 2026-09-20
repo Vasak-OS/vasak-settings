@@ -147,3 +147,50 @@ export function escribirPosicionDeLaBarra(
 	const anterior = (config.window as Record<string, unknown> | undefined) ?? {};
 	config.window = { ...anterior, barPosition: posicion };
 }
+
+/**
+ * Los cuatro lados donde puede quedar el panel del escritorio.
+ *
+ * Son los mismos que los de la barra de las ventanas, y por eso comparten el
+ * tipo: son dos preferencias distintas —una mueve la barra de cada ventana, la
+ * otra la barra del escritorio— con el mismo juego de valores.
+ */
+export const POSICIONES_DEL_PANEL = POSICIONES_DE_LA_BARRA;
+
+export type PosicionDelPanel = PosicionDeLaBarra;
+
+/** Arriba, que es donde el panel estuvo siempre y donde la gente lo busca. */
+export const POSICION_DEL_PANEL_POR_OMISION: PosicionDelPanel = 'top';
+
+/**
+ * De qué lado va el panel, según `panel.position`.
+ *
+ * El escritorio lo lee dos veces con este mismo criterio —el backend para
+ * anclar la superficie, la interfaz para acomodar los iconos—, y las dos
+ * toleran que no diga nada. Leerlo distinto acá haría que esta pantalla muestre
+ * un lado y el panel esté en otro.
+ */
+export function posicionDelPanel(config: unknown): PosicionDelPanel {
+	const seccion =
+		config && typeof config === 'object'
+			? ((config as Record<string, unknown>).panel as Record<string, unknown> | undefined)
+			: undefined;
+	const puesta = seccion?.position;
+	return POSICIONES_DEL_PANEL.includes(puesta as PosicionDelPanel)
+		? (puesta as PosicionDelPanel)
+		: POSICION_DEL_PANEL_POR_OMISION;
+}
+
+/**
+ * Deja la sección `panel` con la posición elegida.
+ *
+ * Conserva lo que ya hubiera: en esa sección viven los interruptores de los
+ * indicadores, y reemplazarla entera los apagaría todos.
+ */
+export function escribirPosicionDelPanel(
+	config: Record<string, unknown>,
+	posicion: PosicionDelPanel
+): void {
+	const anterior = (config.panel as Record<string, unknown> | undefined) ?? {};
+	config.panel = { ...anterior, position: posicion };
+}
