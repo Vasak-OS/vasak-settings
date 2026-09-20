@@ -1,6 +1,14 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends string | number">
 interface Props {
-	modelValue: string | number;
+	/**
+	 * El valor elegido, del tipo que use quien lo pone.
+	 *
+	 * Era `string | number` fijo, y eso obliga a quien tiene algo más estrecho
+	 * —un `Ref<FontTarget>`, por ejemplo— a aceptar de vuelta un valor que
+	 * nunca va a llegar: sólo se emiten los que están en `options`. Con
+	 * `strictTemplates` eso dejó de pasar en silencio.
+	 */
+	modelValue: T;
 	options: { label: string; value: string | number }[] | string[];
 	id?: string;
 	disabled?: boolean;
@@ -14,12 +22,30 @@ const props = withDefaults(defineProps<Props>(), {
 // A <select> always yields a string, so narrowing the emit lets callers type
 // their handlers as (value: string) instead of widening every one of them.
 const emit = defineEmits<{
-	'update:modelValue': [value: string];
+	'update:modelValue': [value: T];
 }>();
+
+/** El valor que lleva una opción, sea texto suelto o `{ label, value }`. */
+const valorDe = (opcion: Props['options'][number]) =>
+	typeof opcion === 'string' ? opcion : opcion.value;
 
 const updateValue = (event: Event) => {
 	const target = event.target as HTMLSelectElement;
-	emit('update:modelValue', target.value);
+	// El `<select>` siempre devuelve una cadena, y emitir `'5000'` donde quien
+	// escucha espera `5000` le deja un tipo que miente: la comparación con los
+	// valores de `options` falla sin decir por qué. Antes se emitía la cadena
+	// siempre, y como el modelo era `string | number` nadie se enteraba.
+	//
+	// El valor sale de la opción elegida y no de convertir según el tipo del
+	// modelo. Mirar el modelo es adivinar: con una lista mezclada —`'auto'` y
+	// `5000` juntos, como la de los intervalos— elegir `'auto'` con un modelo
+	// numérico daba `NaN`, y elegir `5000` con un modelo de texto daba
+	// `'5000'`. Lo marcó la revisión. La opción sabe lo que vale.
+	const elegida = props.options.find((opcion) => String(valorDe(opcion)) === target.value);
+	// Si no hay ninguna, el `<select>` está dibujando algo que no salió de
+	// `options` —un `<option>` puesto a mano en la ranura, por ejemplo—: va la
+	// cadena, que es lo único que se sabe.
+	emit('update:modelValue', (elegida === undefined ? target.value : valorDe(elegida)) as T);
 };
 </script>
 
