@@ -90,4 +90,39 @@ describe('SelectInput', () => {
 
 		expect(vista.emitted('update:modelValue')?.[0]).toEqual([2]);
 	});
+
+	test('y con una lista mezclada, cada opción devuelve lo suyo', async () => {
+		// El tipo sale de la opción elegida, no de convertir según el tipo que
+		// tenga el modelo en ese momento. Adivinar por el modelo rompía las dos
+		// puntas de una lista mezclada: con el modelo en `5000`, elegir `auto`
+		// daba `NaN`; con el modelo en `auto`, elegir `5000` daba `'5000'`. Lo
+		// marcó la revisión.
+		const mezcladas = [
+			{ label: 'automático', value: 'auto' },
+			{ label: '5 s', value: 5000 },
+		];
+
+		vista = mount(SelectInput, { props: { modelValue: 5000, options: mezcladas } });
+		await vista.get('select').setValue('auto');
+		expect(vista.emitted('update:modelValue')?.[0]).toEqual(['auto']);
+		vista.unmount();
+
+		vista = mount(SelectInput, { props: { modelValue: 'auto', options: mezcladas } });
+		await vista.get('select').setValue('5000');
+		expect(vista.emitted('update:modelValue')?.[0]).toEqual([5000]);
+	});
+
+	test('y un valor que no está en la lista sale como la cadena que es', async () => {
+		// La red de abajo: si el `<select>` llega a tener un valor que no salió
+		// de `options`, no hay opción de la que sacar el tipo y va lo único que
+		// se sabe. Sin esa salida, `find` no encuentra nada y lo que se emite
+		// es `undefined`, que es peor que una cadena.
+		vista = mount(SelectInput, { props: { modelValue: 'a', options: ['a', 'b'] } });
+		const select = vista.get('select').element as HTMLSelectElement;
+		select.insertAdjacentHTML('beforeend', '<option value="suelta">suelta</option>');
+
+		await vista.get('select').setValue('suelta');
+
+		expect(vista.emitted('update:modelValue')?.[0]).toEqual(['suelta']);
+	});
 });
