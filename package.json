@@ -8,6 +8,7 @@
     "build": "bunx vue-tsc --noEmit && bunx --bun vite build",
     "preview": "bunx --bun vite preview",
     "test": "bun test",
+    "secciones": "bun run scripts/secciones.ts",
     "tauri": "tauri",
     "lint": "bunx --bun biome check .",
     "lint:fix": "bunx --bun biome check --write . && bunx --bun biome format --write .",

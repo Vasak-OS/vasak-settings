@@ -1,0 +1,266 @@
+[
+	{
+		"id": "home",
+		"icono": "home",
+		"nombres": {
+			"es": "Inicio",
+			"en": "Home"
+		}
+	},
+	{
+		"id": "shortcuts",
+		"icono": "preferences-desktop-keyboard",
+		"nombres": {
+			"es": "Atajos",
+			"en": "Shortcuts"
+		}
+	},
+	{
+		"id": "default-apps",
+		"icono": "preferences-desktop-default-applications",
+		"nombres": {
+			"es": "Aplicaciones por defecto",
+			"en": "Default applications"
+		}
+	},
+	{
+		"id": "appearance-theme",
+		"icono": "preferences-theme",
+		"nombres": {
+			"es": "Tema",
+			"en": "Theme"
+		}
+	},
+	{
+		"id": "appearance-fonts",
+		"icono": "preferences-desktop-font",
+		"nombres": {
+			"es": "Fuentes",
+			"en": "Fonts"
+		}
+	},
+	{
+		"id": "appearance-icon-packs",
+		"icono": "preferences-desktop-icons",
+		"nombres": {
+			"es": "Iconos",
+			"en": "Icons"
+		}
+	},
+	{
+		"id": "appearance-wallpaper",
+		"icono": "preferences-wallpaper",
+		"nombres": {
+			"es": "Fondos",
+			"en": "Wallpapers"
+		}
+	},
+	{
+		"id": "appearance-desktop",
+		"icono": "preferences-desktop-display",
+		"nombres": {
+			"es": "Escritorio",
+			"en": "Desktop"
+		}
+	},
+	{
+		"id": "appearance-panel",
+		"icono": "preferences-system-windows",
+		"nombres": {
+			"es": "Panel",
+			"en": "Panel"
+		}
+	},
+	{
+		"id": "appearance-windows",
+		"icono": "preferences-system-windows",
+		"nombres": {
+			"es": "Ventanas",
+			"en": "Windows"
+		}
+	},
+	{
+		"id": "multimedia-audio",
+		"icono": "audio-speakers-symbolic",
+		"nombres": {
+			"es": "Audio salida",
+			"en": "Audio output"
+		}
+	},
+	{
+		"id": "multimedia-audio-input",
+		"icono": "audio-input-microphone-symbolic",
+		"nombres": {
+			"es": "Audio entrada",
+			"en": "Audio input"
+		}
+	},
+	{
+		"id": "wayfire-input",
+		"icono": "preferences-desktop-keyboard",
+		"nombres": {
+			"es": "Teclado y Ratón",
+			"en": "Keyboard and Mouse"
+		}
+	},
+	{
+		"id": "wayfire-windows",
+		"icono": "preferences-system-windows",
+		"nombres": {
+			"es": "Gestión de Ventanas",
+			"en": "Window Management"
+		}
+	},
+	{
+		"id": "wayfire-workspaces",
+		"icono": "video-display",
+		"nombres": {
+			"es": "Espacios de trabajo",
+			"en": "Workspaces"
+		}
+	},
+	{
+		"id": "wayfire-appearance",
+		"icono": "preferences-desktop-theme",
+		"nombres": {
+			"es": "Apariencia WM",
+			"en": "WM Appearance"
+		}
+	},
+	{
+		"id": "wayfire-effects",
+		"icono": "preferences-desktop-effects",
+		"nombres": {
+			"es": "Efectos",
+			"en": "Effects"
+		}
+	},
+	{
+		"id": "wayfire-autostart",
+		"icono": "system-run",
+		"nombres": {
+			"es": "Autoinicio",
+			"en": "Autostart"
+		}
+	},
+	{
+		"id": "wayfire-plugins",
+		"icono": "application-x-addon",
+		"nombres": {
+			"es": "Plugins",
+			"en": "Plugins"
+		}
+	},
+	{
+		"id": "users",
+		"icono": "system-users",
+		"nombres": {
+			"es": "Usuarios",
+			"en": "Users"
+		}
+	},
+	{
+		"id": "online-accounts",
+		"icono": "online-accounts",
+		"nombres": {
+			"es": "Cuentas en Línea",
+			"en": "Online Accounts"
+		}
+	},
+	{
+		"id": "language-keyboard",
+		"icono": "preferences-desktop-locale",
+		"nombres": {
+			"es": "Idioma y Teclado",
+			"en": "Language and Keyboard"
+		}
+	},
+	{
+		"id": "datetime",
+		"icono": "preferences-system-time",
+		"nombres": {
+			"es": "Fecha y hora",
+			"en": "Date and time"
+		}
+	},
+	{
+		"id": "brightness",
+		"icono": "display-brightness",
+		"nombres": {
+			"es": "Brillo y luz nocturna",
+			"en": "Brightness and night light"
+		}
+	},
+	{
+		"id": "power",
+		"icono": "battery",
+		"nombres": {
+			"es": "Energía",
+			"en": "Power"
+		}
+	},
+	{
+		"id": "monitors",
+		"icono": "video-display",
+		"nombres": {
+			"es": "Pantallas",
+			"en": "Displays"
+		}
+	},
+	{
+		"id": "actualizaciones",
+		"icono": "system-software-update",
+		"nombres": {
+			"es": "Actualizaciones",
+			"en": "Updates"
+		}
+	},
+	{
+		"id": "privacy-security",
+		"icono": "security-high",
+		"nombres": {
+			"es": "Privacidad y seguridad",
+			"en": "Privacy and security"
+		}
+	},
+	{
+		"id": "login-screen",
+		"icono": "preferences-system-login",
+		"nombres": {
+			"es": "Inicio de sesión",
+			"en": "Login Screen"
+		}
+	},
+	{
+		"id": "network-wifi",
+		"icono": "network-wireless",
+		"nombres": {
+			"es": "Wi-Fi",
+			"en": "Wi-Fi"
+		}
+	},
+	{
+		"id": "network-bluetooth",
+		"icono": "preferences-bluetooth",
+		"nombres": {
+			"es": "Bluetooth",
+			"en": "Bluetooth"
+		}
+	},
+	{
+		"id": "network-vpn",
+		"icono": "preferences-system-network-vpn",
+		"nombres": {
+			"es": "VPN",
+			"en": "VPN"
+		}
+	},
+	{
+		"id": "phone-devices",
+		"icono": "smartphone",
+		"nombres": {
+			"es": "Teléfonos",
+			"en": "Phones"
+		}
+	}
+]
