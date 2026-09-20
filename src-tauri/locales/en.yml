@@ -281,8 +281,10 @@ views:
       screen sharing, and the camera in browser video calls — is recorded here
       and can be taken back, with the caveat that on that path an application
       identifies itself with a name it declares. And screen sharing is decided
-      here only when an application asks through the portal: a program can
-      capture the screen on its own without anything showing up.
+      here only when an application asks through the portal. Outside that path
+      the desktop no longer hands the screen to just any program — only the
+      tools that need it to do their job can take it — but anyone can ask one of
+      them to take it on their behalf, and that is not recorded anywhere.
     notConfined: >-
       The system installed this application, so no profile limits it: changing
       this neither grants nor removes access.

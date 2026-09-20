@@ -120,13 +120,26 @@ describe('los recursos de privacidad', () => {
 			// instaló, que es la afirmación que sobra.
 			expect(scope).not.toContain('que no instaló el sistema');
 			expect(scope).not.toContain('the system did not install');
-			// La otra puerta de atrás, la de compartir pantalla: el permiso sólo
-			// alcanza a lo que pasa por el portal, y cualquier cliente puede
-			// capturar con `zwlr_screencopy` sin pedirle nada a nadie. Medido con
-			// `grim` sobre una sesión de verdad. Sin esta frase, la pestaña de
-			// compartir pantalla se lee como una protección completa.
+			// La otra puerta de atrás, la de compartir pantalla. El permiso sólo
+			// alcanza a lo que pasa por el portal; por fuera, el compositor ya no
+			// le ofrece los protocolos de captura a cualquier cliente —eso lo
+			// cerró `permisos-globales`, y un binario que los pida por su cuenta
+			// rebota—, **pero** las herramientas que sí los tienen las puede
+			// ejecutar cualquiera. Medido: un guion de dos líneas que llama a
+			// `grim` capturó la pantalla entera sin estar en ninguna lista.
+			//
+			// Por eso el texto ya no puede decir «un programa puede capturarla
+			// por su cuenta» —eso dejó de ser cierto— ni prometer que nadie puede
+			// capturar, que nunca lo fue. Tiene que decir las dos mitades, y eso
+			// es lo que se comprueba.
 			expect(scope).toMatch(/portal/);
-			expect(scope).toMatch(/por su cuenta|on its own/);
+			// Los saltos del YAML parten las frases en cualquier lado, así que
+			// los espacios van flexibles: la frase de arriba llegó cortada entre
+			// «ask one of» y «them».
+			expect(scope).toMatch(/pedirle\s+a\s+una\s+de\s+ellas|ask\s+one\s+of\s+them/);
+			expect(scope).not.toMatch(
+				/un\s+programa\s+puede\s+capturarla|capture\s+the\s+screen\s+on\s+its\s+own/
+			);
 		}
 	});
 
