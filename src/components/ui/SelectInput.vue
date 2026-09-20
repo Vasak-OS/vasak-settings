@@ -1,6 +1,14 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends string | number">
 interface Props {
-	modelValue: string | number;
+	/**
+	 * El valor elegido, del tipo que use quien lo pone.
+	 *
+	 * Era `string | number` fijo, y eso obliga a quien tiene algo más estrecho
+	 * —un `Ref<FontTarget>`, por ejemplo— a aceptar de vuelta un valor que
+	 * nunca va a llegar: sólo se emiten los que están en `options`. Con
+	 * `strictTemplates` eso dejó de pasar en silencio.
+	 */
+	modelValue: T;
 	options: { label: string; value: string | number }[] | string[];
 	id?: string;
 	disabled?: boolean;
@@ -14,12 +22,18 @@ const props = withDefaults(defineProps<Props>(), {
 // A <select> always yields a string, so narrowing the emit lets callers type
 // their handlers as (value: string) instead of widening every one of them.
 const emit = defineEmits<{
-	'update:modelValue': [value: string];
+	'update:modelValue': [value: T];
 }>();
 
 const updateValue = (event: Event) => {
 	const target = event.target as HTMLSelectElement;
-	emit('update:modelValue', target.value);
+	// El `<select>` siempre devuelve una cadena. Con un modelo numérico hay que
+	// convertir: emitir `'5000'` donde quien escucha espera `5000` le deja un
+	// tipo que miente, y la comparación con los valores de `options` falla sin
+	// decir por qué. Antes se emitía la cadena siempre, y como el modelo era
+	// `string | number` nadie se enteraba.
+	const valor = typeof props.modelValue === 'number' ? Number(target.value) : target.value;
+	emit('update:modelValue', valor as T);
 };
 </script>
 

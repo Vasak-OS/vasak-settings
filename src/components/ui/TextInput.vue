@@ -31,6 +31,16 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
 	'update:modelValue': [value: string];
+	/**
+	 * La tecla que se soltó sobre el campo.
+	 *
+	 * Se declara en vez de dejarlo caer sobre el `<input>` de adentro. Caía y
+	 * funcionaba —así es como el Wi-Fi y los dispositivos confirman con Enter—
+	 * pero no estaba escrito en ningún lado, y con `strictTemplates` pasa a ser
+	 * un error. Declarado, Vue lo saca de los atributos: el `@keyup` de abajo
+	 * no es opcional, sin él Enter deja de confirmar.
+	 */
+	keyup: [evento: KeyboardEvent];
 }>();
 
 const classes = computed(() => [
@@ -58,5 +68,6 @@ function handle(event: Event) {
 		:class="classes"
 		@input="lazy ? undefined : handle($event)"
 		@change="lazy ? handle($event) : undefined"
+		@keyup="emit('keyup', $event)"
 	/>
 </template>
