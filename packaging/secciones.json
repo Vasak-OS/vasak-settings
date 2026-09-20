@@ -13,6 +13,18 @@
 		"nombres": {
 			"es": "Atajos",
 			"en": "Shortcuts"
+		},
+		"palabras": {
+			"es": [
+				"teclas",
+				"combinaciones",
+				"atajos de teclado"
+			],
+			"en": [
+				"keys",
+				"keybindings",
+				"hotkeys"
+			]
 		}
 	},
 	{
@@ -21,6 +33,17 @@
 		"nombres": {
 			"es": "Aplicaciones por defecto",
 			"en": "Default applications"
+		},
+		"palabras": {
+			"es": [
+				"navegador",
+				"predeterminadas",
+				"abrir con"
+			],
+			"en": [
+				"browser",
+				"open with"
+			]
 		}
 	},
 	{
@@ -29,6 +52,18 @@
 		"nombres": {
 			"es": "Tema",
 			"en": "Theme"
+		},
+		"palabras": {
+			"es": [
+				"colores",
+				"modo oscuro",
+				"modo claro"
+			],
+			"en": [
+				"colors",
+				"dark mode",
+				"light mode"
+			]
 		}
 	},
 	{
@@ -37,6 +72,17 @@
 		"nombres": {
 			"es": "Fuentes",
 			"en": "Fonts"
+		},
+		"palabras": {
+			"es": [
+				"tipografía",
+				"letra",
+				"tamaño del texto"
+			],
+			"en": [
+				"typography",
+				"text size"
+			]
 		}
 	},
 	{
@@ -53,6 +99,17 @@
 		"nombres": {
 			"es": "Fondos",
 			"en": "Wallpapers"
+		},
+		"palabras": {
+			"es": [
+				"fondo de pantalla",
+				"wallpaper",
+				"papel tapiz"
+			],
+			"en": [
+				"background",
+				"desktop background"
+			]
 		}
 	},
 	{
@@ -69,6 +126,18 @@
 		"nombres": {
 			"es": "Panel",
 			"en": "Panel"
+		},
+		"palabras": {
+			"es": [
+				"barra",
+				"bandeja",
+				"barra de tareas"
+			],
+			"en": [
+				"bar",
+				"tray",
+				"taskbar"
+			]
 		}
 	},
 	{
@@ -85,6 +154,19 @@
 		"nombres": {
 			"es": "Audio salida",
 			"en": "Audio output"
+		},
+		"palabras": {
+			"es": [
+				"sonido",
+				"volumen",
+				"parlantes",
+				"altavoces"
+			],
+			"en": [
+				"sound",
+				"volume",
+				"speakers"
+			]
 		}
 	},
 	{
@@ -93,6 +175,16 @@
 		"nombres": {
 			"es": "Audio entrada",
 			"en": "Audio input"
+		},
+		"palabras": {
+			"es": [
+				"micrófono",
+				"grabar"
+			],
+			"en": [
+				"microphone",
+				"recording"
+			]
 		}
 	},
 	{
@@ -101,6 +193,19 @@
 		"nombres": {
 			"es": "Teclado y Ratón",
 			"en": "Keyboard and Mouse"
+		},
+		"palabras": {
+			"es": [
+				"mouse",
+				"touchpad",
+				"puntero",
+				"velocidad del cursor"
+			],
+			"en": [
+				"touchpad",
+				"pointer",
+				"cursor speed"
+			]
 		}
 	},
 	{
@@ -109,6 +214,16 @@
 		"nombres": {
 			"es": "Gestión de Ventanas",
 			"en": "Window Management"
+		},
+		"palabras": {
+			"es": [
+				"mosaico",
+				"acomodar ventanas"
+			],
+			"en": [
+				"tiling",
+				"snapping"
+			]
 		}
 	},
 	{
@@ -117,6 +232,14 @@
 		"nombres": {
 			"es": "Espacios de trabajo",
 			"en": "Workspaces"
+		},
+		"palabras": {
+			"es": [
+				"escritorios virtuales"
+			],
+			"en": [
+				"virtual desktops"
+			]
 		}
 	},
 	{
@@ -133,6 +256,18 @@
 		"nombres": {
 			"es": "Efectos",
 			"en": "Effects"
+		},
+		"palabras": {
+			"es": [
+				"animaciones",
+				"transparencia",
+				"sombras"
+			],
+			"en": [
+				"animations",
+				"blur",
+				"shadows"
+			]
 		}
 	},
 	{
@@ -141,6 +276,17 @@
 		"nombres": {
 			"es": "Autoinicio",
 			"en": "Autostart"
+		},
+		"palabras": {
+			"es": [
+				"arranque",
+				"al iniciar sesión",
+				"inicio automático"
+			],
+			"en": [
+				"startup",
+				"run at login"
+			]
 		}
 	},
 	{
@@ -149,6 +295,16 @@
 		"nombres": {
 			"es": "Plugins",
 			"en": "Plugins"
+		},
+		"palabras": {
+			"es": [
+				"complementos",
+				"extensiones"
+			],
+			"en": [
+				"extensions",
+				"addons"
+			]
 		}
 	},
 	{
@@ -157,6 +313,18 @@
 		"nombres": {
 			"es": "Usuarios",
 			"en": "Users"
+		},
+		"palabras": {
+			"es": [
+				"contraseña",
+				"cuenta",
+				"administrador"
+			],
+			"en": [
+				"password",
+				"account",
+				"administrator"
+			]
 		}
 	},
 	{
@@ -165,6 +333,18 @@
 		"nombres": {
 			"es": "Cuentas en Línea",
 			"en": "Online Accounts"
+		},
+		"palabras": {
+			"es": [
+				"google",
+				"nextcloud",
+				"microsoft"
+			],
+			"en": [
+				"google",
+				"nextcloud",
+				"microsoft"
+			]
 		}
 	},
 	{
@@ -173,6 +353,18 @@
 		"nombres": {
 			"es": "Idioma y Teclado",
 			"en": "Language and Keyboard"
+		},
+		"palabras": {
+			"es": [
+				"distribución del teclado",
+				"región",
+				"traducción"
+			],
+			"en": [
+				"keyboard layout",
+				"locale",
+				"region"
+			]
 		}
 	},
 	{
@@ -181,6 +373,16 @@
 		"nombres": {
 			"es": "Fecha y hora",
 			"en": "Date and time"
+		},
+		"palabras": {
+			"es": [
+				"zona horaria",
+				"reloj"
+			],
+			"en": [
+				"timezone",
+				"clock"
+			]
 		}
 	},
 	{
@@ -197,6 +399,18 @@
 		"nombres": {
 			"es": "Energía",
 			"en": "Power"
+		},
+		"palabras": {
+			"es": [
+				"batería",
+				"suspender",
+				"ahorro de energía"
+			],
+			"en": [
+				"battery",
+				"suspend",
+				"power saving"
+			]
 		}
 	},
 	{
@@ -205,6 +419,19 @@
 		"nombres": {
 			"es": "Pantallas",
 			"en": "Displays"
+		},
+		"palabras": {
+			"es": [
+				"resolución",
+				"monitor",
+				"escala",
+				"hdmi"
+			],
+			"en": [
+				"resolution",
+				"scaling",
+				"hdmi"
+			]
 		}
 	},
 	{
@@ -213,6 +440,18 @@
 		"nombres": {
 			"es": "Actualizaciones",
 			"en": "Updates"
+		},
+		"palabras": {
+			"es": [
+				"paquetes",
+				"pacman",
+				"actualizar el sistema"
+			],
+			"en": [
+				"packages",
+				"pacman",
+				"upgrade"
+			]
 		}
 	},
 	{
@@ -221,6 +460,16 @@
 		"nombres": {
 			"es": "Privacidad y seguridad",
 			"en": "Privacy and security"
+		},
+		"palabras": {
+			"es": [
+				"permisos",
+				"cortafuegos"
+			],
+			"en": [
+				"permissions",
+				"firewall"
+			]
 		}
 	},
 	{
@@ -229,6 +478,16 @@
 		"nombres": {
 			"es": "Inicio de sesión",
 			"en": "Login Screen"
+		},
+		"palabras": {
+			"es": [
+				"greeter",
+				"pantalla de bienvenida"
+			],
+			"en": [
+				"greeter",
+				"display manager"
+			]
 		}
 	},
 	{
@@ -237,6 +496,18 @@
 		"nombres": {
 			"es": "Wi-Fi",
 			"en": "Wi-Fi"
+		},
+		"palabras": {
+			"es": [
+				"red",
+				"internet",
+				"inalámbrica"
+			],
+			"en": [
+				"network",
+				"internet",
+				"wireless"
+			]
 		}
 	},
 	{
@@ -245,6 +516,16 @@
 		"nombres": {
 			"es": "Bluetooth",
 			"en": "Bluetooth"
+		},
+		"palabras": {
+			"es": [
+				"auriculares",
+				"emparejar"
+			],
+			"en": [
+				"headphones",
+				"pairing"
+			]
 		}
 	},
 	{
@@ -253,6 +534,16 @@
 		"nombres": {
 			"es": "VPN",
 			"en": "VPN"
+		},
+		"palabras": {
+			"es": [
+				"wireguard",
+				"openvpn"
+			],
+			"en": [
+				"wireguard",
+				"openvpn"
+			]
 		}
 	},
 	{
@@ -261,6 +552,17 @@
 		"nombres": {
 			"es": "Teléfonos",
 			"en": "Phones"
+		},
+		"palabras": {
+			"es": [
+				"android",
+				"celular",
+				"móvil"
+			],
+			"en": [
+				"android",
+				"mobile"
+			]
 		}
 	}
 ]
