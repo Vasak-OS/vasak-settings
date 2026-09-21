@@ -147,10 +147,13 @@ pub fn poner_intervalo_de_comprobacion(dias: u32) -> Result<(), String> {
         return Err("el intervalo tiene que estar entre 1 y 30 días".into());
     }
 
-    let base = std::env::var("XDG_CONFIG_HOME")
-        .map(std::path::PathBuf::from)
-        .or_else(|_| std::env::var("HOME").map(|h| std::path::PathBuf::from(h).join(".config")))
-        .map_err(|_| "no se pudo encontrar la carpeta de configuración".to_string())?;
+    // Por `dirs::config_dir()`: leyéndolo a mano se aceptaba cualquier valor,
+    // y acá abajo se escribe un añadido de systemd. Con una base relativa el
+    // archivo caía bajo el directorio de trabajo, systemd no lo leía nunca y
+    // el intervalo de actualización quedaba sin aplicar sin que nada fallara.
+    let base = dirs::config_dir()
+        .filter(|base| base.is_absolute())
+        .ok_or_else(|| "no se pudo encontrar la carpeta de configuración".to_string())?;
     let dir = base.join("systemd/user/vasak-update.timer.d");
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
 

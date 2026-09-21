@@ -81,10 +81,11 @@ pub fn esta_activo(contenido: &str) -> Option<bool> {
 }
 
 fn ruta_del_usuario() -> Option<PathBuf> {
-    let base = std::env::var_os("XDG_CONFIG_HOME")
-        .filter(|v| !v.is_empty())
-        .map(PathBuf::from)
-        .or_else(|| dirs::home_dir().map(|h| h.join(".config")))?;
+    // Por `dirs::config_dir()` y no a mano: esto filtraba la variable **vacía**
+    // y no la **relativa**, que tiene la misma consecuencia —una ruta respecto
+    // del directorio de trabajo— y se escapa igual. Una regla en vez de dos:
+    // la cadena vacía tampoco es absoluta.
+    let base = dirs::config_dir().filter(|base| base.is_absolute())?;
     Some(base.join("environment.d").join(ARCHIVO))
 }
 
