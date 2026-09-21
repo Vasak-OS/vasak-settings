@@ -130,14 +130,22 @@ pub fn parse_progress(line: &str) -> Option<f64> {
 }
 
 fn cache_dir() -> Option<PathBuf> {
-    let base = std::env::var("XDG_CACHE_HOME")
-        .ok()
-        .map(PathBuf::from)
-        .or_else(|| {
-            std::env::var("HOME")
-                .ok()
-                .map(|h| PathBuf::from(h).join(".cache"))
-        })?;
+    cache_dir_bajo(dirs::cache_dir())
+}
+
+/// La misma decisión sin leer el entorno.
+///
+/// Aparte para poder probarla: el entorno es global al proceso y las pruebas
+/// corren en paralelo, así que una que escriba una variable decide al azar el
+/// resultado de otra.
+///
+/// Antes esto leía `XDG_CACHE_HOME` a mano y aceptaba cualquier valor, incluida
+/// la cadena vacía —`var` devuelve `Ok("")` cuando la variable está puesta y
+/// vacía— y cualquier ruta relativa, que el estándar manda ignorar. Con seis
+/// escrituras colgando de acá, eso dejaba los videos de fondo bajo el directorio
+/// de trabajo del proceso.
+fn cache_dir_bajo(base: Option<PathBuf>) -> Option<PathBuf> {
+    let base = base.filter(|base| base.is_absolute())?;
     Some(base.join("vasak").join("wallpapers"))
 }
 
@@ -663,5 +671,32 @@ mod tests {
     fn lee_el_avance_de_ffmpeg() {
         assert_eq!(parse_progress("out_time_us=2500000"), Some(2.5));
         assert_eq!(parse_progress("frame=42"), None);
+    }
+
+    #[test]
+    fn la_cache_cuelga_del_directorio_de_cache() {
+        assert_eq!(
+            cache_dir_bajo(Some(PathBuf::from("/home/pato/.cache"))),
+            Some(PathBuf::from("/home/pato/.cache/vasak/wallpapers"))
+        );
+    }
+
+    #[test]
+    fn una_base_relativa_no_da_carpeta() {
+        // Hay seis escrituras colgando de esta función, así que una base
+        // relativa dejaba los videos de fondo bajo el directorio de trabajo del
+        // proceso — y como devolvía `Some`, el resto del código creía que la
+        // caché estaba bien.
+        //
+        // Las cuatro formas de no ser absoluta: la del nombre suelto es la que
+        // se escapa cuando uno se acuerda sólo de la vacía.
+        for relativa in ["", "cache", "./cache", "../cache"] {
+            assert_eq!(
+                cache_dir_bajo(Some(PathBuf::from(relativa))),
+                None,
+                "una base de {relativa:?} no tiene que dar carpeta"
+            );
+        }
+        assert_eq!(cache_dir_bajo(None), None);
     }
 }
