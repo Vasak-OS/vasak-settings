@@ -1,13 +1,13 @@
 <script lang="ts" setup>
 import { listen } from '@tauri-apps/api/event';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { computed, onMounted, onUnmounted, type Ref, ref, watch } from 'vue';
+import { ThemeIcon } from '@vasakgroup/vue-libvasak';
+import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
-import { useReactiveSymbol } from '@/composables/useReactiveIcon';
 import {
 	getAudioDevices,
 	getAudioVolume,
@@ -54,18 +54,23 @@ const volumePercentage = computed(() => {
 	return Math.round(((currentVolume.value - min) / (max - min)) * 100);
 });
 
-const [volumeIconContent, updateIcon] = useReactiveSymbol(() =>
+/**
+ * El nombre del icono del volumen, que cambia con el silencio y con el nivel.
+ *
+ * Era un icono resuelto a mano más un `watch` que lo volvía a pedir, más tres
+ * `await updateIcon()` repartidos por las funciones que tocan el volumen. Todo
+ * eso existía porque el composable propio resolvía **una vez** y no miraba el
+ * nombre. `ThemeIcon` recibe el nombre y lo mira: alcanza con el `computed`.
+ */
+const volumeIconName = computed(() =>
 	getVolumeIconName(volumeInfo.value.is_muted, volumePercentage.value)
 );
-
-watch([() => volumeInfo.value.is_muted, volumePercentage], updateIcon);
 
 const getVolumeInfo = async () => {
 	try {
 		const info = await getAudioVolume();
 		volumeInfo.value = info;
 		currentVolume.value = info.current;
-		await updateIcon();
 	} catch (error) {
 		console.error('Error getting volume:', error);
 	}
@@ -75,7 +80,6 @@ const setVolume = async () => {
 	try {
 		volumeChanging.value = true;
 		await setAudioVolume(currentVolume.value);
-		await updateIcon();
 	} catch (error) {
 		console.error('Error setting volume:', error);
 	} finally {
@@ -135,7 +139,6 @@ onMounted(async () => {
 		if (!volumeChanging.value) {
 			currentVolume.value = event.payload.current;
 		}
-		await updateIcon();
 	});
 
 	unlistenDevices = await listen<AudioDevice[]>('audio-devices-changed', (event) => {
@@ -181,7 +184,12 @@ onUnmounted(() => {
 						:class="volumeInfo.is_muted ? 'text-status-error border border-status-error/40' : 'text-tx-primary border border-ui-border'"
 						@click="toggleMute"
 						:title="t('views.multimediaAudio.muteTooltip')" :aria-label="t('views.multimediaAudio.muteTooltip')">
-						<img v-if="volumeIconContent" :src="volumeIconContent" :alt="t('views.multimediaAudio.volumeAlt')" class="h-6 w-6" :class="{'opacity-60': volumeInfo.is_muted}" />
+						<ThemeIcon
+							:name="volumeIconName"
+							type="symbol"
+							:size="24"
+							:alt="t('views.multimediaAudio.volumeAlt')"
+							:class="{ 'opacity-60': volumeInfo.is_muted }" />
 					</button>
 
 					<div class="flex-1 px-2">

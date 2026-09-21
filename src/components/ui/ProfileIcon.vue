@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useReactiveIcon } from '@/composables/useReactiveIcon';
+import { ThemeIcon } from '@vasakgroup/vue-libvasak';
+import { computed } from 'vue';
 
 interface Props {
 	profile: string;
@@ -20,9 +21,9 @@ function iconName(profile: string): string {
 	}
 }
 
-const [icon] = useReactiveIcon(() => iconName(props.profile));
+const icono = computed(() => iconName(props.profile));
 </script>
 
 <template>
-	<img v-if="icon" :src="icon" class="h-5 w-5 shrink-0" />
+	<ThemeIcon :name="icono" :size="20" />
 </template>

@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { getSymbolSource, hasSymbol } from '@vasakgroup/plugin-vicons';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage } from '@vasakgroup/vue-libvasak';
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { AlertMessage, ThemeIcon, usarLaVersionDelTema } from '@vasakgroup/vue-libvasak';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
-import { useReactiveSymbol } from '@/composables/useReactiveIcon';
 import {
 	type AccountInfo,
 	clearProviderCredentials,
@@ -122,35 +120,18 @@ const isCustomValid = computed(() => {
  * Se resuelven cuando llega el catálogo y no antes: la lista de proveedores la
  * decide el servicio, así que acá no se puede saber de antemano cuáles hay.
  */
-/**
- * El icono de cada capacidad, resuelto una vez.
- *
- * En el `setup` y no dentro de una función que corre después: la lista de
- * capacidades es fija —sale de la tabla compartida— y fuera del `setup` el
- * composable no se puede desenganchar. Es la fuga que tuvo esta misma pantalla.
- */
-const iconoCapacidad = Object.fromEntries(
-	Object.entries(ICONO_DE_CAPACIDAD).map(([capacidad, icono]) => [
-		capacidad,
-		useReactiveSymbol(() => icono)[0],
-	])
-) as Record<string, ReturnType<typeof useReactiveSymbol>[0]>;
+/** El nombre del icono de una capacidad, de la tabla compartida. */
+const iconoDeCapacidad = (capacidad: string) => ICONO_DE_CAPACIDAD[capacidad] ?? '';
 
 const iconos = ref<Record<string, string>>({});
-const [customIcon] = useReactiveSymbol(() => 'computer-symbolic');
 
 /**
- * Se piden derecho al plugin, sin pasar por `useReactiveSymbol`.
+ * Se piden derecho al plugin, y no con el componente compartido.
  *
- * El composable da un `ref` que se actualiza solo al cambiar el tema, y eso acá
- * no sirve: los proveedores no se saben hasta que llega el catálogo, así que los
- * `ref` habría que crearlos dentro de esta función —fuera del `setup`— y ahí ni
- * se pueden desenganchar ni los mira nadie, porque lo que la plantilla dibuja es
- * este objeto. Era una fuga por recarga del catálogo y, de paso, tarjetas que se
- * quedaban con el icono de la variante anterior.
- *
- * El cambio de tema lo atiende la vista una vez, más abajo, volviendo a correr
- * esto: un icono por proveedor, resueltos todos juntos.
+ * `ThemeIcon` dibuja **un** nombre del tema, y acá hace falta preguntar antes si
+ * el tema lo tiene: los proveedores salen del catálogo y no se saben de
+ * antemano. El cambio de tema lo atiende la vista volviendo a correr esto — un
+ * icono por proveedor, resueltos todos juntos.
  *
  * `hasSymbol` va aparte de `getSymbolSource` porque son dos preguntas distintas
  * —si el tema lo tiene, y traerlo— y pedir no contesta la primera: un nombre que
@@ -625,33 +606,21 @@ const fetchProviders = async () => {
 };
 
 /**
- * Un solo oyente del cambio de tema para todas las tarjetas de proveedor.
+ * Los iconos del catálogo se vuelven a pedir cuando cambia el tema.
  *
- * `useReactiveSymbol` se encarga del icono del servidor personalizado, que es
- * uno y se sabe de antemano. Los del catálogo no, y por eso este oyente: cuando
- * el tema pasa de claro a oscuro —o al revés— hay que volver a pedirlos, o las
- * tarjetas siguen dibujando la variante vieja.
+ * Acá había un `listen` propio, con su bandera para la carrera entre el
+ * registro y el desmontaje. Todo eso lo hace la librería: `usarLaVersionDelTema`
+ * se cuelga del **mismo** oyente que usan los `ThemeIcon` de esta pantalla, con
+ * su cuenta de suscriptores, en vez de sumar uno más.
+ *
+ * Los del catálogo necesitan esto y los demás no, porque los demás son
+ * `ThemeIcon` y se encargan solos.
  */
-let dejarDeEscucharElTema: UnlistenFn | null = null;
-let desmontada = false;
+const versionDelTema = usarLaVersionDelTema();
+watch(versionDelTema, resolverIconos);
 
 onMounted(async () => {
-	// `listen` tarda en resolver, y en ese rato se puede haber cambiado de
-	// sección: sin la bandera, el oyente llegaría cuando ya no hay a quién
-	// avisarle y nadie lo sacaría nunca — que es la misma fuga que esto arregla.
-	listen('vicons:theme-changed', () => {
-		resolverIconos();
-	}).then((parar) => {
-		if (desmontada) parar();
-		else dejarDeEscucharElTema = parar;
-	});
-
 	await Promise.all([fetchAccounts(), fetchProviders()]);
-});
-
-onUnmounted(() => {
-	desmontada = true;
-	dejarDeEscucharElTema?.();
 });
 </script>
 
@@ -691,7 +660,7 @@ onUnmounted(() => {
 								:key="c"
 								class="flex items-center gap-1 rounded-corner-sm bg-ui-surface/70 px-1.5 py-0.5 text-xs text-tx-muted"
 							>
-								<img v-if="iconoCapacidad[c]?.value" :src="iconoCapacidad[c].value" alt="" class="size-3.5" />
+								<ThemeIcon :name="iconoDeCapacidad(c)" type="symbol" :size="14" />
 								{{ t(`views.onlineAccounts.capabilities.${c}`) }}
 							</li>
 						</ul>
@@ -887,7 +856,7 @@ onUnmounted(() => {
 							class="flex items-center gap-1 text-xs text-tx-muted"
 							:title="t(`views.onlineAccounts.capabilities.${c}`)"
 						>
-							<img v-if="iconoCapacidad[c]?.value" :src="iconoCapacidad[c].value" alt="" class="size-3.5" />
+							<ThemeIcon :name="iconoDeCapacidad(c)" type="symbol" :size="14" />
 							{{ t(`views.onlineAccounts.capabilities.${c}`) }}
 						</li>
 					</ul>
@@ -905,12 +874,11 @@ onUnmounted(() => {
 					:class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'"
 					@click="abrirFormularioPersonalizado"
 				>
-					<img
-						v-if="customIcon"
-						:src="customIcon"
-						:alt="t('views.onlineAccounts.customProvider')"
-						class="h-10 w-10"
-					/>
+					<ThemeIcon
+						name="computer-symbolic"
+						type="symbol"
+						:size="40"
+						:alt="t('views.onlineAccounts.customProvider')" />
 					<span class="text-sm font-medium text-tx-primary">
 						{{ t('views.onlineAccounts.customProvider') }}
 					</span>

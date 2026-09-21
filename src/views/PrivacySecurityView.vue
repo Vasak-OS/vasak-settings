@@ -49,13 +49,12 @@
  * quitar la pantalla anterior.
  */
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage } from '@vasakgroup/vue-libvasak';
+import { AlertMessage, ThemeIcon } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
 import IconoDeApp from '@/components/permisos/IconoDeApp.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
-import { useReactiveSymbol } from '@/composables/useReactiveIcon';
 import {
 	allowBlocked,
 	type BlockedItem,
@@ -150,17 +149,8 @@ const ICONO: Record<string, string> = {
 	),
 };
 
-/**
- * Resueltos de una vez y en el `setup`.
- *
- * La lista de recursos es fija, así que no hace falta —ni conviene— pedirlos
- * dentro de una función que corre más tarde: fuera del `setup` el composable no
- * se puede desenganchar y deja una suscripción por llamada, que es lo que pasó
- * en «Cuentas en Línea».
- */
-const iconos = Object.fromEntries(
-	RESOURCES.map((id) => [id, useReactiveSymbol(() => ICONO[id] ?? 'security-high')[0]])
-) as Record<string, ReturnType<typeof useReactiveSymbol>[0]>;
+/** El nombre del icono de un recurso, con el genérico de respaldo. */
+const iconoDe = (id: string) => ICONO[id] ?? 'security-high';
 
 const entries = ref<PermissionEntry[]>([]);
 /**
@@ -389,7 +379,7 @@ onMounted(load);
 						class="flex w-full items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 p-3 text-left hover:bg-ui-surface"
 						@click="abierto = r.id"
 					>
-						<img v-if="iconos[r.id]?.value" :src="iconos[r.id].value" alt="" class="size-6 shrink-0" />
+						<ThemeIcon :name="iconoDe(r.id)" type="symbol" :size="24" />
 
 						<span class="min-w-0 flex-1 truncate font-medium text-tx-main">{{ nombreDe(r.id) }}</span>
 
@@ -423,12 +413,7 @@ onMounted(load);
 						‹ {{ t('views.privacySecurity.volver') }}
 					</button>
 
-					<img
-						v-if="abierto && iconos[abierto]?.value"
-						:src="iconos[abierto].value"
-						alt=""
-						class="size-6 shrink-0"
-					/>
+					<ThemeIcon v-if="abierto" :name="iconoDe(abierto)" type="symbol" :size="24" />
 					<h3 class="min-w-0 flex-1 truncate font-semibold text-tx-main">
 						{{ abierto ? nombreDe(abierto) : '' }}
 					</h3>

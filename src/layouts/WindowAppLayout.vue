@@ -1,12 +1,11 @@
 <script lang="ts" setup>
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { SideBar, type SidebarCategory, WindowFrame } from '@vasakgroup/vue-libvasak';
+import { SideBar, type SidebarCategory, ThemeIcon, WindowFrame } from '@vasakgroup/vue-libvasak';
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { categoriasDelMenu } from '@/composables/menu';
 import { menuSegunHardware } from '@/composables/secciones-por-hardware';
 import { useHardwareDeRed } from '@/composables/useHardwareDeRed';
-import { useReactiveIcon } from '@/composables/useReactiveIcon';
 
 const route = useRoute();
 const router = useRouter();
@@ -29,8 +28,6 @@ watch(
 		}
 	}
 );
-
-const [appIcon] = useReactiveIcon('preferences');
 
 const { wifi, bluetooth } = useHardwareDeRed();
 
@@ -55,7 +52,7 @@ const sidebarCategories = computed<SidebarCategory[]>(() =>
     :maximize-label="t('windowControls.maximize')"
     :close-label="t('windowControls.close')">
     <template #identidad>
-      <img :src="appIcon" class="h-8 w-8" :alt="t('views.app.iconAlt')">
+      <ThemeIcon name="preferences" :size="32" :alt="t('views.app.iconAlt')" />
     </template>
 
     <!-- El nombre al medio de la ventana entera. Estaba centrado con un tercer

@@ -1,15 +1,14 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
-import { onMounted, ref } from 'vue';
+import { AlertMessage, SwitchToggle, ThemeIcon } from '@vasakgroup/vue-libvasak';
+import { computed, onMounted, ref } from 'vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import NumberInput from '@/components/ui/NumberInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import ProfileIcon from '@/components/ui/ProfileIcon.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import { useBattery, usePowerProfiles } from '@/composables/useBattery';
-import { useReactiveIcon } from '@/composables/useReactiveIcon';
 
 interface IdleConfig {
 	enabled: boolean;
@@ -75,7 +74,13 @@ const {
 	setActive,
 } = usePowerProfiles();
 
-const [batteryIcon] = useReactiveIcon(() => {
+/**
+ * El icono de la batería, que dice el estado sin leer el número.
+ *
+ * Es un `computed` y no un icono resuelto a mano: `ThemeIcon` recibe el nombre
+ * y se encarga de pedirlo y de volver a pedirlo cuando cambia el tema.
+ */
+const batteryIcon = computed(() => {
 	if (!info.value.has_battery) return 'battery';
 	const s = info.value.status;
 	if (s === 'Charging') return 'battery-charging';
@@ -153,7 +158,7 @@ async function selectProfile(profile: string) {
 		<!-- Battery info -->
 		<SectionCard>
 			<div class="flex items-start gap-3">
-				<img v-if="batteryIcon" :src="batteryIcon" class="mt-0.5 h-10 w-10 shrink-0" />
+				<ThemeIcon :name="batteryIcon" :size="40" class="mt-0.5" />
 				<div class="flex-1">
 					<h3 class="text-base font-medium">{{ t('views.power.battery') }}</h3>
 					<p v-if="!info.has_battery" class="mt-2 text-sm text-tx-muted">
