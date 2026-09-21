@@ -6,14 +6,13 @@ import {
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, type Ref, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 
 const { t } = useI18n();
 
@@ -104,9 +103,9 @@ const isFormValid = computed(() => {
 		<EmptyStateBox v-if="loading" :message="t('views.appearanceDesktop.loading')" padding="lg" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
-			<AlertMessage v-if="error" :message="error" tone="error" />
+			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 			
-			<AlertMessage v-if="successMessage" :message="successMessage" tone="success" />
+			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
 			<div class="grid gap-4 xl:grid-cols-2">
 				<SectionCard>
@@ -122,8 +121,8 @@ const isFormValid = computed(() => {
 							<label class="text-sm font-medium text-tx-primary">{{ t('views.appearanceDesktop.showHiddenFiles') }}</label>
 							<div class="flex items-center gap-3">
 								<SwitchToggle :label="t('views.appearanceDesktop.showHiddenFiles')"
-									:is-on="showHiddenFiles"
-									@toggle="val => (showHiddenFiles = val)"
+									:model-value="showHiddenFiles"
+									@update:model-value="val => (showHiddenFiles = val)"
 								/>
 								<span class="w-20 text-xs text-tx-muted">{{ showHiddenFiles ? t('views.appearanceDesktop.enabled') : t('views.appearanceDesktop.disabled') }}</span>
 							</div>

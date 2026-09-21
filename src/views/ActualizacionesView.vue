@@ -25,13 +25,12 @@
  */
 import { open } from '@tauri-apps/plugin-shell';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import {
 	type Actualizacion,
 	activarAviso,
@@ -217,8 +216,8 @@ onMounted(async () => {
 
         <SwitchToggle
           :label="t('views.actualizaciones.avisar')"
-          :is-on="avisa"
-          @toggle="cambiarAviso"
+          :model-value="avisa"
+          @update:model-value="cambiarAviso"
         />
         <p class="mt-1 text-tx-muted text-xs">{{ t('views.actualizaciones.avisarAyuda') }}</p>
 
@@ -237,9 +236,7 @@ onMounted(async () => {
 
       <AlertMessage
         v-if="!hayPrograma"
-        tone="warning"
-        :message="t('views.actualizaciones.sinProgramaDetalle')"
-      />
+        tone="warning">{{ t('views.actualizaciones.sinProgramaDetalle') }}</AlertMessage>
 
       <EmptyStateBox v-else-if="cargando" :message="t('views.actualizaciones.comprobando')" />
 
@@ -255,9 +252,7 @@ onMounted(async () => {
           </h2>
         </header>
         <AlertMessage
-          tone="warning"
-          :message="fallo.explicacion || t('views.actualizaciones.sinExplicacion')"
-        />
+          tone="warning">{{ fallo.explicacion || t('views.actualizaciones.sinExplicacion') }}</AlertMessage>
         <p v-if="fallo.que.detalle" class="mt-2 font-mono text-tx-muted text-xs">
           {{ fallo.que.detalle }}
         </p>
@@ -288,9 +283,7 @@ onMounted(async () => {
           <div class="mt-3 space-y-3">
             <AlertMessage
               v-if="!preflight.hay_lugar_con_red"
-              tone="warning"
-              :message="avisoDelArranque"
-            />
+              tone="warning">{{ avisoDelArranque }}</AlertMessage>
 
             <!--
               Un bloque por motivo, cada uno con su explicación y los paquetes
@@ -298,14 +291,14 @@ onMounted(async () => {
               aunque el que cambiara fuera systemd.
             -->
             <template v-for="razon in preflight.razones" :key="razon.motivo">
-              <AlertMessage tone="info" :message="t(EXPLICACION[razon.motivo])" />
+              <AlertMessage tone="info">{{ t(EXPLICACION[razon.motivo]) }}</AlertMessage>
               <ul class="font-mono text-tx-muted text-xs">
                 <li v-for="p in razon.paquetes" :key="p">{{ p }}</li>
               </ul>
             </template>
 
             <template v-if="preflight.pacnew.length">
-              <AlertMessage tone="info" :message="t('views.actualizaciones.pacnewDetalle')" />
+              <AlertMessage tone="info">{{ t('views.actualizaciones.pacnewDetalle') }}</AlertMessage>
               <ul class="font-mono text-tx-muted text-xs">
                 <li v-for="f in preflight.pacnew" :key="f">{{ f }}</li>
               </ul>

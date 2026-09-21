@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle, TextInput } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import KeyBindingInput from '@/components/ui/KeyBindingInput.vue';
 import NumberInput from '@/components/ui/NumberInput.vue';
@@ -9,8 +9,6 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import PluginSection from '@/components/ui/PluginSection.vue';
 import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
-import TextInput from '@/components/ui/TextInput.vue';
 import { useWayfirePlugins } from '@/composables/useWayfirePlugins';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 
@@ -109,7 +107,7 @@ async function saveAll() {
 			:description="t('views.wayfireEffects.description')"
 		/>
 
-		<AlertMessage v-if="sectionError" tone="error" :message="sectionError" />
+		<AlertMessage v-if="sectionError" tone="error">{{ sectionError }}</AlertMessage>
 
 		<form @submit.prevent="saveAll" class="flex flex-col gap-3">
 			<!-- Los más usados primero -->
@@ -257,8 +255,8 @@ async function saveAll() {
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireEffects.light')">
 						<SwitchToggle :label="t('views.wayfireEffects.light')"
-							:isOn="cube.getBool('light', true)"
-							@toggle="cube.setBool('light', $event)"
+							:model-value="cube.getBool('light', true)"
+							@update:model-value="cube.setBool('light', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireEffects.backgroundMode')">

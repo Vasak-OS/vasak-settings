@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle, TextInput } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
-import TextInput from '@/components/ui/TextInput.vue';
 
 interface DateTimeInfo {
 	timezone: string;
@@ -165,8 +163,8 @@ function toggleLocalRtc(value: boolean) {
 			:description="t('views.datetime.description')"
 		/>
 
-		<AlertMessage v-if="error" tone="error" :message="error" />
-		<AlertMessage v-if="success" tone="success" :message="success" />
+		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
+		<AlertMessage v-if="success" tone="success">{{ success }}</AlertMessage>
 
 		<SectionCard>
 			<p class="text-2xl font-semibold text-tx-primary">{{ formattedNow }}</p>
@@ -182,9 +180,9 @@ function toggleLocalRtc(value: boolean) {
 					</p>
 				</div>
 				<SwitchToggle :label="t('views.datetime.automaticTime')"
-					:is-on="isAutomatic"
+					:model-value="isAutomatic"
 					:disabled="busy || !(info?.can_ntp ?? false)"
-					@toggle="toggleAutomatic"
+					@update:model-value="toggleAutomatic"
 				/>
 			</div>
 		</SectionCard>
@@ -269,9 +267,9 @@ function toggleLocalRtc(value: boolean) {
 						</p>
 					</div>
 					<SwitchToggle :label="t('views.datetime.localRtc')"
-						:is-on="info?.local_rtc ?? false"
+						:model-value="info?.local_rtc ?? false"
 						:disabled="busy"
-						@toggle="toggleLocalRtc"
+						@update:model-value="toggleLocalRtc"
 					/>
 				</div>
 			</details>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import CpuMemoryCard from '@/components/systeminformation/CpuMemoryCard.vue';
 import DisksCard from '@/components/systeminformation/DisksCard.vue';
@@ -8,7 +9,6 @@ import SystemDetailsCard from '@/components/systeminformation/SystemDetailsCard.
 import SystemOverviewCard, {
 	type SystemMetricItem,
 } from '@/components/systeminformation/SystemOverviewCard.vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import { getSystemInfo } from '@/services/system.service';
@@ -192,7 +192,7 @@ onUnmounted(() => {
 
 		<EmptyStateBox v-if="loading" :message="t('views.home.loading')" padding="lg" />
 
-		<AlertMessage v-else-if="errorMessage" :message="errorMessage" tone="error" />
+		<AlertMessage v-else-if="errorMessage" tone="error">{{ errorMessage }}</AlertMessage>
 
 		<div v-else-if="systemInfo" class="flex flex-col gap-4 pb-4">
 				<SystemOverviewCard :metrics="metrics" />

@@ -8,13 +8,12 @@ import {
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import ProgressBar from '@/components/ui/ProgressBar.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import { getOfficialWallpapers } from '@/services/style.service';
 import { booleanoDeConfig } from '@/tools/valores-de-config';
 
@@ -243,9 +242,9 @@ onUnmounted(() => {
 		<EmptyStateBox v-if="loading" :message="t('views.appearanceWallpaper.loading')" padding="lg" />
 
 		<template v-else>
-			<AlertMessage v-if="error" :message="error" tone="error" />
+			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 
-			<AlertMessage v-if="successMessage" :message="successMessage" tone="success" />
+			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
 			<!-- Sólo aparece cuando hace falta: con una imagen de fondo, esto no
 			     significa nada y sería una opción más para leer y descartar. -->
@@ -269,8 +268,8 @@ onUnmounted(() => {
 						{{ t('views.appearanceWallpaper.pauseOnBattery') }}
 					</label>
 					<SwitchToggle :label="t('views.appearanceWallpaper.pauseOnBattery')"
-						:is-on="pauseVideoOnBattery"
-						@toggle="(val: boolean) => (pauseVideoOnBattery = val)"
+						:model-value="pauseVideoOnBattery"
+						@update:model-value="(val: boolean) => (pauseVideoOnBattery = val)"
 					/>
 				</div>
 			</SectionCard>

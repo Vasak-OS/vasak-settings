@@ -7,15 +7,14 @@ import {
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, type Ref, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import {
 	getCurrentSystemState,
 	getCursorThemes,
@@ -287,8 +286,8 @@ const isFormValid = computed(() => {
 		<EmptyStateBox v-if="loading" :message="t('views.appearanceTheme.loading')" padding="lg" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
-			<AlertMessage v-if="error" :message="error" tone="error" />
-			<AlertMessage v-if="successMessage" :message="successMessage" tone="success" />
+			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
+			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
 			<div class="grid gap-4 xl:grid-cols-2">
 				<SectionCard>
@@ -307,7 +306,7 @@ const isFormValid = computed(() => {
 						<div class="flex items-center justify-between">
 							<label class="text-sm font-medium text-tx-primary">{{ t('views.appearanceTheme.darkMode') }}</label>
 							<div class="flex items-center gap-3">
-								<SwitchToggle :label="t('views.appearanceTheme.darkMode')" v-if="vskConfig" :is-on="vskConfig.style.darkmode" @toggle="val => (vskConfig!.style.darkmode = val)" />
+								<SwitchToggle :label="t('views.appearanceTheme.darkMode')" v-if="vskConfig" :model-value="vskConfig.style.darkmode" @update:model-value="val => (vskConfig!.style.darkmode = val)" />
 								<span class="w-20 text-xs text-tx-muted">{{ vskConfig?.style.darkmode ? t('views.appearanceTheme.enabled') : t('views.appearanceTheme.disabled') }}</span>
 							</div>
 						</div>

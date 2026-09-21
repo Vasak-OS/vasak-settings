@@ -9,7 +9,9 @@
  *    así que el encabezado **no se dibujaba**: quedaba como un globito al pasar
  *    el mouse por encima de toda la tarjeta;
  *  - `TextInput` no declaraba `keyup`, y el Wi-Fi y los dispositivos confirman
- *    con Enter. Caía sobre el `<input>` y funcionaba, pero no estaba escrito;
+ *    con Enter. Caía sobre el `<input>` y funcionaba, pero no estaba escrito.
+ *    Ese campo ya no vive acá: es el de la librería, que lo declara y lo
+ *    reenvía, con su prueba allá. Este hallazgo fue el que lo hizo entrar;
  *  - `SelectInput` emitía siempre la cadena del `<select>`, aun con opciones
  *    numéricas. Como su modelo era `string | number`, nadie se enteraba.
  */
@@ -18,7 +20,6 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
-import TextInput from '@/components/ui/TextInput.vue';
 
 let vista: VueWrapper | null = null;
 
@@ -47,17 +48,6 @@ describe('SectionCard', () => {
 		vista = mount(SectionCard, { props: { title: 'Teclado' }, slots: { default: '<p>x</p>' } });
 
 		expect(vista.get('article').attributes('title')).toBeUndefined();
-	});
-});
-
-describe('TextInput', () => {
-	test('la tecla llega a quien lo usa', async () => {
-		// Es cómo el Wi-Fi confirma la contraseña con Enter.
-		vista = mount(TextInput, { props: { modelValue: '' } });
-
-		await vista.get('input').trigger('keyup', { key: 'Enter' });
-
-		expect(vista.emitted('keyup')).toHaveLength(1);
 	});
 });
 

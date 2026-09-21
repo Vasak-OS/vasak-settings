@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
@@ -191,8 +191,8 @@ onMounted(loadData);
 			:description="t('views.languageKeyboard.description')"
 		/>
 
-		<AlertMessage v-if="error" :message="error" tone="error" />
-		<AlertMessage v-if="success" :message="success" tone="success" />
+		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
+		<AlertMessage v-if="success" tone="success">{{ success }}</AlertMessage>
 
 		<div v-if="loading" class="py-8 text-center text-sm text-tx-muted">
 			{{ t('common.loading') }}

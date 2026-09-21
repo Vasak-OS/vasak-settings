@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { listen } from '@tauri-apps/api/event';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle, TextInput } from '@vasakgroup/vue-libvasak';
 import { computed, nextTick, onMounted, onUnmounted, type Ref, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import StatTile from '@/components/ui/StatTile.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
-import TextInput from '@/components/ui/TextInput.vue';
 import { useReactiveSymbol } from '@/composables/useReactiveIcon';
 import {
 	connectToWifi,
@@ -305,12 +303,12 @@ onUnmounted(() => {
 							}}
 						</span>
 					</div>
-					<SwitchToggle :label="t('views.networkWifi.title')" :is-on="wifiEnabled" :disabled="!wifiAvailable" @toggle="toggleWifi" />
+					<SwitchToggle :label="t('views.networkWifi.title')" :model-value="wifiEnabled" :disabled="!wifiAvailable" @update:model-value="toggleWifi" />
 				</div>
 			</template>
 		</PageHeader>
 
-		<AlertMessage v-if="error" :message="error" tone="error" />
+		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 
 		<div class="grid gap-4 xl:grid-cols-3">
 			<SectionCard class="xl:col-span-2">

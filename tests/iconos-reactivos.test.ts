@@ -23,6 +23,7 @@ import { describe, expect, mock, spyOn, test } from 'bun:test';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import * as eventos from '@tauri-apps/api/event';
 
 const RAIZ = fileURLToPath(new URL('..', import.meta.url));
 
@@ -35,7 +36,20 @@ const RAIZ = fileURLToPath(new URL('..', import.meta.url));
  */
 const suscripciones: Array<(...args: unknown[]) => void> = [];
 
+/**
+ * El doble va **encima** del módulo de verdad, no en su lugar.
+ *
+ * Reemplazarlo entero deja sin exportar todo lo que no se nombre acá, y lo que
+ * falla entonces es el import y no la prueba: los componentes compilados de
+ * `@vasakgroup/vue-libvasak` importan `once` de este mismo módulo, así que en
+ * cuanto una prueba monta uno, la corrida entera se cae con un
+ * «Export named 'once' not found» que no nombra ninguna prueba.
+ *
+ * Y se cae sólo en CI. Local pasaba porque el orden en que Bun evalúa los
+ * archivos dejaba a este doble puesto después del import que lo necesitaba.
+ */
 mock.module('@tauri-apps/api/event', () => ({
+	...eventos,
 	listen: async (_evento: string, cb: (...args: unknown[]) => void) => {
 		suscripciones.push(cb);
 		return () => {};

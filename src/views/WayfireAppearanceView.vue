@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, TextInput } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import NumberInput from '@/components/ui/NumberInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import PluginSection from '@/components/ui/PluginSection.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
-import TextInput from '@/components/ui/TextInput.vue';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 
 const { t } = useI18n();
@@ -55,10 +54,8 @@ async function saveAll() {
 			:description="t('views.wayfireAppearance.description')"
 		/>
 
-		<AlertMessage v-if="decoration.error.value || animate.error.value" tone="error"
-			:message="decoration.error.value || animate.error.value" />
-		<AlertMessage v-if="decoration.success.value || animate.success.value" tone="success"
-			:message="t('common.saved')" />
+		<AlertMessage v-if="decoration.error.value || animate.error.value" tone="error">{{ decoration.error.value || animate.error.value }}</AlertMessage>
+		<AlertMessage v-if="decoration.success.value || animate.success.value" tone="success">{{ t('common.saved') }}</AlertMessage>
 
 		<form @submit.prevent="saveAll" class="flex flex-col gap-4">
 			<PluginSection

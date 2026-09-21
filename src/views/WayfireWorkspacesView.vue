@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import KeyBindingInput from '@/components/ui/KeyBindingInput.vue';
 import NumberInput from '@/components/ui/NumberInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import PluginSection from '@/components/ui/PluginSection.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 
 const { t } = useI18n();
@@ -80,10 +79,8 @@ async function saveAll() {
 			:description="t('views.wayfireWorkspaces.description')"
 		/>
 
-		<AlertMessage v-if="vswitch.error.value || expo.error.value" tone="error"
-			:message="vswitch.error.value || expo.error.value" />
-		<AlertMessage v-if="vswitch.success.value || expo.success.value" tone="success"
-			:message="t('common.saved')" />
+		<AlertMessage v-if="vswitch.error.value || expo.error.value" tone="error">{{ vswitch.error.value || expo.error.value }}</AlertMessage>
+		<AlertMessage v-if="vswitch.success.value || expo.success.value" tone="success">{{ t('common.saved') }}</AlertMessage>
 
 		<form @submit.prevent="saveAll" class="flex flex-col gap-4">
 			<SectionCard>
@@ -121,8 +118,8 @@ async function saveAll() {
 						</FormGroup>
 						<FormGroup :label="t('views.wayfireWorkspaces.wraparound')">
 							<SwitchToggle :label="t('views.wayfireWorkspaces.wraparound')"
-								:isOn="vswitch.getBool('wraparound', false)"
-								@toggle="vswitch.setBool('wraparound', $event)"
+								:model-value="vswitch.getBool('wraparound', false)"
+								@update:model-value="vswitch.setBool('wraparound', $event)"
 							/>
 						</FormGroup>
 					</div>

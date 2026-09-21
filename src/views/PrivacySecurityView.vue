@@ -49,9 +49,9 @@
  * quitar la pantalla anterior.
  */
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
 import IconoDeApp from '@/components/permisos/IconoDeApp.vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
@@ -375,7 +375,7 @@ onMounted(load);
 		</SectionCard>
 
 		<SectionCard>
-			<AlertMessage v-if="errorMessage" tone="error" :message="errorMessage" />
+			<AlertMessage v-if="errorMessage" tone="error">{{ errorMessage }}</AlertMessage>
 			<p v-if="loading" class="text-sm text-tx-muted">{{ t('common.loading') }}</p>
 
 			<!-- La lista de permisos, que es por donde se entra. Antes era una

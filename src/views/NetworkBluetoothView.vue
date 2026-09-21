@@ -11,13 +11,12 @@ import {
 	toggleBluetooth,
 } from '@vasakgroup/plugin-bluetooth-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import BluetoothDeviceCard from '@/components/cards/BluetoothDeviceCard.vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 
 const { t } = useI18n();
 
@@ -158,15 +157,15 @@ onUnmounted(() => {
 				<div class="flex items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2">
 					<span class="text-sm font-medium">{{ isBluetoothOn ? t('views.networkBluetooth.on') : t('views.networkBluetooth.off') }}</span>
 					<SwitchToggle :label="t('views.networkBluetooth.title')"
-						:is-on="isBluetoothOn"
+						:model-value="isBluetoothOn"
 						:disabled="isTogglingBluetooth"
-						@toggle="toggleBT"
+						@update:model-value="toggleBT"
 					/>
 				</div>
 			</template>
 		</PageHeader>
 
-		<AlertMessage v-if="error" :message="error" tone="error" />
+		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 
 		<!-- Estado Apagado -->
 		<div v-if="!isBluetoothOn && !loading && !isTogglingBluetooth" class="grid flex-1 place-items-center rounded-corner border border-dashed border-ui-border bg-ui-surface/20 p-6">
