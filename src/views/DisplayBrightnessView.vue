@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle, TextInput } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
-import TextInput from '@/components/ui/TextInput.vue';
 
 interface BacklightDevice {
 	name: string;
@@ -114,8 +112,8 @@ function toggleNightLight(value: boolean) {
 			:description="t('views.brightness.description')"
 		/>
 
-		<AlertMessage v-if="error" tone="error" :message="error" />
-		<AlertMessage v-if="success" tone="success" :message="success" />
+		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
+		<AlertMessage v-if="success" tone="success">{{ success }}</AlertMessage>
 
 		<SectionCard>
 			<h3 class="text-base font-medium">{{ t('views.brightness.brightness') }}</h3>
@@ -152,18 +150,17 @@ function toggleNightLight(value: boolean) {
 					</p>
 				</div>
 				<SwitchToggle :label="t('views.brightness.nightLight')"
-					:is-on="nightLight.enabled"
+					:model-value="nightLight.enabled"
 					:disabled="savingNight || !nightLight.available"
-					@toggle="toggleNightLight"
+					@update:model-value="toggleNightLight"
 				/>
 			</div>
 
 			<AlertMessage
 				v-if="!nightLight.available"
 				tone="warning"
-				:message="t('views.brightness.wlsunsetMissing')"
-				class="mt-3"
-			/>
+			
+				class="mt-3">{{ t('views.brightness.wlsunsetMissing') }}</AlertMessage>
 
 			<div class="mt-4 grid gap-4 sm:grid-cols-2">
 				<FormGroup :label="t('views.brightness.nightTemp')">

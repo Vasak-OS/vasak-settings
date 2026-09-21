@@ -7,14 +7,13 @@ import {
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, type Ref, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import { fijarNitidez, nitidezActiva } from '@/services/nitidez.service';
 import { getSystemFonts, type SystemFontItem } from '@/services/style.service';
 
@@ -194,8 +193,8 @@ const isFormValid = computed(() => {
 		<EmptyStateBox v-if="loading" :message="t('views.appearanceFonts.loading')" padding="lg" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
-			<AlertMessage v-if="error" :message="error" tone="error" />
-			<AlertMessage v-if="successMessage" :message="successMessage" tone="success" />
+			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
+			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
 			<div class="grid gap-4 xl:grid-cols-[360px_1fr]">
 				<SectionCard>
@@ -263,9 +262,9 @@ const isFormValid = computed(() => {
 						</div>
 						<SwitchToggle
 							:label="t('views.appearanceFonts.sharpness')"
-							:is-on="nitidez"
+							:model-value="nitidez"
 							:disabled="guardandoNitidez"
-							@toggle="alternarNitidez"
+							@update:model-value="alternarNitidez"
 						/>
 					</div>
 				</SectionCard>

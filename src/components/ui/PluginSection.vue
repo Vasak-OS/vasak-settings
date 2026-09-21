@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted } from 'vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import { useReactiveIcon } from '@/composables/useReactiveIcon';
 import { useWayfirePlugins } from '@/composables/useWayfirePlugins';
 
@@ -56,7 +56,7 @@ function handleToggle(value: boolean) {
 			>
 				{{ t('common.required') }}
 			</span>
-			<SwitchToggle :label="heading" v-else :is-on="isEnabled" @toggle="handleToggle" />
+			<SwitchToggle :label="heading" v-else :model-value="isEnabled" @update:model-value="handleToggle" />
 		</header>
 
 		<p v-if="isRequired" class="px-4 pb-3 text-[11px] leading-relaxed text-tx-muted">

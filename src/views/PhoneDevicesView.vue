@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, TextInput } from '@vasakgroup/vue-libvasak';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
-import TextInput from '@/components/ui/TextInput.vue';
 import {
 	forgetDevice,
 	type KnownDevice,
@@ -99,12 +98,12 @@ onBeforeUnmount(() => unlisten?.());
 			:description="t('views.phoneDevices.description')"
 		/>
 
-		<AlertMessage v-if="errorMessage" :message="errorMessage" tone="error" />
+		<AlertMessage v-if="errorMessage" tone="error">{{ errorMessage }}</AlertMessage>
 
 		<!-- Said once, plainly, and above the list: pressing "forget" does not
 		     cut off access. The authorisation is on the phone, and somebody who
 		     believes otherwise will think they revoked something they did not. -->
-		<AlertMessage :message="t('views.phoneDevices.trustNotice')" tone="info" />
+		<AlertMessage tone="info">{{ t('views.phoneDevices.trustNotice') }}</AlertMessage>
 
 		<SectionCard>
 			<EmptyStateBox v-if="loading" :message="t('views.phoneDevices.loading')" />

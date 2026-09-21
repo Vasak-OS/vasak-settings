@@ -6,13 +6,11 @@ import {
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { SelectField } from '@vasakgroup/vue-libvasak';
+import { AlertMessage, SelectField, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { onMounted, type Ref, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import {
 	escribirIndicadoresDelPanel,
 	escribirPosicionDelPanel,
@@ -133,9 +131,9 @@ const saveConfig = async () => {
 		<EmptyStateBox v-if="loading" :message="t('views.appearancePanel.loading')" padding="lg" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
-			<AlertMessage v-if="error" :message="error" tone="error" />
+			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 
-			<AlertMessage v-if="successMessage" :message="successMessage" tone="success" />
+			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
 			<SectionCard>
 				<h3 class="mb-4 text-lg font-medium text-tx-primary">
@@ -179,7 +177,7 @@ const saveConfig = async () => {
 								{{ t('views.appearancePanel.weatherHint') }}
 							</span>
 						</div>
-						<SwitchToggle :label="t('views.appearancePanel.weather')" :is-on="weather" @toggle="(val) => (weather = val)" />
+						<SwitchToggle :label="t('views.appearancePanel.weather')" :model-value="weather" @update:model-value="(val) => (weather = val)" />
 					</div>
 
 					<div class="flex items-start justify-between gap-4">
@@ -191,7 +189,7 @@ const saveConfig = async () => {
 								{{ t('views.appearancePanel.musicHint') }}
 							</span>
 						</div>
-						<SwitchToggle :label="t('views.appearancePanel.music')" :is-on="music" @toggle="(val) => (music = val)" />
+						<SwitchToggle :label="t('views.appearancePanel.music')" :model-value="music" @update:model-value="(val) => (music = val)" />
 					</div>
 
 					<div class="flex items-start justify-between gap-4">
@@ -203,7 +201,7 @@ const saveConfig = async () => {
 								{{ t('views.appearancePanel.transferHint') }}
 							</span>
 						</div>
-						<SwitchToggle :label="t('views.appearancePanel.transfer')" :is-on="transfer" @toggle="(val) => (transfer = val)" />
+						<SwitchToggle :label="t('views.appearancePanel.transfer')" :model-value="transfer" @update:model-value="(val) => (transfer = val)" />
 					</div>
 
 					<div class="flex items-start justify-between gap-4">
@@ -215,7 +213,7 @@ const saveConfig = async () => {
 								{{ t('views.appearancePanel.trayHint') }}
 							</span>
 						</div>
-						<SwitchToggle :label="t('views.appearancePanel.tray')" :is-on="tray" @toggle="(val) => (tray = val)" />
+						<SwitchToggle :label="t('views.appearancePanel.tray')" :model-value="tray" @update:model-value="(val) => (tray = val)" />
 					</div>
 
 					<div class="flex items-start justify-between gap-4">
@@ -227,7 +225,7 @@ const saveConfig = async () => {
 								{{ t('views.appearancePanel.privacyHint') }}
 							</span>
 						</div>
-						<SwitchToggle :label="t('views.appearancePanel.privacy')" :is-on="privacy" @toggle="(val) => (privacy = val)" />
+						<SwitchToggle :label="t('views.appearancePanel.privacy')" :model-value="privacy" @update:model-value="(val) => (privacy = val)" />
 					</div>
 				</div>
 			</SectionCard>

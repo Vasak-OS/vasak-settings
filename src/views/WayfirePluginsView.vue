@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { onMounted } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import { useWayfirePlugins } from '@/composables/useWayfirePlugins';
 
 const { t } = useI18n();
@@ -29,7 +28,7 @@ function etiquetaDe(plugin: { id: string; unknown?: boolean }) {
 			:description="`${t('views.wayfirePlugins.description')} ${t('views.wayfirePlugins.activeCount').replace('{0}', String(enabledCount))}`"
 		/>
 
-		<AlertMessage v-if="error" :message="error" tone="error" />
+		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 		<p v-if="loading" class="text-sm text-tx-muted">{{ t('common.loading') }}</p>
 
 		<div v-for="group in byCategory" :key="group.category" class="flex flex-col gap-2">
@@ -72,8 +71,8 @@ function etiquetaDe(plugin: { id: string; unknown?: boolean }) {
 					</span>
 					<SwitchToggle :label="etiquetaDe(plugin)"
 						v-else
-						:is-on="plugin.enabled"
-						@toggle="(value) => handleToggle(plugin.id, value)"
+						:model-value="plugin.enabled"
+						@update:model-value="(value) => handleToggle(plugin.id, value)"
 					/>
 				</li>
 			</ul>

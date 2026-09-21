@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { listen } from '@tauri-apps/api/event';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
@@ -240,7 +240,7 @@ onUnmounted(() => {
 			</template>
 		</PageHeader>
 
-		<AlertMessage v-if="error" :message="error" tone="error" />
+		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 
 		<div class="grid gap-4 xl:grid-cols-3">
 			<SectionCard class="xl:col-span-2">

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { TextInput } from '@vasakgroup/vue-libvasak';
 import { computed, ref } from 'vue';
-import TextInput from '@/components/ui/TextInput.vue';
 import type { VpnCreateInput, VpnType, VpnUpdateInput } from '@/services/network.service';
 
 export interface Props {

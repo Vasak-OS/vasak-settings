@@ -18,9 +18,8 @@ import {
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { SelectField } from '@vasakgroup/vue-libvasak';
+import { AlertMessage, SelectField } from '@vasakgroup/vue-libvasak';
 import { onMounted, type Ref, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
@@ -102,8 +101,8 @@ const saveConfig = async () => {
 		<EmptyStateBox v-if="loading" :message="t('views.appearanceWindows.loading')" padding="lg" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
-			<AlertMessage v-if="error" :message="error" tone="error" />
-			<AlertMessage v-if="successMessage" :message="successMessage" tone="success" />
+			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
+			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
 			<SectionCard>
 				<h3 class="mb-4 font-medium text-lg text-tx-primary">

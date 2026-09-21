@@ -2,8 +2,8 @@
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { getSymbolSource, hasSymbol } from '@vasakgroup/plugin-vicons';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import { useReactiveSymbol } from '@/composables/useReactiveIcon';
@@ -663,9 +663,9 @@ onUnmounted(() => {
 			:description="t('views.onlineAccounts.description')"
 		/>
 
-		<AlertMessage v-if="errors" :message="errors" tone="error" />
-		<AlertMessage v-if="aviso" :message="aviso" tone="warning" />
-		<AlertMessage v-if="success" :message="success" tone="success" />
+		<AlertMessage v-if="errors" tone="error">{{ errors }}</AlertMessage>
+		<AlertMessage v-if="aviso" tone="warning">{{ aviso }}</AlertMessage>
+		<AlertMessage v-if="success" tone="success">{{ success }}</AlertMessage>
 
 		<SectionCard v-if="accounts.length > 0">
 			<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.onlineAccounts.linkedAccounts') }}</h3>
@@ -724,7 +724,7 @@ onUnmounted(() => {
 				{{ t('views.onlineAccounts.credentials.how') }}
 			</p>
 
-			<AlertMessage v-if="credencialesError" :message="credencialesError" tone="error" />
+			<AlertMessage v-if="credencialesError" tone="error">{{ credencialesError }}</AlertMessage>
 
 			<div class="flex flex-col gap-3">
 				<label class="flex flex-col gap-1">
@@ -795,7 +795,7 @@ onUnmounted(() => {
 				{{ t('views.onlineAccounts.nextcloud.description') }}
 			</p>
 
-			<AlertMessage v-if="nextcloudError" :message="nextcloudError" tone="error" />
+			<AlertMessage v-if="nextcloudError" tone="error">{{ nextcloudError }}</AlertMessage>
 
 			<div class="flex flex-col gap-3">
 				<label class="flex flex-col gap-1">

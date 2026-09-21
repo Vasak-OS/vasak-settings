@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { onMounted, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import NumberInput from '@/components/ui/NumberInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import ProfileIcon from '@/components/ui/ProfileIcon.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import { useBattery, usePowerProfiles } from '@/composables/useBattery';
 import { useReactiveIcon } from '@/composables/useReactiveIcon';
 
@@ -149,7 +148,7 @@ async function selectProfile(profile: string) {
 			:description="t('views.power.description')"
 		/>
 
-		<AlertMessage v-if="error" :message="error" tone="error" />
+		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 
 		<!-- Battery info -->
 		<SectionCard>
@@ -222,7 +221,7 @@ async function selectProfile(profile: string) {
 						{{ t('views.power.profilesDescription') }}
 					</p>
 
-					<AlertMessage v-if="profilesError" :message="profilesError" tone="error" />
+					<AlertMessage v-if="profilesError" tone="error">{{ profilesError }}</AlertMessage>
 
 					<div v-if="profilesLoading" class="mt-3 text-sm text-tx-muted">
 						{{ t('views.power.loadingProfiles') }}
@@ -266,33 +265,31 @@ async function selectProfile(profile: string) {
 					</p>
 				</div>
 				<SwitchToggle :label="t('views.power.idleLock')"
-					:is-on="idle.enabled"
+					:model-value="idle.enabled"
 					:disabled="savingIdle || !idle.available"
-					@toggle="toggleIdle"
+					@update:model-value="toggleIdle"
 				/>
 			</div>
 
-			<AlertMessage v-if="idleError" tone="error" :message="idleError" class="mt-3" />
-			<AlertMessage v-if="idleSaved" tone="success" :message="t('views.power.saved')" class="mt-3" />
+			<AlertMessage v-if="idleError" tone="error" class="mt-3">{{ idleError }}</AlertMessage>
+			<AlertMessage v-if="idleSaved" tone="success" class="mt-3">{{ t('views.power.saved') }}</AlertMessage>
 			<AlertMessage
 				v-if="!idle.available"
 				tone="warning"
-				:message="t('views.power.swayidleMissing')"
-				class="mt-3"
-			/>
+			
+				class="mt-3">{{ t('views.power.swayidleMissing') }}</AlertMessage>
 			<AlertMessage
 				v-if="idle.legacy_found"
 				tone="info"
-				:message="t('views.power.legacyConfig')"
-				class="mt-3"
-			/>
+			
+				class="mt-3">{{ t('views.power.legacyConfig') }}</AlertMessage>
 
 			<div class="mt-4 flex items-start gap-3">
 				<div class="min-w-0 flex-1">
 					<h4 class="text-sm font-medium">{{ t('views.power.lockScreen') }}</h4>
 					<p class="text-xs text-tx-muted">{{ t('views.power.lockScreenDescription') }}</p>
 				</div>
-				<SwitchToggle :label="t('views.power.lockScreen')" :is-on="idle.lock_enabled" @toggle="idle.lock_enabled = $event" />
+				<SwitchToggle :label="t('views.power.lockScreen')" :model-value="idle.lock_enabled" @update:model-value="idle.lock_enabled = $event" />
 			</div>
 			<FormGroup v-if="idle.lock_enabled" :label="t('views.power.lockMinutes')" class="mt-2">
 				<NumberInput v-model="idle.lock_minutes" :min="1" :max="180" narrow />
@@ -307,9 +304,9 @@ async function selectProfile(profile: string) {
 					</p>
 				</div>
 				<SwitchToggle :label="t('views.power.screenOff')"
-					:is-on="idle.screen_off_enabled"
+					:model-value="idle.screen_off_enabled"
 					:disabled="!idle.can_screen_off"
-					@toggle="idle.screen_off_enabled = $event"
+					@update:model-value="idle.screen_off_enabled = $event"
 				/>
 			</div>
 			<FormGroup v-if="idle.screen_off_enabled" :label="t('views.power.screenOffMinutes')" class="mt-2">
@@ -322,8 +319,8 @@ async function selectProfile(profile: string) {
 					<p class="text-xs text-tx-muted">{{ t('views.power.lockBeforeSleepDescription') }}</p>
 				</div>
 				<SwitchToggle :label="t('views.power.lockBeforeSleep')"
-					:is-on="idle.lock_before_sleep"
-					@toggle="idle.lock_before_sleep = $event"
+					:model-value="idle.lock_before_sleep"
+					@update:model-value="idle.lock_before_sleep = $event"
 				/>
 			</div>
 

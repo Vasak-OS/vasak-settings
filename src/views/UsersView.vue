@@ -2,13 +2,11 @@
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { open as abrirDialogo } from '@tauri-apps/plugin-dialog';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle, TextInput } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
-import TextInput from '@/components/ui/TextInput.vue';
 
 interface UserAccount {
 	uid: number;
@@ -239,8 +237,8 @@ function canDemote(user: UserAccount): boolean {
 			</template>
 		</PageHeader>
 
-		<AlertMessage v-if="error" tone="error" :message="error" />
-		<AlertMessage v-if="success" tone="success" :message="success" />
+		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
+		<AlertMessage v-if="success" tone="success">{{ success }}</AlertMessage>
 
 		<SectionCard v-if="showCreate">
 			<h3 class="text-base font-medium">{{ t('views.users.newAccount') }}</h3>
@@ -278,7 +276,7 @@ function canDemote(user: UserAccount): boolean {
 
 			<div class="mt-4 flex items-center justify-between gap-3">
 				<div class="flex items-center gap-3">
-					<SwitchToggle :label="t('views.users.admin')" :is-on="newUser.admin" @toggle="newUser.admin = $event" />
+					<SwitchToggle :label="t('views.users.admin')" :model-value="newUser.admin" @update:model-value="newUser.admin = $event" />
 					<span class="text-sm text-tx-primary">{{ t('views.users.admin') }}</span>
 				</div>
 				<button
@@ -386,9 +384,9 @@ function canDemote(user: UserAccount): boolean {
 						</p>
 					</div>
 					<SwitchToggle :label="t('views.users.admin')"
-						:is-on="user.is_admin"
+						:model-value="user.is_admin"
 						:disabled="busy || (user.is_admin && !canDemote(user))"
-						@toggle="toggleAdmin(user, $event)"
+						@update:model-value="toggleAdmin(user, $event)"
 					/>
 				</div>
 
@@ -398,9 +396,9 @@ function canDemote(user: UserAccount): boolean {
 						<p class="text-xs text-tx-muted">{{ t('views.users.lockedDescription') }}</p>
 					</div>
 					<SwitchToggle :label="t('views.users.lockedTitle')"
-						:is-on="user.locked"
+						:model-value="user.locked"
 						:disabled="busy || user.is_current"
-						@toggle="toggleLocked(user, $event)"
+						@update:model-value="toggleLocked(user, $event)"
 					/>
 				</div>
 

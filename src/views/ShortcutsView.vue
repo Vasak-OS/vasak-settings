@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
 import ShortcutDeleteModal from '@/components/shortcuts/ShortcutDeleteModal.vue';
 import ShortcutEditorModal from '@/components/shortcuts/ShortcutEditorModal.vue';
 import SpecialKeysCard from '@/components/shortcuts/SpecialKeysCard.vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
@@ -193,8 +193,8 @@ onMounted(loadShortcuts);
 		<EmptyStateBox v-if="loading" :message="t('views.shortcuts.loading')" padding="lg" />
 
 		<div v-else class="flex flex-col gap-4">
-			<AlertMessage v-if="error" :message="error" tone="error" />
-			<AlertMessage v-if="successMessage" :message="successMessage" tone="success" />
+			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
+			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
 			<SectionCard>
 				<div class="flex flex-col gap-4">

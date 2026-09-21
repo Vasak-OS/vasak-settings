@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle, TextInput } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import NumberInput from '@/components/ui/NumberInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
-import TextInput from '@/components/ui/TextInput.vue';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 
 const { t } = useI18n();
@@ -70,8 +68,8 @@ onMounted(async () => {
 			:description="t('views.wayfireInput.description')"
 		/>
 
-		<AlertMessage v-if="input.error.value" :message="input.error.value" tone="error" />
-		<AlertMessage v-if="input.success.value" :message="input.success.value" tone="success" />
+		<AlertMessage v-if="input.error.value" tone="error">{{ input.error.value }}</AlertMessage>
+		<AlertMessage v-if="input.success.value" tone="success">{{ input.success.value }}</AlertMessage>
 
 		<div v-if="input.loading.value" class="text-center text-tx-muted py-8">{{ t('common.loading') }}</div>
 
@@ -94,8 +92,8 @@ onMounted(async () => {
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.numlock')">
 						<SwitchToggle :label="t('views.wayfireInput.numlock')"
-							:isOn="input.getBool('kb_numlock_default_state', false)"
-							@toggle="input.setBool('kb_numlock_default_state', $event)"
+							:model-value="input.getBool('kb_numlock_default_state', false)"
+							@update:model-value="input.setBool('kb_numlock_default_state', $event)"
 						/>
 					</FormGroup>
 				</div>
@@ -105,14 +103,14 @@ onMounted(async () => {
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup :label="t('views.wayfireInput.leftHanded')">
 						<SwitchToggle :label="t('views.wayfireInput.leftHanded')"
-							:isOn="input.getBool('left_handed_mode', false)"
-							@toggle="input.setBool('left_handed_mode', $event)"
+							:model-value="input.getBool('left_handed_mode', false)"
+							@update:model-value="input.setBool('left_handed_mode', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.middleEmulation')">
 						<SwitchToggle :label="t('views.wayfireInput.middleEmulation')"
-							:isOn="input.getBool('middle_emulation', false)"
-							@toggle="input.setBool('middle_emulation', $event)"
+							:model-value="input.getBool('middle_emulation', false)"
+							@update:model-value="input.setBool('middle_emulation', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.accelProfile')">
@@ -133,8 +131,8 @@ onMounted(async () => {
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.mouseNaturalScroll')">
 						<SwitchToggle :label="t('views.wayfireInput.mouseNaturalScroll')"
-							:isOn="input.getBool('mouse_natural_scroll', false)"
-							@toggle="input.setBool('mouse_natural_scroll', $event)"
+							:model-value="input.getBool('mouse_natural_scroll', false)"
+							@update:model-value="input.setBool('mouse_natural_scroll', $event)"
 						/>
 					</FormGroup>
 				</div>
@@ -144,8 +142,8 @@ onMounted(async () => {
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup :label="t('views.wayfireInput.tapToClick')">
 						<SwitchToggle :label="t('views.wayfireInput.tapToClick')"
-							:isOn="input.getBool('tap_to_click', true)"
-							@toggle="input.setBool('tap_to_click', $event)"
+							:model-value="input.getBool('tap_to_click', true)"
+							@update:model-value="input.setBool('tap_to_click', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.clickMethod')">
@@ -164,26 +162,26 @@ onMounted(async () => {
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.naturalScroll')">
 						<SwitchToggle :label="t('views.wayfireInput.naturalScroll')"
-							:isOn="input.getBool('natural_scroll', false)"
-							@toggle="input.setBool('natural_scroll', $event)"
+							:model-value="input.getBool('natural_scroll', false)"
+							@update:model-value="input.setBool('natural_scroll', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.disableWhileTyping')">
 						<SwitchToggle :label="t('views.wayfireInput.disableWhileTyping')"
-							:isOn="input.getBool('disable_touchpad_while_typing', false)"
-							@toggle="input.setBool('disable_touchpad_while_typing', $event)"
+							:model-value="input.getBool('disable_touchpad_while_typing', false)"
+							@update:model-value="input.setBool('disable_touchpad_while_typing', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.disableWithMouse')">
 						<SwitchToggle :label="t('views.wayfireInput.disableWithMouse')"
-							:isOn="input.getBool('disable_touchpad_while_mouse', false)"
-							@toggle="input.setBool('disable_touchpad_while_mouse', $event)"
+							:model-value="input.getBool('disable_touchpad_while_mouse', false)"
+							@update:model-value="input.setBool('disable_touchpad_while_mouse', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.tapAndDrag')">
 						<SwitchToggle :label="t('views.wayfireInput.tapAndDrag')"
-							:isOn="input.getBool('tap_and_drag', true)"
-							@toggle="input.setBool('tap_and_drag', $event)"
+							:model-value="input.getBool('tap_and_drag', true)"
+							@update:model-value="input.setBool('tap_and_drag', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireInput.accelProfile')">

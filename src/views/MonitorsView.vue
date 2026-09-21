@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
 import MonitorCanvas, { type CanvasMonitor } from '@/components/monitors/MonitorCanvas.vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import NumberInput from '@/components/ui/NumberInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
 import {
 	applyMonitorLayout,
 	type BrightnessKind,
@@ -274,13 +273,12 @@ onMounted(load);
 			:description="t('views.monitors.description')"
 		/>
 
-		<AlertMessage v-if="error" :message="error" tone="error" />
-		<AlertMessage v-if="success" :message="success" tone="success" />
+		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
+		<AlertMessage v-if="success" tone="success">{{ success }}</AlertMessage>
 		<AlertMessage
 			v-if="usingKernelFallback"
-			:message="t('views.monitors.installWlrRandr')"
-			tone="warning"
-		/>
+		
+			tone="warning">{{ t('views.monitors.installWlrRandr') }}</AlertMessage>
 
 		<div v-if="loading" class="py-8 text-center text-sm text-tx-muted">
 			{{ t('views.monitors.loading') }}
@@ -327,8 +325,8 @@ onMounted(load);
 					</div>
 					<SwitchToggle :label="t('views.monitors.enableMonitor').replace('{0}', monitor.name)"
 						v-if="monitor.connected"
-						:isOn="monitor.enabled"
-						@toggle="monitor.enabled = $event"
+						:model-value="monitor.enabled"
+						@update:model-value="monitor.enabled = $event"
 					/>
 				</div>
 
@@ -417,7 +415,7 @@ onMounted(load);
 				</p>
 			</SectionCard>
 
-			<AlertMessage v-if="ddcHint" :message="ddcHint" tone="info" />
+			<AlertMessage v-if="ddcHint" tone="info">{{ ddcHint }}</AlertMessage>
 
 			<div v-if="connected.length > 0" class="flex justify-end">
 				<button

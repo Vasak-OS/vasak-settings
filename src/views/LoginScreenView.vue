@@ -2,15 +2,13 @@
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, SwitchToggle, TextInput } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import FormGroup from '@/components/ui/FormGroup.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
-import SwitchToggle from '@/components/ui/SwitchToggle.vue';
-import TextInput from '@/components/ui/TextInput.vue';
 import { type GreeterConfig, getGreeterConfig, setGreeterConfig } from '@/services/greeter.service';
 import { getOfficialWallpapers, getSchemes } from '@/services/style.service';
 
@@ -216,9 +214,9 @@ const save = async () => {
 		<EmptyStateBox v-if="loading" :message="t('views.loginScreen.loading')" padding="lg" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
-			<AlertMessage v-if="error" :message="error" tone="error" />
-			<AlertMessage v-if="successMessage" :message="successMessage" tone="success" />
-			<AlertMessage :message="t('views.loginScreen.needsAdmin')" tone="info" />
+			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
+			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
+			<AlertMessage tone="info">{{ t('views.loginScreen.needsAdmin') }}</AlertMessage>
 
 			<div class="grid gap-4 xl:grid-cols-2">
 				<SectionCard>
@@ -229,7 +227,7 @@ const save = async () => {
 						<div class="flex items-center justify-between">
 							<label class="text-sm font-medium">{{ t('views.loginScreen.darkMode') }}</label>
 							<div class="flex items-center gap-3">
-								<SwitchToggle :label="t('views.loginScreen.darkMode')" :is-on="darkMode" @toggle="(val: boolean) => (darkMode = val)" />
+								<SwitchToggle :label="t('views.loginScreen.darkMode')" :model-value="darkMode" @update:model-value="(val: boolean) => (darkMode = val)" />
 								<span class="w-16 text-xs text-tx-muted">
 									{{ darkMode ? t('views.loginScreen.dark') : t('views.loginScreen.light') }}
 								</span>

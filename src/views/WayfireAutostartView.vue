@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { AlertMessage, TextInput } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted } from 'vue';
-import AlertMessage from '@/components/ui/AlertMessage.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
-import TextInput from '@/components/ui/TextInput.vue';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 
 // The section is owned entirely by this view, so saving must also delete what
@@ -66,8 +65,8 @@ function renameApp(oldKey: string, rawKey: string) {
 			:description="t('views.wayfireAutostart.description')"
 		/>
 
-		<AlertMessage v-if="autostart.error.value" tone="error" :message="autostart.error.value" />
-		<AlertMessage v-if="autostart.success.value" tone="success" :message="autostart.success.value" />
+		<AlertMessage v-if="autostart.error.value" tone="error">{{ autostart.error.value }}</AlertMessage>
+		<AlertMessage v-if="autostart.success.value" tone="success">{{ autostart.success.value }}</AlertMessage>
 
 		<form @submit.prevent="autostart.save()" class="flex flex-col gap-4">
 			<SectionCard>
