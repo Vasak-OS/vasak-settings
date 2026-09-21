@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { listen } from '@tauri-apps/api/event';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, SwitchToggle, TextInput } from '@vasakgroup/vue-libvasak';
+import { AlertMessage, SwitchToggle, TextInput, ThemeIcon } from '@vasakgroup/vue-libvasak';
 import { computed, nextTick, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import StatTile from '@/components/ui/StatTile.vue';
-import { useReactiveSymbol } from '@/composables/useReactiveIcon';
 import {
 	connectToWifi,
 	getCurrentNetworkState,
@@ -37,12 +36,16 @@ const selectedNetwork = ref<NetworkInfo | null>(null);
 const wifiPassword = ref('');
 const showPasswordDialog = ref(false);
 const error = ref('');
-const [currentNetworkIcon, updateCurrentIcon] = useReactiveSymbol(() => {
-	if (currentConnectedNetwork.value?.icon) {
-		return currentConnectedNetwork.value.icon;
-	}
-	return 'network-wireless-disconnected-symbolic';
-});
+/**
+ * El icono de la red conectada, o el de «sin conexión».
+ *
+ * Era un icono resuelto a mano más cinco `await updateCurrentIcon()` repartidos
+ * por las funciones que tocan la red. Existían porque el composable propio
+ * resolvía **una vez** y no miraba el nombre; `ThemeIcon` lo mira.
+ */
+const currentNetworkIcon = computed(
+	() => currentConnectedNetwork.value?.icon || 'network-wireless-disconnected-symbolic'
+);
 const networkStats = ref<NetworkStats | null>(null);
 const networkInterfaces = ref<string[]>([]);
 
@@ -126,7 +129,6 @@ const refreshNetworks = async () => {
 	loading.value = true;
 	try {
 		availableNetworks.value = await listWifiNetworks();
-		await updateCurrentIcon();
 		await refreshNetworkTelemetry();
 	} catch (scanError) {
 		error.value = t('views.networkWifi.errors.refresh').replace('{0}', String(scanError));
@@ -143,7 +145,6 @@ const triggerRescan = async () => {
 	error.value = '';
 	try {
 		availableNetworks.value = await rescanWifi();
-		await updateCurrentIcon();
 		await refreshNetworkTelemetry();
 	} catch (scanError) {
 		error.value = t('views.networkWifi.errors.scan').replace('{0}', String(scanError));
@@ -172,7 +173,6 @@ const checkWirelessStatus = async () => {
 				availableNetworks.value = [];
 				networkStats.value = null;
 				networkInterfaces.value = [];
-				await updateCurrentIcon();
 			}
 		} else {
 			wifiStatus.value = t('views.networkWifi.status.noHardware');
@@ -180,7 +180,6 @@ const checkWirelessStatus = async () => {
 			availableNetworks.value = [];
 			networkStats.value = null;
 			networkInterfaces.value = [];
-			await updateCurrentIcon();
 		}
 	} catch (wirelessError) {
 		error.value = t('views.networkWifi.errors.wirelessStatus').replace(
@@ -209,7 +208,6 @@ const toggleWifi = async () => {
 			availableNetworks.value = [];
 			networkStats.value = null;
 			networkInterfaces.value = [];
-			await updateCurrentIcon();
 		}
 	} catch (toggleError) {
 		error.value = t('views.networkWifi.errors.toggle').replace('{0}', String(toggleError));
@@ -292,7 +290,11 @@ onUnmounted(() => {
 			<template #actions>
 				<div class="flex items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2">
 					<div class="flex items-center gap-2">
-						<img v-if="currentNetworkIcon" :src="currentNetworkIcon" :alt="t('views.networkWifi.currentNetworkAlt')" class="h-5 w-5" />
+						<ThemeIcon
+							:name="currentNetworkIcon"
+							type="symbol"
+							:size="20"
+							:alt="t('views.networkWifi.currentNetworkAlt')" />
 						<span class="text-sm font-medium">
 							{{
 								currentConnectedNetwork

@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { SwitchToggle } from '@vasakgroup/vue-libvasak';
+import { SwitchToggle, ThemeIcon } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted } from 'vue';
-import { useReactiveIcon } from '@/composables/useReactiveIcon';
 import { useWayfirePlugins } from '@/composables/useWayfirePlugins';
 
 interface Props {
@@ -18,7 +17,6 @@ const props = defineProps<Props>();
 
 const { t } = useI18n();
 const { get, setEnabled, load } = useWayfirePlugins();
-const [iconSrc] = useReactiveIcon(() => props.icon ?? 'application-x-addon');
 
 onMounted(load);
 
@@ -41,7 +39,7 @@ function handleToggle(value: boolean) {
 <template>
 	<article class="rounded-corner border border-ui-border bg-ui-surface/70">
 		<header class="flex items-start gap-3 p-4">
-			<img :src="iconSrc" alt="" class="mt-0.5 h-5 w-5 shrink-0" />
+			<ThemeIcon :name="icon ?? 'application-x-addon'" :size="20" class="mt-0.5" />
 
 			<div class="min-w-0 flex-1">
 				<h3 class="truncate text-sm font-semibold text-tx-primary">{{ heading }}</h3>

@@ -1,14 +1,12 @@
 <script lang="ts" setup>
+import { ThemeIcon } from '@vasakgroup/vue-libvasak';
 import { computed } from 'vue';
-import { useReactiveIcon } from '@/composables/useReactiveIcon';
 
 const props = defineProps<{
 	device: any;
 	actionLabel: string;
 	connected?: boolean;
 }>();
-
-const [icon] = useReactiveIcon(() => props.device.icon || 'bluetooth');
 
 const emit = defineEmits<{
 	action: [];
@@ -33,8 +31,17 @@ const deviceExtraInfo = computed(() => {
 		:class="[connected ? 'border-primary/60 bg-primary/5' : 'border-ui-border hover:border-ui-border/80']"
 	>
 		<div class="flex flex-1 min-w-0 items-center gap-3">
-			<img v-if="icon" :src="icon" :alt="deviceTitle" class="h-6 w-6 shrink-0 opacity-80" />
-			<div class="h-6 w-6 shrink-0 rounded-full bg-ui-border animate-pulse" v-else></div>
+			<!-- Antes había un círculo latiendo mientras no hubiera icono. Se va
+			     por dos motivos: `ThemeIcon` ya reserva el hueco del mismo tamaño
+			     —que era para lo que servía, para que la fila no salte— y ese
+			     latido también aparecía cuando el tema **no tiene** ese icono, que
+			     es un estado permanente: quedaba pulsando para siempre como si
+			     estuviera por llegar algo. -->
+			<ThemeIcon
+				:name="device.icon || 'bluetooth'"
+				:size="24"
+				:alt="deviceTitle"
+				class="opacity-80" />
 
 			<div class="min-w-0 flex-1">
 				<div class="font-medium truncate text-sm text-tx-primary">

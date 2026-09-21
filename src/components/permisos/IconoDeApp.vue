@@ -2,9 +2,11 @@
 /**
  * El icono de una aplicación en la lista de permisos.
  *
- * Va en su propio componente porque `useReactiveIcon` resuelve **un** icono y
- * se vuelve a suscribir al cambio de tema: con una lista de aplicaciones hace
- * falta uno por fila, y un `v-for` no puede llamar a un composable.
+ * Nació como componente aparte porque el composable propio resolvía **un**
+ * icono y se suscribía al cambio de tema por llamada, y un `v-for` no puede
+ * llamar a un composable. Ese motivo ya no existe —`ThemeIcon` es un componente
+ * y se pone dentro de un `v-for` sin más—, pero el componente se queda por el
+ * otro: el recuadro con borde que deja el hueco cuando el icono no está.
  *
  * Si el icono no se encuentra queda el hueco con el borde, no un recuadro roto:
  * una fila sin icono se sigue leyendo por su nombre, y una imagen rota llama la
@@ -18,20 +20,18 @@
  * información, agrega reconocimiento de un vistazo — que es exactamente lo que
  * un `alt` vacío declara.
  */
-import { useReactiveIcon } from '@/composables/useReactiveIcon';
+import { ThemeIcon } from '@vasakgroup/vue-libvasak';
 
-const props = defineProps<{
+defineProps<{
 	/** El nombre del icono, ya resuelto por el backend desde el `.desktop`. */
 	nombre: string;
 }>();
-
-const [icono] = useReactiveIcon(() => props.nombre);
 </script>
 
 <template>
 	<span
 		class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-corner-sm border border-ui-border bg-ui-bg/60"
 	>
-		<img v-if="icono" :src="icono" alt="" class="size-7 object-contain">
+		<ThemeIcon :name="nombre" :size="28" />
 	</span>
 </template>

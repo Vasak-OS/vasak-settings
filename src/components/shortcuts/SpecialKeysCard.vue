@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { computed, type Ref } from 'vue';
-import { useReactiveSymbol } from '@/composables/useReactiveIcon';
+import { ThemeIcon } from '@vasakgroup/vue-libvasak';
+import { computed } from 'vue';
 import { SPECIAL_KEYS, type SpecialKeyDef } from '@/config/specialKeys';
 import type { ShortcutRule } from '@/types/shortcuts';
 
@@ -17,12 +17,6 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
-
-const iconRefs: Record<string, Ref<string>> = {};
-for (const sk of SPECIAL_KEYS) {
-	const [icon] = useReactiveSymbol(() => sk.icon);
-	iconRefs[sk.keyToken] = icon;
-}
 
 interface SpecialKeyEntry {
 	def: SpecialKeyDef;
@@ -77,12 +71,15 @@ const handleEdit = (entry: SpecialKeyEntry) => {
 				class="flex items-center justify-between gap-3 rounded-corner border border-ui-border/60 bg-ui-surface/30 px-3 py-2.5"
 			>
 				<div class="flex min-w-0 items-center gap-3">
-					<img
-						v-if="iconRefs[entry.def.keyToken]?.value"
-						:src="iconRefs[entry.def.keyToken].value"
-						:alt="t(`shortcutKeys.${entry.def.keyToken}.label`)"
-						class="h-5 w-5 shrink-0"
-					/>
+					<!-- El mapa de `ref` que había acá era la forma de resolver un
+					     icono por fila sin poder llamar a un composable dentro del
+					     `v-for`. Con un componente no hace falta: cada fila trae el
+					     suyo. -->
+					<ThemeIcon
+						:name="entry.def.icon"
+						type="symbol"
+						:size="20"
+						:alt="t(`shortcutKeys.${entry.def.keyToken}.label`)" />
 					<div class="min-w-0">
 						<div class="flex items-center gap-2">
 							<span class="text-sm font-medium text-tx-primary">
