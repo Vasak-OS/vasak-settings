@@ -25,10 +25,66 @@
  * cuenta. Ver Vasak-OS/vue-libvasak#54.
  */
 
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, mock, test } from 'bun:test';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Glob } from 'bun';
+
+/**
+ * Qué variante del tema devuelve el doble, para poder cambiarla a mitad.
+ *
+ * El nombre resuelto lleva la variante adentro: así el `src` dibujado dice de
+ * qué tema salió, que es lo único que distingue «volvió a pedirlo» de «se quedó
+ * con el de antes».
+ */
+let variante = 'claro';
+
+/** Los manejadores del cambio de tema, para dispararlos a mano. */
+const oyentesDelTema: Array<() => void> = [];
+
+/**
+ * Los dobles van **encima** del módulo de verdad, no en su lugar.
+ *
+ * Reemplazarlo entero deja sin exportar lo que no se nombre acá, y lo que falla
+ * entonces es el import y no la prueba: los componentes compilados de la
+ * librería importan `once` del módulo de eventos, así que en cuanto una prueba
+ * monta uno, la corrida se cae con un «Export named 'once' not found» que no
+ * nombra ninguna prueba.
+ */
+const eventos = await import('@tauri-apps/api/event');
+const nucleo = await import('@tauri-apps/api/core');
+
+mock.module('@tauri-apps/api/event', () => ({
+	...eventos,
+	listen: async (nombre: string, manejador: () => void) => {
+		if (nombre === 'vicons:theme-changed') oyentesDelTema.push(manejador);
+		return () => {
+			const donde = oyentesDelTema.indexOf(manejador);
+			if (donde >= 0) oyentesDelTema.splice(donde, 1);
+		};
+	},
+}));
+
+/** El catálogo mínimo: un proveedor, para mirarle el icono. */
+mock.module('@tauri-apps/api/core', () => ({
+	...nucleo,
+	invoke: async (comando: string) => {
+		if (comando.includes('list_providers')) {
+			return [{ id: 'google', display_name: 'Google', capabilities: [] }];
+		}
+		return [];
+	},
+}));
+
+mock.module('@vasakgroup/plugin-vicons', () => ({
+	getIconSource: async (nombre: string) => `icono:${variante}:${nombre}`,
+	getSymbolSource: async (nombre: string) => `simbolo:${variante}:${nombre}`,
+	hasSymbol: async () => true,
+}));
+
+mock.module('@vasakgroup/tauri-plugin-i18n', () => ({
+	useI18n: () => ({ t: (clave: string) => clave, locale: { value: 'es' } }),
+}));
 
 // `fileURLToPath` y no `.pathname`: éste deja los caracteres codificados tal
 // como están, así que un checkout en una ruta con un espacio llega con `%20` y
@@ -97,13 +153,55 @@ describe('quién resuelve iconos a mano', () => {
 		// resuelve y **no** vuelve a resolver nunca: las tarjetas se quedarían
 		// con la variante anterior al cambiar de tema, y nada fallaría.
 		//
-		// Es una guardia de texto y no de comportamiento, así que comprueba lo
-		// único que el texto puede decir: que el archivo se cuelgue del oyente
-		// compartido. Que de verdad vuelva a pedir los iconos se prueba en
-		// `icono-de-proveedor.test.ts`, que es donde vive esa función.
+		// Es una guardia de texto, y sola **no alcanza**: sacándole el `watch` a
+		// la versión, el archivo sigue nombrando `usarLaVersionDelTema` y esto
+		// sigue en verde. Lo que cierra el agujero es la prueba de más abajo, que
+		// monta la vista y mira el dibujo. Ésta queda por lo otro que el texto sí
+		// puede decir: que no haya vuelto a aparecer un `listen` propio.
 		const texto = await Bun.file(join(FUENTE, 'views/OnlineAccountsView.vue')).text();
 
 		expect(texto).toContain('usarLaVersionDelTema');
 		expect(texto).not.toContain("listen('vicons:theme-changed'");
+	});
+});
+
+/**
+ * Y que de verdad vuelva a pedirlos, que es lo que el texto no puede decir.
+ *
+ * La guardia de arriba comprueba que el archivo se cuelgue del oyente
+ * compartido, y con eso **no alcanza**: sacándole el `watch` a la versión, el
+ * archivo sigue nombrando `usarLaVersionDelTema` y la guardia sigue en verde
+ * mientras las tarjetas se quedan con los iconos del tema anterior. Medido, y
+ * lo marcó CodeRabbit en la revisión de este PR.
+ *
+ * Así que esto monta la vista, cambia lo que el tema devuelve, emite el aviso
+ * del cambio y mira el `src` que quedó dibujado.
+ */
+describe('las tarjetas de proveedor vuelven a pedir el icono al cambiar el tema', () => {
+	test('el dibujo cambia, no sólo el import', async () => {
+		const { mount } = await import('@vue/test-utils');
+		const { nextTick } = await import('vue');
+		const { olvidarLosIconosDelTema } = await import('@vasakgroup/vue-libvasak');
+
+		olvidarLosIconosDelTema();
+		variante = 'claro';
+
+		const OnlineAccountsView = (await import('@/views/OnlineAccountsView.vue')).default;
+		const vista = mount(OnlineAccountsView, { attachTo: document.body });
+		for (let i = 0; i < 12; i++) await nextTick();
+
+		const antes = vista.find('img[alt="Google"]').attributes('src');
+		expect(antes).toBe('simbolo:claro:google-symbolic');
+
+		variante = 'oscuro';
+		for (const manejador of oyentesDelTema) manejador();
+		for (let i = 0; i < 12; i++) await nextTick();
+
+		expect(vista.find('img[alt="Google"]').attributes('src')).toBe(
+			'simbolo:oscuro:google-symbolic'
+		);
+
+		vista.unmount();
+		olvidarLosIconosDelTema();
 	});
 });
