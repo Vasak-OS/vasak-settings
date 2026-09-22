@@ -238,13 +238,19 @@ describe('la recarga de los iconos del tema se agenda', () => {
 			}
 		};
 
-		jest.useFakeTimers();
-		olvidarLosIconosDelTema();
-		variante = 'claro';
-
-		const ProfileIcon = (await import('@/components/ui/ProfileIcon.vue')).default;
-		const icono = mount(ProfileIcon, { props: { profile: 'balanced' } });
+		// Todo lo que haya que deshacer se prepara **dentro** del `try`: si el
+		// import o el `mount` fallaran antes, el `finally` no correría y las
+		// pruebas siguientes heredarían el reloj detenido y la variante puesta
+		// acá. Lo marcó la revisión.
+		const varianteDeAntes = variante;
+		let icono: ReturnType<typeof mount> | null = null;
 		try {
+			jest.useFakeTimers();
+			olvidarLosIconosDelTema();
+			variante = 'claro';
+
+			const ProfileIcon = (await import('@/components/ui/ProfileIcon.vue')).default;
+			icono = mount(ProfileIcon, { props: { profile: 'balanced' } });
 			await settle();
 			expect(icono.get('img').attributes('src')).toBe('icono:claro:battery-profile-balanced');
 
@@ -263,7 +269,8 @@ describe('la recarga de los iconos del tema se agenda', () => {
 
 			expect(icono.get('img').attributes('src')).toBe('icono:oscuro:battery-profile-balanced');
 		} finally {
-			icono.unmount();
+			icono?.unmount();
+			variante = varianteDeAntes;
 			olvidarLosIconosDelTema();
 			jest.useRealTimers();
 		}
