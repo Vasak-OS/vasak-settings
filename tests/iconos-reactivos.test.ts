@@ -25,7 +25,7 @@
  * cuenta. Ver Vasak-OS/vue-libvasak#54.
  */
 
-import { describe, expect, mock, test } from 'bun:test';
+import { describe, expect, jest, mock, test } from 'bun:test';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Glob } from 'bun';
@@ -203,5 +203,76 @@ describe('las tarjetas de proveedor vuelven a pedir el icono al cambiar el tema'
 
 		vista.unmount();
 		olvidarLosIconosDelTema();
+	});
+});
+
+/**
+ * Y que la recarga vaya por el planificador, que es lo que la 1.4.0 trae.
+ *
+ * Distinto de lo de arriba. Las tarjetas de proveedor siguen al tema por
+ * `usarLaVersionDelTema`, que sube la versión **en el acto**; por eso aquella
+ * prueba pasa igual con la librería vieja —comprobado instalando la 1.2.0—. Lo
+ * que separa las dos versiones es lo que hace `ThemeIcon` con los treinta y
+ * seis iconos del resto de la ventana: desde la 1.3.0 la recarga se **agenda**
+ * en vez de dispararse, para que el aviso del tema de iconos y el de GTK no
+ * disparen dos barridos.
+ *
+ * Va con el reloj detenido. Las dos cosas que hay que comprobar se pelean: que
+ * la recarga **todavía no** pasó justo después del aviso, y que **sí** pasa un
+ * poco más tarde. Con esperas de reloj real la primera falla de a ratos —si la
+ * máquina se demora, los 100 ms se cumplen antes de la aserción— y con sólo un
+ * `nextTick` la segunda se vuelve vacía, porque sin planificador la recarga
+ * tampoco llega a verse. Las dos las comprobé.
+ */
+describe('la recarga de los iconos del tema se agenda', () => {
+	test('no pasa en el acto, y pasa un poco después', async () => {
+		const { mount } = await import('@vue/test-utils');
+		const { nextTick } = await import('vue');
+		const { olvidarLosIconosDelTema } = await import('@vasakgroup/vue-libvasak');
+
+		/** Sólo microtareas: con el reloj detenido un `setTimeout(0)` no vuelve. */
+		const settle = async (rounds = 8) => {
+			for (let i = 0; i < rounds; i++) {
+				await nextTick();
+				await Promise.resolve();
+			}
+		};
+
+		// Todo lo que haya que deshacer se prepara **dentro** del `try`: si el
+		// import o el `mount` fallaran antes, el `finally` no correría y las
+		// pruebas siguientes heredarían el reloj detenido y la variante puesta
+		// acá. Lo marcó la revisión.
+		const varianteDeAntes = variante;
+		let icono: ReturnType<typeof mount> | null = null;
+		try {
+			jest.useFakeTimers();
+			olvidarLosIconosDelTema();
+			variante = 'claro';
+
+			const ProfileIcon = (await import('@/components/ui/ProfileIcon.vue')).default;
+			icono = mount(ProfileIcon, { props: { profile: 'balanced' } });
+			await settle();
+			expect(icono.get('img').attributes('src')).toBe('icono:claro:battery-profile-balanced');
+
+			variante = 'oscuro';
+			for (const manejador of oyentesDelTema) manejador();
+			await settle();
+
+			expect(icono.get('img').attributes('src')).not.toBe('icono:oscuro:battery-profile-balanced');
+
+			// El planificador `await`ea entre tandas, así que se avanza en pasos
+			// con microtareas en el medio.
+			for (let i = 0; i < 8; i++) {
+				jest.advanceTimersByTime(40);
+				await settle(2);
+			}
+
+			expect(icono.get('img').attributes('src')).toBe('icono:oscuro:battery-profile-balanced');
+		} finally {
+			icono?.unmount();
+			variante = varianteDeAntes;
+			olvidarLosIconosDelTema();
+			jest.useRealTimers();
+		}
 	});
 });
