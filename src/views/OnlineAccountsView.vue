@@ -637,7 +637,7 @@ onMounted(async () => {
 		<AlertMessage v-if="success" tone="success">{{ success }}</AlertMessage>
 
 		<SectionCard v-if="accounts.length > 0">
-			<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.onlineAccounts.linkedAccounts') }}</h3>
+			<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.onlineAccounts.linkedAccounts') }}</h3>
 
 			<ul class="flex flex-col gap-2">
 				<li
@@ -646,7 +646,7 @@ onMounted(async () => {
 					class="flex items-center justify-between rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-3"
 				>
 					<div class="flex min-w-0 flex-col">
-						<span class="truncate text-sm font-medium text-tx-primary">
+						<span class="truncate text-sm font-medium text-tx-main">
 							{{ account.display_name || account.provider_type }}
 						</span>
 						<span class="text-xs text-tx-muted">{{ account.provider_type }}</span>
@@ -683,7 +683,7 @@ onMounted(async () => {
 		</SectionCard>
 
 		<SectionCard v-if="credencialesDe">
-			<h3 class="mb-1 text-lg font-medium text-tx-primary">
+			<h3 class="mb-1 text-lg font-medium text-tx-main">
 				{{ t('views.onlineAccounts.credentials.title').replace('{0}', credencialesDe.display_name) }}
 			</h3>
 			<p class="mb-2 text-sm text-tx-muted">
@@ -757,7 +757,7 @@ onMounted(async () => {
 		</SectionCard>
 
 		<SectionCard v-if="nextcloudProvider">
-			<h3 class="mb-1 text-lg font-medium text-tx-primary">
+			<h3 class="mb-1 text-lg font-medium text-tx-main">
 				{{ t('views.onlineAccounts.nextcloud.title').replace('{0}', nextcloudProvider.display_name) }}
 			</h3>
 			<p class="mb-4 text-sm text-tx-muted">
@@ -826,7 +826,7 @@ onMounted(async () => {
 		</SectionCard>
 
 		<SectionCard>
-			<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.onlineAccounts.providers') }}</h3>
+			<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.onlineAccounts.providers') }}</h3>
 
 			<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
 				<button
@@ -848,7 +848,7 @@ onMounted(async () => {
 						:alt="provider.display_name"
 						class="h-10 w-10"
 					/>
-					<span class="text-sm font-medium text-tx-primary">{{ provider.display_name }}</span>
+					<span class="text-sm font-medium text-tx-main">{{ provider.display_name }}</span>
 					<ul class="flex flex-wrap justify-center gap-1.5">
 						<li
 							v-for="c in provider.capabilities"
@@ -879,7 +879,7 @@ onMounted(async () => {
 						type="symbol"
 						:size="40"
 						:alt="t('views.onlineAccounts.customProvider')" />
-					<span class="text-sm font-medium text-tx-primary">
+					<span class="text-sm font-medium text-tx-main">
 						{{ t('views.onlineAccounts.customProvider') }}
 					</span>
 					<span class="text-xs text-tx-muted">IMAP / SMTP / CardDAV / CalDAV</span>
@@ -893,7 +893,7 @@ onMounted(async () => {
 			class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
 		>
 			<div class="w-full max-w-lg rounded-corner border border-ui-border bg-ui-bg p-5 shadow-xl">
-				<h2 class="text-lg font-semibold text-tx-primary">{{ t('views.onlineAccounts.customProvider') }}</h2>
+				<h2 class="text-lg font-semibold text-tx-main">{{ t('views.onlineAccounts.customProvider') }}</h2>
 				<p class="mt-1 text-sm text-tx-muted">
 					{{ t('views.onlineAccounts.customDialogDescription') }}
 				</p>

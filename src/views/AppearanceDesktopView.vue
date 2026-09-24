@@ -108,7 +108,7 @@ const isFormValid = computed(() => {
 
 			<div class="grid gap-4 xl:grid-cols-2">
 				<SectionCard>
-					<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.appearanceDesktop.files') }}</h3>
+					<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.appearanceDesktop.files') }}</h3>
 					<div class="flex flex-col gap-5">
 						<!-- Mostrar u ocultar los archivos ya no es un interruptor: se
 						     hace poniendo o sacando el widget de archivos del escritorio,
@@ -117,7 +117,7 @@ const isFormValid = computed(() => {
 						<p class="text-sm text-tx-muted">{{ t('views.appearanceDesktop.filesAreAWidget') }}</p>
 
 						<div class="flex items-center justify-between">
-							<label class="text-sm font-medium text-tx-primary">{{ t('views.appearanceDesktop.showHiddenFiles') }}</label>
+							<label class="text-sm font-medium text-tx-main">{{ t('views.appearanceDesktop.showHiddenFiles') }}</label>
 							<div class="flex items-center gap-3">
 								<SwitchToggle :label="t('views.appearanceDesktop.showHiddenFiles')"
 									:model-value="showHiddenFiles"
@@ -130,7 +130,7 @@ const isFormValid = computed(() => {
 				</SectionCard>
 
 				<SectionCard>
-					<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.appearanceDesktop.dimensions') }}</h3>
+					<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.appearanceDesktop.dimensions') }}</h3>
 					<div class="flex flex-col gap-5">
 						<FormGroup :label="t('views.appearanceDesktop.iconSize')" html-for="icon-size" :label-class="'flex justify-between w-full'">
 							<template #default>

@@ -45,7 +45,7 @@ const emit = defineEmits<{ close: [] }>();
     <DialogContent :class="['w-full', maxWidthClass]">
       <DialogHeader class="flex items-start justify-between gap-4">
         <div>
-          <DialogTitle class="font-semibold text-lg text-tx-primary">{{ title }}</DialogTitle>
+          <DialogTitle class="font-semibold text-lg text-tx-main">{{ title }}</DialogTitle>
           <DialogDescription v-if="description" class="mt-1 text-sm">
             {{ description }}
           </DialogDescription>
@@ -53,7 +53,7 @@ const emit = defineEmits<{ close: [] }>();
 
         <button
           type="button"
-          class="rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-1.5 text-sm text-tx-muted transition-colors hover:bg-ui-surface hover:text-tx-primary"
+          class="rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-1.5 text-sm text-tx-muted transition-colors hover:bg-ui-surface hover:text-tx-main"
           @click="emit('close')">
           {{ t('common.close') }}
         </button>

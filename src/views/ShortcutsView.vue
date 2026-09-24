@@ -200,7 +200,7 @@ onMounted(loadShortcuts);
 				<div class="flex flex-col gap-4">
 					<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 						<div>
-							<h3 class="text-lg font-medium text-tx-primary">{{ t('views.shortcuts.listTitle') }}</h3>
+							<h3 class="text-lg font-medium text-tx-main">{{ t('views.shortcuts.listTitle') }}</h3>
 							<p class="text-sm text-tx-muted">{{ t('views.shortcuts.listHint') }}</p>
 						</div>
 
@@ -208,7 +208,7 @@ onMounted(loadShortcuts);
 							v-model="searchQuery"
 							type="text"
 							:placeholder="t('views.shortcuts.searchPlaceholder')"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary transition-colors placeholder:text-tx-muted/70 focus:border-primary sm:max-w-sm"
+							class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-main transition-colors placeholder:text-tx-muted/70 focus:border-primary sm:max-w-sm"
 						/>
 					</div>
 
@@ -230,20 +230,20 @@ onMounted(loadShortcuts);
 										</span>
 										<span class="text-xs uppercase tracking-[0.16em] text-tx-muted">{{ item.shortcut.action }}</span>
 									</div>
-									<p class="mt-3 break-all text-sm text-tx-primary">{{ item.shortcut.target }}</p>
+									<p class="mt-3 break-all text-sm text-tx-main">{{ item.shortcut.target }}</p>
 								</div>
 
 								<div class="flex gap-2">
 									<button
 										type="button"
-										class="rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-2 text-sm font-medium text-tx-primary transition-colors hover:bg-ui-surface"
+										class="rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-2 text-sm font-medium text-tx-main transition-colors hover:bg-ui-surface"
 										@click="openEditModal(item.index)"
 									>
 										{{ t('common.edit') }}
 									</button>
 									<button
 										type="button"
-										class="rounded-corner border border-status-danger/30 bg-status-danger/10 px-3 py-2 text-sm font-medium text-status-danger transition-colors hover:bg-status-danger/20"
+										class="rounded-corner border border-status-error/30 bg-status-error/10 px-3 py-2 text-sm font-medium text-status-error transition-colors hover:bg-status-error/20"
 										@click="openDeleteModal(item.shortcut, item.index)"
 									>
 										{{ t('common.delete') }}
@@ -265,7 +265,7 @@ onMounted(loadShortcuts);
 
 			<button
 				type="button"
-				class="self-start rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2 text-sm font-medium text-tx-primary transition-colors hover:bg-ui-surface"
+				class="self-start rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2 text-sm font-medium text-tx-main transition-colors hover:bg-ui-surface"
 				:disabled="saving"
 				@click="resetSpecialDefaults"
 			>

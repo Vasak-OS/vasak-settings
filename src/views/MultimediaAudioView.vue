@@ -177,11 +177,11 @@ onUnmounted(() => {
 		<div class="mt-2 grid gap-6 xl:grid-cols-2">
 			<!-- Slider Volumen -->
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.multimediaAudio.masterVolume') }}</h3>
+				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.multimediaAudio.masterVolume') }}</h3>
 				<div class="flex items-center gap-4 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 					<button 
 						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner bg-ui-surface transition-colors hover:bg-primary hover:text-white"
-						:class="volumeInfo.is_muted ? 'text-status-error border border-status-error/40' : 'text-tx-primary border border-ui-border'"
+						:class="volumeInfo.is_muted ? 'text-status-error border border-status-error/40' : 'text-tx-main border border-ui-border'"
 						@click="toggleMute"
 						:title="t('views.multimediaAudio.muteTooltip')" :aria-label="t('views.multimediaAudio.muteTooltip')">
 						<ThemeIcon
@@ -212,7 +212,7 @@ onUnmounted(() => {
 
 			<!-- Dispositivos Salida -->
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary flex items-center justify-between">
+				<h3 class="mb-4 text-lg font-medium text-tx-main flex items-center justify-between">
 					{{ t('views.multimediaAudio.outputDevices') }}
 					<button
 						@click="loadDevices" 
@@ -248,7 +248,7 @@ onUnmounted(() => {
 						
 						<!-- Info -->
 						<div class="flex flex-1 flex-col min-w-0">
-							<span class="text-sm font-medium text-tx-primary truncate">
+							<span class="text-sm font-medium text-tx-main truncate">
 								{{ getDeviceName(device) }}
 							</span>
 							<span class="text-xs text-tx-muted mt-0.5" v-if="device.volume">

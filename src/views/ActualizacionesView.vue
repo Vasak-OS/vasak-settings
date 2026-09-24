@@ -330,7 +330,7 @@ onMounted(async () => {
               <button
                 v-if="a.donde_mirar"
                 type="button"
-                class="cursor-pointer font-medium text-tx-link underline decoration-dotted underline-offset-2"
+                class="cursor-pointer font-medium text-primary underline decoration-dotted underline-offset-2"
                 :title="t('views.actualizaciones.verProyecto').replace('{0}', a.donde_mirar)"
                 @click="abrir(a.donde_mirar)"
               >

@@ -59,7 +59,7 @@ const handleEdit = (entry: SpecialKeyEntry) => {
 
 <template>
 	<div class="rounded-corner border border-ui-border bg-ui-surface/70 p-4">
-		<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.shortcuts.specialKeys.title') }}</h3>
+		<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.shortcuts.specialKeys.title') }}</h3>
 		<p class="mb-4 text-sm text-tx-muted">
 			{{ t('views.shortcuts.specialKeys.description') }}
 		</p>
@@ -82,7 +82,7 @@ const handleEdit = (entry: SpecialKeyEntry) => {
 						:alt="t(`shortcutKeys.${entry.def.keyToken}.label`)" />
 					<div class="min-w-0">
 						<div class="flex items-center gap-2">
-							<span class="text-sm font-medium text-tx-primary">
+							<span class="text-sm font-medium text-tx-main">
 							{{ t(`shortcutKeys.${entry.def.keyToken}.label`) }}
 						</span>
 							<span
@@ -114,7 +114,7 @@ const handleEdit = (entry: SpecialKeyEntry) => {
 
 				<button
 					type="button"
-					class="shrink-0 rounded-corner border border-ui-border bg-ui-surface/70 px-2.5 py-1.5 text-xs font-medium text-tx-primary transition-colors hover:bg-ui-surface"
+					class="shrink-0 rounded-corner border border-ui-border bg-ui-surface/70 px-2.5 py-1.5 text-xs font-medium text-tx-main transition-colors hover:bg-ui-surface"
 					@click="handleEdit(entry)"
 				>
 					{{ entry.exists ? t('common.edit') : t('views.shortcuts.specialKeys.assign') }}

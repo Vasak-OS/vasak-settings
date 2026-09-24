@@ -209,29 +209,29 @@ const isFormValid = computed(() => {
 									v-model="searchQuery"
 									type="text"
 									:placeholder="t('views.appearanceFonts.searchPlaceholder')"
-									class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary transition-colors placeholder:text-tx-muted/70 focus:border-primary"
+									class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-main transition-colors placeholder:text-tx-muted/70 focus:border-primary"
 								/>
 							</template>
 						</FormGroup>
 
 						<div class="rounded-corner border border-ui-border bg-ui-bg/60 p-4">
-							<div class="mb-3 text-sm font-medium text-tx-primary">{{ t('views.appearanceFonts.currentSelections') }}</div>
+							<div class="mb-3 text-sm font-medium text-tx-main">{{ t('views.appearanceFonts.currentSelections') }}</div>
 							<div class="space-y-3 text-sm text-tx-muted">
 								<div>
 									<div class="text-xs uppercase tracking-wide text-tx-muted">{{ t('views.appearanceFonts.targets.terminal') }}</div>
-									<div class="text-tx-primary" :style="{ fontFamily: pilaDeFuente(selectedFonts.terminal, 'terminal') }">
+									<div class="text-tx-main" :style="{ fontFamily: pilaDeFuente(selectedFonts.terminal, 'terminal') }">
 										{{ selectedFonts.terminal || t('views.appearanceFonts.noFontAssigned') }}
 									</div>
 								</div>
 								<div>
 									<div class="text-xs uppercase tracking-wide text-tx-muted">{{ t('views.appearanceFonts.targets.title') }}</div>
-									<div class="text-tx-primary" :style="{ fontFamily: pilaDeFuente(selectedFonts.title, 'title') }">
+									<div class="text-tx-main" :style="{ fontFamily: pilaDeFuente(selectedFonts.title, 'title') }">
 										{{ selectedFonts.title || t('views.appearanceFonts.noFontAssigned') }}
 									</div>
 								</div>
 								<div>
 									<div class="text-xs uppercase tracking-wide text-tx-muted">{{ t('views.appearanceFonts.targets.apps') }}</div>
-									<div class="text-tx-primary" :style="{ fontFamily: pilaDeFuente(selectedFonts.apps, 'apps') }">
+									<div class="text-tx-main" :style="{ fontFamily: pilaDeFuente(selectedFonts.apps, 'apps') }">
 										{{ selectedFonts.apps || t('views.appearanceFonts.noFontAssigned') }}
 									</div>
 								</div>
@@ -248,7 +248,7 @@ const isFormValid = computed(() => {
 				<SectionCard>
 					<div class="flex items-center justify-between gap-3">
 						<div class="min-w-0">
-							<h3 class="text-lg font-medium text-tx-primary">
+							<h3 class="text-lg font-medium text-tx-main">
 								{{ t('views.appearanceFonts.sharpness') }}
 							</h3>
 							<p class="text-sm text-tx-muted">{{ t('views.appearanceFonts.sharpnessHint') }}</p>
@@ -271,7 +271,7 @@ const isFormValid = computed(() => {
 				<SectionCard>
 					<div class="flex items-center justify-between gap-3">
 						<div>
-							<h3 class="text-lg font-medium text-tx-primary">{{ t('views.appearanceFonts.library') }}</h3>
+							<h3 class="text-lg font-medium text-tx-main">{{ t('views.appearanceFonts.library') }}</h3>
 							<p class="text-sm text-tx-muted">
 								{{ t('views.appearanceFonts.libraryHint') }}
 							</p>
@@ -292,7 +292,7 @@ const isFormValid = computed(() => {
 						>
 							<div class="flex items-start justify-between gap-3">
 								<div>
-									<div class="text-base font-medium text-tx-primary">{{ font.name }}</div>
+									<div class="text-base font-medium text-tx-main">{{ font.name }}</div>
 									<div class="text-xs text-tx-muted">{{ font.fontName || t('views.appearanceFonts.noPostscript') }}</div>
 								</div>
 								<div class="rounded-full border border-ui-border bg-ui-surface/70 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-tx-muted">
@@ -303,7 +303,7 @@ const isFormValid = computed(() => {
 							<div class="mt-4 rounded-corner border border-ui-border bg-ui-bg/80 p-3">
 								<div class="text-[11px] uppercase tracking-wider text-tx-muted">{{ t('views.appearanceFonts.preview') }}</div>
 								<div
-									class="mt-2 text-sm leading-6 text-tx-primary"
+									class="mt-2 text-sm leading-6 text-tx-main"
 									:style="{ fontFamily: pilaDeFuente(font.name, font.monospaced ? 'terminal' : 'apps') }"
 								>
 									{{ t('views.appearanceFonts.previewText') }}

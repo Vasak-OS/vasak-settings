@@ -264,7 +264,7 @@ onUnmounted(() => {
 				</p>
 
 				<div class="mt-4 flex items-center justify-between">
-					<label class="text-sm font-medium text-tx-primary">
+					<label class="text-sm font-medium text-tx-main">
 						{{ t('views.appearanceWallpaper.pauseOnBattery') }}
 					</label>
 					<SwitchToggle :label="t('views.appearanceWallpaper.pauseOnBattery')"

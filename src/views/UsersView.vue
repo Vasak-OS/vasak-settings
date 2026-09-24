@@ -276,7 +276,7 @@ function canDemote(user: UserAccount): boolean {
 			<div class="mt-4 flex items-center justify-between gap-3">
 				<div class="flex items-center gap-3">
 					<SwitchToggle :label="t('views.users.admin')" :model-value="newUser.admin" @update:model-value="newUser.admin = $event" />
-					<span class="text-sm text-tx-primary">{{ t('views.users.admin') }}</span>
+					<span class="text-sm text-tx-main">{{ t('views.users.admin') }}</span>
 				</div>
 				<button
 					type="button"
@@ -317,7 +317,7 @@ function canDemote(user: UserAccount): boolean {
 
 				<div class="min-w-0 flex-1">
 					<div class="flex flex-wrap items-center gap-2">
-						<span class="truncate text-base font-medium text-tx-primary">
+						<span class="truncate text-base font-medium text-tx-main">
 							{{ user.real_name || user.username }}
 						</span>
 						<code class="rounded bg-ui-surface/70 px-1.5 py-0.5 text-[11px] text-tx-muted">
@@ -337,7 +337,7 @@ function canDemote(user: UserAccount): boolean {
 						</span>
 						<span
 							v-if="user.locked"
-							class="rounded-full border border-status-danger/30 bg-status-danger/10 px-2 py-0.5 text-[11px] text-status-danger"
+							class="rounded-full border border-status-error/30 bg-status-error/10 px-2 py-0.5 text-[11px] text-status-error"
 						>
 							{{ t('views.users.lockedBadge') }}
 						</span>
@@ -439,7 +439,7 @@ function canDemote(user: UserAccount): boolean {
 					<button
 						type="button"
 						:disabled="busy"
-						class="rounded-corner border border-status-danger/30 bg-status-danger/10 px-4 py-2 text-sm font-medium text-status-danger hover:bg-status-danger/20 disabled:opacity-50"
+						class="rounded-corner border border-status-error/30 bg-status-error/10 px-4 py-2 text-sm font-medium text-status-error hover:bg-status-error/20 disabled:opacity-50"
 						@click="deleteTarget = user"
 					>
 						{{ t('views.users.deleteAccount') }}
@@ -449,7 +449,7 @@ function canDemote(user: UserAccount): boolean {
 		</SectionCard>
 
 		<SectionCard v-if="deleteTarget">
-			<h3 class="text-base font-medium text-status-danger">
+			<h3 class="text-base font-medium text-status-error">
 				{{ t('views.users.deleteTitle').replace('{0}', deleteTarget.username) }}
 			</h3>
 			<p class="mt-1 text-sm text-tx-muted">{{ t('views.users.deleteWarning') }}</p>
@@ -470,7 +470,7 @@ function canDemote(user: UserAccount): boolean {
 				<button
 					type="button"
 					:disabled="busy"
-					class="rounded-corner bg-status-danger px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+					class="rounded-corner bg-status-error px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
 					@click="confirmDelete"
 				>
 					{{ t('common.delete') }}

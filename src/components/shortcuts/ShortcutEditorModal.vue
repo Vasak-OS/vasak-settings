@@ -296,7 +296,7 @@ const handleCancel = () => {
 <template>
 	<ModalDialog :open="open" :title="dialogTitle" :description="dialogDescription" @close="handleCancel">
 		<div class="space-y-4">
-			<div v-if="formError" class="rounded border border-status-danger/30 bg-status-danger/10 p-2 text-xs text-status-danger">
+			<div v-if="formError" class="rounded border border-status-error/30 bg-status-error/10 p-2 text-xs text-status-error">
 				{{ formError }}
 			</div>
 
@@ -305,7 +305,7 @@ const handleCancel = () => {
 					<div
 						id="shortcut-keys"
 						tabindex="0"
-						class="min-h-10 w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary transition-colors focus:border-primary flex flex-wrap gap-2 items-center"
+						class="min-h-10 w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-main transition-colors focus:border-primary flex flex-wrap gap-2 items-center"
 						@keydown="handleKeyDown"
 						@keyup="handleKeyUp"
 					>
@@ -327,7 +327,7 @@ const handleCancel = () => {
 						</p>
 						<button
 							type="button"
-							class="rounded-corner border border-ui-border bg-ui-surface/60 px-2.5 py-1.5 text-xs font-medium text-tx-primary transition-colors hover:bg-ui-surface"
+							class="rounded-corner border border-ui-border bg-ui-surface/60 px-2.5 py-1.5 text-xs font-medium text-tx-main transition-colors hover:bg-ui-surface"
 							@click="clearShortcut"
 						>
 							{{ t('views.shortcuts.editor.clear') }}
@@ -342,7 +342,7 @@ const handleCancel = () => {
 					v-model="action"
 					type="text"
 					placeholder="launch"
-					class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary transition-colors placeholder:text-tx-muted/70 focus:border-primary"
+					class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-main transition-colors placeholder:text-tx-muted/70 focus:border-primary"
 				/>
 			</FormGroup>
 
@@ -352,7 +352,7 @@ const handleCancel = () => {
 					v-model="target"
 					rows="3"
 					placeholder="firefox"
-					class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-primary transition-colors placeholder:text-tx-muted/70 focus:border-primary"
+					class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-main transition-colors placeholder:text-tx-muted/70 focus:border-primary"
 				/>
 			</FormGroup>
 
@@ -361,7 +361,7 @@ const handleCancel = () => {
 			<div class="flex justify-end gap-2 pt-2">
 				<button
 					type="button"
-					class="rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2 text-sm font-medium text-tx-primary transition-colors hover:bg-ui-surface"
+					class="rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2 text-sm font-medium text-tx-main transition-colors hover:bg-ui-surface"
 					@click="handleCancel"
 				>
 					{{ t('common.cancel') }}

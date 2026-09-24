@@ -244,7 +244,7 @@ onUnmounted(() => {
 
 		<div class="grid gap-4 xl:grid-cols-3">
 			<SectionCard class="xl:col-span-2">
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.networkVpn.currentStatus') }}</h3>
+				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.networkVpn.currentStatus') }}</h3>
 
 				<EmptyStateBox v-if="loading" :message="t('views.networkVpn.readingStatus')" />
 
@@ -257,12 +257,12 @@ onUnmounted(() => {
 			</SectionCard>
 
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.networkVpn.quickConnect') }}</h3>
+				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.networkVpn.quickConnect') }}</h3>
 				<div class="space-y-2 text-sm text-tx-muted">
 					<p>{{ t('views.networkVpn.availableProfiles') }} {{ vpnProfiles.length }}</p>
 					<p>
 						{{ t('views.networkVpn.tunnelState') }}
-						<span class="font-medium text-tx-primary">{{ vpnStateLabel }}</span>
+						<span class="font-medium text-tx-main">{{ vpnStateLabel }}</span>
 					</p>
 					<button
 						class="mt-2 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-1.5 text-sm text-tx-muted hover:bg-ui-surface disabled:cursor-not-allowed disabled:opacity-50"
@@ -277,7 +277,7 @@ onUnmounted(() => {
 
 		<SectionCard>
 			<div class="mb-4 flex items-center justify-between">
-				<h3 class="text-lg font-medium text-tx-primary">{{ t('views.networkVpn.profiles') }}</h3>
+				<h3 class="text-lg font-medium text-tx-main">{{ t('views.networkVpn.profiles') }}</h3>
 				<span class="text-xs uppercase tracking-[0.16em] text-tx-muted">
 					{{ t('views.networkVpn.profileCount').replace('{0}', String(vpnProfiles.length)) }}
 				</span>

@@ -290,7 +290,7 @@ const isFormValid = computed(() => {
 
 			<div class="grid gap-4 xl:grid-cols-2">
 				<SectionCard>
-					<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.appearanceTheme.baseStyles') }}</h3>
+					<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.appearanceTheme.baseStyles') }}</h3>
 					<div class="flex flex-col gap-5">
 						<FormGroup :label="t('views.appearanceTheme.borderRadius')" html-for="border-radius" :label-class="'flex justify-between w-full'">
 							<template #default>
@@ -303,7 +303,7 @@ const isFormValid = computed(() => {
 						</FormGroup>
 
 						<div class="flex items-center justify-between">
-							<label class="text-sm font-medium text-tx-primary">{{ t('views.appearanceTheme.darkMode') }}</label>
+							<label class="text-sm font-medium text-tx-main">{{ t('views.appearanceTheme.darkMode') }}</label>
 							<div class="flex items-center gap-3">
 								<SwitchToggle :label="t('views.appearanceTheme.darkMode')" v-if="vskConfig" :model-value="vskConfig.style.darkmode" @update:model-value="val => (vskConfig!.style.darkmode = val)" />
 								<span class="w-20 text-xs text-tx-muted">{{ vskConfig?.style.darkmode ? t('views.appearanceTheme.enabled') : t('views.appearanceTheme.disabled') }}</span>
@@ -313,7 +313,7 @@ const isFormValid = computed(() => {
 				</SectionCard>
 
 				<SectionCard>
-					<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.appearanceTheme.systemThemes') }}</h3>
+					<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.appearanceTheme.systemThemes') }}</h3>
 					<div class="flex flex-col gap-5">
 						<FormGroup :label="t('views.appearanceTheme.gtkTheme')" html-for="gtk-theme">
 							<SelectInput id="gtk-theme" v-model="selectedGtkTheme" :options="gtkThemes" />
@@ -328,7 +328,7 @@ const isFormValid = computed(() => {
 
 			<SectionCard>
 				<div class="mb-4 flex flex-col gap-1">
-					<h3 class="text-lg font-medium text-tx-primary">{{ t('views.appearanceTheme.schemeSection') }}</h3>
+					<h3 class="text-lg font-medium text-tx-main">{{ t('views.appearanceTheme.schemeSection') }}</h3>
 					<p class="text-sm text-tx-muted">
 						{{ t('views.appearanceTheme.schemeHintPrefix') }} <span class="font-mono">scheme id</span> {{ t('views.appearanceTheme.schemeHintSuffix') }}
 					</p>
@@ -348,7 +348,7 @@ const isFormValid = computed(() => {
 						<div class="rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 							<div class="mb-4 flex flex-col gap-1">
 								<div class="flex items-center justify-between gap-3">
-									<h4 class="text-base font-medium text-tx-primary">{{ selectedScheme.scheme.name }}</h4>
+									<h4 class="text-base font-medium text-tx-main">{{ selectedScheme.scheme.name }}</h4>
 									<span class="rounded-full border border-ui-border px-2 py-0.5 text-[11px] uppercase tracking-wider text-tx-muted">
 										{{ selectedScheme.scheme.version }}
 									</span>
@@ -359,7 +359,7 @@ const isFormValid = computed(() => {
 							<div class="grid gap-3 sm:grid-cols-2">
 								<div class="rounded-corner border border-ui-border bg-ui-bg/80 p-3">
 									<div class="mb-3 flex items-center justify-between">
-										<span class="text-sm font-medium text-tx-primary">{{ t('views.appearanceTheme.dark') }}</span>
+										<span class="text-sm font-medium text-tx-main">{{ t('views.appearanceTheme.dark') }}</span>
 										<span class="text-xs text-tx-muted">{{ selectedScheme.scheme.colors.dark.ui.background }}</span>
 									</div>
 									<div class="grid gap-2">
@@ -370,7 +370,7 @@ const isFormValid = computed(() => {
 										>
 											<div class="h-8 w-8 rounded-corner border border-ui-border/60" :style="{ backgroundColor: swatch.value }" />
 											<div class="min-w-0 flex-1">
-												<p class="truncate text-xs font-medium text-tx-primary">{{ swatch.label }}</p>
+												<p class="truncate text-xs font-medium text-tx-main">{{ swatch.label }}</p>
 												<p class="truncate text-[11px] text-tx-muted">{{ swatch.value }}</p>
 											</div>
 										</div>
@@ -379,7 +379,7 @@ const isFormValid = computed(() => {
 
 								<div class="rounded-corner border border-ui-border bg-ui-bg/80 p-3">
 									<div class="mb-3 flex items-center justify-between">
-										<span class="text-sm font-medium text-tx-primary">{{ t('views.appearanceTheme.light') }}</span>
+										<span class="text-sm font-medium text-tx-main">{{ t('views.appearanceTheme.light') }}</span>
 										<span class="text-xs text-tx-muted">{{ selectedScheme.scheme.colors.light.ui.background }}</span>
 									</div>
 									<div class="grid gap-2">
@@ -390,7 +390,7 @@ const isFormValid = computed(() => {
 										>
 											<div class="h-8 w-8 rounded-corner border border-ui-border/60" :style="{ backgroundColor: swatch.value }" />
 											<div class="min-w-0 flex-1">
-												<p class="truncate text-xs font-medium text-tx-primary">{{ swatch.label }}</p>
+												<p class="truncate text-xs font-medium text-tx-main">{{ swatch.label }}</p>
 												<p class="truncate text-[11px] text-tx-muted">{{ swatch.value }}</p>
 											</div>
 										</div>
@@ -400,11 +400,11 @@ const isFormValid = computed(() => {
 						</div>
 
 						<div class="rounded-corner border border-ui-border bg-ui-surface/30 p-4">
-							<h4 class="mb-3 text-sm font-medium text-tx-primary">{{ t('views.appearanceTheme.schemeInfo') }}</h4>
+							<h4 class="mb-3 text-sm font-medium text-tx-main">{{ t('views.appearanceTheme.schemeInfo') }}</h4>
 							<div class="space-y-3 text-sm text-tx-muted">
-								<p><span class="font-medium text-tx-primary">ID:</span> {{ selectedScheme.scheme.id }}</p>
-								<p><span class="font-medium text-tx-primary">{{ t('views.appearanceTheme.author') }}:</span> {{ selectedScheme.scheme.author || t('views.appearanceTheme.notSpecified') }}</p>
-								<p><span class="font-medium text-tx-primary">{{ t('views.appearanceTheme.path') }}:</span> {{ selectedScheme.path }}</p>
+								<p><span class="font-medium text-tx-main">ID:</span> {{ selectedScheme.scheme.id }}</p>
+								<p><span class="font-medium text-tx-main">{{ t('views.appearanceTheme.author') }}:</span> {{ selectedScheme.scheme.author || t('views.appearanceTheme.notSpecified') }}</p>
+								<p><span class="font-medium text-tx-main">{{ t('views.appearanceTheme.path') }}:</span> {{ selectedScheme.path }}</p>
 							</div>
 						</div>
 					</div>

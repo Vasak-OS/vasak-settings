@@ -23,7 +23,7 @@ const emit = defineEmits<{
 }>();
 
 const classes = computed(() => [
-	'rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm text-tx-primary transition-colors',
+	'rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm text-tx-main transition-colors',
 	'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20',
 	'disabled:cursor-not-allowed disabled:opacity-50',
 	props.narrow ? 'w-32' : 'w-full',
