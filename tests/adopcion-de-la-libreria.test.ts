@@ -174,7 +174,6 @@ describe('la barra de progreso', () => {
 	});
 });
 
-
 /**
  * El grupo de formulario, la sexta pieza que se va.
  *
