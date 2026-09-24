@@ -6,10 +6,9 @@ import {
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
+import { AlertMessage, FormGroup, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, type Ref, ref } from 'vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import FormGroup from '@/components/ui/FormGroup.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import RangeSlider from '@/components/ui/RangeSlider.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';

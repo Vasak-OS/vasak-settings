@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, TextInput } from '@vasakgroup/vue-libvasak';
+import { AlertMessage, FormGroup, TextInput } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted } from 'vue';
-import FormGroup from '@/components/ui/FormGroup.vue';
 import NumberInput from '@/components/ui/NumberInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import PluginSection from '@/components/ui/PluginSection.vue';

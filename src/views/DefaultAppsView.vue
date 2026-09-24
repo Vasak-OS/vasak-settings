@@ -12,11 +12,10 @@
  * funcionar.
  */
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage } from '@vasakgroup/vue-libvasak';
+import { AlertMessage, FormGroup } from '@vasakgroup/vue-libvasak';
 import { onMounted, ref } from 'vue';
 import IconoDeApp from '@/components/permisos/IconoDeApp.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import FormGroup from '@/components/ui/FormGroup.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import SelectInput from '@/components/ui/SelectInput.vue';
