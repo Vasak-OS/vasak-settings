@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
+import { AlertMessage, FormGroup, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
 import MonitorCanvas, { type CanvasMonitor } from '@/components/monitors/MonitorCanvas.vue';
-import FormGroup from '@/components/ui/FormGroup.vue';
 import NumberInput from '@/components/ui/NumberInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';

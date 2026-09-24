@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, SwitchToggle, ThemeIcon } from '@vasakgroup/vue-libvasak';
+import { AlertMessage, FormGroup, SwitchToggle, ThemeIcon } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
-import FormGroup from '@/components/ui/FormGroup.vue';
 import NumberInput from '@/components/ui/NumberInput.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import ProfileIcon from '@/components/ui/ProfileIcon.vue';

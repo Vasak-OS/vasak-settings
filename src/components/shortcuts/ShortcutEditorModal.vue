@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { FormGroup } from '@vasakgroup/vue-libvasak';
 import { computed, ref, watch } from 'vue';
-import FormGroup from '@/components/ui/FormGroup.vue';
 import ModalDialog from '@/components/ui/ModalDialog.vue';
 import { normalizeShortcutKeys } from '@/services/shortcuts.service';
 import type { ShortcutRule } from '@/types/shortcuts';

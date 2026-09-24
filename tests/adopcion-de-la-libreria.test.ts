@@ -6,6 +6,10 @@
  * barra de progreso. Las cinco existían igual en la librería, con otros
  * nombres y otra suerte.
  *
+ * Y ahora son seis: se suma `FormGroup`, que eran dieciocho vistas importando
+ * una copia idéntica a la de la librería salvo la sangría y el color de la
+ * etiqueta.
+ *
  * Lo que se comprueba acá es lo que la mudanza cambia y podría romperse
  * callado: que el aviso siga diciendo lo que decía después de pasar de
  * propiedad a ranura en sesenta y nueve etiquetas, que el modal —que no se
@@ -167,5 +171,51 @@ describe('la barra de progreso', () => {
 		const vista = montar(ProgressBar, { props: { label: 'Disco', value: 10 } });
 
 		expect(vista.findComponent(BarraDeLaLibreria).exists()).toBe(true);
+	});
+});
+
+
+/**
+ * El grupo de formulario, la sexta pieza que se va.
+ *
+ * Eran dieciocho vistas importando `@/components/ui/FormGroup.vue`, idéntica a
+ * la de la librería salvo la sangría y una clase: la de la librería le pone
+ * `text-primary` a la etiqueta y la copia dejaba el color de texto de siempre.
+ *
+ * Eso **sí cambia cómo se ve**: las etiquetas de todos los formularios de
+ * Configuración pasan a ir en el color de marca. Es una decisión tomada a
+ * propósito, no un descuido — la alternativa era sacarle el color a la librería
+ * o pasar `label-class` en dieciocho lugares.
+ */
+describe('el grupo de formulario', () => {
+	const FUENTE = new URL('../src/', import.meta.url).pathname;
+	const fuentes = [...new Glob('**/*.vue').scanSync(FUENTE)];
+
+	test('hay algo que mirar', () => {
+		expect(fuentes.length).toBeGreaterThan(30);
+	});
+
+	test('ya no hay copia propia', () => {
+		expect(fuentes.filter((ruta) => ruta.endsWith('ui/FormGroup.vue'))).toEqual([]);
+	});
+
+	test('y nadie la importa de acá adentro', () => {
+		const culpables = fuentes.filter((ruta) =>
+			readFileSync(FUENTE + ruta, 'utf8').includes('components/ui/FormGroup.vue')
+		);
+
+		expect(culpables).toEqual([]);
+	});
+
+	test('las dieciocho la piden a la librería', () => {
+		// Si alguna la usa sin importarla, Vue dibuja un elemento desconocido y
+		// no falla: la vista queda sin el campo y nadie se entera.
+		const culpables = fuentes.filter((ruta) => {
+			const texto = readFileSync(FUENTE + ruta, 'utf8');
+			if (!/<FormGroup\b/.test(texto)) return false;
+			return !/import \{[^}]*\bFormGroup\b[^}]*\} from '@vasakgroup\/vue-libvasak'/.test(texto);
+		});
+
+		expect(culpables).toEqual([]);
 	});
 });
