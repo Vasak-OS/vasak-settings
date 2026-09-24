@@ -198,19 +198,50 @@ describe('el grupo de formulario', () => {
 		expect(fuentes.filter((ruta) => ruta.endsWith('ui/FormGroup.vue'))).toEqual([]);
 	});
 
+	/**
+	 * El archivo sin lo que está comentado.
+	 *
+	 * Sin esto, un `// import { FormGroup } from '@vasakgroup/vue-libvasak';`
+	 * comentado alcanza para que la comprobación de abajo pase, y la vista queda
+	 * **sin el componente**: Vue dibuja un elemento desconocido, no falla, y el
+	 * campo simplemente no está. Lo mismo al revés — un import viejo comentado
+	 * haría fallar la guardia sin que haya nada mal.
+	 *
+	 * Se sacan los bloques `/* *\/` y las líneas que **empiezan** con `//`, no
+	 * cualquier `//`: así una URL adentro de una cadena no se lleva media línea
+	 * puesta.
+	 */
+	function sinComentarios(texto: string): string {
+		return texto
+			.replace(/\/\*[\s\S]*?\*\//g, '')
+			.replace(/<!--[\s\S]*?-->/g, '')
+			.split('\n')
+			.filter((linea) => !/^\s*\/\//.test(linea))
+			.join('\n');
+	}
+
+	const leer = (ruta: string) => sinComentarios(readFileSync(FUENTE + ruta, 'utf8'));
+
 	test('y nadie la importa de acá adentro', () => {
-		const culpables = fuentes.filter((ruta) =>
-			readFileSync(FUENTE + ruta, 'utf8').includes('components/ui/FormGroup.vue')
-		);
+		const culpables = fuentes.filter((ruta) => leer(ruta).includes('components/ui/FormGroup.vue'));
 
 		expect(culpables).toEqual([]);
+	});
+
+	test('la guardia mira importaciones vivas, no texto comentado', () => {
+		// Un import comentado no es un import: el componente no queda disponible.
+		const comentado = "// import { FormGroup } from '@vasakgroup/vue-libvasak';";
+
+		expect(sinComentarios(comentado)).toBe('');
+		// Y una URL adentro de una cadena sobrevive entera.
+		expect(sinComentarios("const u = 'https://vasak.net.ar';")).toContain('https://vasak.net.ar');
 	});
 
 	test('las dieciocho la piden a la librería', () => {
 		// Si alguna la usa sin importarla, Vue dibuja un elemento desconocido y
 		// no falla: la vista queda sin el campo y nadie se entera.
 		const culpables = fuentes.filter((ruta) => {
-			const texto = readFileSync(FUENTE + ruta, 'utf8');
+			const texto = leer(ruta);
 			if (!/<FormGroup\b/.test(texto)) return false;
 			return !/import \{[^}]*\bFormGroup\b[^}]*\} from '@vasakgroup\/vue-libvasak'/.test(texto);
 		});
