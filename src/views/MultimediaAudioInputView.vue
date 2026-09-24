@@ -171,14 +171,14 @@ onUnmounted(() => {
 
 		<div class="mt-2 grid gap-6 xl:grid-cols-2">
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.multimediaAudioInput.inputLevel') }}</h3>
+				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.multimediaAudioInput.inputLevel') }}</h3>
 				<div class="flex items-center gap-4 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 					<button
 						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner border transition-colors hover:bg-primary hover:text-white"
 						:class="
 							inputVolumeInfo.is_muted
 								? 'border-status-error/40 text-status-error'
-								: 'border-ui-border text-tx-primary'
+								: 'border-ui-border text-tx-main'
 						"
 						@click="toggleInputMute"
 						:title="t('views.multimediaAudioInput.muteTooltip')" :aria-label="t('views.multimediaAudioInput.muteTooltip')">
@@ -216,7 +216,7 @@ onUnmounted(() => {
 			</SectionCard>
 
 			<SectionCard>
-				<h3 class="mb-4 flex items-center justify-between text-lg font-medium text-tx-primary">
+				<h3 class="mb-4 flex items-center justify-between text-lg font-medium text-tx-main">
 					{{ t('views.multimediaAudioInput.inputDevices') }}
 					<button
 						@click="loadInputDevices"
@@ -264,7 +264,7 @@ onUnmounted(() => {
 						</div>
 
 						<div class="flex min-w-0 flex-1 flex-col">
-							<span class="truncate text-sm font-medium text-tx-primary">
+							<span class="truncate text-sm font-medium text-tx-main">
 								{{ getDeviceName(device) }}
 							</span>
 							<span v-if="device.volume" class="mt-0.5 text-xs text-tx-muted">

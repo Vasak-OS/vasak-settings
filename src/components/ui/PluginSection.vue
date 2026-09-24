@@ -42,7 +42,7 @@ function handleToggle(value: boolean) {
 			<ThemeIcon :name="icon ?? 'application-x-addon'" :size="20" class="mt-0.5" />
 
 			<div class="min-w-0 flex-1">
-				<h3 class="truncate text-sm font-semibold text-tx-primary">{{ heading }}</h3>
+				<h3 class="truncate text-sm font-semibold text-tx-main">{{ heading }}</h3>
 				<p v-if="summary" class="mt-0.5 text-xs text-tx-muted">{{ summary }}</p>
 			</div>
 

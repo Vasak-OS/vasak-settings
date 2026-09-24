@@ -136,7 +136,7 @@ const saveConfig = async () => {
 			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">
+				<h3 class="mb-4 text-lg font-medium text-tx-main">
 					{{ t('views.appearancePanel.bar') }}
 				</h3>
 
@@ -163,14 +163,14 @@ const saveConfig = async () => {
 			</SectionCard>
 
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">
+				<h3 class="mb-4 text-lg font-medium text-tx-main">
 					{{ t('views.appearancePanel.indicators') }}
 				</h3>
 
 				<div class="flex flex-col gap-5">
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
-							<label class="text-sm font-medium text-tx-primary">
+							<label class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.weather') }}
 							</label>
 							<span class="text-xs text-tx-muted">
@@ -182,7 +182,7 @@ const saveConfig = async () => {
 
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
-							<label class="text-sm font-medium text-tx-primary">
+							<label class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.music') }}
 							</label>
 							<span class="text-xs text-tx-muted">
@@ -194,7 +194,7 @@ const saveConfig = async () => {
 
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
-							<label class="text-sm font-medium text-tx-primary">
+							<label class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.transfer') }}
 							</label>
 							<span class="text-xs text-tx-muted">
@@ -206,7 +206,7 @@ const saveConfig = async () => {
 
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
-							<label class="text-sm font-medium text-tx-primary">
+							<label class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.tray') }}
 							</label>
 							<span class="text-xs text-tx-muted">
@@ -218,7 +218,7 @@ const saveConfig = async () => {
 
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
-							<label class="text-sm font-medium text-tx-primary">
+							<label class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.privacy') }}
 							</label>
 							<span class="text-xs text-tx-muted">

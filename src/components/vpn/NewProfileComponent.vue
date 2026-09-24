@@ -173,10 +173,10 @@ const handleCancel = () => {
 <template>
 	<div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
 		<div class="w-full max-w-2xl rounded-corner border border-ui-border bg-ui-bg p-4 shadow-xl">
-			<h2 class="text-lg font-semibold text-tx-primary">{{ dialogTitle }}</h2>
+			<h2 class="text-lg font-semibold text-tx-main">{{ dialogTitle }}</h2>
 			<p class="mt-1 text-sm text-tx-muted">{{ t('views.networkVpn.dialog.description') }}</p>
 
-			<div v-if="formError" class="mt-3 rounded border border-status-danger/30 bg-status-danger/10 p-2 text-xs text-status-danger">
+			<div v-if="formError" class="mt-3 rounded border border-status-error/30 bg-status-error/10 p-2 text-xs text-status-error">
 				{{ formError }}
 			</div>
 

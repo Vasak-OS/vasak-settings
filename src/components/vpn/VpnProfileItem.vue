@@ -28,7 +28,7 @@ defineEmits<Emits>();
 	<li class="rounded-corner border border-ui-border bg-ui-surface/35 p-3">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<div>
-				<p class="text-sm font-medium text-tx-primary">{{ profile.id }}</p>
+				<p class="text-sm font-medium text-tx-main">{{ profile.id }}</p>
 				<p class="text-xs text-tx-muted">
 					{{ profile.vpn_type }} · UUID: {{ profile.uuid }}
 					<span v-if="profile.autoconnect"> · autoconnect</span>
@@ -58,7 +58,7 @@ defineEmits<Emits>();
 					{{ t('common.edit') }}
 				</button>
 				<button
-					class="rounded-corner border border-status-danger/20 bg-status-danger/10 px-2 py-1 text-xs text-status-danger hover:bg-status-danger/20 disabled:cursor-not-allowed disabled:opacity-50"
+					class="rounded-corner border border-status-error/20 bg-status-error/10 px-2 py-1 text-xs text-status-error hover:bg-status-error/20 disabled:cursor-not-allowed disabled:opacity-50"
 					@click="$emit('delete')"
 					:disabled="actionProfileUuid === profile.uuid"
 				>

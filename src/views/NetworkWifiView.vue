@@ -315,7 +315,7 @@ onUnmounted(() => {
 		<div class="grid gap-4 xl:grid-cols-3">
 			<SectionCard class="xl:col-span-2">
 				<div class="mb-4 flex items-center justify-between">
-					<h3 class="text-lg font-medium text-tx-primary">{{ t('views.networkWifi.availableNetworks') }}</h3>
+					<h3 class="text-lg font-medium text-tx-main">{{ t('views.networkWifi.availableNetworks') }}</h3>
 					<button
 						class="flex items-center justify-center rounded p-1.5 transition-colors hover:bg-ui-surface border-transparent border hover:border-ui-border"
 						:class="isRefreshing || !wifiEnabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'"
@@ -346,7 +346,7 @@ onUnmounted(() => {
 						@click="openConnectDialog(network)"
 					>
 						<div class="flex min-w-0 flex-1 flex-col">
-							<span class="truncate text-sm font-medium text-tx-primary">
+							<span class="truncate text-sm font-medium text-tx-main">
 								{{ getNetworkName(network) }}
 							</span>
 							<span class="mt-0.5 text-xs text-tx-muted">
@@ -373,7 +373,7 @@ onUnmounted(() => {
 			</SectionCard>
 
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.networkWifi.networkStatus') }}</h3>
+				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.networkWifi.networkStatus') }}</h3>
 				<div class="space-y-3">
 					<StatTile label="Wi-Fi" :value="wifiStatus" />
 					<StatTile label="Ethernet" :value="ethernetStatus" />
@@ -399,7 +399,7 @@ onUnmounted(() => {
 			class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
 		>
 			<div class="w-full max-w-md rounded-corner border border-ui-border bg-ui-bg p-4 shadow-xl">
-				<h2 class="text-lg font-semibold text-tx-primary">
+				<h2 class="text-lg font-semibold text-tx-main">
 					{{ t('views.networkWifi.dialog.title').replace('{0}', getNetworkName(selectedNetwork)) }}
 				</h2>
 				<p class="mt-1 text-sm text-tx-muted">{{ t('views.networkWifi.dialog.description') }}</p>

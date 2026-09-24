@@ -105,7 +105,7 @@ const saveConfig = async () => {
 			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
 			<SectionCard>
-				<h3 class="mb-4 font-medium text-lg text-tx-primary">
+				<h3 class="mb-4 font-medium text-lg text-tx-main">
 					{{ t('views.appearanceWindows.bar') }}
 				</h3>
 

@@ -166,7 +166,7 @@ function toggleLocalRtc(value: boolean) {
 		<AlertMessage v-if="success" tone="success">{{ success }}</AlertMessage>
 
 		<SectionCard>
-			<p class="text-2xl font-semibold text-tx-primary">{{ formattedNow }}</p>
+			<p class="text-2xl font-semibold text-tx-main">{{ formattedNow }}</p>
 			<p class="mt-1 text-sm text-tx-muted">{{ syncLabel }}</p>
 		</SectionCard>
 

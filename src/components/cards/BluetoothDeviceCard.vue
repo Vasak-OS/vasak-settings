@@ -44,7 +44,7 @@ const deviceExtraInfo = computed(() => {
 				class="opacity-80" />
 
 			<div class="min-w-0 flex-1">
-				<div class="font-medium truncate text-sm text-tx-primary">
+				<div class="font-medium truncate text-sm text-tx-main">
 					{{ deviceTitle }}
 				</div>
 				<div class="flex items-center gap-2 text-xs mt-0.5 text-tx-muted opacity-80">

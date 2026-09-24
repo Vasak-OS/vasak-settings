@@ -308,7 +308,7 @@ async function saveAll() {
 						<button
 							type="button"
 							@click="removeRule(key as string)"
-							class="shrink-0 rounded-corner border border-status-danger/30 bg-status-danger/10 px-3 py-2 text-xs font-medium text-status-danger hover:bg-status-danger/20"
+							class="shrink-0 rounded-corner border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs font-medium text-status-error hover:bg-status-error/20"
 						>
 							{{ t('common.delete') }}
 						</button>

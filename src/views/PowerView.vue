@@ -112,7 +112,7 @@ function getStatusColor(status: string): string {
 		case 'Charging':
 			return 'text-status-success';
 		case 'Discharging':
-			return 'text-tx-primary';
+			return 'text-tx-main';
 		case 'FullyCharged':
 			return 'text-status-success';
 		case 'Empty':
@@ -244,7 +244,7 @@ async function selectProfile(profile: string) {
 								'flex items-center gap-2 rounded-corner border px-4 py-2.5 text-sm font-medium transition-all',
 								active === profile
 									? 'border-primary bg-primary/10 text-primary shadow-sm shadow-primary/20'
-									: 'border-ui-border bg-ui-surface/50 text-tx-primary hover:bg-ui-surface hover:border-ui-border-hover'
+									: 'border-ui-border bg-ui-surface/50 text-tx-main hover:bg-ui-surface hover:border-ui-border-strong'
 							]"
 							@click="selectProfile(profile)"
 						>

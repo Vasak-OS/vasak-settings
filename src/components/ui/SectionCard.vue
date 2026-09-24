@@ -17,7 +17,7 @@ defineProps<{ title?: string }>();
 
 <template>
 	<article class="rounded-corner border border-ui-border bg-ui-bg/75 p-5 shadow-sm">
-		<h3 v-if="title" class="mb-4 font-medium text-lg text-tx-primary">{{ title }}</h3>
+		<h3 v-if="title" class="mb-4 font-medium text-lg text-tx-main">{{ title }}</h3>
 		<slot />
 	</article>
 </template>

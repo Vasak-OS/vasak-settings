@@ -160,7 +160,7 @@ const isChanged = computed(() => {
 
 			<!-- Modo Oscuro -->
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.appearanceIconPacks.darkMode') }}</h3>
+				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.appearanceIconPacks.darkMode') }}</h3>
 				<FormGroup :label="t('views.appearanceIconPacks.selectPack')" html-for="dark-pack" :label-class="'flex justify-between w-full'">
 					<div class="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
 						<div
@@ -193,7 +193,7 @@ const isChanged = computed(() => {
 										?
 									</div>
 								</div>
-								<p class="text-sm font-medium text-tx-primary text-center truncate">{{ pack }}</p>
+								<p class="text-sm font-medium text-tx-main text-center truncate">{{ pack }}</p>
 							</div>
 						</div>
 					</div>
@@ -202,7 +202,7 @@ const isChanged = computed(() => {
 
 			<!-- Modo Claro -->
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.appearanceIconPacks.lightMode') }}</h3>
+				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.appearanceIconPacks.lightMode') }}</h3>
 				<FormGroup :label="t('views.appearanceIconPacks.selectPack')" html-for="light-pack" :label-class="'flex justify-between w-full'">
 					<div class="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
 						<div
@@ -235,7 +235,7 @@ const isChanged = computed(() => {
 										?
 									</div>
 								</div>
-								<p class="text-sm font-medium text-tx-primary text-center truncate">{{ pack }}</p>
+								<p class="text-sm font-medium text-tx-main text-center truncate">{{ pack }}</p>
 								<div
 									v-if="selectedLightPack === pack"
 									class="text-xs text-primary font-medium text-center"
@@ -250,14 +250,14 @@ const isChanged = computed(() => {
 
 			<!-- Información -->
 			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-primary">{{ t('views.appearanceIconPacks.info') }}</h3>
+				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.appearanceIconPacks.info') }}</h3>
 				<div class="text-sm text-tx-muted space-y-2">
 					<p>
-						<span class="font-medium text-tx-primary">{{ t('views.appearanceIconPacks.darkMode') }}:</span>
+						<span class="font-medium text-tx-main">{{ t('views.appearanceIconPacks.darkMode') }}:</span>
 						{{ t('views.appearanceIconPacks.infoDark') }}
 					</p>
 					<p>
-						<span class="font-medium text-tx-primary">{{ t('views.appearanceIconPacks.lightMode') }}:</span>
+						<span class="font-medium text-tx-main">{{ t('views.appearanceIconPacks.lightMode') }}:</span>
 						{{ t('views.appearanceIconPacks.infoLight') }}
 					</p>
 					<p class="mt-4">

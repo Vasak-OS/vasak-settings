@@ -44,7 +44,7 @@ function etiquetaDe(plugin: { id: string; unknown?: boolean }) {
 				>
 					<div class="min-w-0 flex-1">
 						<div class="flex items-center gap-2">
-							<span class="truncate text-sm font-medium text-tx-primary">
+							<span class="truncate text-sm font-medium text-tx-main">
 							{{ etiquetaDe(plugin) }}
 						</span>
 							<code class="shrink-0 rounded bg-ui-surface/70 px-1.5 py-0.5 text-[10px] text-tx-muted">

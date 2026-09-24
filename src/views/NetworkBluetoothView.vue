@@ -175,7 +175,7 @@ onUnmounted(() => {
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
 					</svg>
 				</div>
-				<p class="text-base font-medium text-tx-primary">{{ t('views.networkBluetooth.offTitle') }}</p>
+				<p class="text-base font-medium text-tx-main">{{ t('views.networkBluetooth.offTitle') }}</p>
 				<p class="text-sm mt-1">{{ t('views.networkBluetooth.offHint') }}</p>
 			</div>
 		</div>
@@ -188,7 +188,7 @@ onUnmounted(() => {
 			<div class="grid gap-4 xl:grid-cols-2">
 				<!-- Conectados -->
 				<SectionCard>
-					<h3 class="mb-4 text-lg font-medium text-tx-primary flex items-center justify-between">
+					<h3 class="mb-4 text-lg font-medium text-tx-main flex items-center justify-between">
 						{{ t('views.networkBluetooth.connectedDevices') }}
 						<span class="text-xs text-tx-muted rounded bg-ui-surface/50 px-2 py-0.5 border border-ui-border">
 							{{ connectedDevices.length }}
@@ -212,7 +212,7 @@ onUnmounted(() => {
 				<!-- Disponibles -->
 				<SectionCard>
 					<div class="mb-4 flex items-center justify-between">
-						<h3 class="text-lg font-medium text-tx-primary">{{ t('views.networkBluetooth.availableDevices') }}</h3>
+						<h3 class="text-lg font-medium text-tx-main">{{ t('views.networkBluetooth.availableDevices') }}</h3>
 						
 						<button
 							class="flex items-center justify-center rounded p-1.5 transition-colors hover:bg-ui-surface border-transparent border hover:border-ui-border"
