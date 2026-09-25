@@ -1028,6 +1028,28 @@ views:
     connect: Conectar
     disconnect: Desconectar
     signal: '{0} dBm'
+    battery: '{0}%'
+    paired: Emparejado
+    trusted: De confianza
+    kinds:
+      audioCard: Parlante
+      audioHeadphones: Auriculares
+      audioHeadset: Auriculares con micrófono
+      cameraPhoto: Cámara
+      cameraVideo: Videocámara
+      computer: Computadora
+      inputGaming: Joystick
+      inputKeyboard: Teclado
+      inputMouse: Ratón
+      inputTablet: Tableta gráfica
+      modem: Módem
+      multimediaPlayer: Reproductor multimedia
+      networkWireless: Punto de acceso inalámbrico
+      phone: Teléfono
+      printer: Impresora
+      scanner: Escáner
+      videoDisplay: Pantalla
+      unknown: Dispositivo Bluetooth
     errors:
       toggle: 'Error alternando Bluetooth: {0}'
       scan: 'Error buscando dispositivos: {0}'

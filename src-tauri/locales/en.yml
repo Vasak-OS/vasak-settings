@@ -1024,6 +1024,28 @@ views:
     connect: Connect
     disconnect: Disconnect
     signal: '{0} dBm'
+    battery: '{0}%'
+    paired: Paired
+    trusted: Trusted
+    kinds:
+      audioCard: Speaker
+      audioHeadphones: Headphones
+      audioHeadset: Headset
+      cameraPhoto: Camera
+      cameraVideo: Video camera
+      computer: Computer
+      inputGaming: Game controller
+      inputKeyboard: Keyboard
+      inputMouse: Mouse
+      inputTablet: Graphics tablet
+      modem: Modem
+      multimediaPlayer: Media player
+      networkWireless: Wireless access point
+      phone: Phone
+      printer: Printer
+      scanner: Scanner
+      videoDisplay: Display
+      unknown: Bluetooth device
     errors:
       toggle: 'Error toggling Bluetooth: {0}'
       scan: 'Error searching for devices: {0}'
