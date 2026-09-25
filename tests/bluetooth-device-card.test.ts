@@ -101,7 +101,7 @@ describe('deviceCardProps', () => {
 /**
  * Y que la clave exista en los dos idiomas.
  *
- * `cargo test --test locales` ya exige que los dos yml tengan las mismas
+ * `tests/locale-catalogs.test.ts` ya exige que los dos yml tengan las mismas
  * claves, pero no sabe que **ésta** tiene que estar: si nadie la agrega, el
  * `t()` devuelve la clave pelada y la fila dice `views.networkBluetooth.signal`.
  */
