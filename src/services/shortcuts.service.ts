@@ -30,7 +30,8 @@ export const normalizeShortcutKeys = (combo: string): string => {
 		.map(canonicalKeyName)
 		.filter((part) => part.length > 0);
 
-	return Array.from(new Set(parts)).sort().join('+');
+	const unique = Array.from(new Set(parts));
+	return unique.sort((a, b) => a.localeCompare(b)).join('+');
 };
 
 export const formatShortcutLabel = (shortcut: ShortcutRule): string => {
