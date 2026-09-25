@@ -11,14 +11,42 @@ import {
 	toggleBluetooth,
 } from '@vasakgroup/plugin-bluetooth-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
+import { AlertMessage, DeviceCard, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
-import BluetoothDeviceCard from '@/components/cards/BluetoothDeviceCard.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 
 const { t } = useI18n();
+
+/**
+ * Las propiedades de la tarjeta a partir de un dispositivo de BlueZ.
+ *
+ * Va acá y no adentro de un componente propio: la tarjeta la pone la librería,
+ * y lo único que era nuestro es esta traducción de un dispositivo de BlueZ a lo
+ * que la tarjeta muestra. Un componente entero para envolver eso es la copia
+ * que este cambio viene a borrar.
+ *
+ * `metadata` conserva lo que mostraba la copia —`icon` y si no `alias`— aunque
+ * `icon` sea el **nombre** del icono del tema y no un texto pensado para
+ * leerse. Se deja igual a propósito: cambiar qué dice una fila mientras se
+ * cambia de dónde sale la fila deja sin saber cuál de las dos cosas movió algo.
+ */
+const cardProps = (device: any) => ({
+	name: device.icon || 'bluetooth',
+	title: device.alias || device.name || device.address,
+	subtitle: device.address,
+	metadata: device.icon || device.alias || '',
+	// La señal va como cadena suelta, que la tarjeta acepta. La otra forma
+	// —`{ icon, text }`— pondría un símbolo del tema en vez del emoji, pero eso
+	// es un cambio de aspecto que no tiene que ver con sacar la copia.
+	//
+	// Sin anotar el tipo: la librería declara `ExtraInfo` para esta propiedad
+	// pero **no la exporta** en su índice, así que desde afuera no se puede
+	// nombrar. `string[]` es asignable igual. Queda anotado como hueco de la
+	// librería, no como algo a resolver acá.
+	extraInfo: device.rssi ? [`📶 ${device.rssi} dBm`] : [],
+});
 
 // --- Estado ---
 const connectedDevices: Ref<any[]> = ref([]);
@@ -199,10 +227,12 @@ onUnmounted(() => {
 					
 					<ul v-else class="flex flex-col gap-1">
 						<li v-for="dev in connectedDevices" :key="dev.path">
-							<BluetoothDeviceCard
-								:device="dev"
+							<DeviceCard
+								v-bind="cardProps(dev)"
 								:action-label="t('views.networkBluetooth.disconnect')"
-								connected
+								action-kind="destructive"
+								is-connected
+								show-status-indicator
 								@action="disconnect(dev)"
 							/>
 						</li>
@@ -230,8 +260,8 @@ onUnmounted(() => {
 					
 					<ul v-else class="flex flex-col gap-1 max-h-[50vh] overflow-y-auto pr-1">
 						<li v-for="dev in availableDevices" :key="dev.path">
-							<BluetoothDeviceCard
-								:device="dev"
+							<DeviceCard
+								v-bind="cardProps(dev)"
 								:action-label="t('views.networkBluetooth.connect')"
 								@action="connect(dev)"
 							/>

@@ -52,6 +52,46 @@ afterEach(() => {
 	}
 });
 
+/**
+ * El archivo sin lo que está comentado.
+ *
+ * Sin esto, un `// import { FormGroup } from '@vasakgroup/vue-libvasak';`
+ * comentado alcanza para que las comprobaciones de abajo pasen, y la vista
+ * queda **sin el componente**: Vue dibuja un elemento desconocido, no falla, y
+ * el campo simplemente no está. Lo mismo al revés — un import viejo comentado
+ * haría fallar una guardia sin que haya nada mal.
+ *
+ * Se sacan los bloques `/* *\/` y las líneas que **empiezan** con `//`, no
+ * cualquier `//`: así una URL adentro de una cadena no se lleva media línea
+ * puesta.
+ *
+ * **Por qué el bucle y no un `.replace` suelto.** Una sola pasada deja pasar los
+ * marcadores anidados: en `<!-- <!-- x --> -->`, la expresión no codiciosa se
+ * come el tramo del medio y devuelve un texto que **todavía tiene** `<!--`. Con
+ * el comentario de un `.vue` real no cambia nada, pero es una guardia: lo que
+ * lee es código que alguien va a escribir, y dejar una sanitización que se
+ * aplica «casi siempre» es lo que CodeQL marca —con razón— como incompleta. Se
+ * repite hasta que el texto deja de cambiar.
+ *
+ * Va una sola vez y a nivel de módulo: había dos copias idénticas, una por
+ * bloque, que es exactamente la clase de duplicado que este archivo existe para
+ * cazar en el código de la aplicación.
+ */
+function sinComentarios(texto: string): string {
+	let anterior: string;
+	let actual = texto;
+
+	do {
+		anterior = actual;
+		actual = actual.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '');
+	} while (actual !== anterior);
+
+	return actual
+		.split('\n')
+		.filter((linea) => !/^\s*\/\//.test(linea))
+		.join('\n');
+}
+
 describe('el aviso, en las sesenta y nueve etiquetas convertidas', () => {
 	// El mensaje pasó de propiedad a ranura, con un guion, en treinta y una
 	// pantallas. Si alguna hubiera quedado con `:message`, la librería la
@@ -211,15 +251,6 @@ describe('el grupo de formulario', () => {
 	 * cualquier `//`: así una URL adentro de una cadena no se lleva media línea
 	 * puesta.
 	 */
-	function sinComentarios(texto: string): string {
-		return texto
-			.replace(/\/\*[\s\S]*?\*\//g, '')
-			.replace(/<!--[\s\S]*?-->/g, '')
-			.split('\n')
-			.filter((linea) => !/^\s*\/\//.test(linea))
-			.join('\n');
-	}
-
 	const leer = (ruta: string) => sinComentarios(readFileSync(FUENTE + ruta, 'utf8'));
 
 	test('y nadie la importa de acá adentro', () => {
@@ -237,6 +268,18 @@ describe('el grupo de formulario', () => {
 		expect(sinComentarios("const u = 'https://vasak.net.ar';")).toContain('https://vasak.net.ar');
 	});
 
+	test('y no deja marcadores atrás cuando vienen anidados', () => {
+		// Una sola pasada devuelve `<!--  -->`, que todavía tiene marcador: la
+		// no codiciosa se come el tramo del medio y deja los extremos pegados.
+		// Es lo que CodeQL marca como sanitización incompleta, y con un import
+		// escondido ahí adentro la guardia miraría un texto que no es el que se
+		// compila.
+		expect(sinComentarios('<!-- <!-- x --> -->')).not.toContain('<!--');
+		expect(sinComentarios('/* /* x */ */')).not.toContain('/*');
+		// Y lo de siempre sigue andando igual.
+		expect(sinComentarios('<!-- fuera -->adentro')).toBe('adentro');
+	});
+
 	test('las dieciocho la piden a la librería', () => {
 		// Si alguna la usa sin importarla, Vue dibuja un elemento desconocido y
 		// no falla: la vista queda sin el campo y nadie se entera.
@@ -247,5 +290,72 @@ describe('el grupo de formulario', () => {
 		});
 
 		expect(culpables).toEqual([]);
+	});
+});
+
+/**
+ * ── La tarjeta de dispositivo de Bluetooth ─────────────────────────────────
+ *
+ * Era la séptima copia: `BluetoothDeviceCard.vue` dibujaba a mano lo que la
+ * `DeviceCard` de la librería ya hacía. La adopción esperó a que la librería
+ * aprendiera lo único que la copia sabía y ella no — pintar de rojo el botón
+ * que desconecta, que llegó en la 1.9.0 con `actionKind`.
+ *
+ * Eso es lo que estas pruebas cuidan: no que la tarjeta exista, sino que la
+ * fila de un dispositivo **conectado** siga ofreciendo su acción en rojo. Sin
+ * `action-kind`, la adopción compila, se ve bien y el botón de desconectar
+ * queda del mismo color que el de conectar — que es exactamente la clase de
+ * detalle que una mudanza se lleva puesta sin que nadie lo note.
+ */
+describe('la tarjeta de dispositivo de Bluetooth', () => {
+	// Propios: los del bloque de arriba viven dentro de aquel `describe`.
+	const FUENTE = new URL('../src/', import.meta.url).pathname;
+	const fuentes = [...new Glob('**/*.vue').scanSync(FUENTE)];
+	const VISTA = 'views/NetworkBluetoothView.vue';
+
+	const vista = () => sinComentarios(readFileSync(FUENTE + VISTA, 'utf8'));
+
+	test('ya no hay copia propia', () => {
+		expect(fuentes.filter((ruta) => ruta.endsWith('cards/BluetoothDeviceCard.vue'))).toEqual([]);
+	});
+
+	test('y nadie la importa de acá adentro', () => {
+		const culpables = fuentes.filter((ruta) =>
+			sinComentarios(readFileSync(FUENTE + ruta, 'utf8')).includes('BluetoothDeviceCard')
+		);
+
+		expect(culpables).toEqual([]);
+	});
+
+	test('la vista la pide a la librería', () => {
+		// Si la usa sin importarla, Vue dibuja un elemento desconocido y no
+		// falla: la lista de dispositivos queda vacía y nadie se entera.
+		const texto = vista();
+
+		expect(texto).toMatch(/<DeviceCard\b/);
+		expect(texto).toMatch(/import \{[^}]*\bDeviceCard\b[^}]*\} from '@vasakgroup\/vue-libvasak'/);
+	});
+
+	test('el botón de desconectar sigue siendo el rojo, y el de conectar no', () => {
+		const texto = vista();
+		// Las dos tarjetas de la vista, en orden: la del dispositivo conectado
+		// —que desconecta— y la del disponible —que conecta—.
+		const tarjetas = texto.split(/<DeviceCard\b/).slice(1);
+
+		expect(tarjetas).toHaveLength(2);
+
+		const [conectado, disponible] = tarjetas.map((t) => t.slice(0, t.indexOf('/>')));
+
+		expect(conectado).toContain('action-kind="destructive"');
+		expect(conectado).toContain('is-connected');
+		expect(disponible).not.toContain('action-kind');
+	});
+
+	test('y la fila conectada muestra su indicador de estado', () => {
+		// La copia dibujaba un punto verde cuando el dispositivo estaba
+		// conectado. En la librería eso no viene solo: hay que pedirlo.
+		const conectado = vista().split(/<DeviceCard\b/)[1];
+
+		expect(conectado.slice(0, conectado.indexOf('/>'))).toContain('show-status-indicator');
 	});
 });
