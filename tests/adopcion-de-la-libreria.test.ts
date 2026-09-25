@@ -52,6 +52,46 @@ afterEach(() => {
 	}
 });
 
+/**
+ * El archivo sin lo que está comentado.
+ *
+ * Sin esto, un `// import { FormGroup } from '@vasakgroup/vue-libvasak';`
+ * comentado alcanza para que las comprobaciones de abajo pasen, y la vista
+ * queda **sin el componente**: Vue dibuja un elemento desconocido, no falla, y
+ * el campo simplemente no está. Lo mismo al revés — un import viejo comentado
+ * haría fallar una guardia sin que haya nada mal.
+ *
+ * Se sacan los bloques `/* *\/` y las líneas que **empiezan** con `//`, no
+ * cualquier `//`: así una URL adentro de una cadena no se lleva media línea
+ * puesta.
+ *
+ * **Por qué el bucle y no un `.replace` suelto.** Una sola pasada deja pasar los
+ * marcadores anidados: en `<!-- <!-- x --> -->`, la expresión no codiciosa se
+ * come el tramo del medio y devuelve un texto que **todavía tiene** `<!--`. Con
+ * el comentario de un `.vue` real no cambia nada, pero es una guardia: lo que
+ * lee es código que alguien va a escribir, y dejar una sanitización que se
+ * aplica «casi siempre» es lo que CodeQL marca —con razón— como incompleta. Se
+ * repite hasta que el texto deja de cambiar.
+ *
+ * Va una sola vez y a nivel de módulo: había dos copias idénticas, una por
+ * bloque, que es exactamente la clase de duplicado que este archivo existe para
+ * cazar en el código de la aplicación.
+ */
+function sinComentarios(texto: string): string {
+	let anterior: string;
+	let actual = texto;
+
+	do {
+		anterior = actual;
+		actual = actual.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '');
+	} while (actual !== anterior);
+
+	return actual
+		.split('\n')
+		.filter((linea) => !/^\s*\/\//.test(linea))
+		.join('\n');
+}
+
 describe('el aviso, en las sesenta y nueve etiquetas convertidas', () => {
 	// El mensaje pasó de propiedad a ranura, con un guion, en treinta y una
 	// pantallas. Si alguna hubiera quedado con `:message`, la librería la
@@ -211,15 +251,6 @@ describe('el grupo de formulario', () => {
 	 * cualquier `//`: así una URL adentro de una cadena no se lleva media línea
 	 * puesta.
 	 */
-	function sinComentarios(texto: string): string {
-		return texto
-			.replace(/\/\*[\s\S]*?\*\//g, '')
-			.replace(/<!--[\s\S]*?-->/g, '')
-			.split('\n')
-			.filter((linea) => !/^\s*\/\//.test(linea))
-			.join('\n');
-	}
-
 	const leer = (ruta: string) => sinComentarios(readFileSync(FUENTE + ruta, 'utf8'));
 
 	test('y nadie la importa de acá adentro', () => {
@@ -235,6 +266,18 @@ describe('el grupo de formulario', () => {
 		expect(sinComentarios(comentado)).toBe('');
 		// Y una URL adentro de una cadena sobrevive entera.
 		expect(sinComentarios("const u = 'https://vasak.net.ar';")).toContain('https://vasak.net.ar');
+	});
+
+	test('y no deja marcadores atrás cuando vienen anidados', () => {
+		// Una sola pasada devuelve `<!--  -->`, que todavía tiene marcador: la
+		// no codiciosa se come el tramo del medio y deja los extremos pegados.
+		// Es lo que CodeQL marca como sanitización incompleta, y con un import
+		// escondido ahí adentro la guardia miraría un texto que no es el que se
+		// compila.
+		expect(sinComentarios('<!-- <!-- x --> -->')).not.toContain('<!--');
+		expect(sinComentarios('/* /* x */ */')).not.toContain('/*');
+		// Y lo de siempre sigue andando igual.
+		expect(sinComentarios('<!-- fuera -->adentro')).toBe('adentro');
 	});
 
 	test('las dieciocho la piden a la librería', () => {
@@ -270,16 +313,7 @@ describe('la tarjeta de dispositivo de Bluetooth', () => {
 	const fuentes = [...new Glob('**/*.vue').scanSync(FUENTE)];
 	const VISTA = 'views/NetworkBluetoothView.vue';
 
-	function sinLoComentado(texto: string): string {
-		return texto
-			.replace(/\/\*[\s\S]*?\*\//g, '')
-			.replace(/<!--[\s\S]*?-->/g, '')
-			.split('\n')
-			.filter((linea) => !/^\s*\/\//.test(linea))
-			.join('\n');
-	}
-
-	const vista = () => sinLoComentado(readFileSync(FUENTE + VISTA, 'utf8'));
+	const vista = () => sinComentarios(readFileSync(FUENTE + VISTA, 'utf8'));
 
 	test('ya no hay copia propia', () => {
 		expect(fuentes.filter((ruta) => ruta.endsWith('cards/BluetoothDeviceCard.vue'))).toEqual([]);
@@ -287,7 +321,7 @@ describe('la tarjeta de dispositivo de Bluetooth', () => {
 
 	test('y nadie la importa de acá adentro', () => {
 		const culpables = fuentes.filter((ruta) =>
-			sinLoComentado(readFileSync(FUENTE + ruta, 'utf8')).includes('BluetoothDeviceCard')
+			sinComentarios(readFileSync(FUENTE + ruta, 'utf8')).includes('BluetoothDeviceCard')
 		);
 
 		expect(culpables).toEqual([]);
