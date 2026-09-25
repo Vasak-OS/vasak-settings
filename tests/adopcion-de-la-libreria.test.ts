@@ -249,3 +249,79 @@ describe('el grupo de formulario', () => {
 		expect(culpables).toEqual([]);
 	});
 });
+
+/**
+ * ── La tarjeta de dispositivo de Bluetooth ─────────────────────────────────
+ *
+ * Era la séptima copia: `BluetoothDeviceCard.vue` dibujaba a mano lo que la
+ * `DeviceCard` de la librería ya hacía. La adopción esperó a que la librería
+ * aprendiera lo único que la copia sabía y ella no — pintar de rojo el botón
+ * que desconecta, que llegó en la 1.9.0 con `actionKind`.
+ *
+ * Eso es lo que estas pruebas cuidan: no que la tarjeta exista, sino que la
+ * fila de un dispositivo **conectado** siga ofreciendo su acción en rojo. Sin
+ * `action-kind`, la adopción compila, se ve bien y el botón de desconectar
+ * queda del mismo color que el de conectar — que es exactamente la clase de
+ * detalle que una mudanza se lleva puesta sin que nadie lo note.
+ */
+describe('la tarjeta de dispositivo de Bluetooth', () => {
+	// Propios: los del bloque de arriba viven dentro de aquel `describe`.
+	const FUENTE = new URL('../src/', import.meta.url).pathname;
+	const fuentes = [...new Glob('**/*.vue').scanSync(FUENTE)];
+	const VISTA = 'views/NetworkBluetoothView.vue';
+
+	function sinLoComentado(texto: string): string {
+		return texto
+			.replace(/\/\*[\s\S]*?\*\//g, '')
+			.replace(/<!--[\s\S]*?-->/g, '')
+			.split('\n')
+			.filter((linea) => !/^\s*\/\//.test(linea))
+			.join('\n');
+	}
+
+	const vista = () => sinLoComentado(readFileSync(FUENTE + VISTA, 'utf8'));
+
+	test('ya no hay copia propia', () => {
+		expect(fuentes.filter((ruta) => ruta.endsWith('cards/BluetoothDeviceCard.vue'))).toEqual([]);
+	});
+
+	test('y nadie la importa de acá adentro', () => {
+		const culpables = fuentes.filter((ruta) =>
+			sinLoComentado(readFileSync(FUENTE + ruta, 'utf8')).includes('BluetoothDeviceCard')
+		);
+
+		expect(culpables).toEqual([]);
+	});
+
+	test('la vista la pide a la librería', () => {
+		// Si la usa sin importarla, Vue dibuja un elemento desconocido y no
+		// falla: la lista de dispositivos queda vacía y nadie se entera.
+		const texto = vista();
+
+		expect(texto).toMatch(/<DeviceCard\b/);
+		expect(texto).toMatch(/import \{[^}]*\bDeviceCard\b[^}]*\} from '@vasakgroup\/vue-libvasak'/);
+	});
+
+	test('el botón de desconectar sigue siendo el rojo, y el de conectar no', () => {
+		const texto = vista();
+		// Las dos tarjetas de la vista, en orden: la del dispositivo conectado
+		// —que desconecta— y la del disponible —que conecta—.
+		const tarjetas = texto.split(/<DeviceCard\b/).slice(1);
+
+		expect(tarjetas).toHaveLength(2);
+
+		const [conectado, disponible] = tarjetas.map((t) => t.slice(0, t.indexOf('/>')));
+
+		expect(conectado).toContain('action-kind="destructive"');
+		expect(conectado).toContain('is-connected');
+		expect(disponible).not.toContain('action-kind');
+	});
+
+	test('y la fila conectada muestra su indicador de estado', () => {
+		// La copia dibujaba un punto verde cuando el dispositivo estaba
+		// conectado. En la librería eso no viene solo: hay que pedirlo.
+		const conectado = vista().split(/<DeviceCard\b/)[1];
+
+		expect(conectado.slice(0, conectado.indexOf('/>'))).toContain('show-status-indicator');
+	});
+});
