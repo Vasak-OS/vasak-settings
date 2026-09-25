@@ -1027,6 +1027,7 @@ views:
     scanTooltip: Escanear
     connect: Conectar
     disconnect: Desconectar
+    signal: '{0} dBm'
     errors:
       toggle: 'Error alternando Bluetooth: {0}'
       scan: 'Error buscando dispositivos: {0}'

@@ -3,6 +3,7 @@ import { listen } from '@tauri-apps/api/event';
 import {
 	type AdapterInfo,
 	connectDevice,
+	type DeviceInfo,
 	disconnectDevice,
 	getDefaultAdapter,
 	listDevices,
@@ -16,41 +17,17 @@ import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
+import { deviceCardProps } from '@/utils/bluetooth-device-card';
 
 const { t } = useI18n();
 
-/**
- * Las propiedades de la tarjeta a partir de un dispositivo de BlueZ.
- *
- * Va acá y no adentro de un componente propio: la tarjeta la pone la librería,
- * y lo único que era nuestro es esta traducción de un dispositivo de BlueZ a lo
- * que la tarjeta muestra. Un componente entero para envolver eso es la copia
- * que este cambio viene a borrar.
- *
- * `metadata` conserva lo que mostraba la copia —`icon` y si no `alias`— aunque
- * `icon` sea el **nombre** del icono del tema y no un texto pensado para
- * leerse. Se deja igual a propósito: cambiar qué dice una fila mientras se
- * cambia de dónde sale la fila deja sin saber cuál de las dos cosas movió algo.
- */
-const cardProps = (device: any) => ({
-	name: device.icon || 'bluetooth',
-	title: device.alias || device.name || device.address,
-	subtitle: device.address,
-	metadata: device.icon || device.alias || '',
-	// La señal va como cadena suelta, que la tarjeta acepta. La otra forma
-	// —`{ icon, text }`— pondría un símbolo del tema en vez del emoji, pero eso
-	// es un cambio de aspecto que no tiene que ver con sacar la copia.
-	//
-	// Sin anotar el tipo: la librería declara `ExtraInfo` para esta propiedad
-	// pero **no la exporta** en su índice, así que desde afuera no se puede
-	// nombrar. `string[]` es asignable igual. Queda anotado como hueco de la
-	// librería, no como algo a resolver acá.
-	extraInfo: device.rssi ? [`📶 ${device.rssi} dBm`] : [],
-});
+// El armado de cada fila —de un dispositivo de BlueZ a las propiedades de
+// `DeviceCard`— vive en `@/utils/bluetooth-device-card`, como función pura:
+// así se prueba sin Tauri y sin montar esta vista.
 
 // --- Estado ---
-const connectedDevices: Ref<any[]> = ref([]);
-const availableDevices: Ref<any[]> = ref([]);
+const connectedDevices: Ref<DeviceInfo[]> = ref([]);
+const availableDevices: Ref<DeviceInfo[]> = ref([]);
 const isTogglingBluetooth = ref(false);
 const defaultAdapter = ref<AdapterInfo | null>(null);
 const loading = ref(true);
@@ -228,7 +205,7 @@ onUnmounted(() => {
 					<ul v-else class="flex flex-col gap-1">
 						<li v-for="dev in connectedDevices" :key="dev.path">
 							<DeviceCard
-								v-bind="cardProps(dev)"
+								v-bind="deviceCardProps(dev, t)"
 								:action-label="t('views.networkBluetooth.disconnect')"
 								action-kind="destructive"
 								is-connected
@@ -261,7 +238,7 @@ onUnmounted(() => {
 					<ul v-else class="flex flex-col gap-1 max-h-[50vh] overflow-y-auto pr-1">
 						<li v-for="dev in availableDevices" :key="dev.path">
 							<DeviceCard
-								v-bind="cardProps(dev)"
+								v-bind="deviceCardProps(dev, t)"
 								:action-label="t('views.networkBluetooth.connect')"
 								@action="connect(dev)"
 							/>

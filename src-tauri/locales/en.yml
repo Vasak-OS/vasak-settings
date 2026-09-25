@@ -1023,6 +1023,7 @@ views:
     scanTooltip: Scan
     connect: Connect
     disconnect: Disconnect
+    signal: '{0} dBm'
     errors:
       toggle: 'Error toggling Bluetooth: {0}'
       scan: 'Error searching for devices: {0}'
