@@ -296,7 +296,7 @@ views:
     forgetHint: >-
       Borra lo decidido sobre esta aplicación para todos los recursos, no sólo
       para el que estás mirando.
-    sinAppsEnRecurso: >-
+    noAppsForResource: >-
       Ninguna aplicación pidió esto todavía. Las que lo pidan van a aparecer
       acá para que decidas.
     allow: Permitir
@@ -304,9 +304,9 @@ views:
     blocked:
       title: 'Bloqueado, esperando tu decisión'
       description: 'Un perfil de seguridad le impidió esto a un programa. Si era algo que esperabas, permitíselo; si no, descartalo y queda bloqueado.'
-      permisos: 'Permisos'
-      veces: 'intentado {0} veces'
-      descartar: 'Descartar'
+      permissions: 'Permisos'
+      times: 'intentado {0} veces'
+      dismiss: 'Descartar'
     resources:
       accountEmail: Correo de tus cuentas
       accountCalendar: Calendario de tus cuentas
@@ -318,8 +318,8 @@ views:
       microphone: Micrófono
       screenCapture: Compartir pantalla
       credentials: Claves y accesos guardados
-    ninguna: Ninguna
-    volver: Permisos
+    none: Ninguna
+    back: Permisos
   wayfirePlugins:
     title: Plugins del compositor
     description: 'Activá solo lo que uses: cada plugin apagado es memoria y trabajo que Wayfire no hace.'

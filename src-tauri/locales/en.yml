@@ -292,7 +292,7 @@ views:
     forgetHint: >-
       Clears what was decided about this application for every resource, not
       just the one you are looking at.
-    sinAppsEnRecurso: >-
+    noAppsForResource: >-
       No application has asked for this yet. The ones that do will show up
       here for you to decide.
     allow: Allow
@@ -300,9 +300,9 @@ views:
     blocked:
       title: 'Blocked, waiting for you'
       description: 'A security profile stopped a program from doing this. If you expected it, allow it; if not, dismiss it and it stays blocked.'
-      permisos: 'Permissions'
-      veces: 'tried {0} times'
-      descartar: 'Dismiss'
+      permissions: 'Permissions'
+      times: 'tried {0} times'
+      dismiss: 'Dismiss'
     resources:
       accountEmail: Account email
       accountCalendar: Account calendar
@@ -314,8 +314,8 @@ views:
       microphone: Microphone
       screenCapture: Screen sharing
       credentials: Keys and saved logins
-    ninguna: None
-    volver: Permissions
+    none: None
+    back: Permissions
   wayfirePlugins:
     title: Compositor plugins
     description: 'Enable only what you use: every plugin turned off is memory and work Wayfire does not spend.'

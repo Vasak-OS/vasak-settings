@@ -336,9 +336,9 @@ onMounted(load);
 					     distingue un archivo tuyo de otro que no lo es. -->
 					<p class="mt-2 text-sm text-tx-main break-all font-mono">{{ b.ruta }}</p>
 					<p class="mt-1 text-xs text-tx-muted">
-						{{ t('views.privacySecurity.blocked.permisos') }}: {{ b.mascara }}
+						{{ t('views.privacySecurity.blocked.permissions') }}: {{ b.mascara }}
 						<span v-if="b.veces > 1">
-							· {{ t('views.privacySecurity.blocked.veces').replace('{0}', String(b.veces)) }}
+							· {{ t('views.privacySecurity.blocked.times').replace('{0}', String(b.veces)) }}
 						</span>
 					</p>
 				</div>
@@ -358,7 +358,7 @@ onMounted(load);
 						class="rounded-corner px-3 py-1 text-xs border border-ui-border text-tx-muted hover:bg-ui-surface disabled:opacity-50"
 						@click="descartarBloqueo(b)"
 					>
-						{{ t('views.privacySecurity.blocked.descartar') }}
+						{{ t('views.privacySecurity.blocked.dismiss') }}
 					</button>
 				</div>
 			</article>
@@ -393,7 +393,7 @@ onMounted(load);
 							{{ r.permitidas }}
 						</span>
 						<span v-else class="shrink-0 text-xs text-tx-muted">
-							{{ t('views.privacySecurity.ninguna') }}
+							{{ t('views.privacySecurity.none') }}
 						</span>
 
 						<span class="shrink-0 text-tx-muted" aria-hidden="true">›</span>
@@ -410,7 +410,7 @@ onMounted(load);
 						class="rounded-corner border border-ui-border px-3 py-1.5 text-sm text-tx-muted hover:bg-ui-surface"
 						@click="abierto = null"
 					>
-						‹ {{ t('views.privacySecurity.volver') }}
+						‹ {{ t('views.privacySecurity.back') }}
 					</button>
 
 					<ThemeIcon v-if="abierto" :name="iconoDe(abierto)" type="symbol" :size="24" />
@@ -422,7 +422,7 @@ onMounted(load);
 				<EmptyStateBox
 					v-if="recursoActivo && recursoActivo.apps.length === 0"
 					padding="lg"
-					:message="t('views.privacySecurity.sinAppsEnRecurso')"
+					:message="t('views.privacySecurity.noAppsForResource')"
 				/>
 
 				<ul v-else class="flex flex-col gap-2">
