@@ -53,7 +53,7 @@ dirs = "5"
 futures-util = "0.3"
 notify = "8"
 zbus = { version = "4", default-features = false, features = ["tokio"] }
-tauri-plugin-bluetooth-manager = "2"
+tauri-plugin-bluetooth-manager = "2.1"
 #tauri-plugin-bluetooth-manager = { path = "../../tauri-plugin-bluetooth-manager" }
 tauri-plugin-network-manager = "2"
 tauri-plugin-vsk-contextual-menu = "2"
