@@ -65,92 +65,25 @@ import {
 	type PermissionEntry,
 	setPermission,
 } from '@/services/permissions.service';
-import { ICONO_DE_CAPACIDAD } from '@/tools/icono-de-proveedor';
-import { porRecurso } from '@/tools/permisos-por-recurso';
+import { groupByResource } from '@/tools/permissions-by-resource';
+import {
+	PRIVACY_RESOURCES,
+	type PrivacyResource,
+	resourceIcon,
+	resourceLabelKey,
+} from '@/tools/privacy-resources';
 
 const { t } = useI18n();
 
 /**
- * Lo que el perfil de AppArmor niega, y por eso lo único sobre lo que decidir
- * acá cambia algo.
+ * El nombre de un recurso en el idioma de la sesión.
  *
- * Las credenciales van primero a propósito. Es lo que más daño hace si se
- * pierde —una clave de SSH sin frase abre servidores, un token abre la cuenta
- * sin segundo factor— y lo que la persona menos espera que una aplicación
- * cualquiera pueda leer.
+ * La lista, las claves y los iconos viven en `tools/privacy-resources.ts`,
+ * probados aparte: acá sólo se traduce. Los ids con punto (`account.email`,
+ * `store.email`) no pueden ir tal cual a la clave, y el mapa de ese módulo es
+ * lo que lo evita.
  */
-const RESOURCES = [
-	'credentials',
-	// Las cuentas van acá y no en su propia pantalla: son lo único de esta lista
-	// que se hace cumplir de verdad —`vasak-accounts` le pregunta a este
-	// servicio por cada acceso, así que negar acá niega—, y quien abre
-	// «Privacidad» viene justamente a preguntar quién puede leer su correo.
-	'account.email',
-	'account.calendar',
-	'account.contacts',
-	'account.chat',
-	'account.drive',
-	'account.tasks',
-	'camera',
-	'microphone',
-	// Compartir la pantalla llega sólo por el portal, así que sus entradas son
-	// las únicas de esta lista identificadas por un nombre que declara la propia
-	// aplicación. Va acá igual: el criterio de esta pantalla es que todo lo que
-	// se concede se tiene que poder retirar, y antes esto no se podía.
-	'screen-capture',
-] as const;
-
-/**
- * La clave de traducción de cada recurso.
- *
- * Aparte del id porque los de cuenta llevan un punto (`account.email`) y las
- * claves se resuelven partiendo por punto: usar el id tal cual bajaría a una
- * clave que no existe y se dibujaría cruda. Ya había costado eso una vez.
- */
-const ETIQUETA: Record<string, string> = {
-	'account.email': 'accountEmail',
-	'account.calendar': 'accountCalendar',
-	'account.contacts': 'accountContacts',
-	'account.chat': 'accountChat',
-	'account.drive': 'accountDrive',
-	'account.tasks': 'accountTasks',
-	// Sin punto, pero con guion: la clave iría a `resources.screen-capture`, que
-	// existiría si se escribiera así en el catálogo. Se mapea igual para que las
-	// claves de traducción sigan todas la misma forma y no haya que recordar
-	// cuál de ellas lleva guion.
-	'screen-capture': 'screenCapture',
-};
-
-const nombreDe = (recurso: string) =>
-	t(`views.privacySecurity.resources.${ETIQUETA[recurso] ?? recurso}`);
-
-/**
- * El icono de cada permiso en la lista.
- *
- * Del tema, no dibujados acá: son los nombres que el escritorio ya usa para
- * esas mismas cosas —el sobre del correo, la cámara web, el micrófono—, así que
- * siguen la variante clara u oscura y cambian con el pack de iconos.
- *
- * Ninguno es el logo de un proveedor: acá el permiso es sobre *el tipo de
- * dato*, no sobre una cuenta. «Correo de tus cuentas» vale para todas las que
- * haya conectadas.
- */
-const ICONO: Record<string, string> = {
-	credentials: 'dialog-password',
-	camera: 'camera-web',
-	microphone: 'audio-input-microphone',
-	'screen-capture': 'video-display',
-	// Los de cuenta salen de la misma tabla que usa «Cuentas en Línea», con el
-	// prefijo del recurso: el id de capacidad `email` es el recurso
-	// `account.email`. Dos tablas se separan y la misma cosa termina dibujada
-	// distinta según por dónde se entre.
-	...Object.fromEntries(
-		Object.entries(ICONO_DE_CAPACIDAD).map(([capacidad, icono]) => [`account.${capacidad}`, icono])
-	),
-};
-
-/** El nombre del icono de un recurso, con el genérico de respaldo. */
-const iconoDe = (id: string) => ICONO[id] ?? 'security-high';
+const labelOf = (id: string) => t(resourceLabelKey(id));
 
 const entries = ref<PermissionEntry[]>([]);
 /**
@@ -162,8 +95,9 @@ const entries = ref<PermissionEntry[]>([]);
  * niega algo deja un programa que falla sin explicación y sin remedio, que es
  * lo que obliga a tener los perfiles del sistema en modo aviso.
  */
-const bloqueados = ref<BlockedItem[]>([]);
-const ocupado = ref('');
+const blockedItems = ref<BlockedItem[]>([]);
+/** El bloqueo sobre el que se está actuando, por `blockedKey`. */
+const busyBlockedKey = ref('');
 const loading = ref(true);
 const errorMessage = ref('');
 const busyPath = ref('');
@@ -171,14 +105,14 @@ const busyPath = ref('');
 /**
  * Trae la lista.
  *
- * `refrescar` es para volver a leerla **después** de una acción que falló: sin
+ * `refresh` es para volver a leerla **después** de una acción que falló: sin
  * eso, esta función limpiaba el mensaje que el manejador acababa de escribir y
  * ningún fallo llegaba a verse. Una autenticación rechazada se veía igual que
  * un cambio aplicado, que es la peor forma de equivocarse en una pantalla de
  * permisos.
  */
-const load = async (refrescar = false) => {
-	if (!refrescar) {
+const load = async (refresh = false) => {
+	if (!refresh) {
 		loading.value = true;
 		errorMessage.value = '';
 	}
@@ -186,7 +120,7 @@ const load = async (refrescar = false) => {
 		entries.value = await listPermissions();
 		// Si esto falla no se pierde la lista de permisos: son dos cosas
 		// independientes y una pantalla a medias es mejor que una vacía.
-		bloqueados.value = await listBlocked().catch(() => bloqueados.value);
+		blockedItems.value = await listBlocked().catch(() => blockedItems.value);
 	} catch (error) {
 		errorMessage.value = String(error);
 	} finally {
@@ -200,9 +134,9 @@ const load = async (refrescar = false) => {
  * El servicio contesta por aplicación porque así es como decide, pero la
  * pregunta que alguien trae acá es «¿quién puede usar mi cámara?». Con la lista
  * por aplicación había que abrir una por una y recordar lo que decía la
- * anterior. La cuenta está en `tools/permisos-por-recurso.ts`, probada aparte.
+ * anterior. La cuenta está en `tools/permissions-by-resource.ts`, probada aparte.
  */
-const recursos = computed(() => porRecurso(entries.value, RESOURCES));
+const resourceGroups = computed(() => groupByResource(entries.value, PRIVACY_RESOURCES));
 
 /**
  * Qué permiso se está mirando, o `null` para la lista.
@@ -216,9 +150,11 @@ const recursos = computed(() => porRecurso(entries.value, RESOURCES));
  * es el número que alguien vino a mirar, y ninguno desaparece por estar en
  * cero: la lista es también el inventario de lo que el sistema sabe decidir.
  */
-const abierto = ref<(typeof RESOURCES)[number] | null>(null);
+const openResource = ref<PrivacyResource | null>(null);
 
-const recursoActivo = computed(() => recursos.value.find((r) => r.id === abierto.value));
+const activeGroup = computed(() =>
+	resourceGroups.value.find((group) => group.id === openResource.value)
+);
 
 /**
  * Si cambiar esto acá va a servir de algo.
@@ -237,14 +173,14 @@ const recursoActivo = computed(() => recursos.value.find((r) => r.id === abierto
  * apagado: un permiso concedido sin forma de retirarlo, que es justo lo que
  * esta pantalla existe para evitar.
  */
-const sePuedeDecidir = (entry: PermissionEntry) =>
+const canDecide = (entry: PermissionEntry) =>
 	entry.application.provenance === 'unverified' || entry.asks;
 
 /** Identifica un bloqueo: el par perfil+ruta es único en la lista. */
-const claveDe = (b: BlockedItem) => `${b.perfil}\u0000${b.ruta}`;
+const blockedKey = (b: BlockedItem) => `${b.perfil}\u0000${b.ruta}`;
 
-const permitirBloqueo = async (b: BlockedItem) => {
-	ocupado.value = claveDe(b);
+const allowBlockedItem = async (b: BlockedItem) => {
+	busyBlockedKey.value = blockedKey(b);
 	errorMessage.value = '';
 	try {
 		await allowBlocked(b.perfil, b.ruta);
@@ -252,20 +188,20 @@ const permitirBloqueo = async (b: BlockedItem) => {
 		// Una autenticación rechazada es lo normal, no una alarma.
 		errorMessage.value = String(error);
 	} finally {
-		ocupado.value = '';
+		busyBlockedKey.value = '';
 		await load(true);
 	}
 };
 
-const descartarBloqueo = async (b: BlockedItem) => {
-	ocupado.value = claveDe(b);
+const dismissBlockedItem = async (b: BlockedItem) => {
+	busyBlockedKey.value = blockedKey(b);
 	errorMessage.value = '';
 	try {
 		await dismissBlocked(b.perfil, b.ruta);
 	} catch (error) {
 		errorMessage.value = String(error);
 	} finally {
-		ocupado.value = '';
+		busyBlockedKey.value = '';
 		await load(true);
 	}
 };
@@ -313,7 +249,7 @@ onMounted(load);
 		     Va en su propia tarjeta y arriba de la lista de aplicaciones porque
 		     es lo único de esta pantalla que pide una acción: lo demás es
 		     estado que se consulta. -->
-		<SectionCard v-if="bloqueados.length > 0">
+		<SectionCard v-if="blockedItems.length > 0">
 			<header>
 				<h2 class="text-lg font-medium text-tx-main">
 					{{ t('views.privacySecurity.blocked.title') }}
@@ -324,8 +260,8 @@ onMounted(load);
 			</header>
 
 			<article
-				v-for="b in bloqueados"
-				:key="claveDe(b)"
+				v-for="b in blockedItems"
+				:key="blockedKey(b)"
 				class="rounded-corner border border-ui-border bg-ui-surface/70 p-4 flex flex-col gap-3"
 			>
 				<div class="min-w-0">
@@ -346,17 +282,17 @@ onMounted(load);
 				<div class="flex shrink-0 gap-2">
 					<button
 						type="button"
-						:disabled="ocupado === claveDe(b)"
+						:disabled="busyBlockedKey === blockedKey(b)"
 						class="rounded-corner px-3 py-1 text-xs border border-ui-border text-tx-main hover:bg-ui-surface disabled:opacity-50"
-						@click="permitirBloqueo(b)"
+						@click="allowBlockedItem(b)"
 					>
 						{{ t('views.privacySecurity.allow') }}
 					</button>
 					<button
 						type="button"
-						:disabled="ocupado === claveDe(b)"
+						:disabled="busyBlockedKey === blockedKey(b)"
 						class="rounded-corner px-3 py-1 text-xs border border-ui-border text-tx-muted hover:bg-ui-surface disabled:opacity-50"
-						@click="descartarBloqueo(b)"
+						@click="dismissBlockedItem(b)"
 					>
 						{{ t('views.privacySecurity.blocked.dismiss') }}
 					</button>
@@ -372,25 +308,25 @@ onMounted(load);
 			     fila de pestañas: con nueve recursos no entraba, y las vacías
 			     —cámara y micrófono, hasta que una aplicación confinada las
 			     pide— se leían como «acá no hay nada». -->
-			<ul v-else-if="!abierto" class="flex flex-col gap-2">
-				<li v-for="r in recursos" :key="r.id">
+			<ul v-else-if="!openResource" class="flex flex-col gap-2">
+				<li v-for="group in resourceGroups" :key="group.id">
 					<button
 						type="button"
 						class="flex w-full items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 p-3 text-left hover:bg-ui-surface"
-						@click="abierto = r.id"
+						@click="openResource = group.id"
 					>
-						<ThemeIcon :name="iconoDe(r.id)" type="symbol" :size="24" />
+						<ThemeIcon :name="resourceIcon(group.id)" type="symbol" :size="24" />
 
-						<span class="min-w-0 flex-1 truncate font-medium text-tx-main">{{ nombreDe(r.id) }}</span>
+						<span class="min-w-0 flex-1 truncate font-medium text-tx-main">{{ labelOf(group.id) }}</span>
 
 						<!-- Cuántas lo tienen concedido, no cuántas lo pidieron: es
 						     el número que alguien vino a mirar. En cero no se
 						     dibuja nada, para que el ojo vaya a los que sí. -->
 						<span
-							v-if="r.permitidas > 0"
+							v-if="group.allowedCount > 0"
 							class="shrink-0 rounded-corner-sm bg-status-success/20 px-1.5 text-xs text-status-success"
 						>
-							{{ r.permitidas }}
+							{{ group.allowedCount }}
 						</span>
 						<span v-else class="shrink-0 text-xs text-tx-muted">
 							{{ t('views.privacySecurity.none') }}
@@ -408,40 +344,40 @@ onMounted(load);
 					<button
 						type="button"
 						class="rounded-corner border border-ui-border px-3 py-1.5 text-sm text-tx-muted hover:bg-ui-surface"
-						@click="abierto = null"
+						@click="openResource = null"
 					>
 						‹ {{ t('views.privacySecurity.back') }}
 					</button>
 
-					<ThemeIcon v-if="abierto" :name="iconoDe(abierto)" type="symbol" :size="24" />
+					<ThemeIcon v-if="openResource" :name="resourceIcon(openResource)" type="symbol" :size="24" />
 					<h3 class="min-w-0 flex-1 truncate font-semibold text-tx-main">
-						{{ abierto ? nombreDe(abierto) : '' }}
+						{{ openResource ? labelOf(openResource) : '' }}
 					</h3>
 				</div>
 
 				<EmptyStateBox
-					v-if="recursoActivo && recursoActivo.apps.length === 0"
+					v-if="activeGroup && activeGroup.apps.length === 0"
 					padding="lg"
 					:message="t('views.privacySecurity.noAppsForResource')"
 				/>
 
 				<ul v-else class="flex flex-col gap-2">
 					<li
-						v-for="{ entrada, decision } in recursoActivo?.apps ?? []"
-						:key="entrada.application.binary_path"
+						v-for="{ entry, decision } in activeGroup?.apps ?? []"
+						:key="entry.application.binary_path"
 						class="flex flex-wrap items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 p-3"
 					>
-						<IconoDeApp :nombre="entrada.application.icon" />
+						<IconoDeApp :nombre="entry.application.icon" />
 
 						<div class="min-w-0 flex-1">
 							<h3 class="truncate font-semibold text-tx-main">
-								{{ entrada.application.display_name }}
+								{{ entry.application.display_name }}
 							</h3>
-							<p class="truncate text-xs text-tx-muted" :title="entrada.application.binary_path">
-								{{ entrada.application.binary_path }}
+							<p class="truncate text-xs text-tx-muted" :title="entry.application.binary_path">
+								{{ entry.application.binary_path }}
 							</p>
 							<p
-								v-if="!sePuedeDecidir(entrada)"
+								v-if="!canDecide(entry)"
 								class="mt-1 text-xs text-status-warning"
 							>
 								{{ t('views.privacySecurity.notConfined') }}
@@ -451,27 +387,27 @@ onMounted(load);
 						<div class="flex shrink-0 gap-1">
 							<button
 								type="button"
-								:disabled="busyPath === entrada.application.binary_path || !sePuedeDecidir(entrada)"
+								:disabled="busyPath === entry.application.binary_path || !canDecide(entry)"
 								class="rounded-corner px-3 py-1 text-xs disabled:opacity-50"
 								:class="
 									decision === 'allowed'
 										? 'bg-status-success/20 font-semibold text-status-success'
 										: 'border border-ui-border text-tx-muted hover:bg-ui-surface'
 								"
-								@click="change(entrada, abierto ?? '', true)"
+								@click="change(entry, openResource ?? '', true)"
 							>
 								{{ t('views.privacySecurity.allow') }}
 							</button>
 							<button
 								type="button"
-								:disabled="busyPath === entrada.application.binary_path || !sePuedeDecidir(entrada)"
+								:disabled="busyPath === entry.application.binary_path || !canDecide(entry)"
 								class="rounded-corner px-3 py-1 text-xs disabled:opacity-50"
 								:class="
 									decision === 'denied'
 										? 'bg-status-error/20 font-semibold text-status-error'
 										: 'border border-ui-border text-tx-muted hover:bg-ui-surface'
 								"
-								@click="change(entrada, abierto ?? '', false)"
+								@click="change(entry, openResource ?? '', false)"
 							>
 								{{ t('views.privacySecurity.deny') }}
 							</button>
@@ -480,10 +416,10 @@ onMounted(load);
 							     separado de los dos de arriba. -->
 							<button
 								type="button"
-								:disabled="busyPath === entrada.application.binary_path"
+								:disabled="busyPath === entry.application.binary_path"
 								:title="t('views.privacySecurity.forgetHint')"
 								class="rounded-corner border border-ui-border px-3 py-1 text-xs text-tx-main hover:bg-ui-surface disabled:opacity-50"
-								@click="forget(entrada)"
+								@click="forget(entry)"
 							>
 								{{ t('views.privacySecurity.forget') }}
 							</button>
