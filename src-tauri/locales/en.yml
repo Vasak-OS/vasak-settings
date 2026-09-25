@@ -1128,6 +1128,8 @@ views:
     customProvider: Custom server
     providerConnected: '{0} account connected.'
     needsReauth: This account has to be connected again.
+    capabilityNotAvailableYet: '{0} (not available yet)'
+    nothingAvailableYet: 'Nothing from {0} is available in VasakOS yet.'
     capabilities:
       email: Mail
       calendar: Calendar

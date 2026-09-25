@@ -43,6 +43,16 @@ pub struct AccountInfo {
     /// pantalla lo muestra: si no, la cuenta queda en la lista fallando en
     /// silencio.
     pub needs_reauth: bool,
+    /// Las capacidades de esta cuenta que su proveedor todavía no puede dar: la
+    /// persona las tiene, pero el servicio aún no sabe adónde ir a buscarlas. La
+    /// pantalla las muestra apagadas con «todavía no disponible» en vez de
+    /// esconderlas o dejarlas fallar.
+    ///
+    /// Un demonio anterior a vasak-accounts 0.13.1 no lo manda, y entonces vale
+    /// una lista vacía: todo lo que la cuenta tiene se da por disponible, que es
+    /// lo que se suponía antes de que existiera el campo.
+    #[serde(default)]
+    pub unavailable_capabilities: Vec<String>,
 }
 
 /// Un proveedor del catálogo del servicio.
@@ -62,6 +72,15 @@ pub struct ProviderInfo {
     /// primero abre el navegador directo, el segundo necesita la dirección del
     /// servidor antes de poder empezar.
     pub kind: String,
+    /// Las de `capabilities` que el proveedor ofrece pero todavía no tienen
+    /// dirección de servicio —hoy el Drive de Google y todo lo de Microsoft—.
+    /// Siguen en la tarjeta, apagadas, y no se piden al conectar: el servicio
+    /// las descartaría igual, y si no queda ninguna devuelve error.
+    ///
+    /// Un demonio anterior a vasak-accounts 0.13.1 no lo manda, y entonces vale
+    /// una lista vacía: se piden todas, como antes.
+    #[serde(default)]
+    pub unavailable_capabilities: Vec<String>,
 }
 
 /// Lo que `BeginAuth` devuelve.
@@ -771,6 +790,67 @@ mod tests {
         // contra un request_id vencido, y el error diría «autorización
         // desconocida» en vez de «se te fue el tiempo».
         assert_eq!(ESPERA_DEL_CALLBACK, std::time::Duration::from_secs(300));
+    }
+
+    /// Un demonio anterior a vasak-accounts 0.13.1 no manda el campo. Sin el
+    /// `#[serde(default)]` la lista entera de proveedores dejaría de
+    /// interpretarse, y la pantalla se quedaría sin catálogo.
+    #[test]
+    fn un_proveedor_de_un_demonio_viejo_no_trae_capacidades_apagadas() {
+        let proveedor: ProviderInfo = serde_json::from_str(
+            r#"{"id":"google","display_name":"Google","capabilities":["email","drive"],
+                "configured":true,"kind":"oauth2"}"#,
+        )
+        .unwrap();
+        assert!(proveedor.unavailable_capabilities.is_empty());
+        assert_eq!(proveedor.capabilities, ["email", "drive"]);
+    }
+
+    #[test]
+    fn un_proveedor_conserva_sus_capacidades_apagadas() {
+        let proveedor: ProviderInfo = serde_json::from_str(
+            r#"{"id":"google","display_name":"Google","capabilities":["email","drive"],
+                "configured":true,"kind":"oauth2","unavailable_capabilities":["drive"]}"#,
+        )
+        .unwrap();
+        assert_eq!(proveedor.unavailable_capabilities, ["drive"]);
+    }
+
+    #[test]
+    fn una_cuenta_de_un_demonio_viejo_no_trae_capacidades_apagadas() {
+        let cuenta: AccountInfo = serde_json::from_str(
+            r#"{"id":"a","display_name":"Trabajo","provider_type":"microsoft",
+                "capabilities":["email"],"needs_reauth":false}"#,
+        )
+        .unwrap();
+        assert!(cuenta.unavailable_capabilities.is_empty());
+    }
+
+    #[test]
+    fn una_cuenta_conserva_sus_capacidades_apagadas() {
+        let cuenta: AccountInfo = serde_json::from_str(
+            r#"{"id":"a","display_name":"Trabajo","provider_type":"microsoft",
+                "capabilities":["email","calendar"],"needs_reauth":false,
+                "unavailable_capabilities":["email","calendar"]}"#,
+        )
+        .unwrap();
+        assert_eq!(cuenta.unavailable_capabilities, ["email", "calendar"]);
+    }
+
+    /// El campo también sale hacia la ventana: la vista lo lee del JSON que
+    /// devuelve el comando, así que no alcanza con que entre.
+    #[test]
+    fn las_capacidades_apagadas_llegan_a_la_ventana() {
+        let proveedor: ProviderInfo = serde_json::from_str(
+            r#"{"id":"microsoft","display_name":"Microsoft","capabilities":["email"],
+                "configured":false,"kind":"oauth2","unavailable_capabilities":["email"]}"#,
+        )
+        .unwrap();
+        let salida = serde_json::to_value(&proveedor).unwrap();
+        assert_eq!(
+            salida["unavailable_capabilities"],
+            serde_json::json!(["email"])
+        );
     }
 }
 

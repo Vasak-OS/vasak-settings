@@ -22,6 +22,12 @@ import {
 	testMailConnection,
 } from '@/services/accounts.service';
 import { ICONO_DE_CAPACIDAD, resolverIconosDeProveedores } from '@/tools/icono-de-proveedor';
+import {
+	type CapabilityOwner,
+	connectionBlocker,
+	isCapabilityAvailable,
+	requestedCapabilities,
+} from '@/utils/requested-capabilities';
 
 /**
  * El proveedor personalizado no está en el catálogo del servicio.
@@ -37,21 +43,31 @@ const { t } = useI18n();
 const providers = ref<ProviderInfo[]>([]);
 
 /**
- * Por qué un proveedor no se puede conectar todavía, o `undefined` si sí.
+ * Por qué un proveedor no se puede conectar tal como está, o `undefined` si sí.
  *
  * Un botón que abre un flujo roto es peor que un botón apagado: la persona no
- * sabe si se equivocó ella, si falta un dato o si el sistema está mal. Acá el
- * motivo es siempre el mismo —falta el `client_id`— y por eso el texto dice qué
- * hacer al respecto.
- */
-/**
- * Si a este proveedor le falta que le peguen sus credenciales.
+ * sabe si se equivocó ella, si falta un dato o si el sistema está mal. Hay dos
+ * motivos, y el orden lo decide `connectionBlocker`:
  *
- * Ya no es un «no se puede»: el botón abre el formulario, así que el texto
- * invita a tocarlo en vez de mandar a editar un archivo del sistema.
+ * - que nada de lo que ofrece exista todavía en VasakOS (Microsoft hoy): se
+ *   dice eso, y no se piden credenciales que no servirían para nada;
+ * - que falten las credenciales: ya no es un «no se puede», el botón abre el
+ *   formulario, así que el texto invita a tocarlo en vez de mandar a editar un
+ *   archivo del sistema.
  */
-const motivoNoDisponible = (provider: ProviderInfo): string | undefined =>
-	provider.configured ? undefined : t('views.onlineAccounts.credentials.needed');
+const unavailableReason = (provider: ProviderInfo): string | undefined => {
+	switch (connectionBlocker(provider)) {
+		case 'nothingAvailable':
+			return t('views.onlineAccounts.nothingAvailableYet').replace(
+				'{0}',
+				() => provider.display_name
+			);
+		case 'credentialsNeeded':
+			return t('views.onlineAccounts.credentials.needed');
+		default:
+			return undefined;
+	}
+};
 
 /**
  * Si a este proveedor se le pueden cambiar o quitar las credenciales.
@@ -114,15 +130,32 @@ const isCustomValid = computed(() => {
 	);
 });
 
+/** El nombre del icono de una capacidad, de la tabla compartida. */
+const capabilityIcon = (capability: string) => ICONO_DE_CAPACIDAD[capability] ?? '';
+
+/**
+ * El nombre de una capacidad tal como se lee en pantalla.
+ *
+ * Una que el proveedor todavía no puede dar lleva «todavía no disponible» en
+ * el texto mismo y no sólo en el color: el atenuado solo no lo dice el lector
+ * de pantalla, y un `title` no se ve sin pasar el ratón.
+ */
+const capabilityLabel = (
+	owner: Pick<CapabilityOwner, 'unavailable_capabilities'>,
+	capability: string
+): string => {
+	const name = t(`views.onlineAccounts.capabilities.${capability}`);
+	return isCapabilityAvailable(owner, capability)
+		? name
+		: t('views.onlineAccounts.capabilityNotAvailableYet').replace('{0}', () => name);
+};
+
 /**
  * Los iconos, uno por proveedor.
  *
  * Se resuelven cuando llega el catálogo y no antes: la lista de proveedores la
  * decide el servicio, así que acá no se puede saber de antemano cuáles hay.
  */
-/** El nombre del icono de una capacidad, de la tabla compartida. */
-const iconoDeCapacidad = (capacidad: string) => ICONO_DE_CAPACIDAD[capacidad] ?? '';
-
 const iconos = ref<Record<string, string>>({});
 
 /**
@@ -212,15 +245,30 @@ const fetchAccounts = async () => {
 /**
  * Conecta un proveedor del catálogo.
  *
- * Se piden **todas** sus capacidades juntas: el proveedor muestra una sola
+ * Se piden **todas las disponibles** juntas: el proveedor muestra una sola
  * pantalla de consentimiento, y pedirlas de a una obligaría a pasar por ahí una
- * vez por capacidad para terminar con el mismo permiso.
+ * vez por capacidad para terminar con el mismo permiso. Las que todavía no
+ * existen en VasakOS quedan afuera (ver `requestedCapabilities`).
  */
-const conectarProveedor = async (provider: ProviderInfo) => {
+const connectProvider = async (provider: ProviderInfo) => {
+	const blocker = connectionBlocker(provider);
+
+	// Primero lo que no está: si nada de este proveedor existe todavía, el
+	// servicio rechazaría el pedido **después** de abrir el navegador, y pedir
+	// las credenciales antes sería mandar a la persona a la consola del
+	// proveedor a sacar un `client_id` para terminar en ese mismo rechazo. Se
+	// le dice de entrada, sin flujo y sin formulario.
+	if (blocker === 'nothingAvailable') {
+		errors.value = '';
+		success.value = '';
+		aviso.value = unavailableReason(provider) ?? '';
+		return;
+	}
+
 	// Sin credenciales no hay flujo que empezar, pero tampoco es un callejón:
 	// se abre el formulario para pegarlas. Antes el botón estaba apagado y lo
 	// único que se podía hacer era editar un archivo como administrador.
-	if (motivoNoDisponible(provider)) {
+	if (blocker === 'credentialsNeeded') {
 		abrirCredenciales(provider);
 		return;
 	}
@@ -238,7 +286,7 @@ const conectarProveedor = async (provider: ProviderInfo) => {
 	aviso.value = '';
 
 	try {
-		await connectOauthAccount(provider.id, provider.capabilities, provider.display_name);
+		await connectOauthAccount(provider.id, requestedCapabilities(provider), provider.display_name);
 		success.value = t('views.onlineAccounts.providerConnected').replace(
 			'{0}',
 			provider.display_name
@@ -659,9 +707,10 @@ onMounted(async () => {
 								v-for="c in account.capabilities"
 								:key="c"
 								class="flex items-center gap-1 rounded-corner-sm bg-ui-surface/70 px-1.5 py-0.5 text-xs text-tx-muted"
+								:class="{ 'opacity-60': !isCapabilityAvailable(account, c) }"
 							>
-								<ThemeIcon :name="iconoDeCapacidad(c)" type="symbol" :size="14" />
-								{{ t(`views.onlineAccounts.capabilities.${c}`) }}
+								<ThemeIcon :name="capabilityIcon(c)" type="symbol" :size="14" />
+								{{ capabilityLabel(account, c) }}
 							</li>
 						</ul>
 						<!-- Sin esto la cuenta queda en la lista fallando en silencio:
@@ -833,14 +882,14 @@ onMounted(async () => {
 					v-for="provider in providers"
 					:key="provider.id"
 					:disabled="loading"
-					:title="motivoNoDisponible(provider) && t('views.onlineAccounts.credentials.needed')"
+					:title="unavailableReason(provider)"
 					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-5 text-center transition-colors"
 					:class="
 						loading
 							? 'opacity-60 cursor-not-allowed'
 							: 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'
 					"
-					@click="conectarProveedor(provider)"
+					@click="connectProvider(provider)"
 				>
 					<img
 						v-if="iconos[provider.id]"
@@ -850,20 +899,28 @@ onMounted(async () => {
 					/>
 					<span class="text-sm font-medium text-tx-main">{{ provider.display_name }}</span>
 					<ul class="flex flex-wrap justify-center gap-1.5">
+						<!-- Las que todavía no existen en VasakOS siguen acá, atenuadas
+						     y con el texto que lo dice: una casilla que desaparece
+						     parece una que el proveedor no tiene. -->
 						<li
 							v-for="c in provider.capabilities"
 							:key="c"
 							class="flex items-center gap-1 text-xs text-tx-muted"
-							:title="t(`views.onlineAccounts.capabilities.${c}`)"
+							:class="{ 'opacity-60': !isCapabilityAvailable(provider, c) }"
 						>
-							<ThemeIcon :name="iconoDeCapacidad(c)" type="symbol" :size="14" />
-							{{ t(`views.onlineAccounts.capabilities.${c}`) }}
+							<ThemeIcon :name="capabilityIcon(c)" type="symbol" :size="14" />
+							{{ capabilityLabel(provider, c) }}
 						</li>
 					</ul>
 					<!-- Ya no está apagado: falta un paso y el botón lleva a darlo.
 					     Antes esto decía «no se puede» y lo único que se podía hacer
-					     era editar un archivo del sistema como administrador. -->
-					<span v-if="motivoNoDisponible(provider)" class="text-xs text-status-warning">
+					     era editar un archivo del sistema como administrador. Y sólo
+					     si pegarlas sirve: con nada disponible, las casillas ya dicen
+					     por qué, y el clic lo explica sin pedir nada. -->
+					<span
+						v-if="connectionBlocker(provider) === 'credentialsNeeded'"
+						class="text-xs text-status-warning"
+					>
 						{{ t('views.onlineAccounts.credentials.needed') }}
 					</span>
 				</button>

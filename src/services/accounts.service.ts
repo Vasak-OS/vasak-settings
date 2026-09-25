@@ -15,6 +15,16 @@ export interface AccountInfo {
 	capabilities: string[];
 	/** El proveedor dejó de aceptar la autorización y hay que reconectarla. */
 	needs_reauth: boolean;
+	/**
+	 * Las de `capabilities` que su proveedor todavía no puede dar: la cuenta las
+	 * tiene, pero el servicio aún no sabe adónde ir a buscarlas. Se muestran
+	 * apagadas, con «todavía no disponible», y no se esconden.
+	 *
+	 * Un servicio anterior a vasak-accounts 0.13.1 no lo manda; el puente de
+	 * Rust lo completa con una lista vacía, pero se lee igual tolerando que
+	 * falte.
+	 */
+	unavailable_capabilities: string[];
 }
 
 /** Un proveedor OAuth2 del catálogo del servicio. */
@@ -35,6 +45,16 @@ export interface ProviderInfo {
 	 * el navegador directo, el segundo necesita la dirección del servidor antes.
 	 */
 	kind: 'oauth2' | 'nextcloud';
+	/**
+	 * Las de `capabilities` que el proveedor ofrece pero todavía no tienen
+	 * dirección de servicio —hoy el Drive de Google y todo lo de Microsoft—.
+	 * Siguen en la tarjeta, apagadas, y no se piden al conectar: el servicio las
+	 * descartaría, y si no queda ninguna devuelve error.
+	 *
+	 * Un servicio anterior a vasak-accounts 0.13.1 no lo manda, y entonces se
+	 * piden todas, como antes. Ver `src/utils/requested-capabilities.ts`.
+	 */
+	unavailable_capabilities: string[];
 }
 
 export const listAccounts = (): Promise<AccountInfo[]> => invoke<AccountInfo[]>('list_accounts');
