@@ -314,6 +314,9 @@ views:
       accountChat: Mensajes de tus cuentas
       accountDrive: Archivos en la nube
       accountTasks: Tareas de tus cuentas
+      storeEmail: Correo guardado en este equipo
+      storeCalendar: Calendario guardado en este equipo
+      storeContacts: Contactos guardados en este equipo
       camera: Cámara
       microphone: Micrófono
       screenCapture: Compartir pantalla

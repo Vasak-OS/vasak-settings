@@ -310,6 +310,9 @@ views:
       accountChat: Account messages
       accountDrive: Cloud files
       accountTasks: Account tasks
+      storeEmail: Email saved on this computer
+      storeCalendar: Calendar saved on this computer
+      storeContacts: Contacts saved on this computer
       camera: Camera
       microphone: Microphone
       screenCapture: Screen sharing

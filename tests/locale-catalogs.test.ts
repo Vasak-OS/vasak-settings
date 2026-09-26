@@ -200,6 +200,11 @@ describe('los catálogos de idioma', () => {
 			'resources.accountChat',
 			'resources.accountDrive',
 			'resources.accountTasks',
+			// Leer lo que el sincronizador de cuentas ya guardó en el equipo:
+			// otro permiso que `account.*`, que llega a la credencial.
+			'resources.storeEmail',
+			'resources.storeCalendar',
+			'resources.storeContacts',
 			'resources.camera',
 			'resources.microphone',
 			'resources.screenCapture',

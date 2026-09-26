@@ -18,20 +18,20 @@
 import type { Decision, PermissionEntry } from '@/services/permissions.service';
 
 /** Una aplicación dentro de la pestaña de un recurso. */
-export interface AppConPermiso {
-	entrada: PermissionEntry;
+export interface AppWithPermission {
+	entry: PermissionEntry;
 	decision: Decision;
 }
 
-export interface Recurso<Id extends string = string> {
+export interface ResourceGroup<Id extends string = string> {
 	id: Id;
-	apps: AppConPermiso[];
+	apps: AppWithPermission[];
 	/** Cuántas lo tienen concedido. Es lo que se muestra al lado del nombre. */
-	permitidas: number;
+	allowedCount: number;
 }
 
-export const decisionDe = (entrada: PermissionEntry, recurso: string): Decision =>
-	entrada.decisions[recurso] ?? 'unknown';
+export const decisionOf = (entry: PermissionEntry, resource: string): Decision =>
+	entry.decisions[resource] ?? 'unknown';
 
 /**
  * Las aplicaciones de cada recurso, en el orden en que se muestran.
@@ -45,32 +45,32 @@ export const decisionDe = (entrada: PermissionEntry, recurso: string): Decision 
  * abrir esta pantalla es qué tiene acceso, no qué no lo tiene, y dejarlo al
  * final obligaría a recorrer toda la lista para encontrarlo.
  */
-export function porRecurso<Id extends string>(
-	entradas: PermissionEntry[],
-	recursos: readonly Id[]
-): Recurso<Id>[] {
-	return recursos.map((id) => {
-		const apps = entradas
-			.filter((entrada) => decisionDe(entrada, id) !== 'unknown')
-			.map((entrada) => ({ entrada, decision: decisionDe(entrada, id) }))
-			.sort(comparar);
+export function groupByResource<Id extends string>(
+	entries: PermissionEntry[],
+	resources: readonly Id[]
+): ResourceGroup<Id>[] {
+	return resources.map((id) => {
+		const apps = entries
+			.filter((entry) => decisionOf(entry, id) !== 'unknown')
+			.map((entry) => ({ entry, decision: decisionOf(entry, id) }))
+			.sort(compareApps);
 
 		return {
 			id,
 			apps,
-			permitidas: apps.filter((a) => a.decision === 'allowed').length,
+			allowedCount: apps.filter((a) => a.decision === 'allowed').length,
 		};
 	});
 }
 
-function comparar(a: AppConPermiso, b: AppConPermiso): number {
+function compareApps(a: AppWithPermission, b: AppWithPermission): number {
 	if (a.decision !== b.decision) {
 		return a.decision === 'allowed' ? -1 : 1;
 	}
 
 	// `localeCompare` y no `<`: con nombres acentuados, comparar por punto de
 	// código pone «Ángela» después de «Zoe».
-	return a.entrada.application.display_name.localeCompare(b.entrada.application.display_name);
+	return a.entry.application.display_name.localeCompare(b.entry.application.display_name);
 }
 
 /**
@@ -80,6 +80,6 @@ function comparar(a: AppConPermiso, b: AppConPermiso): number {
  * ningún permiso concedido en todo el sistema, cuando lo que pasa es que ese
  * recurso no lo pidió nadie.
  */
-export function pestanaInicial<Id extends string>(recursos: Recurso<Id>[], porOmision: Id): Id {
-	return recursos.find((r) => r.apps.length > 0)?.id ?? porOmision;
+export function initialTab<Id extends string>(groups: ResourceGroup<Id>[], fallback: Id): Id {
+	return groups.find((g) => g.apps.length > 0)?.id ?? fallback;
 }
