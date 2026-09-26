@@ -57,7 +57,7 @@ const nombresDeRuta = async (): Promise<string[]> => {
 	// Y si algún día se declaran de una forma que esto no sabe leer, que falle
 	// acá en vez de comprobar de menos en silencio.
 	const cuantos = [...registro.matchAll(/\bname\s*:/g)].length;
-	expect(nombres.length).toBe(cuantos);
+	expect(nombres).toHaveLength(cuantos);
 
 	return nombres;
 };
@@ -90,7 +90,7 @@ describe('el menú ofrece todas las pantallas', () => {
 
 	test('no hay dos entradas con el mismo identificador', () => {
 		const ids = idsDelMenu();
-		expect(ids.length).toBe(new Set(ids).size);
+		expect(ids).toHaveLength(new Set(ids).size);
 	});
 
 	test('«Cuentas en Línea» está', () => {
