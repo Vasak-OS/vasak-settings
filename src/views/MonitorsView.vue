@@ -381,10 +381,12 @@ onMounted(load);
 						<FormGroup
 							v-if="brightness[monitor.name]"
 							:label="t('views.monitors.brightness')"
+							:html-for="`brightness-${monitor.name}`"
 							customClass="sm:col-span-2"
 						>
 							<div class="flex items-center gap-3">
 								<input
+									:id="`brightness-${monitor.name}`"
 									type="range"
 									min="1"
 									max="100"

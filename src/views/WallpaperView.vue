@@ -264,9 +264,11 @@ onUnmounted(() => {
 				</p>
 
 				<div class="mt-4 flex items-center justify-between">
-					<label class="text-sm font-medium text-tx-main">
+					<!-- No es un `<label>`: el interruptor ya lleva el mismo texto como
+					     nombre accesible, y una etiqueta sin control asociado no nombra nada. -->
+					<span class="text-sm font-medium text-tx-main">
 						{{ t('views.appearanceWallpaper.pauseOnBattery') }}
-					</label>
+					</span>
 					<SwitchToggle :label="t('views.appearanceWallpaper.pauseOnBattery')"
 						:model-value="pauseVideoOnBattery"
 						@update:model-value="(val: boolean) => (pauseVideoOnBattery = val)"

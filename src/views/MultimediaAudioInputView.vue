@@ -237,7 +237,7 @@ onUnmounted(() => {
 				<EmptyStateBox v-if="inputDevicesLoading" :message="t('views.multimediaAudioInput.loadingDevices')" />
 				<EmptyStateBox v-else-if="inputDevices.length === 0" :message="t('views.multimediaAudioInput.emptyDevices')" />
 
-				<ul v-else class="flex max-h-[14rem] flex-col gap-2 overflow-y-auto pr-1">
+				<ul v-else class="flex max-h-[14rem] flex-col gap-2 overflow-y-auto pr-1" role="radiogroup">
 					<li
 						v-for="device in inputDevices"
 						:key="device.id"
@@ -247,7 +247,12 @@ onUnmounted(() => {
 								? 'border-primary/50 bg-primary/5 shadow-sm'
 								: 'border-ui-border bg-ui-surface/70 hover:border-ui-border.hover hover:bg-ui-surface'
 						"
+						role="radio"
+						:aria-checked="selectedInputDeviceId === device.id"
+						tabindex="0"
 						@click="selectInputDevice(device.id)"
+						@keydown.enter.prevent="selectInputDevice(device.id)"
+						@keydown.space.prevent="selectInputDevice(device.id)"
 					>
 						<div
 							class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors"

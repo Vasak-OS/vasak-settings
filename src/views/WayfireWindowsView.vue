@@ -192,8 +192,9 @@ async function saveAll() {
 
 			<PluginSection plugin-id="grid" icon="view-grid">
 				<div class="mb-3">
-					<label class="text-sm font-medium">{{ t('views.wayfireWindows.gridDuration') }}</label>
+					<label for="grid-duration" class="text-sm font-medium">{{ t('views.wayfireWindows.gridDuration') }}</label>
 					<NumberInput
+						id="grid-duration"
 						class="mt-1"
 						:model-value="grid.getInt('duration', 300)"
 						:min="0" :max="2000" :step="50"

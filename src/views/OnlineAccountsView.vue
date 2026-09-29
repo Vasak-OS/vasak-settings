@@ -459,7 +459,7 @@ const probeOk = computed(() => probe.value?.imap.ok === true && probe.value?.smt
  * Sin esto, alguien podría probar, corregir el servidor, y guardar apoyándose en
  * un resultado que ya no corresponde a lo que hay en el formulario.
  */
-const olvidarPrueba = () => {
+const forgetProbe = () => {
 	probe.value = null;
 	// Lo encontrado también deja de valer: si cambió el usuario o el servidor,
 	// esas direcciones son de otra cuenta.
@@ -957,10 +957,11 @@ onMounted(async () => {
 
 				<div class="mt-4 space-y-3">
 					<div>
-						<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.displayName') }}</label>
+						<label for="custom-display-name" class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.displayName') }}</label>
 						<input
+							id="custom-display-name"
 							v-model="customForm.displayName"
-							@input="olvidarPrueba"
+							@input="forgetProbe"
 							type="text"
 							:placeholder="t('views.onlineAccounts.displayNamePlaceholder')"
 							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
@@ -973,10 +974,11 @@ onMounted(async () => {
 
 					<div class="grid grid-cols-3 gap-2">
 						<div class="col-span-2">
-							<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.imapServer') }}</label>
+							<label for="custom-imap-server" class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.imapServer') }}</label>
 							<input
+								id="custom-imap-server"
 								v-model="customForm.imapServer"
-							@input="olvidarPrueba"
+							@input="forgetProbe"
 								type="text"
 								placeholder="imap.example.com"
 								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
@@ -987,10 +989,11 @@ onMounted(async () => {
 							</span>
 						</div>
 						<div>
-							<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.port') }}</label>
+							<label for="custom-imap-port" class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.port') }}</label>
 							<input
+								id="custom-imap-port"
 								v-model.number="customForm.imapPort"
-								@input="olvidarPrueba"
+								@input="forgetProbe"
 								type="number"
 								placeholder="993"
 								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
@@ -1004,10 +1007,11 @@ onMounted(async () => {
 
 					<div class="grid grid-cols-3 gap-2">
 						<div class="col-span-2">
-							<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.smtpServer') }}</label>
+							<label for="custom-smtp-server" class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.smtpServer') }}</label>
 							<input
+								id="custom-smtp-server"
 								v-model="customForm.smtpServer"
-							@input="olvidarPrueba"
+							@input="forgetProbe"
 								type="text"
 								placeholder="smtp.example.com"
 								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
@@ -1018,10 +1022,11 @@ onMounted(async () => {
 							</span>
 						</div>
 						<div>
-							<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.port') }}</label>
+							<label for="custom-smtp-port" class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.port') }}</label>
 							<input
+								id="custom-smtp-port"
 								v-model.number="customForm.smtpPort"
-								@input="olvidarPrueba"
+								@input="forgetProbe"
 								type="number"
 								placeholder="587"
 								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
@@ -1034,10 +1039,11 @@ onMounted(async () => {
 					</div>
 
 					<div>
-						<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.username') }}</label>
+						<label for="custom-username" class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.username') }}</label>
 						<input
+							id="custom-username"
 							v-model="customForm.username"
-							@input="olvidarPrueba"
+							@input="forgetProbe"
 							type="text"
 							:placeholder="t('views.onlineAccounts.usernamePlaceholder')"
 							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
@@ -1049,10 +1055,11 @@ onMounted(async () => {
 					</div>
 
 					<div>
-						<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.password') }}</label>
+						<label for="custom-password" class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.password') }}</label>
 						<input
+							id="custom-password"
 							v-model="customForm.password"
-							@input="olvidarPrueba"
+							@input="forgetProbe"
 							type="password"
 							:placeholder="t('views.onlineAccounts.passwordPlaceholder')"
 							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
