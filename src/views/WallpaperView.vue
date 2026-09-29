@@ -261,9 +261,11 @@ onUnmounted(() => {
 				</p>
 
 				<div class="mt-4 flex items-center justify-between">
-					<label class="text-sm font-medium text-tx-main">
+					<!-- No es un `<label>`: el interruptor ya lleva el mismo texto como
+					     nombre accesible, y una etiqueta sin control asociado no nombra nada. -->
+					<span class="text-sm font-medium text-tx-main">
 						{{ t('views.appearanceWallpaper.pauseOnBattery') }}
-					</label>
+					</span>
 					<SwitchToggle :label="t('views.appearanceWallpaper.pauseOnBattery')"
 						:model-value="pauseVideoOnBattery"
 						@update:model-value="(val: boolean) => (pauseVideoOnBattery = val)"
@@ -330,10 +332,10 @@ onUnmounted(() => {
 							<img v-if="thumbnailFor(selectedWallpaperPath)" :src="thumbnailFor(selectedWallpaperPath)" :alt="t('views.appearanceWallpaper.selectedAlt')" class="pointer-events-none absolute inset-0 h-full w-full object-cover" />
 							<div v-else class="absolute inset-0 animate-pulse bg-ui-surface/60"></div>
 
-							<div class="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors hover:bg-black/20">
+							<div class="absolute inset-0 flex items-center justify-center bg-black/50 transition-colors hover:bg-black/40">
 								<div class="pointer-events-none text-center">
 									<span class="mb-2 block text-sm text-white">📂 {{ t('views.appearanceWallpaper.dropToChange') }}</span>
-									<span class="text-xs text-white/70">{{ selectedWallpaperPath.split('/').pop() }}</span>
+									<span class="text-xs text-white/85">{{ selectedWallpaperPath.split('/').pop() }}</span>
 								</div>
 							</div>
 						</div>
@@ -342,7 +344,7 @@ onUnmounted(() => {
 					<div v-else class="mt-4 rounded-corner border border-ui-border bg-ui-surface/30 p-3">
 						<p class="mb-2 text-xs uppercase tracking-[0.16em] text-tx-muted">{{ t('views.appearanceWallpaper.preview') }}</p>
 						<div class="group relative flex h-40 w-full items-center justify-center overflow-hidden rounded-corner border-2 border-dashed border-primary/30 bg-ui-surface/80 transition-colors hover:border-primary/50 hover:bg-primary/5">
-							<div class="absolute inset-0 flex items-center justify-center bg-black/30 transition-colors hover:bg-black/20">
+							<div class="absolute inset-0 flex items-center justify-center bg-black/50 transition-colors hover:bg-black/40">
 								<div class="pointer-events-none text-center">
 									<span class="mb-2 block text-sm text-white">📂 {{ t('views.appearanceWallpaper.dropHere') }}</span>
 								</div>

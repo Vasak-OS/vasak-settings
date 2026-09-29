@@ -124,7 +124,7 @@ onBeforeUnmount(() => unlisten?.());
 							<TextInput v-model="draftAlias" @keyup.enter="saveAlias(device)" />
 							<button
 								type="button"
-								class="rounded-corner bg-primary px-3 py-1 text-sm text-white"
+								class="rounded-corner bg-primary px-3 py-1 text-sm text-tx-on-primary"
 								@click="saveAlias(device)"
 							>
 								{{ t('views.phoneDevices.save') }}

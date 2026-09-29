@@ -119,8 +119,10 @@ onMounted(async () => {
 							@update:modelValue="input.setVal('mouse_accel_profile', $event)"
 						/>
 					</FormGroup>
-					<FormGroup :label="t('views.wayfireInput.cursorSpeed')">
+					<FormGroup :label="t('views.wayfireInput.cursorSpeed')" html-for="mouse-cursor-speed">
 						<input
+							id="mouse-cursor-speed"
+							:aria-label="t('views.wayfireInput.cursorSpeed')"
 							type="range" min="-1" max="1" step="0.05"
 							:value="input.getFloat('mouse_cursor_speed', 0)"
 							@input="input.setVal('mouse_cursor_speed', ($event.target as HTMLInputElement).value)"
@@ -190,8 +192,10 @@ onMounted(async () => {
 							@update:modelValue="input.setVal('touchpad_accel_profile', $event)"
 						/>
 					</FormGroup>
-					<FormGroup :label="t('views.wayfireInput.cursorSpeed')">
+					<FormGroup :label="t('views.wayfireInput.cursorSpeed')" html-for="touchpad-cursor-speed">
 						<input
+							id="touchpad-cursor-speed"
+							:aria-label="t('views.wayfireInput.cursorSpeed')"
 							type="range" min="-1" max="1" step="0.05"
 							:value="input.getFloat('touchpad_cursor_speed', 0)"
 							@input="input.setVal('touchpad_cursor_speed', ($event.target as HTMLInputElement).value)"
@@ -224,7 +228,7 @@ onMounted(async () => {
 				<button
 					type="submit"
 					:disabled="input.saving.value"
-					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90 disabled:opacity-50"
 				>
 					{{ input.saving.value ? t('common.saving') : t('common.save') }}
 				</button>

@@ -16,6 +16,7 @@ import {
 	toggleAudioMute,
 } from '@/services/audio.service';
 import type { AudioDevice, VolumeInfo } from '@/types/audio';
+import { onRadioArrow, radioTabIndex } from '@/utils/radio-group';
 
 const { t } = useI18n();
 
@@ -31,6 +32,7 @@ const volumeChanging = ref(false);
 
 // --- Estado Dispositivos ---
 const devices: Ref<AudioDevice[]> = ref([]);
+const deviceIds = computed(() => devices.value.map((device) => device.id));
 const selectedDeviceId = ref('');
 const devicesLoading = ref(false);
 
@@ -180,7 +182,7 @@ onUnmounted(() => {
 				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.multimediaAudio.masterVolume') }}</h3>
 				<div class="flex items-center gap-4 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 					<button 
-						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner bg-ui-surface transition-colors hover:bg-primary hover:text-white"
+						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner bg-ui-surface transition-colors hover:bg-primary hover:text-tx-on-primary"
 						:class="volumeInfo.is_muted ? 'text-status-error border border-status-error/40' : 'text-tx-main border border-ui-border'"
 						@click="toggleMute"
 						:title="t('views.multimediaAudio.muteTooltip')" :aria-label="t('views.multimediaAudio.muteTooltip')">
@@ -228,7 +230,7 @@ onUnmounted(() => {
 				<EmptyStateBox v-if="devicesLoading" :message="t('views.multimediaAudio.loadingDevices')" />
 				<EmptyStateBox v-else-if="devices.length === 0" :message="t('views.multimediaAudio.emptyDevices')" />
 				
-				<ul v-else class="flex flex-col gap-2 max-h-[14rem] overflow-y-auto pr-1">
+				<ul v-else class="flex flex-col gap-2 max-h-[14rem] overflow-y-auto pr-1" role="radiogroup">
 					<li 
 						v-for="device in devices" 
 						:key="device.id"
@@ -236,7 +238,13 @@ onUnmounted(() => {
 						:class="selectedDeviceId === device.id 
 							? 'border-primary/50 bg-primary/5 shadow-sm' 
 							: 'border-ui-border bg-ui-surface/70 hover:border-ui-border.hover hover:bg-ui-surface'"
+						role="radio"
+						:aria-checked="selectedDeviceId === device.id"
+						:tabindex="radioTabIndex(deviceIds, selectedDeviceId, device.id)"
 						@click="selectDevice(device.id)"
+						@keydown.enter.prevent="selectDevice(device.id)"
+						@keydown.space.prevent="selectDevice(device.id)"
+						@keydown="onRadioArrow($event, deviceIds, device.id, selectDevice)"
 					>
 						<!-- Selector Circle -->
 						<div 

@@ -56,7 +56,7 @@ const handleCancel = () => {
 				</button>
 				<button
 					type="button"
-					class="rounded-corner border border-status-error/30 bg-status-error px-4 py-2 text-sm font-medium text-white transition-colors hover:opacity-90"
+					class="rounded-corner border border-status-error/30 bg-status-error px-4 py-2 text-sm font-medium text-tx-on-error transition-colors hover:opacity-90"
 					@click="emit('confirm')"
 				>
 					{{ t('common.delete') }}

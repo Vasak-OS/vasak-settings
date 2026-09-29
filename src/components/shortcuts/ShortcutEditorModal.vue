@@ -317,7 +317,7 @@ const handleCancel = () => {
 						>
 							{{ key }}
 						</span>
-						<span v-if="displayKeys.length === 0" class="text-tx-muted/70">
+						<span v-if="displayKeys.length === 0" class="text-tx-muted">
 							{{ t('views.shortcuts.editor.keysPlaceholder') }}
 						</span>
 					</div>
@@ -339,6 +339,7 @@ const handleCancel = () => {
 			<FormGroup :label="t('views.shortcuts.editor.actionLabel')" html-for="shortcut-action">
 				<input
 					id="shortcut-action"
+					:aria-label="t('views.shortcuts.editor.actionLabel')"
 					v-model="action"
 					type="text"
 					placeholder="launch"
@@ -349,6 +350,7 @@ const handleCancel = () => {
 			<FormGroup :label="t('views.shortcuts.editor.targetLabel')" html-for="shortcut-target">
 				<textarea
 					id="shortcut-target"
+					:aria-label="t('views.shortcuts.editor.targetLabel')"
 					v-model="target"
 					rows="3"
 					placeholder="firefox"
@@ -368,7 +370,7 @@ const handleCancel = () => {
 				</button>
 				<button
 					type="button"
-					class="rounded-corner border border-primary bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+					class="rounded-corner border border-primary bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary transition-colors hover:bg-primary/90"
 					@click="handleSubmit"
 				>
 					{{ isEditing ? t('common.save') : t('views.shortcuts.editor.submitCreate') }}
