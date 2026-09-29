@@ -174,7 +174,7 @@ onUnmounted(() => {
 				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.multimediaAudioInput.inputLevel') }}</h3>
 				<div class="flex items-center gap-4 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 					<button
-						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner border transition-colors hover:bg-primary hover:text-white"
+						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner border transition-colors hover:bg-primary hover:text-tx-on-primary"
 						:class="
 							inputVolumeInfo.is_muted
 								? 'border-status-error/40 text-status-error'

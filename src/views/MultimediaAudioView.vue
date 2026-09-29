@@ -180,7 +180,7 @@ onUnmounted(() => {
 				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.multimediaAudio.masterVolume') }}</h3>
 				<div class="flex items-center gap-4 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 					<button 
-						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner bg-ui-surface transition-colors hover:bg-primary hover:text-white"
+						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner bg-ui-surface transition-colors hover:bg-primary hover:text-tx-on-primary"
 						:class="volumeInfo.is_muted ? 'text-status-error border border-status-error/40' : 'text-tx-main border border-ui-border'"
 						@click="toggleMute"
 						:title="t('views.multimediaAudio.muteTooltip')" :aria-label="t('views.multimediaAudio.muteTooltip')">

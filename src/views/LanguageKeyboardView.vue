@@ -215,7 +215,7 @@ onMounted(loadData);
 					<button
 						type="button"
 						:disabled="saving"
-						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-white transition-opacity disabled:opacity-50 hover:opacity-90"
+						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary transition-opacity disabled:opacity-50 hover:opacity-90"
 						@click="saveLocale"
 					>
 						{{ saving ? t('common.saving') : t('common.apply') }}
@@ -263,7 +263,7 @@ onMounted(loadData);
 					<button
 						type="button"
 						:disabled="saving"
-						class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white transition-opacity disabled:opacity-50 hover:opacity-90"
+						class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary transition-opacity disabled:opacity-50 hover:opacity-90"
 						@click="saveLayouts"
 					>
 						{{ saving ? t('common.saving') : t('views.languageKeyboard.saveLayout') }}

@@ -246,7 +246,7 @@ function toggleLocalRtc(value: boolean) {
 					<button
 						type="button"
 						:disabled="isAutomatic || busy"
-						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90 disabled:opacity-50"
 						@click="applyManualTime"
 					>
 						{{ t('common.apply') }}

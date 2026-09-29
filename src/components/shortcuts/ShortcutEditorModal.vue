@@ -317,7 +317,7 @@ const handleCancel = () => {
 						>
 							{{ key }}
 						</span>
-						<span v-if="displayKeys.length === 0" class="text-tx-muted/70">
+						<span v-if="displayKeys.length === 0" class="text-tx-muted">
 							{{ t('views.shortcuts.editor.keysPlaceholder') }}
 						</span>
 					</div>
@@ -368,7 +368,7 @@ const handleCancel = () => {
 				</button>
 				<button
 					type="button"
-					class="rounded-corner border border-primary bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+					class="rounded-corner border border-primary bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary transition-colors hover:bg-primary/90"
 					@click="handleSubmit"
 				>
 					{{ isEditing ? t('common.save') : t('views.shortcuts.editor.submitCreate') }}

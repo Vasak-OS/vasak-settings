@@ -781,7 +781,7 @@ onMounted(async () => {
 				<div class="flex gap-2">
 					<button
 						:disabled="guardandoCredenciales || !credencialesForm.clientId.trim()"
-						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary disabled:opacity-50"
 						@click="guardarCredenciales"
 					>
 						{{ guardandoCredenciales ? t('common.saving') : t('common.save') }}
@@ -858,7 +858,7 @@ onMounted(async () => {
 				<div class="flex gap-2">
 					<button
 						:disabled="esperandoNextcloud"
-						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary disabled:opacity-50"
 						@click="conectarNextcloud"
 					>
 						{{ t('views.onlineAccounts.nextcloud.connect') }}
