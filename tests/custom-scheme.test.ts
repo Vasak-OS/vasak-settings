@@ -369,4 +369,85 @@ describe('useCustomScheme', () => {
 		expect(saved).toHaveLength(1);
 		expect(saved[0].path).toEndWith('/schemes/custom.json');
 	});
+
+	test('los guardados van en fila: uno lento no termina después del siguiente', async () => {
+		// El primero tarda más que el segundo. Sin fila, el segundo terminaría
+		// primero y `onSaved` publicaría al final el esquema viejo.
+		const started: string[] = [];
+		const saved: string[] = [];
+		const custom = useCustomScheme({
+			delay: 5,
+			save: async (scheme) => {
+				const border = scheme.colors.dark.ui.border as string;
+				started.push(border);
+				await wait(border === '#010101' ? 60 : 5);
+				return { path: 'x', scheme };
+			},
+			onSaved: (entry) => {
+				saved.push(entry.scheme.colors.dark.ui.border as string);
+			},
+		});
+		custom.load(cloneAsCustom(baseScheme(), IDENTITY));
+
+		custom.updateColors('dark', { ui: { border: '#010101' } });
+		await wait(20);
+		expect(custom.saving.value).toBe(true);
+		custom.updateColors('dark', { ui: { border: '#020202' } });
+		await wait(20);
+		// El segundo ya está agendado y el primero sigue: todavía se está guardando.
+		expect(custom.saving.value).toBe(true);
+		expect(started).toEqual(['#010101']);
+
+		await wait(120);
+		expect(started).toEqual(['#010101', '#020202']);
+		expect(saved).toEqual(['#010101', '#020202']);
+		expect(custom.saving.value).toBe(false);
+	});
+
+	test('un guardado que falla no frena al siguiente de la fila', async () => {
+		const disk = recorder();
+		let fail = true;
+		const custom = useCustomScheme({
+			delay: 5,
+			save: async (scheme) => {
+				if (fail) {
+					fail = false;
+					throw new Error('disco lleno');
+				}
+				return disk.save(scheme);
+			},
+		});
+		custom.load(cloneAsCustom(baseScheme(), IDENTITY));
+
+		custom.updateColors('dark', { ui: { border: '#010101' } });
+		await wait(30);
+		custom.updateColors('dark', { ui: { border: '#020202' } });
+		await wait(30);
+
+		expect(disk.calls).toHaveLength(1);
+		expect(disk.calls[0].colors.dark.ui.border).toBe('#020202');
+		expect(custom.error.value).toBeNull();
+	});
+
+	test('si reclonar falla, el editor vuelve a lo que está guardado', async () => {
+		// «Empezar de nuevo desde…» pone el clon en el editor y lo guarda. Si el
+		// guardado falla, el archivo sigue teniendo el anterior, y el editor no
+		// puede quedarse mostrando como propio algo que no está en disco.
+		const custom = useCustomScheme({
+			delay: 5,
+			save: async () => {
+				throw new Error('disco lleno');
+			},
+		});
+		const onDisk = cloneAsCustom(baseScheme(), IDENTITY);
+		onDisk.colors.dark.ui.color.primary = '#123123';
+		custom.load(onDisk);
+
+		const other = baseScheme();
+		other.colors.dark.ui.color.primary = '#abcabc';
+		await expect(custom.createFrom(other, IDENTITY)).rejects.toThrow('disco lleno');
+
+		expect(custom.scheme.value?.colors.dark.ui.color.primary).toBe('#123123');
+		expect(String(custom.error.value)).toContain('disco lleno');
+	});
 });

@@ -71,6 +71,16 @@ export function useCustomScheme(options: CustomSchemeOptions = {}): CustomScheme
 	const error = ref<unknown>(null);
 
 	let timer: ReturnType<typeof setTimeout> | null = null;
+	/**
+	 * Los guardados, en fila. Sin esto, uno lento y el siguiente pueden terminar
+	 * en cualquier orden: si el viejo termina último, `onSaved` publica un
+	 * esquema viejo y el archivo depende de qué escritura llegó después.
+	 */
+	let queue: Promise<unknown> = Promise.resolve();
+	/** Cuántos guardados hay en la fila: `saving` es verdadero hasta el último. */
+	let pending = 0;
+	/** Lo último que se sabe que está en disco: lo cargado o lo último guardado. */
+	let persisted: SchemeFile | null = null;
 
 	const cancelPending = () => {
 		if (timer !== null) {
@@ -79,24 +89,34 @@ export function useCustomScheme(options: CustomSchemeOptions = {}): CustomScheme
 		}
 	};
 
-	const persist = async (toSave: SchemeFile): Promise<SchemeEntry> => {
+	const persist = (toSave: SchemeFile): Promise<SchemeEntry> => {
+		pending += 1;
 		saving.value = true;
-		try {
-			const entry = await save(toSave);
-			error.value = null;
-			await options.onSaved?.(entry);
-			return entry;
-		} catch (err) {
-			error.value = err;
-			throw err;
-		} finally {
-			saving.value = false;
-		}
+		const run = queue
+			.catch(() => {})
+			.then(async () => {
+				try {
+					const entry = await save(toSave);
+					error.value = null;
+					persisted = toSave;
+					await options.onSaved?.(entry);
+					return entry;
+				} catch (err) {
+					error.value = err;
+					throw err;
+				} finally {
+					pending -= 1;
+					saving.value = pending > 0;
+				}
+			});
+		queue = run;
+		return run;
 	};
 
 	const load = (loaded: SchemeFile | null) => {
 		cancelPending();
 		scheme.value = loaded ? cloneScheme(loaded) : null;
+		persisted = scheme.value;
 	};
 
 	const createFrom = async (base: SchemeFile, identity: CloneIdentity) => {
@@ -105,7 +125,16 @@ export function useCustomScheme(options: CustomSchemeOptions = {}): CustomScheme
 		cancelPending();
 		const clone = cloneAsCustom(base, identity);
 		scheme.value = clone;
-		return persist(clone);
+		try {
+			return await persist(clone);
+		} catch (err) {
+			// El clon no llegó al disco: el editor vuelve a lo que sí está, en vez
+			// de mostrar como guardado algo que el archivo no tiene.
+			if (scheme.value === clone) {
+				scheme.value = persisted ? cloneScheme(persisted) : null;
+			}
+			throw err;
+		}
 	};
 
 	const ensureCustom: CustomScheme['ensureCustom'] = async (existing, getBase) => {
