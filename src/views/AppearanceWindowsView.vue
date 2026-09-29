@@ -24,11 +24,11 @@ import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import {
-	escribirPosicionDeLaBarra,
-	POSICIONES_DE_LA_BARRA,
-	type PosicionDeLaBarra,
-	posicionDeLaBarra,
-} from '@/tools/valores-de-config';
+	BAR_POSITIONS,
+	type BarPosition,
+	readBarPosition,
+	writeBarPosition,
+} from '@/tools/config-values';
 
 const { t } = useI18n();
 
@@ -38,13 +38,13 @@ const error = ref('');
 const successMessage = ref('');
 
 const vskConfig: Ref<VSKConfig | null> = ref(null);
-const posicion = ref<PosicionDeLaBarra>('top');
+const posicion = ref<BarPosition>('top');
 
 onMounted(async () => {
 	try {
 		await useConfigStore().loadConfig();
 		vskConfig.value = await readConfig();
-		posicion.value = posicionDeLaBarra(vskConfig.value);
+		posicion.value = readBarPosition(vskConfig.value);
 	} catch (err) {
 		error.value = t('views.appearanceWindows.errorLoading').replace('{0}', String(err));
 	} finally {
@@ -60,10 +60,7 @@ const saveConfig = async () => {
 	try {
 		if (!vskConfig.value) return;
 
-		escribirPosicionDeLaBarra(
-			vskConfig.value as unknown as Record<string, unknown>,
-			posicion.value
-		);
+		writeBarPosition(vskConfig.value as unknown as Record<string, unknown>, posicion.value);
 		await writeConfig(vskConfig.value);
 
 		successMessage.value = t('views.appearanceWindows.saved');
@@ -124,7 +121,7 @@ const saveConfig = async () => {
 						:label="t('views.appearanceWindows.barPosition')"
 						class="w-48 shrink-0"
 					>
-						<option v-for="lado in POSICIONES_DE_LA_BARRA" :key="lado" :value="lado">
+						<option v-for="lado in BAR_POSITIONS" :key="lado" :value="lado">
 							{{ t(`views.appearanceWindows.lados.${lado}`) }}
 						</option>
 					</SelectField>

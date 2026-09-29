@@ -458,6 +458,52 @@ views:
       onPrimary: Sobre primario
       terminalBackground: Terminal fondo
       terminalForeground: Terminal texto
+      onSecondary: Sobre secundario
+      terminalCursor: Terminal cursor
+    schemeList: Esquemas disponibles
+    ansi:
+      black: Negro
+      red: Rojo
+      green: Verde
+      yellow: Amarillo
+      blue: Azul
+      magenta: Magenta
+      cyan: Cian
+      white: Blanco
+      brightBlack: Negro brillante
+      brightRed: Rojo brillante
+      brightGreen: Verde brillante
+      brightYellow: Amarillo brillante
+      brightBlue: Azul brillante
+      brightMagenta: Magenta brillante
+      brightCyan: Cian brillante
+      brightWhite: Blanco brillante
+    contrast:
+      mainOnBackground: Texto sobre el fondo
+      mutedOnBackground: Texto suave sobre el fondo
+      mainOnSurface: Texto sobre la superficie
+      onPrimary: Texto sobre el primario
+      onSecondary: Texto sobre el secundario
+    custom:
+      name: Personalizado
+      basedOn: 'Basado en {0}'
+      createHint: Tu propio esquema, con todos los colores editables.
+      create: Crear a partir del actual
+      createError: 'No se pudo crear el esquema Personalizado: {0}'
+      saveError: 'No se pudo guardar el esquema Personalizado: {0}'
+      notActive: Los cambios se guardan en Personalizado. Se ven en el escritorio cuando lo apliques con «Aplicar Cambios».
+      variants: Variante del esquema
+      interface: Interfaz
+      contrastTitle: Contraste
+      lowContrast: 'Bajo {0}:1'
+      terminal: Terminal
+      ansi: Colores ANSI
+      invalidHex: 'Usá #rgb o #rrggbb'
+      resetFrom: Empezar de nuevo desde…
+      resetAction: Reemplazar
+      resetTitle: ¿Empezar de nuevo?
+      resetDescription: 'Personalizado va a pasar a ser una copia de {0}. Se pierden todos los colores que editaste.'
+      resetConfirm: Reemplazar mis colores
 
   appearanceFonts:
     sharpness: Trazos más gruesos

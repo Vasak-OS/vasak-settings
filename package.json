@@ -1,7 +1,7 @@
 {
 	"name": "vasak-settings",
 	"private": true,
-	"version": "0.30.0",
+	"version": "0.31.0",
 	"type": "module",
 	"scripts": {
 		"dev": "bunx --bun vite",
@@ -16,9 +16,9 @@
 	},
 	"dependencies": {
 		"@tailwindcss/vite": "^4.3.3",
-		"@tauri-apps/api": "^2.11.1",
-		"@tauri-apps/plugin-dialog": "^2.7.3",
-		"@tauri-apps/plugin-shell": "^2.3.6",
+		"@tauri-apps/api": "^2.12.0",
+		"@tauri-apps/plugin-dialog": "^2.8.0",
+		"@tauri-apps/plugin-shell": "^2.4.0",
 		"@vasakgroup/plugin-bluetooth-manager": "^2.1.0",
 		"@vasakgroup/plugin-config-manager": "~2.6.1",
 		"@vasakgroup/plugin-network-manager": "^2.2.1",
@@ -37,7 +37,7 @@
 		"@biomejs/biome": "^2.5.14",
 		"@happy-dom/global-registrator": "^20.14.5",
 		"@tailwindcss/postcss": "^4.3.3",
-		"@tauri-apps/cli": "^2.11.5",
+		"@tauri-apps/cli": "^2.12.0",
 		"@types/node": "^26.6.3",
 		"@vitejs/plugin-vue": "^6.0.9",
 		"@vue/test-utils": "^2.5.1",
@@ -50,7 +50,7 @@
 	},
 	"vasak": {
 		"bibliotecasAtrasadas": {
-			"@vasakgroup/plugin-config-manager": "La 2.7 (2.7.0 y 2.7.1, la última al 25/09/2026) declara pinia ^4 y esta aplicación está en pinia 3: subir el rango arrastra un salto mayor ajeno. Por eso el rango es ~2.6.1 y no ^2.6.1, que alcanzaría una versión que no se puede instalar. Se saca al subir a pinia 4.",
+			"@vasakgroup/plugin-config-manager": "Desde la 2.7 (2.7.0, 2.7.1 y la 2.8.0 del 29/09/2026) declara pinia ^4 y esta aplicación está en pinia 3: subir el rango arrastra un salto mayor ajeno. Por eso el rango es ~2.6.1 y no ^2.6.1, que alcanzaría una versión que no se puede instalar. Lo que la 2.8 agrega y la aplicación ya usa —guardar el esquema Personalizado— se llama con `invoke` desde `src/services/scheme.service.ts`, y del lado de Rust sí se pide la 2.8. Se saca al subir a pinia 4, y ese mismo PR cambia el `invoke` por el `saveUserScheme` del paquete.",
 			"pinia": "La 4 es un salto mayor de una biblioteca que usa el taller entero: catorce aplicaciones están en pinia 3 y subir sólo ésta parte el vocabulario compartido. Va en su propio PR, coordinado con el resto; ese mismo PR se lleva la nota de @vasakgroup/plugin-config-manager, que espera lo mismo.",
 			"typescript": "La 7 (el compilador reescrito) no trae `typescript/lib/tsc` y vue-tsc 3.3 lo busca ahí: `bun run build` se cae antes de mirar un archivo. Se saca cuando vue-tsc publique una versión que soporte TypeScript 7.",
 			"vite": "La 8 cambia rollup por rolldown. Acá compila limpia —no hay `manualChunks`—, pero es cambiar cómo se empaqueta la ventana y eso no lo verifica ninguna prueba: va en su propio PR, que abra la ventana en una sesión con `--features custom-protocol` y recorra las vistas cargadas a demanda. Se saca con ese PR.",

@@ -3,7 +3,7 @@
  *
  * Se lee del fuente, como el resto de las pruebas de estructura de este
  * repositorio: lo que se afirma es que la pantalla está cableada al ayudante
- * que sí se prueba con valores —`valores-de-config.test.ts`— y que los textos
+ * que sí se prueba con valores —`config-values.test.ts`— y que los textos
  * existen en los dos idiomas. Lo que el panel hace con la clave se prueba en
  * `vasak-desktop`, que es quien la lee.
  */
@@ -23,16 +23,16 @@ const en = leer('src-tauri/locales/en.yml');
 describe('la pantalla del panel', () => {
 	test('escribe con el mismo ayudante que se prueba aparte', () => {
 		// La lógica —qué se considera una posición válida, y no apagar los
-		// indicadores que comparten la sección— vive en `tools/valores-de-config`.
-		expect(pantalla).toContain('escribirPosicionDelPanel');
-		expect(pantalla).toContain('posicionDelPanel');
+		// indicadores que comparten la sección— vive en `tools/config-values`.
+		expect(pantalla).toContain('writePanelPosition');
+		expect(pantalla).toContain('readPanelPosition');
 	});
 
 	test('y sigue guardando los indicadores en el mismo viaje', () => {
 		// Las dos cosas viven en la sección `panel` y se guardan con el mismo
 		// botón: si una de las dos escrituras se perdiera, aplicar los cambios
 		// devolvería la otra a como estaba.
-		expect(pantalla).toContain('escribirIndicadoresDelPanel');
+		expect(pantalla).toContain('writePanelIndicators');
 	});
 
 	test('usa el `select` de la librería, con su etiqueta asociada', () => {
@@ -43,7 +43,7 @@ describe('la pantalla del panel', () => {
 	});
 
 	test('los cuatro lados salen de la lista y no escritos a mano', () => {
-		expect(pantalla).toContain('v-for="lado in POSICIONES_DEL_PANEL"');
+		expect(pantalla).toContain('v-for="lado in PANEL_POSITIONS"');
 	});
 
 	test('y los textos están en los dos idiomas', () => {
