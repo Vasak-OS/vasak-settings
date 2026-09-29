@@ -192,8 +192,9 @@ async function saveAll() {
 
 			<PluginSection plugin-id="grid" icon="view-grid">
 				<div class="mb-3">
-					<label class="text-sm font-medium">{{ t('views.wayfireWindows.gridDuration') }}</label>
+					<label for="grid-duration" class="text-sm font-medium">{{ t('views.wayfireWindows.gridDuration') }}</label>
 					<NumberInput
+						id="grid-duration"
 						class="mt-1"
 						:model-value="grid.getInt('duration', 300)"
 						:min="0" :max="2000" :step="50"
@@ -329,7 +330,7 @@ async function saveAll() {
 			<div class="flex justify-end">
 				<button
 					type="submit"
-					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white hover:opacity-90"
+					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90"
 				>
 					{{ t('common.save') }}
 				</button>

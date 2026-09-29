@@ -154,7 +154,7 @@ async function saveAll() {
 			<div class="flex justify-end">
 				<button
 					type="submit"
-					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white hover:opacity-90"
+					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90"
 				>
 					{{ t('common.save') }}
 				</button>

@@ -166,7 +166,7 @@ function clear() {
 			>
 				{{ key }}
 			</span>
-			<span v-if="displayKeys.length === 0" class="text-tx-muted/70">
+			<span v-if="displayKeys.length === 0" class="text-tx-muted">
 				{{ t('common.keyBinding.prompt') }}
 			</span>
 		</div>

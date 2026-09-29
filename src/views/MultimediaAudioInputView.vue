@@ -16,6 +16,7 @@ import {
 	toggleAudioInputMute,
 } from '@/services/audio.service';
 import type { AudioDevice, VolumeInfo } from '@/types/audio';
+import { onRadioArrow, radioTabIndex } from '@/utils/radio-group';
 
 const { t } = useI18n();
 
@@ -29,6 +30,7 @@ const currentInputVolume = ref(0);
 const inputVolumeChanging = ref(false);
 
 const inputDevices: Ref<AudioDevice[]> = ref([]);
+const inputDeviceIds = computed(() => inputDevices.value.map((device) => device.id));
 const selectedInputDeviceId = ref('');
 const inputDevicesLoading = ref(false);
 
@@ -174,7 +176,7 @@ onUnmounted(() => {
 				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.multimediaAudioInput.inputLevel') }}</h3>
 				<div class="flex items-center gap-4 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
 					<button
-						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner border transition-colors hover:bg-primary hover:text-white"
+						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner border transition-colors hover:bg-primary hover:text-tx-on-primary"
 						:class="
 							inputVolumeInfo.is_muted
 								? 'border-status-error/40 text-status-error'
@@ -237,7 +239,7 @@ onUnmounted(() => {
 				<EmptyStateBox v-if="inputDevicesLoading" :message="t('views.multimediaAudioInput.loadingDevices')" />
 				<EmptyStateBox v-else-if="inputDevices.length === 0" :message="t('views.multimediaAudioInput.emptyDevices')" />
 
-				<ul v-else class="flex max-h-[14rem] flex-col gap-2 overflow-y-auto pr-1">
+				<ul v-else class="flex max-h-[14rem] flex-col gap-2 overflow-y-auto pr-1" role="radiogroup">
 					<li
 						v-for="device in inputDevices"
 						:key="device.id"
@@ -247,7 +249,13 @@ onUnmounted(() => {
 								? 'border-primary/50 bg-primary/5 shadow-sm'
 								: 'border-ui-border bg-ui-surface/70 hover:border-ui-border.hover hover:bg-ui-surface'
 						"
+						role="radio"
+						:aria-checked="selectedInputDeviceId === device.id"
+						:tabindex="radioTabIndex(inputDeviceIds, selectedInputDeviceId, device.id)"
 						@click="selectInputDevice(device.id)"
+						@keydown.enter.prevent="selectInputDevice(device.id)"
+						@keydown.space.prevent="selectInputDevice(device.id)"
+						@keydown="onRadioArrow($event, inputDeviceIds, device.id, selectInputDevice)"
 					>
 						<div
 							class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors"

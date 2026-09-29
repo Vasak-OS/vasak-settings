@@ -210,7 +210,7 @@ function toggleNightLight(value: boolean) {
 				<button
 					type="button"
 					:disabled="savingNight || !nightLight.available"
-					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90 disabled:opacity-50"
 					@click="saveNightLight"
 				>
 					{{ savingNight ? t('common.saving') : t('common.save') }}

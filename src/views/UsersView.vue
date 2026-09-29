@@ -228,7 +228,7 @@ function canDemote(user: UserAccount): boolean {
 			<template #actions>
 				<button
 					type="button"
-					class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+					class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90"
 					@click="showCreate = !showCreate"
 				>
 					{{ showCreate ? t('common.cancel') : t('views.users.addUser') }}
@@ -281,7 +281,7 @@ function canDemote(user: UserAccount): boolean {
 				<button
 					type="button"
 					:disabled="!createValid || busy"
-					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90 disabled:opacity-50"
 					@click="createUser"
 				>
 					{{ t('views.users.createAccount') }}
@@ -427,7 +427,7 @@ function canDemote(user: UserAccount): boolean {
 								draftFor(user.uid).password.length < MIN_PASSWORD ||
 								draftFor(user.uid).password !== draftFor(user.uid).confirm
 							"
-							class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+							class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90 disabled:opacity-50"
 							@click="changePassword(user)"
 						>
 							{{ t('views.users.changePassword') }}
@@ -470,7 +470,7 @@ function canDemote(user: UserAccount): boolean {
 				<button
 					type="button"
 					:disabled="busy"
-					class="rounded-corner bg-status-error px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+					class="rounded-corner bg-status-error px-4 py-2 text-sm font-medium text-tx-on-error hover:opacity-90 disabled:opacity-50"
 					@click="confirmDelete"
 				>
 					{{ t('common.delete') }}

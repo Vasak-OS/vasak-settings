@@ -381,10 +381,12 @@ onMounted(load);
 						<FormGroup
 							v-if="brightness[monitor.name]"
 							:label="t('views.monitors.brightness')"
+							:html-for="`brightness-${monitor.name}`"
 							customClass="sm:col-span-2"
 						>
 							<div class="flex items-center gap-3">
 								<input
+									:id="`brightness-${monitor.name}`"
 									type="range"
 									min="1"
 									max="100"
@@ -420,7 +422,7 @@ onMounted(load);
 				<button
 					type="button"
 					:disabled="!isDirty || saving"
-					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50 hover:enabled:opacity-90"
+					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary transition-opacity disabled:cursor-not-allowed disabled:opacity-50 hover:enabled:opacity-90"
 					@click="save"
 				>
 					{{ saving ? t('common.saving') : t('views.monitors.saveAll') }}
