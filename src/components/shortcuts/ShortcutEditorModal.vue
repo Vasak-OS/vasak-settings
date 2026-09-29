@@ -339,6 +339,7 @@ const handleCancel = () => {
 			<FormGroup :label="t('views.shortcuts.editor.actionLabel')" html-for="shortcut-action">
 				<input
 					id="shortcut-action"
+					:aria-label="t('views.shortcuts.editor.actionLabel')"
 					v-model="action"
 					type="text"
 					placeholder="launch"
@@ -349,6 +350,7 @@ const handleCancel = () => {
 			<FormGroup :label="t('views.shortcuts.editor.targetLabel')" html-for="shortcut-target">
 				<textarea
 					id="shortcut-target"
+					:aria-label="t('views.shortcuts.editor.targetLabel')"
 					v-model="target"
 					rows="3"
 					placeholder="firefox"

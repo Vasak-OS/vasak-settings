@@ -115,3 +115,22 @@ describe('selección de dispositivo de audio con el teclado', () => {
 		}
 	);
 });
+
+// SonarCloud no ve la `<label>` que dibuja `FormGroup` y marca el campo como sin
+// nombre. El `aria-label` repite el mismo texto: lo que anuncia el lector no
+// cambia, y la regla lo reconoce.
+describe('campos dentro de FormGroup', () => {
+	test.each([
+		['src/components/shortcuts/ShortcutEditorModal.vue', 'shortcut-action'],
+		['src/components/shortcuts/ShortcutEditorModal.vue', 'shortcut-target'],
+		['src/views/WayfireInputView.vue', 'mouse-cursor-speed'],
+		['src/views/WayfireInputView.vue', 'touchpad-cursor-speed'],
+	])('%s: #%s tiene html-for, id y aria-label con el mismo texto', (file, id) => {
+		const html = template(join(root, file));
+		const group = html.match(new RegExp(`<FormGroup :label="([^"]+)" html-for="${id}">`));
+		expect(group).not.toBeNull();
+		expect(html).toContain(`id="${id}"\n`);
+		const field = html.slice(html.indexOf(`id="${id}"`)).split('/>')[0];
+		expect(field).toContain(`:aria-label="${group?.[1]}"`);
+	});
+});

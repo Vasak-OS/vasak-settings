@@ -122,6 +122,7 @@ onMounted(async () => {
 					<FormGroup :label="t('views.wayfireInput.cursorSpeed')" html-for="mouse-cursor-speed">
 						<input
 							id="mouse-cursor-speed"
+							:aria-label="t('views.wayfireInput.cursorSpeed')"
 							type="range" min="-1" max="1" step="0.05"
 							:value="input.getFloat('mouse_cursor_speed', 0)"
 							@input="input.setVal('mouse_cursor_speed', ($event.target as HTMLInputElement).value)"
@@ -194,6 +195,7 @@ onMounted(async () => {
 					<FormGroup :label="t('views.wayfireInput.cursorSpeed')" html-for="touchpad-cursor-speed">
 						<input
 							id="touchpad-cursor-speed"
+							:aria-label="t('views.wayfireInput.cursorSpeed')"
 							type="range" min="-1" max="1" step="0.05"
 							:value="input.getFloat('touchpad_cursor_speed', 0)"
 							@input="input.setVal('touchpad_cursor_speed', ($event.target as HTMLInputElement).value)"
