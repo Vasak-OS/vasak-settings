@@ -1,49 +1,43 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, type Mock, spyOn, test } from 'bun:test';
+import * as plugin from '@vasakgroup/plugin-config-manager';
 import { saveUserScheme } from '@/services/scheme.service';
-import type { SchemeEntry, SchemeFile } from '@/types/scheme';
+import type { SchemeFile } from '@/types/scheme';
 import vasakDefault from './fixtures/scheme-vasak-default.json';
 
 /**
  * `saveUserScheme` pasó de un `invoke` escrito a mano al ayudante del plugin
- * (la 2.9 admite pinia 3). Lo que no puede cambiar con eso es el contrato: el
- * nombre del comando, la forma del argumento, y que las claves que el modelo
- * del paquete no nombra lleguen enteras al archivo.
+ * (la 2.9 admite pinia 3). Lo que no puede cambiar con eso es que el esquema
+ * llegue entero —con las claves que el modelo del paquete no nombra— y que lo
+ * que vuelve sea lo que devolvió el plugin.
  *
- * Se reemplaza el `invoke` de `__TAURI_INTERNALS__` y no se simula el módulo:
- * dos `mock.module` del mismo módulo en archivos distintos se pisan en el CI.
+ * El nombre del comando y la forma del argumento los prueba el propio plugin
+ * (`guest-js/save-user-scheme.test.ts`). Acá se espía su `saveUserScheme` y no
+ * el `invoke`: `iconos-reactivos.test.ts` simula `@tauri-apps/api/core` para
+ * toda la corrida, y un segundo `mock.module` del mismo módulo se pisa con ése
+ * según el orden. El espía se restaura después de cada prueba.
  */
-type Call = { cmd: string; args: unknown };
-let calls: Call[] = [];
-
-const g = globalThis as Record<string, unknown>;
+let spy: Mock<typeof plugin.saveUserScheme>;
 
 beforeEach(() => {
-	calls = [];
-	g.__TAURI_INTERNALS__ = {
-		invoke: async (cmd: string, args: unknown): Promise<SchemeEntry> => {
-			calls.push({ cmd, args });
-			return {
-				path: '/home/alguien/.config/vasak/schemes/custom.json',
-				scheme: (args as { scheme: SchemeFile }).scheme,
-			};
-		},
-		transformCallback: () => 0,
-	};
+	spy = spyOn(plugin, 'saveUserScheme').mockImplementation(async (scheme) => ({
+		path: `/home/alguien/.config/vasak/schemes/${scheme.id}.json`,
+		scheme,
+	}));
 });
 
 afterEach(() => {
-	delete g.__TAURI_INTERNALS__;
+	spy.mockRestore();
 });
 
 describe('saveUserScheme', () => {
-	test('llama al comando del plugin con el esquema en `scheme`', async () => {
+	test('le pasa el esquema al plugin y devuelve lo que contestó', async () => {
 		const scheme = { ...(vasakDefault as SchemeFile), id: 'custom' };
 
-		await saveUserScheme(scheme);
+		const entry = await saveUserScheme(scheme);
 
-		expect(calls).toHaveLength(1);
-		expect(calls[0].cmd).toBe('plugin:config-manager|save_user_scheme');
-		expect(calls[0].args).toEqual({ scheme });
+		expect(spy).toHaveBeenCalledTimes(1);
+		expect(spy.mock.calls[0][0]).toEqual(scheme);
+		expect(entry.path).toBe('/home/alguien/.config/vasak/schemes/custom.json');
 	});
 
 	test('las claves que el paquete no nombra viajan enteras', async () => {
@@ -53,11 +47,10 @@ describe('saveUserScheme', () => {
 			'x-puesto-a-mano': { nota: 'lo escribió alguien con un editor' },
 		} as SchemeFile;
 
-		const entry = await saveUserScheme(scheme);
+		await saveUserScheme(scheme);
 
-		expect((calls[0].args as { scheme: SchemeFile }).scheme['x-puesto-a-mano']).toEqual({
+		expect((spy.mock.calls[0][0] as SchemeFile)['x-puesto-a-mano']).toEqual({
 			nota: 'lo escribió alguien con un editor',
 		});
-		expect(entry.path).toBe('/home/alguien/.config/vasak/schemes/custom.json');
 	});
 });
