@@ -1,7 +1,7 @@
 {
 	"name": "vasak-settings",
 	"private": true,
-	"version": "0.30.1",
+	"version": "0.31.0",
 	"type": "module",
 	"scripts": {
 		"dev": "bunx --bun vite",
@@ -20,7 +20,7 @@
 		"@tauri-apps/plugin-dialog": "^2.8.0",
 		"@tauri-apps/plugin-shell": "^2.4.0",
 		"@vasakgroup/plugin-bluetooth-manager": "^2.1.0",
-		"@vasakgroup/plugin-config-manager": "~2.6.1",
+		"@vasakgroup/plugin-config-manager": "^2.9.0",
 		"@vasakgroup/plugin-network-manager": "^2.2.1",
 		"@vasakgroup/plugin-vicons": "^2.2.2",
 		"@vasakgroup/plugin-vsk-contextual-menu": "^2.0.3",
@@ -50,8 +50,7 @@
 	},
 	"vasak": {
 		"bibliotecasAtrasadas": {
-			"@vasakgroup/plugin-config-manager": "La 2.7 (2.7.0 y 2.7.1, la última al 25/09/2026) declara pinia ^4 y esta aplicación está en pinia 3: subir el rango arrastra un salto mayor ajeno. Por eso el rango es ~2.6.1 y no ^2.6.1, que alcanzaría una versión que no se puede instalar. Se saca al subir a pinia 4.",
-			"pinia": "La 4 es un salto mayor de una biblioteca que usa el taller entero: catorce aplicaciones están en pinia 3 y subir sólo ésta parte el vocabulario compartido. Va en su propio PR, coordinado con el resto; ese mismo PR se lleva la nota de @vasakgroup/plugin-config-manager, que espera lo mismo.",
+			"pinia": "La 4 es un salto mayor de una biblioteca que usa el taller entero: catorce aplicaciones están en pinia 3 y subir sólo ésta parte el vocabulario compartido. Va en su propio PR, coordinado con el resto.",
 			"typescript": "La 7 (el compilador reescrito) no trae `typescript/lib/tsc` y vue-tsc 3.3 lo busca ahí: `bun run build` se cae antes de mirar un archivo. Se saca cuando vue-tsc publique una versión que soporte TypeScript 7.",
 			"vite": "La 8 cambia rollup por rolldown. Acá compila limpia —no hay `manualChunks`—, pero es cambiar cómo se empaqueta la ventana y eso no lo verifica ninguna prueba: va en su propio PR, que abra la ventana en una sesión con `--features custom-protocol` y recorra las vistas cargadas a demanda. Se saca con ese PR.",
 			"zbus (crate de Rust)": "La 5 cambia la API de proxies y conexiones, y tauri-plugin-bluetooth-manager y tauri-plugin-network-manager siguen en la 4, igual que el servicio vasak-accounts: subirla sola deja dos zbus en el binario. Se saca cuando los complementos pasen a la 5.",

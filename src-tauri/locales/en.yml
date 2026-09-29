@@ -454,6 +454,52 @@ views:
       onPrimary: On primary
       terminalBackground: Terminal background
       terminalForeground: Terminal text
+      onSecondary: On secondary
+      terminalCursor: Terminal cursor
+    schemeList: Available schemes
+    ansi:
+      black: Black
+      red: Red
+      green: Green
+      yellow: Yellow
+      blue: Blue
+      magenta: Magenta
+      cyan: Cyan
+      white: White
+      brightBlack: Bright black
+      brightRed: Bright red
+      brightGreen: Bright green
+      brightYellow: Bright yellow
+      brightBlue: Bright blue
+      brightMagenta: Bright magenta
+      brightCyan: Bright cyan
+      brightWhite: Bright white
+    contrast:
+      mainOnBackground: Text on background
+      mutedOnBackground: Muted text on background
+      mainOnSurface: Text on surface
+      onPrimary: Text on primary
+      onSecondary: Text on secondary
+    custom:
+      name: Custom
+      basedOn: 'Based on {0}'
+      createHint: Your own scheme, with every color editable.
+      create: Create from current
+      createError: 'Could not create the Custom scheme: {0}'
+      saveError: 'Could not save the Custom scheme: {0}'
+      notActive: Changes are saved to Custom. The desktop shows them once you apply it with «Apply Changes».
+      variants: Scheme variant
+      interface: Interface
+      contrastTitle: Contrast
+      lowContrast: 'Below {0}:1'
+      terminal: Terminal
+      ansi: ANSI colors
+      invalidHex: 'Use #rgb or #rrggbb'
+      resetFrom: Start over from…
+      resetAction: Replace
+      resetTitle: Start over?
+      resetDescription: 'Custom will become a copy of {0}. Every color you edited is lost.'
+      resetConfirm: Replace my colors
 
   appearanceFonts:
     sharpness: Thicker strokes

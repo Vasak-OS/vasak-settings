@@ -16,6 +16,7 @@
     "core:window:allow-close",
     "vicons:default",
     "config-manager:default",
+    "config-manager:allow-save-user-scheme",
     "vsk-contextual-menu:default",
     "vsk-journal:default",
     "system-fonts:default",

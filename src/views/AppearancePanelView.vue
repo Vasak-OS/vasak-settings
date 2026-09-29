@@ -12,13 +12,13 @@ import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import {
-	escribirIndicadoresDelPanel,
-	escribirPosicionDelPanel,
-	indicadoresDelPanel,
-	POSICIONES_DEL_PANEL,
-	type PosicionDelPanel,
-	posicionDelPanel,
-} from '@/tools/valores-de-config';
+	PANEL_POSITIONS,
+	type PanelPosition,
+	readPanelIndicators,
+	readPanelPosition,
+	writePanelIndicators,
+	writePanelPosition,
+} from '@/tools/config-values';
 
 const { t } = useI18n();
 
@@ -51,7 +51,7 @@ const privacy = ref(true);
  * reacomoda lo de adentro al recibir `config-changed`, así que moverla no pide
  * reiniciar la sesión.
  */
-const posicion = ref<PosicionDelPanel>('top');
+const posicion = ref<PanelPosition>('top');
 
 onMounted(async () => {
 	try {
@@ -60,13 +60,13 @@ onMounted(async () => {
 		await configStore.value.loadConfig();
 		vskConfig.value = await readConfig();
 
-		const panel = indicadoresDelPanel(vskConfig.value);
+		const panel = readPanelIndicators(vskConfig.value);
 		weather.value = panel.weather;
 		music.value = panel.music;
 		transfer.value = panel.transfer;
 		tray.value = panel.tray;
 		privacy.value = panel.privacy;
-		posicion.value = posicionDelPanel(vskConfig.value);
+		posicion.value = readPanelPosition(vskConfig.value);
 	} catch (err) {
 		error.value = t('views.appearancePanel.errorLoading').replace('{0}', String(err));
 	} finally {
@@ -82,7 +82,7 @@ const saveConfig = async () => {
 	try {
 		if (!vskConfig.value) return;
 
-		escribirIndicadoresDelPanel(vskConfig.value as any, {
+		writePanelIndicators(vskConfig.value as any, {
 			weather: weather.value,
 			music: music.value,
 			transfer: transfer.value,
@@ -90,7 +90,7 @@ const saveConfig = async () => {
 			privacy: privacy.value,
 		});
 
-		escribirPosicionDelPanel(vskConfig.value as unknown as Record<string, unknown>, posicion.value);
+		writePanelPosition(vskConfig.value as unknown as Record<string, unknown>, posicion.value);
 
 		await writeConfig(vskConfig.value);
 
@@ -155,7 +155,7 @@ const saveConfig = async () => {
 						:label="t('views.appearancePanel.position')"
 						class="w-48 shrink-0"
 					>
-						<option v-for="lado in POSICIONES_DEL_PANEL" :key="lado" :value="lado">
+						<option v-for="lado in PANEL_POSITIONS" :key="lado" :value="lado">
 							{{ t(`views.appearancePanel.lados.${lado}`) }}
 						</option>
 					</SelectField>

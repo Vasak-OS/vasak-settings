@@ -10,7 +10,7 @@
  * repositorio: son afirmaciones sobre de dónde sale el componente y sobre cómo
  * está cableada la pantalla nueva. Lo que el marco hace —acomodarse a los
  * cuatro lados, encoger las pestañas— se prueba en la librería, montándolo. Lo
- * que la pantalla escribe se prueba en `valores-de-config.test.ts`, que es el
+ * que la pantalla escribe se prueba en `config-values.test.ts`, que es el
  * único lugar donde hay lógica de verdad.
  */
 
@@ -78,10 +78,10 @@ describe('la pantalla de las ventanas', () => {
 
 	test('escribe con el mismo ayudante que se prueba aparte', () => {
 		// La lógica —qué se considera una posición válida, y no pisar lo que ya
-		// hubiera en la sección— vive en `tools/valores-de-config`, que se
+		// hubiera en la sección— vive en `tools/config-values`, que se
 		// prueba sin montar nada.
-		expect(pantalla).toContain('escribirPosicionDeLaBarra');
-		expect(pantalla).toContain('posicionDeLaBarra');
+		expect(pantalla).toContain('writeBarPosition');
+		expect(pantalla).toContain('readBarPosition');
 	});
 
 	test('usa el `select` de la librería, con su etiqueta asociada', () => {
@@ -95,7 +95,7 @@ describe('la pantalla de las ventanas', () => {
 	test('los cuatro lados salen de la lista y no escritos a mano', () => {
 		// Escritos a mano, agregar un lado en la librería deja esta pantalla
 		// sin ofrecerlo y nadie se entera.
-		expect(pantalla).toContain('v-for="lado in POSICIONES_DE_LA_BARRA"');
+		expect(pantalla).toContain('v-for="lado in BAR_POSITIONS"');
 	});
 
 	test('y los cuatro tienen texto en los dos idiomas', () => {

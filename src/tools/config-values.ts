@@ -16,12 +16,12 @@
  */
 
 /** El booleano de una clave, o el valor de fábrica si no hay uno de verdad. */
-export function booleanoDeConfig(valor: unknown, porDefecto: boolean): boolean {
-	return typeof valor === 'boolean' ? valor : porDefecto;
+export function configBoolean(value: unknown, fallback: boolean): boolean {
+	return typeof value === 'boolean' ? value : fallback;
 }
 
 /** La clave del esquema de color, tal como se llama en el archivo. */
-export const CLAVE_DEL_ESQUEMA = 'color-scheme';
+export const SCHEME_KEY = 'color-scheme';
 
 /**
  * Las claves de estilo que la interfaz ya no escribe y quedaron en los archivos.
@@ -41,7 +41,7 @@ export const CLAVE_DEL_ESQUEMA = 'color-scheme';
  * quien haya tocado el tema alguna vez: una diciendo un esquema distinto del
  * que vale, la otra un color que no se aplica en ninguna parte.
  */
-const CLAVES_MUERTAS = ['color_scheme', 'primarycolor'];
+const DEAD_KEYS = ['color_scheme', 'primarycolor'];
 
 /**
  * Deja escrito el esquema elegido, en la clave que se lee.
@@ -49,23 +49,23 @@ const CLAVES_MUERTAS = ['color_scheme', 'primarycolor'];
  * Modifica la sección en lugar de devolver una nueva porque es lo que hace el
  * resto de la vista, que guarda la configuración entera que tiene cargada.
  */
-export function escribirEsquema(style: Record<string, unknown>, id: string): void {
-	style[CLAVE_DEL_ESQUEMA] = id;
+export function writeScheme(style: Record<string, unknown>, id: string): void {
+	style[SCHEME_KEY] = id;
 }
 
 /** Saca de la sección de estilo lo que la interfaz ya no escribe. */
-export function limpiarEstilo(style: Record<string, unknown>): void {
-	for (const clave of CLAVES_MUERTAS) {
-		delete style[clave];
+export function clearStyle(style: Record<string, unknown>): void {
+	for (const key of DEAD_KEYS) {
+		delete style[key];
 	}
 }
 
 /** Lo que el panel muestra y se puede apagar, en el orden en que aparece. */
-export const INDICADORES_DEL_PANEL = ['weather', 'music', 'transfer', 'tray', 'privacy'] as const;
+export const PANEL_INDICATORS = ['weather', 'music', 'transfer', 'tray', 'privacy'] as const;
 
-export type IndicadorDelPanel = (typeof INDICADORES_DEL_PANEL)[number];
+export type PanelIndicator = (typeof PANEL_INDICATORS)[number];
 
-export type IndicadoresDelPanel = Record<IndicadorDelPanel, boolean>;
+export type PanelIndicators = Record<PanelIndicator, boolean>;
 
 /**
  * Qué indicadores del panel están encendidos.
@@ -75,17 +75,17 @@ export type IndicadoresDelPanel = Record<IndicadorDelPanel, boolean>;
  * mismo criterio; leerlo al revés haría que el panel muestre el indicador y la
  * pantalla de configuración diga que está apagado, en cada instalación nueva.
  */
-export function indicadoresDelPanel(config: unknown): IndicadoresDelPanel {
-	const seccion =
+export function readPanelIndicators(config: unknown): PanelIndicators {
+	const section =
 		config && typeof config === 'object'
 			? ((config as Record<string, unknown>).panel as Record<string, unknown> | undefined)
 			: undefined;
 
-	const leidos = {} as IndicadoresDelPanel;
-	for (const clave of INDICADORES_DEL_PANEL) {
-		leidos[clave] = booleanoDeConfig(seccion?.[clave], true);
+	const read = {} as PanelIndicators;
+	for (const key of PANEL_INDICATORS) {
+		read[key] = configBoolean(section?.[key], true);
 	}
-	return leidos;
+	return read;
 }
 
 /**
@@ -94,21 +94,21 @@ export function indicadoresDelPanel(config: unknown): IndicadoresDelPanel {
  * Conserva lo que no son interruptores: ahí viven claves de otras pantallas, y
  * reemplazar la sección entera las borraría.
  */
-export function escribirIndicadoresDelPanel(
+export function writePanelIndicators(
 	config: Record<string, unknown>,
-	valores: IndicadoresDelPanel
+	values: PanelIndicators
 ): void {
-	const anterior = (config.panel as Record<string, unknown> | undefined) ?? {};
-	config.panel = { ...anterior, ...valores };
+	const previous = (config.panel as Record<string, unknown> | undefined) ?? {};
+	config.panel = { ...previous, ...values };
 }
 
 /** Los cuatro lados donde puede quedar la barra de una ventana. */
-export const POSICIONES_DE_LA_BARRA = ['top', 'bottom', 'left', 'right'] as const;
+export const BAR_POSITIONS = ['top', 'bottom', 'left', 'right'] as const;
 
-export type PosicionDeLaBarra = (typeof POSICIONES_DE_LA_BARRA)[number];
+export type BarPosition = (typeof BAR_POSITIONS)[number];
 
 /** Arriba, que es donde estuvo siempre y donde la gente la busca. */
-export const POSICION_DE_LA_BARRA_POR_OMISION: PosicionDeLaBarra = 'top';
+export const DEFAULT_BAR_POSITION: BarPosition = 'top';
 
 /**
  * De qué lado va la barra de las ventanas, según `window.barPosition`.
@@ -122,15 +122,15 @@ export const POSICION_DE_LA_BARRA_POR_OMISION: PosicionDeLaBarra = 'top';
  * El archivo se puede editar a mano, así que el valor no viene de nuestro
  * código: se comprueba en lugar de afirmarlo con una aserción.
  */
-export function posicionDeLaBarra(config: unknown): PosicionDeLaBarra {
-	const seccion =
+export function readBarPosition(config: unknown): BarPosition {
+	const section =
 		config && typeof config === 'object'
 			? ((config as Record<string, unknown>).window as Record<string, unknown> | undefined)
 			: undefined;
-	const puesta = seccion?.barPosition;
-	return POSICIONES_DE_LA_BARRA.includes(puesta as PosicionDeLaBarra)
-		? (puesta as PosicionDeLaBarra)
-		: POSICION_DE_LA_BARRA_POR_OMISION;
+	const stored = section?.barPosition;
+	return BAR_POSITIONS.includes(stored as BarPosition)
+		? (stored as BarPosition)
+		: DEFAULT_BAR_POSITION;
 }
 
 /**
@@ -138,14 +138,11 @@ export function posicionDeLaBarra(config: unknown): PosicionDeLaBarra {
  *
  * Conserva lo que ya hubiera: es una sección compartida con lo que venga
  * después, y reemplazarla entera borraría claves ajenas. Lo mismo que hace
- * `escribirIndicadoresDelPanel`.
+ * `writePanelIndicators`.
  */
-export function escribirPosicionDeLaBarra(
-	config: Record<string, unknown>,
-	posicion: PosicionDeLaBarra
-): void {
-	const anterior = (config.window as Record<string, unknown> | undefined) ?? {};
-	config.window = { ...anterior, barPosition: posicion };
+export function writeBarPosition(config: Record<string, unknown>, position: BarPosition): void {
+	const previous = (config.window as Record<string, unknown> | undefined) ?? {};
+	config.window = { ...previous, barPosition: position };
 }
 
 /**
@@ -155,12 +152,12 @@ export function escribirPosicionDeLaBarra(
  * tipo: son dos preferencias distintas —una mueve la barra de cada ventana, la
  * otra la barra del escritorio— con el mismo juego de valores.
  */
-export const POSICIONES_DEL_PANEL = POSICIONES_DE_LA_BARRA;
+export const PANEL_POSITIONS = BAR_POSITIONS;
 
-export type PosicionDelPanel = PosicionDeLaBarra;
+export type PanelPosition = BarPosition;
 
 /** Arriba, que es donde el panel estuvo siempre y donde la gente lo busca. */
-export const POSICION_DEL_PANEL_POR_OMISION: PosicionDelPanel = 'top';
+export const DEFAULT_PANEL_POSITION: PanelPosition = 'top';
 
 /**
  * De qué lado va el panel, según `panel.position`.
@@ -170,15 +167,15 @@ export const POSICION_DEL_PANEL_POR_OMISION: PosicionDelPanel = 'top';
  * toleran que no diga nada. Leerlo distinto acá haría que esta pantalla muestre
  * un lado y el panel esté en otro.
  */
-export function posicionDelPanel(config: unknown): PosicionDelPanel {
-	const seccion =
+export function readPanelPosition(config: unknown): PanelPosition {
+	const section =
 		config && typeof config === 'object'
 			? ((config as Record<string, unknown>).panel as Record<string, unknown> | undefined)
 			: undefined;
-	const puesta = seccion?.position;
-	return POSICIONES_DEL_PANEL.includes(puesta as PosicionDelPanel)
-		? (puesta as PosicionDelPanel)
-		: POSICION_DEL_PANEL_POR_OMISION;
+	const stored = section?.position;
+	return PANEL_POSITIONS.includes(stored as PanelPosition)
+		? (stored as PanelPosition)
+		: DEFAULT_PANEL_POSITION;
 }
 
 /**
@@ -187,10 +184,7 @@ export function posicionDelPanel(config: unknown): PosicionDelPanel {
  * Conserva lo que ya hubiera: en esa sección viven los interruptores de los
  * indicadores, y reemplazarla entera los apagaría todos.
  */
-export function escribirPosicionDelPanel(
-	config: Record<string, unknown>,
-	posicion: PosicionDelPanel
-): void {
-	const anterior = (config.panel as Record<string, unknown> | undefined) ?? {};
-	config.panel = { ...anterior, position: posicion };
+export function writePanelPosition(config: Record<string, unknown>, position: PanelPosition): void {
+	const previous = (config.panel as Record<string, unknown> | undefined) ?? {};
+	config.panel = { ...previous, position };
 }

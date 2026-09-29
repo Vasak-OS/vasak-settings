@@ -1,15 +1,15 @@
 import { describe, expect, test } from 'bun:test';
 import {
-	booleanoDeConfig,
-	escribirEsquema,
-	escribirPosicionDeLaBarra,
-	escribirPosicionDelPanel,
-	limpiarEstilo,
-	POSICIONES_DE_LA_BARRA,
-	POSICIONES_DEL_PANEL,
-	posicionDeLaBarra,
-	posicionDelPanel,
-} from '../src/tools/valores-de-config';
+	BAR_POSITIONS,
+	clearStyle,
+	configBoolean,
+	PANEL_POSITIONS,
+	readBarPosition,
+	readPanelPosition,
+	writeBarPosition,
+	writePanelPosition,
+	writeScheme,
+} from '../src/tools/config-values';
 
 /**
  * Las claves que el plugin de configuración transporta sin conocer llegan como
@@ -17,24 +17,24 @@ import {
  * que esa aserción dejaba pasar: el valor no lo escribe nuestro código, sale de
  * un archivo que se puede editar a mano, así que puede ser cualquier cosa.
  */
-describe('booleanoDeConfig', () => {
+describe('configBoolean', () => {
 	test('un booleano de verdad se respeta, incluso el que no es el de fábrica', () => {
-		expect(booleanoDeConfig(false, true)).toBe(false);
-		expect(booleanoDeConfig(true, false)).toBe(true);
+		expect(configBoolean(false, true)).toBe(false);
+		expect(configBoolean(true, false)).toBe(true);
 	});
 
 	test('lo que no está usa el valor de fábrica', () => {
-		expect(booleanoDeConfig(undefined, true)).toBe(true);
-		expect(booleanoDeConfig(null, false)).toBe(false);
+		expect(configBoolean(undefined, true)).toBe(true);
+		expect(configBoolean(null, false)).toBe(false);
 	});
 
 	test('lo que no es booleano tampoco cuenta como uno', () => {
 		// Con `as any` una cadena llegaba al interruptor y lo dejaba prendido por
 		// ser una cadena no vacía, aunque dijera «no».
-		expect(booleanoDeConfig('no', false)).toBe(false);
-		expect(booleanoDeConfig('true', false)).toBe(false);
-		expect(booleanoDeConfig(0, true)).toBe(true);
-		expect(booleanoDeConfig(1, false)).toBe(false);
+		expect(configBoolean('no', false)).toBe(false);
+		expect(configBoolean('true', false)).toBe(false);
+		expect(configBoolean(0, true)).toBe(true);
+		expect(configBoolean(1, false)).toBe(false);
 	});
 });
 
@@ -44,7 +44,7 @@ describe('booleanoDeConfig', () => {
  * lee es `color-scheme`. O sea que se escribía una clave nueva que nadie mira y
  * la de verdad se quedaba con el valor viejo.
  */
-describe('escribirEsquema', () => {
+describe('writeScheme', () => {
 	test('deja el esquema en la clave que se lee', () => {
 		const style: Record<string, unknown> = {
 			darkmode: true,
@@ -52,7 +52,7 @@ describe('escribirEsquema', () => {
 			radius: 10,
 		};
 
-		escribirEsquema(style, 'catppuccin');
+		writeScheme(style, 'catppuccin');
 
 		expect(style['color-scheme']).toBe('catppuccin');
 	});
@@ -64,7 +64,7 @@ describe('escribirEsquema', () => {
 			radius: 10,
 		};
 
-		escribirEsquema(style, 'catppuccin');
+		writeScheme(style, 'catppuccin');
 
 		expect(style.darkmode).toBe(true);
 		expect(style.radius).toBe(10);
@@ -77,14 +77,14 @@ describe('escribirEsquema', () => {
  * salvó la disposición de los widgets—, así que lo que la interfaz dejó de
  * escribir hay que sacarlo a propósito o queda para siempre.
  */
-describe('limpiarEstilo', () => {
+describe('clearStyle', () => {
 	test('saca la clave del esquema mal escrita', () => {
 		const style: Record<string, unknown> = {
 			'color-scheme': 'catppuccin',
 			color_scheme: 'lo-que-alguien-eligió-y-no-se-aplicó',
 		};
 
-		limpiarEstilo(style);
+		clearStyle(style);
 
 		expect('color_scheme' in style).toBe(false);
 		expect(style['color-scheme']).toBe('catppuccin');
@@ -95,7 +95,7 @@ describe('limpiarEstilo', () => {
 		// existía y no hacía nada, así que su valor quedaba escrito para nada.
 		const style: Record<string, unknown> = { primarycolor: '#0084FF', radius: 10 };
 
-		limpiarEstilo(style);
+		clearStyle(style);
 
 		expect('primarycolor' in style).toBe(false);
 		expect(style.radius).toBe(10);
@@ -104,23 +104,23 @@ describe('limpiarEstilo', () => {
 	test('con una sección que no las tiene no hace nada', () => {
 		const style: Record<string, unknown> = { darkmode: true, 'color-scheme': 'x', radius: 8 };
 
-		limpiarEstilo(style);
+		clearStyle(style);
 
 		expect(style).toEqual({ darkmode: true, 'color-scheme': 'x', radius: 8 });
 	});
 });
 
-describe('posicionDeLaBarra', () => {
+describe('readBarPosition', () => {
 	test('sin nada puesto, la barra va arriba', () => {
 		// Es donde estuvo siempre y donde la gente la busca.
-		expect(posicionDeLaBarra({})).toBe('top');
-		expect(posicionDeLaBarra(null)).toBe('top');
-		expect(posicionDeLaBarra({ window: {} })).toBe('top');
+		expect(readBarPosition({})).toBe('top');
+		expect(readBarPosition(null)).toBe('top');
+		expect(readBarPosition({ window: {} })).toBe('top');
 	});
 
 	test('los cuatro lados se leen', () => {
-		for (const lado of POSICIONES_DE_LA_BARRA) {
-			expect(posicionDeLaBarra({ window: { barPosition: lado } })).toBe(lado);
+		for (const lado of BAR_POSITIONS) {
+			expect(readBarPosition({ window: { barPosition: lado } })).toBe(lado);
 		}
 	});
 
@@ -128,17 +128,17 @@ describe('posicionDeLaBarra', () => {
 		// El archivo se edita a mano. Con una aserción de tipo, un `"izquierda"`
 		// llegaría hasta el marco y ahí no coincide con ninguna dirección: la
 		// ventana quedaría sin acomodo.
-		expect(posicionDeLaBarra({ window: { barPosition: 'izquierda' } })).toBe('top');
-		expect(posicionDeLaBarra({ window: { barPosition: 3 } })).toBe('top');
-		expect(posicionDeLaBarra({ window: 'left' })).toBe('top');
+		expect(readBarPosition({ window: { barPosition: 'izquierda' } })).toBe('top');
+		expect(readBarPosition({ window: { barPosition: 3 } })).toBe('top');
+		expect(readBarPosition({ window: 'left' })).toBe('top');
 	});
 });
 
-describe('escribirPosicionDeLaBarra', () => {
+describe('writeBarPosition', () => {
 	test('deja la posición elegida', () => {
 		const config: Record<string, unknown> = {};
 
-		escribirPosicionDeLaBarra(config, 'left');
+		writeBarPosition(config, 'left');
 
 		expect(config.window).toEqual({ barPosition: 'left' });
 	});
@@ -147,26 +147,26 @@ describe('escribirPosicionDeLaBarra', () => {
 		// `window` es una sección compartida con lo que venga después.
 		const config: Record<string, unknown> = { window: { otraCosa: 1, barPosition: 'top' } };
 
-		escribirPosicionDeLaBarra(config, 'bottom');
+		writeBarPosition(config, 'bottom');
 
 		expect(config.window).toEqual({ otraCosa: 1, barPosition: 'bottom' });
 	});
 });
 
-describe('posicionDelPanel', () => {
+describe('readPanelPosition', () => {
 	test('sin nada puesto, el panel va arriba', () => {
 		// La sección `panel` existe desde antes que esta clave —lleva los
 		// interruptores de los indicadores—, así que lo normal en una
 		// instalación que viene de antes es que la sección esté y la clave no.
-		expect(posicionDelPanel({})).toBe('top');
-		expect(posicionDelPanel(null)).toBe('top');
-		expect(posicionDelPanel({ panel: {} })).toBe('top');
-		expect(posicionDelPanel({ panel: { weather: false } })).toBe('top');
+		expect(readPanelPosition({})).toBe('top');
+		expect(readPanelPosition(null)).toBe('top');
+		expect(readPanelPosition({ panel: {} })).toBe('top');
+		expect(readPanelPosition({ panel: { weather: false } })).toBe('top');
 	});
 
 	test('los cuatro lados se leen', () => {
-		for (const lado of POSICIONES_DEL_PANEL) {
-			expect(posicionDelPanel({ panel: { position: lado } })).toBe(lado);
+		for (const lado of PANEL_POSITIONS) {
+			expect(readPanelPosition({ panel: { position: lado } })).toBe(lado);
 		}
 	});
 
@@ -174,17 +174,17 @@ describe('posicionDelPanel', () => {
 		// El escritorio lee esta clave con el mismo criterio. Si acá se afirmara
 		// el tipo, esta pantalla mostraría «izquierda» y el panel seguiría
 		// arriba, que es la contradicción que ya pasó con el esquema de color.
-		expect(posicionDelPanel({ panel: { position: 'izquierda' } })).toBe('top');
-		expect(posicionDelPanel({ panel: { position: 3 } })).toBe('top');
-		expect(posicionDelPanel({ panel: 'left' })).toBe('top');
+		expect(readPanelPosition({ panel: { position: 'izquierda' } })).toBe('top');
+		expect(readPanelPosition({ panel: { position: 3 } })).toBe('top');
+		expect(readPanelPosition({ panel: 'left' })).toBe('top');
 	});
 });
 
-describe('escribirPosicionDelPanel', () => {
+describe('writePanelPosition', () => {
 	test('deja la posición elegida', () => {
 		const config: Record<string, unknown> = {};
 
-		escribirPosicionDelPanel(config, 'bottom');
+		writePanelPosition(config, 'bottom');
 
 		expect(config.panel).toEqual({ position: 'bottom' });
 	});
@@ -197,7 +197,7 @@ describe('escribirPosicionDelPanel', () => {
 			panel: { weather: false, tray: false, position: 'top' },
 		};
 
-		escribirPosicionDelPanel(config, 'left');
+		writePanelPosition(config, 'left');
 
 		expect(config.panel).toEqual({ weather: false, tray: false, position: 'left' });
 	});
