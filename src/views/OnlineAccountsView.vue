@@ -978,7 +978,7 @@ onMounted(async () => {
 							<input
 								id="custom-imap-server"
 								v-model="customForm.imapServer"
-							@input="forgetProbe"
+								@input="forgetProbe"
 								type="text"
 								placeholder="imap.example.com"
 								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
@@ -1011,7 +1011,7 @@ onMounted(async () => {
 							<input
 								id="custom-smtp-server"
 								v-model="customForm.smtpServer"
-							@input="forgetProbe"
+								@input="forgetProbe"
 								type="text"
 								placeholder="smtp.example.com"
 								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"

@@ -99,14 +99,15 @@ describe('etiquetas de formulario', () => {
 
 describe('selección de dispositivo de audio con el teclado', () => {
 	test.each(['src/views/MultimediaAudioView.vue', 'src/views/MultimediaAudioInputView.vue'])(
-		'%s: cada opción es un radio enfocable que responde a Enter y Espacio',
+		'%s: cada opción es un radio con tabulación itinerante, flechas, Enter y Espacio',
 		(file) => {
 			const html = template(join(root, file));
 			expect(html).toContain('role="radiogroup"');
 			const options = [...html.matchAll(/<li\b[^>]*role="radio"[^>]*>/g)].map((m) => m[0]);
 			expect(options).toHaveLength(1);
 			const [li] = options;
-			expect(li).toContain('tabindex="0"');
+			expect(li).toMatch(/:tabindex="radioTabIndex\(\w+Ids, \w+, device\.id\)"/);
+			expect(li).toMatch(/@keydown="onRadioArrow\(\$event, \w+Ids, device\.id, \w+\)"/);
 			expect(li).toContain(':aria-checked=');
 			const click = li.match(/@click="([^"]+)"/)?.[1];
 			expect(click).toBeTruthy();
@@ -129,8 +130,9 @@ describe('campos dentro de FormGroup', () => {
 		const html = template(join(root, file));
 		const group = html.match(new RegExp(`<FormGroup :label="([^"]+)" html-for="${id}">`));
 		expect(group).not.toBeNull();
-		expect(html).toContain(`id="${id}"\n`);
-		const field = html.slice(html.indexOf(`id="${id}"`)).split('/>')[0];
+		const at = html.search(new RegExp(`\\sid="${id}"(?=[\\s/>])`));
+		expect(at).toBeGreaterThan(-1);
+		const field = html.slice(at).split(/\/?>/)[0];
 		expect(field).toContain(`:aria-label="${group?.[1]}"`);
 	});
 });

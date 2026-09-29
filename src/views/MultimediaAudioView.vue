@@ -16,6 +16,7 @@ import {
 	toggleAudioMute,
 } from '@/services/audio.service';
 import type { AudioDevice, VolumeInfo } from '@/types/audio';
+import { onRadioArrow, radioTabIndex } from '@/utils/radio-group';
 
 const { t } = useI18n();
 
@@ -31,6 +32,7 @@ const volumeChanging = ref(false);
 
 // --- Estado Dispositivos ---
 const devices: Ref<AudioDevice[]> = ref([]);
+const deviceIds = computed(() => devices.value.map((device) => device.id));
 const selectedDeviceId = ref('');
 const devicesLoading = ref(false);
 
@@ -238,10 +240,11 @@ onUnmounted(() => {
 							: 'border-ui-border bg-ui-surface/70 hover:border-ui-border.hover hover:bg-ui-surface'"
 						role="radio"
 						:aria-checked="selectedDeviceId === device.id"
-						tabindex="0"
+						:tabindex="radioTabIndex(deviceIds, selectedDeviceId, device.id)"
 						@click="selectDevice(device.id)"
 						@keydown.enter.prevent="selectDevice(device.id)"
 						@keydown.space.prevent="selectDevice(device.id)"
+						@keydown="onRadioArrow($event, deviceIds, device.id, selectDevice)"
 					>
 						<!-- Selector Circle -->
 						<div 

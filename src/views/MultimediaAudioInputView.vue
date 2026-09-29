@@ -16,6 +16,7 @@ import {
 	toggleAudioInputMute,
 } from '@/services/audio.service';
 import type { AudioDevice, VolumeInfo } from '@/types/audio';
+import { onRadioArrow, radioTabIndex } from '@/utils/radio-group';
 
 const { t } = useI18n();
 
@@ -29,6 +30,7 @@ const currentInputVolume = ref(0);
 const inputVolumeChanging = ref(false);
 
 const inputDevices: Ref<AudioDevice[]> = ref([]);
+const inputDeviceIds = computed(() => inputDevices.value.map((device) => device.id));
 const selectedInputDeviceId = ref('');
 const inputDevicesLoading = ref(false);
 
@@ -249,10 +251,11 @@ onUnmounted(() => {
 						"
 						role="radio"
 						:aria-checked="selectedInputDeviceId === device.id"
-						tabindex="0"
+						:tabindex="radioTabIndex(inputDeviceIds, selectedInputDeviceId, device.id)"
 						@click="selectInputDevice(device.id)"
 						@keydown.enter.prevent="selectInputDevice(device.id)"
 						@keydown.space.prevent="selectInputDevice(device.id)"
+						@keydown="onRadioArrow($event, inputDeviceIds, device.id, selectInputDevice)"
 					>
 						<div
 							class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors"
