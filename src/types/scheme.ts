@@ -1,14 +1,12 @@
 /**
  * La forma de un archivo de esquema de color, tal como vive en disco.
  *
- * El paquete de npm del plugin (`~2.6.1`) tipa el esquema, pero se queda corto
- * en dos cosas que acá importan porque el editor **escribe** el archivo:
- *
- *  - `text.on-secondary`, que trae `vasak-default.json` y que `TextColors` no
- *    declara;
- *  - cualquier otra clave que alguien haya puesto a mano. El archivo es un JSON
- *    común y se puede editar con un editor de texto: lo que el modelo no conoce
- *    tiene que sobrevivir a una edición desde Configuración.
+ * El paquete de npm del plugin tipa el esquema, pero sólo con las claves que
+ * conoce, y acá importa lo demás porque el editor **escribe** el archivo:
+ * cualquier clave que alguien haya puesto a mano —el archivo es un JSON común y
+ * se puede editar con un editor de texto— tiene que sobrevivir a una edición
+ * desde Configuración. (Hasta la 2.6 tampoco declaraba `text.on-secondary`, que
+ * trae `vasak-default.json`.)
  *
  * Por eso cada nivel acepta claves de más. Las que sí se conocen están
  * nombradas para que el editor y las pruebas las usen con su tipo.

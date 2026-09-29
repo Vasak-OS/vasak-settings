@@ -55,7 +55,9 @@
   --text-on-secondary: #eff1f5;
   /* El texto sobre `bg-status-error`, que es un botón destructivo. El rojo claro
      pide texto claro (4.80) y el rosa del oscuro pide texto oscuro (7.08): el
-     blanco fijo daba 2.32 en oscuro. */
+     blanco fijo daba 2.32 en oscuro. Es el respaldo: desde la 2.9 el plugin
+     escribe `--text-on-error` calculado sobre el rojo del esquema, y con el
+     esquema por omisión da estos mismos dos. */
   --text-on-error: #eff1f5;
   --text-main-dark: #cdd6f4;
   --text-muted-dark: #a6adc8;
