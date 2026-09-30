@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { reactive } from 'vue';
 import { useCustomScheme } from '@/composables/useCustomScheme';
+import type { SchemeEntry, SchemeFile } from '@/types/scheme';
 import {
 	ANSI_COLOR_NAMES,
 	applyColorPatch,
@@ -11,8 +12,7 @@ import {
 	isHexColor,
 	measureContrast,
 	toLongHex,
-} from '@/tools/custom-scheme';
-import type { SchemeEntry, SchemeFile } from '@/types/scheme';
+} from '@/utils/custom-scheme';
 
 /**
  * El esquema «Personalizado» (Vasak-OS/vasak-settings#135): cómo se clona, cómo

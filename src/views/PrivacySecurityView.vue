@@ -51,7 +51,7 @@
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { AlertMessage, ThemeIcon } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
-import IconoDeApp from '@/components/permisos/IconoDeApp.vue';
+import AppIcon from '@/components/permissions/AppIcon.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
@@ -65,20 +65,20 @@ import {
 	type PermissionEntry,
 	setPermission,
 } from '@/services/permissions.service';
-import { groupByResource } from '@/tools/permissions-by-resource';
+import { groupByResource } from '@/utils/permissions-by-resource';
 import {
 	PRIVACY_RESOURCES,
 	type PrivacyResource,
 	resourceIcon,
 	resourceLabelKey,
-} from '@/tools/privacy-resources';
+} from '@/utils/privacy-resources';
 
 const { t } = useI18n();
 
 /**
  * El nombre de un recurso en el idioma de la sesión.
  *
- * La lista, las claves y los iconos viven en `tools/privacy-resources.ts`,
+ * La lista, las claves y los iconos viven en `utils/privacy-resources.ts`,
  * probados aparte: acá sólo se traduce. Los ids con punto (`account.email`,
  * `store.email`) no pueden ir tal cual a la clave, y el mapa de ese módulo es
  * lo que lo evita.
@@ -134,7 +134,7 @@ const load = async (refresh = false) => {
  * El servicio contesta por aplicación porque así es como decide, pero la
  * pregunta que alguien trae acá es «¿quién puede usar mi cámara?». Con la lista
  * por aplicación había que abrir una por una y recordar lo que decía la
- * anterior. La cuenta está en `tools/permissions-by-resource.ts`, probada aparte.
+ * anterior. La cuenta está en `utils/permissions-by-resource.ts`, probada aparte.
  */
 const resourceGroups = computed(() => groupByResource(entries.value, PRIVACY_RESOURCES));
 
@@ -367,7 +367,7 @@ onMounted(load);
 						:key="entry.application.binary_path"
 						class="flex flex-wrap items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 p-3"
 					>
-						<IconoDeApp :nombre="entry.application.icon" />
+						<AppIcon :name="entry.application.icon" />
 
 						<div class="min-w-0 flex-1">
 							<h3 class="truncate font-semibold text-tx-main">

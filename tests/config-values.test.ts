@@ -9,7 +9,7 @@ import {
 	writeBarPosition,
 	writePanelPosition,
 	writeScheme,
-} from '../src/tools/config-values';
+} from '../src/utils/config-values';
 
 /**
  * Las claves que el plugin de configuración transporta sin conocer llegan como
@@ -119,8 +119,8 @@ describe('readBarPosition', () => {
 	});
 
 	test('los cuatro lados se leen', () => {
-		for (const lado of BAR_POSITIONS) {
-			expect(readBarPosition({ window: { barPosition: lado } })).toBe(lado);
+		for (const side of BAR_POSITIONS) {
+			expect(readBarPosition({ window: { barPosition: side } })).toBe(side);
 		}
 	});
 
@@ -145,11 +145,11 @@ describe('writeBarPosition', () => {
 
 	test('y no se lleva puesto lo que ya hubiera en la sección', () => {
 		// `window` es una sección compartida con lo que venga después.
-		const config: Record<string, unknown> = { window: { otraCosa: 1, barPosition: 'top' } };
+		const config: Record<string, unknown> = { window: { otherKey: 1, barPosition: 'top' } };
 
 		writeBarPosition(config, 'bottom');
 
-		expect(config.window).toEqual({ otraCosa: 1, barPosition: 'bottom' });
+		expect(config.window).toEqual({ otherKey: 1, barPosition: 'bottom' });
 	});
 });
 
@@ -165,8 +165,8 @@ describe('readPanelPosition', () => {
 	});
 
 	test('los cuatro lados se leen', () => {
-		for (const lado of PANEL_POSITIONS) {
-			expect(readPanelPosition({ panel: { position: lado } })).toBe(lado);
+		for (const side of PANEL_POSITIONS) {
+			expect(readPanelPosition({ panel: { position: side } })).toBe(side);
 		}
 	});
 

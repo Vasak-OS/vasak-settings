@@ -18,7 +18,7 @@ import {
 	readPanelPosition,
 	writePanelIndicators,
 	writePanelPosition,
-} from '@/tools/config-values';
+} from '@/utils/config-values';
 
 const { t } = useI18n();
 
@@ -51,7 +51,7 @@ const privacy = ref(true);
  * reacomoda lo de adentro al recibir `config-changed`, así que moverla no pide
  * reiniciar la sesión.
  */
-const posicion = ref<PanelPosition>('top');
+const position = ref<PanelPosition>('top');
 
 onMounted(async () => {
 	try {
@@ -66,7 +66,7 @@ onMounted(async () => {
 		transfer.value = panel.transfer;
 		tray.value = panel.tray;
 		privacy.value = panel.privacy;
-		posicion.value = readPanelPosition(vskConfig.value);
+		position.value = readPanelPosition(vskConfig.value);
 	} catch (err) {
 		error.value = t('views.appearancePanel.errorLoading').replace('{0}', String(err));
 	} finally {
@@ -90,7 +90,7 @@ const saveConfig = async () => {
 			privacy: privacy.value,
 		});
 
-		writePanelPosition(vskConfig.value as unknown as Record<string, unknown>, posicion.value);
+		writePanelPosition(vskConfig.value as unknown as Record<string, unknown>, position.value);
 
 		await writeConfig(vskConfig.value);
 
@@ -151,12 +151,12 @@ const saveConfig = async () => {
 					     al lado no está asociado a nada, y un lector de pantalla
 					     anuncia un desplegable sin nombre. -->
 					<SelectField
-						v-model="posicion"
+						v-model="position"
 						:label="t('views.appearancePanel.position')"
 						class="w-48 shrink-0"
 					>
-						<option v-for="lado in PANEL_POSITIONS" :key="lado" :value="lado">
-							{{ t(`views.appearancePanel.lados.${lado}`) }}
+						<option v-for="side in PANEL_POSITIONS" :key="side" :value="side">
+							{{ t(`views.appearancePanel.lados.${side}`) }}
 						</option>
 					</SelectField>
 				</div>

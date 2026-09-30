@@ -5,7 +5,7 @@ import {
 	PANEL_INDICATORS,
 	readPanelIndicators,
 	writePanelIndicators,
-} from '../src/tools/config-values';
+} from '../src/utils/config-values';
 
 /**
  * Los interruptores de «Indicadores», y el del indicador de cámara y micrófono
@@ -18,8 +18,8 @@ import {
  * nada más que la disciplina los ata.
  */
 
-const RAIZ = join(import.meta.dir, '..');
-const VISTA = readFileSync(join(RAIZ, 'src', 'views', 'AppearancePanelView.vue'), 'utf8');
+const ROOT = join(import.meta.dir, '..');
+const VIEW = readFileSync(join(ROOT, 'src', 'views', 'AppearancePanelView.vue'), 'utf8');
 
 describe('leer los indicadores del panel', () => {
 	test('sin sección `panel`, todo se muestra', () => {
@@ -35,10 +35,10 @@ describe('leer los indicadores del panel', () => {
 	});
 
 	test('un `false` explícito apaga, y sólo ése', () => {
-		const leidos = readPanelIndicators({ panel: { privacy: false } });
+		const indicators = readPanelIndicators({ panel: { privacy: false } });
 
-		expect(leidos.privacy).toBe(false);
-		expect(leidos.tray).toBe(true);
+		expect(indicators.privacy).toBe(false);
+		expect(indicators.tray).toBe(true);
 	});
 
 	test('lo que no es booleano no apaga nada', () => {
@@ -48,8 +48,8 @@ describe('leer los indicadores del panel', () => {
 	});
 
 	test('una configuración que no es un objeto no rompe la pantalla', () => {
-		for (const basura of [null, undefined, 'panel', 42]) {
-			expect(readPanelIndicators(basura).privacy).toBe(true);
+		for (const garbage of [null, undefined, 'panel', 42]) {
+			expect(readPanelIndicators(garbage).privacy).toBe(true);
 		}
 	});
 });
@@ -70,7 +70,7 @@ describe('guardar los indicadores del panel', () => {
 	});
 
 	test('no borra las claves de la sección que no son interruptores', () => {
-		const config: Record<string, unknown> = { panel: { alto: 32 } };
+		const config: Record<string, unknown> = { panel: { height: 32 } };
 
 		writePanelIndicators(config, {
 			weather: true,
@@ -80,28 +80,28 @@ describe('guardar los indicadores del panel', () => {
 			privacy: false,
 		});
 
-		expect((config.panel as Record<string, unknown>).alto).toBe(32);
+		expect((config.panel as Record<string, unknown>).height).toBe(32);
 	});
 });
 
 describe('la pantalla usa ese camino', () => {
 	test('lee y escribe con los mismos ayudantes que se prueban acá', () => {
-		expect(VISTA).toContain('readPanelIndicators(vskConfig.value)');
-		expect(VISTA).toContain('writePanelIndicators(');
+		expect(VIEW).toContain('readPanelIndicators(vskConfig.value)');
+		expect(VIEW).toContain('writePanelIndicators(');
 	});
 
 	test('los cinco interruptores arrancan encendidos y se guardan', () => {
-		const arranques = [...VISTA.matchAll(/const (\w+) = ref\(true\);/g)].map(([, n]) => n);
+		const initiallyOn = [...VIEW.matchAll(/const (\w+) = ref\(true\);/g)].map(([, n]) => n);
 
-		for (const clave of PANEL_INDICATORS) {
-			expect(arranques).toContain(clave);
-			expect(VISTA).toContain(`${clave}: ${clave}.value,`);
+		for (const key of PANEL_INDICATORS) {
+			expect(initiallyOn).toContain(key);
+			expect(VIEW).toContain(`${key}: ${key}.value,`);
 		}
 	});
 
 	test('tiene etiqueta y explicación en los dos idiomas', () => {
-		for (const idioma of ['es', 'en']) {
-			const yml = readFileSync(join(RAIZ, 'src-tauri', 'locales', `${idioma}.yml`), 'utf8');
+		for (const language of ['es', 'en']) {
+			const yml = readFileSync(join(ROOT, 'src-tauri', 'locales', `${language}.yml`), 'utf8');
 
 			expect(yml).toContain('    privacy: ');
 			expect(yml).toContain('    privacyHint: ');

@@ -21,7 +21,7 @@
  * `goa-account-*-symbolic`, que es el vocabulario que ya usaba GNOME Online
  * Accounts.
  */
-export const iconoDe = (id: string): string => `${id}-symbolic`;
+export const symbolNameFor = (id: string): string => `${id}-symbolic`;
 
 /**
  * El icono de «una cuenta», sin decir de quién.
@@ -29,10 +29,10 @@ export const iconoDe = (id: string): string => `${id}-symbolic`;
  * Es a lo que se cae cuando el proveedor no tiene el suyo. Dice menos que el
  * logo, pero dice algo cierto, y sobre todo no dice «acá se rompió algo».
  */
-export const ICONO_GENERICO = 'goa-account-symbolic';
+export const GENERIC_ICON = 'goa-account-symbolic';
 
 /** Con qué se pregunta si el tema tiene un nombre. `hasSymbol`, en la aplicación. */
-export type Existe = (nombre: string) => Promise<boolean>;
+export type SymbolExists = (name: string) => Promise<boolean>;
 
 /**
  * Qué nombre de icono le corresponde a cada proveedor.
@@ -47,26 +47,26 @@ export type Existe = (nombre: string) => Promise<boolean>;
  * pack completo es nunca. Antes se resolvía siempre, aunque no hiciera falta.
  *
  * @param ids Los `id` de proveedor que dio el servicio de cuentas.
- * @param existe Con qué preguntarle al tema, normalmente `hasSymbol`.
+ * @param exists Con qué preguntarle al tema, normalmente `hasSymbol`.
  * @returns Un nombre por proveedor. Los que no tienen ninguno no aparecen.
  */
-export async function nombresDeIconos(
+export async function pickIconNames(
 	ids: string[],
-	existe: Existe
+	exists: SymbolExists
 ): Promise<Record<string, string>> {
-	const propios = await Promise.all(
-		ids.map(async (id) => [id, (await existe(iconoDe(id))) ? iconoDe(id) : ''] as const)
+	const own = await Promise.all(
+		ids.map(async (id) => [id, (await exists(symbolNameFor(id))) ? symbolNameFor(id) : ''] as const)
 	);
 
-	const generico =
-		propios.some(([, nombre]) => !nombre) && (await existe(ICONO_GENERICO)) ? ICONO_GENERICO : '';
+	const fallback =
+		own.some(([, name]) => !name) && (await exists(GENERIC_ICON)) ? GENERIC_ICON : '';
 
-	const nombres: Record<string, string> = {};
-	for (const [id, propio] of propios) {
-		const nombre = propio || generico;
-		if (nombre) nombres[id] = nombre;
+	const names: Record<string, string> = {};
+	for (const [id, ownName] of own) {
+		const name = ownName || fallback;
+		if (name) names[id] = name;
 	}
-	return nombres;
+	return names;
 }
 
 /**
@@ -74,9 +74,9 @@ export async function nombresDeIconos(
  *
  * Va acá y no en la vista porque es donde se puede probar, y porque lo que hace
  * no tiene nada de visual: elegir el nombre de cada uno con
- * {@link nombresDeIconos} y después pedir sólo ésos.
+ * {@link pickIconNames} y después pedir sólo ésos.
  *
- * Recibe `pedir` y `existe` en vez de importar el plugin de iconos por lo
+ * Recibe `fetchSymbol` y `exists` en vez de importar el plugin de iconos por lo
  * mismo: así la prueba contesta lo que quiere sin levantar Tauri.
  *
  * No devuelve entradas vacías: la vista dibuja el icono sólo si el proveedor
@@ -84,25 +84,25 @@ export async function nombresDeIconos(
  * mejor que haya una sola forma de decirlo.
  *
  * @param ids Los `id` de proveedor que dio el servicio de cuentas.
- * @param pedir Cómo se resuelve un nombre de icono, normalmente `getSymbolSource`.
- * @param existe Cómo se pregunta si el tema lo tiene, normalmente `hasSymbol`.
+ * @param fetchSymbol Cómo se resuelve un nombre de icono, normalmente `getSymbolSource`.
+ * @param exists Cómo se pregunta si el tema lo tiene, normalmente `hasSymbol`.
  */
-export async function resolverIconosDeProveedores(
+export async function resolveProviderIcons(
 	ids: string[],
-	pedir: (nombre: string) => Promise<string>,
-	existe: Existe
+	fetchSymbol: (name: string) => Promise<string>,
+	exists: SymbolExists
 ): Promise<Record<string, string>> {
-	const nombres = await nombresDeIconos(ids, existe);
+	const names = await pickIconNames(ids, exists);
 
-	const iconos: Record<string, string> = {};
+	const icons: Record<string, string> = {};
 	await Promise.all(
-		Object.entries(nombres).map(async ([id, nombre]) => {
-			const icono = await pedir(nombre);
-			if (icono) iconos[id] = icono;
+		Object.entries(names).map(async ([id, name]) => {
+			const icon = await fetchSymbol(name);
+			if (icon) icons[id] = icon;
 		})
 	);
 
-	return iconos;
+	return icons;
 }
 
 /**
@@ -117,7 +117,7 @@ export async function resolverIconosDeProveedores(
  * Son nombres del tema, no logos: la capacidad es el tipo de dato, no el
  * proveedor. El sobre vale para el correo de Google y para el de Disroot.
  */
-export const ICONO_DE_CAPACIDAD: Record<string, string> = {
+export const CAPABILITY_ICONS: Record<string, string> = {
 	email: 'internet-mail',
 	calendar: 'office-calendar',
 	contacts: 'x-office-address-book',

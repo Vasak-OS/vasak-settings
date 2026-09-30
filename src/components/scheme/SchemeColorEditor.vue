@@ -9,19 +9,19 @@
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { computed, nextTick, ref } from 'vue';
 import ColorSwatch from '@/components/scheme/ColorSwatch.vue';
-import {
-	ANSI_COLOR_NAMES,
-	formatContrast,
-	MINIMUM_TEXT_CONTRAST,
-	measureContrast,
-	SCHEME_VARIANTS,
-} from '@/tools/custom-scheme';
 import type {
 	SchemeColorPatch,
 	SchemeFile,
 	SchemeVariantColors,
 	SchemeVariantName,
 } from '@/types/scheme';
+import {
+	ANSI_COLOR_NAMES,
+	formatContrast,
+	MINIMUM_TEXT_CONTRAST,
+	measureContrast,
+	SCHEME_VARIANTS,
+} from '@/utils/custom-scheme';
 
 interface Props {
 	scheme: SchemeFile;

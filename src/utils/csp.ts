@@ -18,7 +18,7 @@
  * No son direcciones, así que no se sanean: se dejan tal cual porque son la
  * información útil del aviso.
  */
-export const MARCADORES_CSP = new Set([
+export const CSP_KEYWORDS = new Set([
 	'inline',
 	'eval',
 	'wasm-eval',
@@ -44,7 +44,7 @@ export const MARCADORES_CSP = new Set([
  * otra URL entera —`blob:https://usuario:token@sitio/x`— y esa no la ve
  * `new URL` como autoridad suya.
  */
-const ESQUEMAS_CON_RUTA = new Set([
+const HIERARCHICAL_SCHEMES = new Set([
 	'http:',
 	'https:',
 	'ws:',
@@ -65,7 +65,7 @@ const ESQUEMAS_CON_RUTA = new Set([
  * pueden llevar credenciales porque la especificación no se lo permite.
  * Recortarlas perdería la ruta, que es justo lo que sirve para depurar.
  */
-function esJerarquica(url: URL): boolean {
+function isHierarchical(url: URL): boolean {
 	return url.host !== '' || url.protocol === 'file:';
 }
 
@@ -76,12 +76,12 @@ function esJerarquica(url: URL): boolean {
  * Mirar sólo si hay un `@` no serviría: una ruta relativa como
  * `/assets/@vite/client.js` tiene uno y es de las más comunes que hay.
  */
-const CON_AUTORIDAD = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i;
+const HAS_AUTHORITY = /^(?:[a-z][a-z0-9+.-]*:)?\/\//i;
 
 /** Un esquema inventado para poder parsear una URL sin esquema propio. */
-const ESQUEMA_PRESTADO = 'https:';
+const BORROWED_SCHEME = 'https:';
 
-function sinCredenciales(url: URL): URL {
+function stripCredentials(url: URL): URL {
 	url.username = '';
 	url.password = '';
 	url.search = '';
@@ -97,27 +97,27 @@ function sinCredenciales(url: URL): URL {
  * su texto de reserva **después** de llamar acá y no antes: una entrada como
  * `?token=X` no es vacía, pero lo que queda de ella sí.
  */
-export function sanearUrl(valor: string | null | undefined): string {
-	if (!valor) {
+export function sanitizeUrl(value: string | null | undefined): string {
+	if (!value) {
 		return '';
 	}
 
-	if (MARCADORES_CSP.has(valor)) {
-		return valor;
+	if (CSP_KEYWORDS.has(value)) {
+		return value;
 	}
 
 	// Relativas al protocolo: `//usuario:token@sitio/x`. `new URL` sin base las
 	// rechaza, y la versión anterior caía a cortar por `?` y `#`, que deja
 	// `usuario:token@` intacto. Se parsean con un esquema prestado y se
 	// devuelven en la misma forma en que llegaron.
-	if (valor.startsWith('//')) {
+	if (value.startsWith('//')) {
 		try {
-			const url = sinCredenciales(new URL(`${ESQUEMA_PRESTADO}${valor}`));
+			const url = stripCredentials(new URL(`${BORROWED_SCHEME}${value}`));
 			// `new URL` completa una ruta ausente con «/», y eso cambia la forma
 			// de lo que llegó: `//sitio` volvía como `//sitio/`. Se devuelve
 			// como vino.
-			const sinRuta = url.pathname === '/' && !valor.split(/[?#]/)[0].endsWith('/');
-			return sinRuta ? `//${url.host}` : `//${url.host}${url.pathname}`;
+			const hadNoPath = url.pathname === '/' && !value.split(/[?#]/)[0].endsWith('/');
+			return hadNoPath ? `//${url.host}` : `//${url.host}${url.pathname}`;
 		} catch {
 			// Ni con esquema prestado. No se cae al respaldo: lo que declara una
 			// autoridad puede llevar credenciales, y el respaldo sólo corta la
@@ -127,15 +127,15 @@ export function sanearUrl(valor: string | null | undefined): string {
 	}
 
 	try {
-		const url = new URL(valor);
-		if (!ESQUEMAS_CON_RUTA.has(url.protocol) || !esJerarquica(url)) {
+		const url = new URL(value);
+		if (!HIERARCHICAL_SCHEMES.has(url.protocol) || !isHierarchical(url)) {
 			return `${url.protocol}(recortado)`;
 		}
-		return sinCredenciales(url).href;
+		return stripCredentials(url).href;
 	} catch {
 		// Sin autoridad no puede haber credenciales —requieren una— así que
 		// alcanza con quitar la query y el fragmento. Con autoridad no se
 		// arriesga: si no se pudo parsear, no se registra.
-		return CON_AUTORIDAD.test(valor) ? '' : valor.split(/[?#]/)[0];
+		return HAS_AUTHORITY.test(value) ? '' : value.split(/[?#]/)[0];
 	}
 }

@@ -126,33 +126,33 @@ describe('connectionBlocker', () => {
  * Y que la vista los use, que es lo que las funciones solas no dicen.
  *
  * Se mira el texto y no se monta la vista a propósito: montarla pide doblar
- * `@tauri-apps/api/core`, y `iconos-reactivos.test.ts` ya lo dobla. Dos
+ * `@tauri-apps/api/core`, y `reactive-icons.test.ts` ya lo dobla. Dos
  * `mock.module` del mismo módulo dan verde o rojo según el orden en que Bun
  * evalúe los archivos. Lo que se vigila es la regresión concreta: volver a
  * mandar `provider.capabilities` entero, o dibujar el nombre crudo de una
  * capacidad sin su «todavía no disponible».
  */
 describe('la vista de Cuentas en Línea', () => {
-	const VISTA = fileURLToPath(new URL('../src/views/OnlineAccountsView.vue', import.meta.url));
+	const VIEW = fileURLToPath(new URL('../src/views/OnlineAccountsView.vue', import.meta.url));
 
 	test('pide sólo las capacidades disponibles', async () => {
-		const texto = await Bun.file(VISTA).text();
-		const llamada = texto.match(/connectOauthAccount\(([^)]*\))[^)]*\)/)?.[0] ?? '';
+		const text = await Bun.file(VIEW).text();
+		const call = text.match(/connectOauthAccount\(([^)]*\))[^)]*\)/)?.[0] ?? '';
 
-		expect(llamada).toContain('requestedCapabilities(provider)');
-		expect(llamada).not.toContain('provider.capabilities');
+		expect(call).toContain('requestedCapabilities(provider)');
+		expect(call).not.toContain('provider.capabilities');
 	});
 
 	test('las dos listas de capacidades pasan por el texto que avisa', async () => {
-		const texto = await Bun.file(VISTA).text();
-		const plantilla = texto.slice(texto.indexOf('<template>'));
+		const text = await Bun.file(VIEW).text();
+		const template = text.slice(text.indexOf('<template>'));
 
-		expect(plantilla.match(/capabilityLabel\((account|provider), c\)/g)).toEqual([
+		expect(template.match(/capabilityLabel\((account|provider), c\)/g)).toEqual([
 			'capabilityLabel(account, c)',
 			'capabilityLabel(provider, c)',
 		]);
 		// El autodescubrimiento de DAV sí nombra la capacidad cruda, y está bien:
 		// ahí no hay proveedor que la tenga apagada.
-		expect(plantilla).not.toMatch(/views\.onlineAccounts\.capabilities\.\$\{c\}/);
+		expect(template).not.toMatch(/views\.onlineAccounts\.capabilities\.\$\{c\}/);
 	});
 });

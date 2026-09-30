@@ -28,7 +28,7 @@ import {
 	type BarPosition,
 	readBarPosition,
 	writeBarPosition,
-} from '@/tools/config-values';
+} from '@/utils/config-values';
 
 const { t } = useI18n();
 
@@ -38,13 +38,13 @@ const error = ref('');
 const successMessage = ref('');
 
 const vskConfig: Ref<VSKConfig | null> = ref(null);
-const posicion = ref<BarPosition>('top');
+const position = ref<BarPosition>('top');
 
 onMounted(async () => {
 	try {
 		await useConfigStore().loadConfig();
 		vskConfig.value = await readConfig();
-		posicion.value = readBarPosition(vskConfig.value);
+		position.value = readBarPosition(vskConfig.value);
 	} catch (err) {
 		error.value = t('views.appearanceWindows.errorLoading').replace('{0}', String(err));
 	} finally {
@@ -60,7 +60,7 @@ const saveConfig = async () => {
 	try {
 		if (!vskConfig.value) return;
 
-		writeBarPosition(vskConfig.value as unknown as Record<string, unknown>, posicion.value);
+		writeBarPosition(vskConfig.value as unknown as Record<string, unknown>, position.value);
 		await writeConfig(vskConfig.value);
 
 		successMessage.value = t('views.appearanceWindows.saved');
@@ -117,12 +117,12 @@ const saveConfig = async () => {
 					     al lado no está asociado a nada, y un lector de pantalla
 					     anuncia un desplegable sin nombre. -->
 					<SelectField
-						v-model="posicion"
+						v-model="position"
 						:label="t('views.appearanceWindows.barPosition')"
 						class="w-48 shrink-0"
 					>
-						<option v-for="lado in BAR_POSITIONS" :key="lado" :value="lado">
-							{{ t(`views.appearanceWindows.lados.${lado}`) }}
+						<option v-for="side in BAR_POSITIONS" :key="side" :value="side">
+							{{ t(`views.appearanceWindows.lados.${side}`) }}
 						</option>
 					</SelectField>
 				</div>

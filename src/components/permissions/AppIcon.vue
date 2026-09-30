@@ -22,16 +22,18 @@
  */
 import { ThemeIcon } from '@vasakgroup/vue-libvasak';
 
-defineProps<{
+interface Props {
 	/** El nombre del icono, ya resuelto por el backend desde el `.desktop`. */
-	nombre: string;
-}>();
+	name: string;
+}
+
+defineProps<Props>();
 </script>
 
 <template>
 	<span
 		class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-corner-sm border border-ui-border bg-ui-bg/60"
 	>
-		<ThemeIcon :name="nombre" :size="28" />
+		<ThemeIcon :name="name" :size="28" />
 	</span>
 </template>
