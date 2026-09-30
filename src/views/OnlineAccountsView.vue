@@ -317,6 +317,13 @@ const credentialsError = ref('');
  * que volver a la consola del proveedor a sacar otras.
  */
 const confirmingClear = ref(false);
+const clearingCredentials = ref(false);
+/**
+ * Si hay un guardado o un borrado de credenciales en curso. Mientras dura, no se
+ * abre el formulario de otro proveedor: al terminar, el de éste se cierra, y se
+ * llevaría puesto el otro con lo que la persona ya había escrito.
+ */
+const credentialsBusy = computed(() => savingCredentials.value || clearingCredentials.value);
 
 const openCredentials = (provider: ProviderInfo) => {
 	errors.value = '';
@@ -347,7 +354,7 @@ const saveCredentials = async () => {
 			credentialsForm.clientId,
 			credentialsForm.clientSecret
 		);
-		credentialsFor.value = null;
+		if (credentialsFor.value?.id === provider.id) credentialsFor.value = null;
 		// El catálogo cambió: ese proveedor pasa a estar listo, y el botón se
 		// tiene que encender sin que haya que volver a entrar a la pantalla.
 		await fetchProviders();
@@ -365,22 +372,27 @@ const saveCredentials = async () => {
 const clearCredentials = async (provider: ProviderInfo) => {
 	credentialsError.value = '';
 	success.value = '';
+	clearingCredentials.value = true;
 	try {
 		await clearProviderCredentials(provider.id);
-		credentialsFor.value = null;
-		confirmingClear.value = false;
-		await fetchProviders();
+		if (credentialsFor.value?.id === provider.id) {
+			credentialsFor.value = null;
+			confirmingClear.value = false;
+		}
+		const refreshed = await fetchProviders();
 		// Las que se borran son las propias: si el proveedor sigue listo, tiene
 		// unas del sistema, y «quitadas» a secas haría creer que ya no se puede
 		// conectar nada nuevo con él.
 		const after = providers.value.find((p) => p.id === provider.id);
 		const key =
-			clearOutcome(after) === 'systemRemains'
+			clearOutcome(after, refreshed) === 'systemRemains'
 				? 'views.onlineAccounts.credentials.clearedSystemRemains'
 				: 'views.onlineAccounts.credentials.cleared';
 		success.value = t(key).replace('{0}', provider.display_name);
 	} catch (err) {
 		credentialsError.value = String(err);
+	} finally {
+		clearingCredentials.value = false;
 	}
 };
 
@@ -645,15 +657,22 @@ const deleteAccount = async (account: AccountInfo) => {
 	}
 };
 
-const fetchProviders = async () => {
+/**
+ * Relee el catálogo. Devuelve si lo pudo releer: quien acaba de cambiar algo
+ * necesita saber si lo que ve después es el catálogo nuevo o el de antes.
+ */
+const fetchProviders = async (): Promise<boolean> => {
+	let refreshed = false;
 	try {
 		providers.value = await listProviders();
+		refreshed = true;
 		await resolverIconos();
 	} catch (err) {
 		// El catálogo no es imprescindible para ver las cuentas que ya están, así
 		// que el fallo se cuenta y la pantalla sigue sirviendo.
 		errors.value = t('views.onlineAccounts.errors.loadProviders').replace('{0}', String(err));
 	}
+	return refreshed;
 };
 
 /**
@@ -814,13 +833,15 @@ onMounted(async () => {
 					</p>
 					<div class="mt-2 flex gap-2">
 						<button
-							class="rounded-corner bg-status-error px-4 py-2 text-sm font-medium text-tx-on-error"
+							:disabled="clearingCredentials"
+							class="rounded-corner bg-status-error px-4 py-2 text-sm font-medium text-tx-on-error disabled:opacity-50"
 							@click="clearCredentials(credentialsFor)"
 						>
 							{{ t('views.onlineAccounts.credentials.clearConfirmAction') }}
 						</button>
 						<button
-							class="rounded-corner border border-ui-border px-4 py-2 text-sm text-tx-main"
+							:disabled="clearingCredentials"
+							class="rounded-corner border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
 							@click="confirmingClear = false"
 						>
 							{{ t('common.cancel') }}
@@ -954,7 +975,7 @@ onMounted(async () => {
 					     (Vasak-OS/vasak-settings#132). -->
 					<button
 						v-if="canManageCredentials(provider)"
-						:disabled="loading"
+						:disabled="loading || credentialsBusy"
 						class="self-center rounded-corner px-2 py-1 text-xs text-tx-muted transition-colors hover:text-tx-main disabled:opacity-50"
 						@click="openCredentials(provider)"
 					>

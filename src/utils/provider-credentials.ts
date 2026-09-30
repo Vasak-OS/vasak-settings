@@ -25,11 +25,16 @@ export const canManageCredentials = (provider: Pick<ProviderInfo, 'kind' | 'conf
  *
  * El servicio de cuentas borra sólo las **propias**. Si el proveedor sigue
  * listo después, es porque tiene unas del sistema —las que un administrador
- * dejó en `/etc`—, y decir «quitadas» a secas haría creer que ya no se pueden
- * conectar cuentas nuevas con él.
+ * dejó en `/etc/vasak-accounts/providers.d/`—, y decir «quitadas» a secas haría
+ * creer que ya no se pueden conectar cuentas nuevas con él.
  *
- * `after` es el proveedor releído del catálogo, o `undefined` si ya no está.
+ * `after` es el proveedor en el catálogo, o `undefined` si ya no está.
+ * `refreshed` es si ese catálogo se releyó después de quitar: si la relectura
+ * falló, lo que hay es el de antes —donde el proveedor estaba listo, por eso se
+ * pudo quitar— y no dice nada de lo que quedó. Ahí se dice lo que sí se sabe:
+ * que se quitaron las propias.
  */
 export const clearOutcome = (
-	after: Pick<ProviderInfo, 'configured'> | undefined
-): 'cleared' | 'systemRemains' => (after?.configured ? 'systemRemains' : 'cleared');
+	after: Pick<ProviderInfo, 'configured'> | undefined,
+	refreshed: boolean
+): 'cleared' | 'systemRemains' => (refreshed && after?.configured ? 'systemRemains' : 'cleared');
