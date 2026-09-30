@@ -1,7 +1,8 @@
 <script lang="ts" setup>
-import { listen } from '@tauri-apps/api/event';
+import { type Event, listen } from '@tauri-apps/api/event';
 import {
 	type AdapterInfo,
+	type BluetoothChange,
 	connectDevice,
 	type DeviceInfo,
 	disconnectDevice,
@@ -17,6 +18,7 @@ import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
+import { shouldRefresh } from '@/utils/bluetooth-change';
 import { deviceCardProps } from '@/utils/bluetooth-device-card';
 
 const { t } = useI18n();
@@ -107,7 +109,7 @@ const scanDevices = async () => {
 	}
 };
 
-const connect = async (device: any) => {
+const connect = async (device: DeviceInfo) => {
 	try {
 		await connectDevice(device.path);
 	} catch (err) {
@@ -117,7 +119,7 @@ const connect = async (device: any) => {
 	}
 };
 
-const disconnect = async (device: any) => {
+const disconnect = async (device: DeviceInfo) => {
 	try {
 		await disconnectDevice(device.path);
 	} catch (err) {
@@ -126,24 +128,18 @@ const disconnect = async (device: any) => {
 };
 
 // --- Manejo unificado de eventos de sistema ---
-// Para mantener la UI rápida reconstruimos las listas cuando hay un evento
-const handleBluetoothChange = async (event: any) => {
-	const { change_type } = event.payload;
-	// Refrescar el estado de forma general cuando cambia alguna propiedad local
-	if (
-		change_type === 'adapter-property-changed' ||
-		change_type === 'device-added' ||
-		change_type === 'device-removed' ||
-		change_type === 'device-connected' ||
-		change_type === 'device-disconnected'
-	) {
+// Para mantener la UI rápida reconstruimos las listas cuando hay un evento. Qué
+// cambios refrescan lo decide `shouldRefresh`, que lee `changeType` y no el
+// nombre viejo, que el complemento va a sacar.
+const handleBluetoothChange = async (event: Event<BluetoothChange>) => {
+	if (shouldRefresh(event.payload)) {
 		await refreshDevices();
 	}
 };
 
 onMounted(async () => {
 	await refreshDevices();
-	unlistenBluetooth = await listen('bluetooth-change', handleBluetoothChange);
+	unlistenBluetooth = await listen<BluetoothChange>('bluetooth-change', handleBluetoothChange);
 });
 
 onUnmounted(() => {
