@@ -9,7 +9,7 @@ import {
 	writeBarPosition,
 	writePanelPosition,
 	writeScheme,
-} from '../src/tools/config-values';
+} from '../src/utils/config-values';
 
 /**
  * Las claves que el plugin de configuración transporta sin conocer llegan como

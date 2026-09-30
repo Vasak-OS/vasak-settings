@@ -28,7 +28,7 @@ import {
 	type BarPosition,
 	readBarPosition,
 	writeBarPosition,
-} from '@/tools/config-values';
+} from '@/utils/config-values';
 
 const { t } = useI18n();
 

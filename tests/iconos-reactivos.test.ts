@@ -134,7 +134,7 @@ describe('el composable de iconos propio', () => {
 describe('quién resuelve iconos a mano', () => {
 	test('sólo los dos que no pueden hacerlo de otra forma', async () => {
 		// Lo que cuenta es **importar** el complemento o escuchar el evento, no
-		// nombrarlos. `tools/icono-de-proveedor.ts` recibe el resolvedor como
+		// nombrarlos. `utils/provider-icon.ts` recibe el resolvedor como
 		// parámetro —por eso se puede probar sin arrastrar Vue— y lo nombra en un
 		// `@param`: buscando el nombre a secas aparecía como culpable.
 		const aMano: string[] = [];

@@ -7,7 +7,7 @@ import { createPinia } from 'pinia';
 import { createApp } from 'vue';
 import App from '@/App.vue';
 import { router } from '@/routes';
-import { sanearUrl } from '@/tools/csp';
+import { sanitizeUrl } from '@/utils/csp';
 import '@/assets/main.css';
 import { captureFailures } from '@vasakgroup/plugin-vsk-journal';
 
@@ -31,8 +31,8 @@ document.addEventListener('securitypolicyviolation', (evento) => {
 	// nada, así que el registro salía con el campo en blanco. Sanear
 	// primero y decidir después es lo que hace que un aviso incompleto no
 	// exista.
-	const recurso = sanearUrl(evento.blockedURI) || '(en línea)';
-	const origen = sanearUrl(evento.sourceFile) || 'documento';
+	const recurso = sanitizeUrl(evento.blockedURI) || '(en línea)';
+	const origen = sanitizeUrl(evento.sourceFile) || 'documento';
 	console.error(
 		`[CSP] bloqueado ${recurso} por la directiva ` +
 			`«${evento.violatedDirective}» en ${origen}:${evento.lineNumber}`

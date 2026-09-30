@@ -7,7 +7,7 @@ import {
 	RESOURCE_LABEL_KEYS,
 	resourceIcon,
 	resourceLabelKey,
-} from '../src/tools/privacy-resources';
+} from '../src/utils/privacy-resources';
 
 /**
  * Que cada recurso de «Privacidad y seguridad» tenga su nombre traducido.
@@ -23,7 +23,7 @@ import {
  * del mapa— baja a una clave que no existe. Ya había costado eso una vez.
  *
  * Antes esta prueba leía la vista con expresiones regulares; ahora la lista y
- * los mapas viven en `tools/privacy-resources.ts` y se importan, así que un
+ * los mapas viven en `utils/privacy-resources.ts` y se importan, así que un
  * cambio de formato en la vista ya no deja la prueba mirando nada.
  */
 
@@ -153,7 +153,7 @@ describe('los recursos de privacidad', () => {
 	test('la vista usa la lista y los mapas compartidos', () => {
 		// Si la vista vuelve a declarar su propia lista, las pruebas de arriba
 		// siguen verdes mirando una copia que nadie dibuja.
-		expect(VIEW).toContain("from '@/tools/privacy-resources'");
+		expect(VIEW).toContain("from '@/utils/privacy-resources'");
 		expect(VIEW).toContain('resourceLabelKey(');
 		expect(VIEW).not.toMatch(/const RESOURCES = \[/);
 	});

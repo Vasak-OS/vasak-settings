@@ -14,7 +14,7 @@
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { AlertMessage, FormGroup } from '@vasakgroup/vue-libvasak';
 import { onMounted, ref } from 'vue';
-import IconoDeApp from '@/components/permisos/IconoDeApp.vue';
+import AppIcon from '@/components/permissions/AppIcon.vue';
 import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
@@ -146,7 +146,7 @@ async function elegir(fila: Fila, id: string) {
 		<SectionCard v-else>
 			<div class="flex flex-col gap-5">
 				<div v-for="fila in filas" :key="fila.categoria.id" class="flex items-center gap-4">
-					<IconoDeApp :nombre="iconoDe(fila) || fila.categoria.icono" />
+					<AppIcon :name="iconoDe(fila) || fila.categoria.icono" />
 
 					<FormGroup
 						:label="t(`views.defaultApps.categorias.${fila.categoria.id}`)"

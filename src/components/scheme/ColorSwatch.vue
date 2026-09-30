@@ -8,7 +8,7 @@
  * se emite**, así que un valor a medio escribir nunca llega al archivo.
  */
 import { computed, ref, watch } from 'vue';
-import { isHexColor, toLongHex } from '@/tools/custom-scheme';
+import { isHexColor, toLongHex } from '@/utils/custom-scheme';
 
 interface Props {
 	/** El id del campo de texto; el selector lleva el mismo con `-picker`. */

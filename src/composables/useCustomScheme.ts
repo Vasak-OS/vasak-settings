@@ -15,13 +15,13 @@
 
 import { type Ref, ref, shallowRef } from 'vue';
 import { saveUserScheme } from '@/services/scheme.service';
+import type { SchemeColorPatch, SchemeEntry, SchemeFile, SchemeVariantName } from '@/types/scheme';
 import {
 	applyColorPatch,
 	type CloneIdentity,
 	cloneAsCustom,
 	cloneScheme,
-} from '@/tools/custom-scheme';
-import type { SchemeColorPatch, SchemeEntry, SchemeFile, SchemeVariantName } from '@/types/scheme';
+} from '@/utils/custom-scheme';
 
 /** Cuánto se espera sin cambios antes de guardar. */
 export const SAVE_DELAY_MS = 400;

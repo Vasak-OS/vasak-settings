@@ -78,7 +78,7 @@ describe('la pantalla de las ventanas', () => {
 
 	test('escribe con el mismo ayudante que se prueba aparte', () => {
 		// La lógica —qué se considera una posición válida, y no pisar lo que ya
-		// hubiera en la sección— vive en `tools/config-values`, que se
+		// hubiera en la sección— vive en `utils/config-values`, que se
 		// prueba sin montar nada.
 		expect(pantalla).toContain('writeBarPosition');
 		expect(pantalla).toContain('readBarPosition');

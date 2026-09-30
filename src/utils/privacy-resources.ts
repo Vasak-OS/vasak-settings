@@ -9,7 +9,7 @@
  * y la pantalla sigue viéndose bien.
  */
 
-import { ICONO_DE_CAPACIDAD } from '@/tools/icono-de-proveedor';
+import { CAPABILITY_ICONS } from '@/utils/provider-icon';
 
 /**
  * Lo que se puede decidir desde esta pantalla, en el orden en que se muestra.
@@ -104,12 +104,12 @@ export const RESOURCE_ICONS: Readonly<Record<string, string>> = {
 	// llega a la cuenta o se lee lo guardado en el equipo. Dos tablas se separan
 	// y la misma cosa termina dibujada distinta según por dónde se entre.
 	...Object.fromEntries(
-		Object.entries(ICONO_DE_CAPACIDAD).map(([capability, icon]) => [`account.${capability}`, icon])
+		Object.entries(CAPABILITY_ICONS).map(([capability, icon]) => [`account.${capability}`, icon])
 	),
 	...Object.fromEntries(
 		(['email', 'calendar', 'contacts'] as const).map((capability) => [
 			`store.${capability}`,
-			ICONO_DE_CAPACIDAD[capability],
+			CAPABILITY_ICONS[capability],
 		])
 	),
 };

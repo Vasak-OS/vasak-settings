@@ -27,9 +27,9 @@ import {
 	setSystemConfig,
 } from '@/services/style.service';
 import { getCurrentUserName } from '@/services/users.service';
-import { clearStyle, SCHEME_KEY, writeScheme } from '@/tools/config-values';
-import { CUSTOM_SCHEME_ID } from '@/tools/custom-scheme';
 import type { SchemeEntry, SchemeFile, SchemeVariantColors } from '@/types/scheme';
+import { clearStyle, SCHEME_KEY, writeScheme } from '@/utils/config-values';
+import { CUSTOM_SCHEME_ID } from '@/utils/custom-scheme';
 
 interface SchemePreviewValue {
 	label: string;

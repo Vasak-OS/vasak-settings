@@ -15,7 +15,7 @@ import PageHeader from '@/components/ui/PageHeader.vue';
 import ProgressBar from '@/components/ui/ProgressBar.vue';
 import SectionCard from '@/components/ui/SectionCard.vue';
 import { getOfficialWallpapers } from '@/services/style.service';
-import { configBoolean } from '@/tools/config-values';
+import { configBoolean } from '@/utils/config-values';
 
 const { t } = useI18n();
 

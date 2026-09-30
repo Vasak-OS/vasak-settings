@@ -1,16 +1,16 @@
 import { describe, expect, test } from 'bun:test';
-import { MARCADORES_CSP, sanearUrl } from '../src/tools/csp';
+import { CSP_KEYWORDS, sanitizeUrl } from '../src/utils/csp';
 
 /**
  * Lo que se registra al bloquearse un recurso es una URL que eligió otro, y las
  * URL llevan credenciales. Lo que estas pruebas cuidan es que ninguna termine
  * en el diario.
  */
-describe('sanearUrl', () => {
+describe('sanitizeUrl', () => {
 	test('una URL relativa al protocolo no deja pasar las credenciales', () => {
 		// El caso reportado: `new URL` sin base rechaza estas direcciones, y la
 		// versión anterior caía a cortar por `?` y `#`, que deja el token.
-		const limpia = sanearUrl('//user:token@example.test/path?access_token=secret#frag');
+		const limpia = sanitizeUrl('//user:token@example.test/path?access_token=secret#frag');
 
 		for (const secreto of ['user', 'token', 'access_token', 'secret', 'frag']) {
 			expect(limpia).not.toContain(secreto);
@@ -19,8 +19,8 @@ describe('sanearUrl', () => {
 	});
 
 	test('y sin credenciales conserva el sitio y la ruta', () => {
-		expect(sanearUrl('//example.test/path')).toBe('//example.test/path');
-		expect(sanearUrl('//example.test/a/b.js?x=1')).toBe('//example.test/a/b.js');
+		expect(sanitizeUrl('//example.test/path')).toBe('//example.test/path');
+		expect(sanitizeUrl('//example.test/a/b.js?x=1')).toBe('//example.test/a/b.js');
 	});
 
 	/**
@@ -31,13 +31,13 @@ describe('sanearUrl', () => {
 	 * el token entero en `href`. O sea que también filtraba por la rama buena.
 	 */
 	test('un esquema opaco no deja pasar lo que lleva adentro', () => {
-		const limpia = sanearUrl('user:token@example.test/path');
+		const limpia = sanitizeUrl('user:token@example.test/path');
 		expect(limpia).not.toContain('token');
 		expect(limpia).toBe('user:(recortado)');
 	});
 
 	test('las credenciales de una URL absoluta tampoco', () => {
-		const limpia = sanearUrl('https://user:token@example.test/p?x=1#f');
+		const limpia = sanitizeUrl('https://user:token@example.test/p?x=1#f');
 		for (const secreto of ['user', 'token', 'x=1', '#f']) {
 			expect(limpia).not.toContain(secreto);
 		}
@@ -45,8 +45,8 @@ describe('sanearUrl', () => {
 	});
 
 	test('los marcadores de la especificación se dejan tal cual', () => {
-		for (const marcador of MARCADORES_CSP) {
-			expect(sanearUrl(marcador)).toBe(marcador);
+		for (const marcador of CSP_KEYWORDS) {
+			expect(sanitizeUrl(marcador)).toBe(marcador);
 		}
 	});
 
@@ -56,13 +56,13 @@ describe('sanearUrl', () => {
 	 * casi igual.
 	 */
 	test('una URL de datos se recorta pero se sigue sabiendo que lo era', () => {
-		expect(sanearUrl('data:text/html;base64,UEFTUw==')).toBe('data:(recortado)');
-		expect(sanearUrl('data')).toBe('data');
+		expect(sanitizeUrl('data:text/html;base64,UEFTUw==')).toBe('data:(recortado)');
+		expect(sanitizeUrl('data')).toBe('data');
 	});
 
 	test('una ruta relativa pierde la query y el fragmento', () => {
-		expect(sanearUrl('/assets/app.js?v=2#top')).toBe('/assets/app.js');
-		expect(sanearUrl('app.js')).toBe('app.js');
+		expect(sanitizeUrl('/assets/app.js?v=2#top')).toBe('/assets/app.js');
+		expect(sanitizeUrl('app.js')).toBe('app.js');
 	});
 
 	/**
@@ -72,11 +72,11 @@ describe('sanearUrl', () => {
 	 * registro salía con el campo en blanco.
 	 */
 	test('lo que queda en nada devuelve vacío', () => {
-		expect(sanearUrl('?token=X')).toBe('');
-		expect(sanearUrl('#fragment')).toBe('');
-		expect(sanearUrl('')).toBe('');
-		expect(sanearUrl(null)).toBe('');
-		expect(sanearUrl(undefined)).toBe('');
+		expect(sanitizeUrl('?token=X')).toBe('');
+		expect(sanitizeUrl('#fragment')).toBe('');
+		expect(sanitizeUrl('')).toBe('');
+		expect(sanitizeUrl(null)).toBe('');
+		expect(sanitizeUrl(undefined)).toBe('');
 	});
 
 	test('nunca devuelve algo que parezca credencial', () => {
@@ -88,7 +88,7 @@ describe('sanearUrl', () => {
 			'user:p@sitio/x',
 			'ftp://u:p@sitio/x',
 		]) {
-			const limpia = sanearUrl(entrada);
+			const limpia = sanitizeUrl(entrada);
 			const autoridad = limpia
 				.replace(/^[a-z]+:/, '')
 				.replace(/^\/\//, '')
@@ -111,13 +111,13 @@ describe('sanearUrl', () => {
 			'asset:user:token@example.test',
 			'ipc:user:token@example.test',
 		]) {
-			expect(sanearUrl(entrada)).not.toContain('token');
+			expect(sanitizeUrl(entrada)).not.toContain('token');
 		}
-		expect(sanearUrl('blob:https://user:token@example.test/x')).toBe('blob:(recortado)');
+		expect(sanitizeUrl('blob:https://user:token@example.test/x')).toBe('blob:(recortado)');
 	});
 
 	test('y en forma jerárquica el mismo esquema sí conserva sitio y ruta', () => {
-		expect(sanearUrl('asset://user:token@example.test/path')).toBe('asset://example.test/path');
+		expect(sanitizeUrl('asset://user:token@example.test/path')).toBe('asset://example.test/path');
 	});
 
 	/**
@@ -125,10 +125,10 @@ describe('sanearUrl', () => {
 	 * que llegó, y lo que se registra tiene que parecerse a lo que se bloqueó.
 	 */
 	test('una autoridad sola no gana una barra que no tenía', () => {
-		expect(sanearUrl('//example.test')).toBe('//example.test');
-		expect(sanearUrl('//example.test?x=1')).toBe('//example.test');
+		expect(sanitizeUrl('//example.test')).toBe('//example.test');
+		expect(sanitizeUrl('//example.test?x=1')).toBe('//example.test');
 		// Y la que sí la tenía la conserva.
-		expect(sanearUrl('//example.test/')).toBe('//example.test/');
+		expect(sanitizeUrl('//example.test/')).toBe('//example.test/');
 	});
 
 	/**
@@ -139,8 +139,8 @@ describe('sanearUrl', () => {
 	 * token escrito ahí para siempre.
 	 */
 	test('lo que declara autoridad y no parsea no se registra', () => {
-		expect(sanearUrl('//user:token@[malformado/x')).toBe('');
-		expect(sanearUrl('https://user:token@[malformado/x')).toBe('');
+		expect(sanitizeUrl('//user:token@[malformado/x')).toBe('');
+		expect(sanitizeUrl('https://user:token@[malformado/x')).toBe('');
 	});
 
 	/**
@@ -148,8 +148,8 @@ describe('sanearUrl', () => {
 	 * las rutas de Vite lo llevan, y son de las más frecuentes que hay.
 	 */
 	test('una ruta relativa con arroba sobrevive', () => {
-		expect(sanearUrl('/assets/@vite/client.js')).toBe('/assets/@vite/client.js');
-		expect(sanearUrl('/node_modules/.vite/deps/@vue_devtools.js?v=1')).toBe(
+		expect(sanitizeUrl('/assets/@vite/client.js')).toBe('/assets/@vite/client.js');
+		expect(sanitizeUrl('/node_modules/.vite/deps/@vue_devtools.js?v=1')).toBe(
 			'/node_modules/.vite/deps/@vue_devtools.js'
 		);
 	});

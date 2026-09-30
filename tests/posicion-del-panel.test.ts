@@ -23,7 +23,7 @@ const en = leer('src-tauri/locales/en.yml');
 describe('la pantalla del panel', () => {
 	test('escribe con el mismo ayudante que se prueba aparte', () => {
 		// La lógica —qué se considera una posición válida, y no apagar los
-		// indicadores que comparten la sección— vive en `tools/config-values`.
+		// indicadores que comparten la sección— vive en `utils/config-values`.
 		expect(pantalla).toContain('writePanelPosition');
 		expect(pantalla).toContain('readPanelPosition');
 	});

@@ -18,7 +18,7 @@ import {
 	readPanelPosition,
 	writePanelIndicators,
 	writePanelPosition,
-} from '@/tools/config-values';
+} from '@/utils/config-values';
 
 const { t } = useI18n();
 

@@ -21,8 +21,8 @@ import {
 	setProviderCredentials,
 	testMailConnection,
 } from '@/services/accounts.service';
-import { ICONO_DE_CAPACIDAD, resolverIconosDeProveedores } from '@/tools/icono-de-proveedor';
 import { canManageCredentials, clearOutcome } from '@/utils/provider-credentials';
+import { CAPABILITY_ICONS, resolveProviderIcons } from '@/utils/provider-icon';
 import {
 	type CapabilityOwner,
 	connectionBlocker,
@@ -121,7 +121,7 @@ const isCustomValid = computed(() => {
 });
 
 /** El nombre del icono de una capacidad, de la tabla compartida. */
-const capabilityIcon = (capability: string) => ICONO_DE_CAPACIDAD[capability] ?? '';
+const capabilityIcon = (capability: string) => CAPABILITY_ICONS[capability] ?? '';
 
 /**
  * El nombre de una capacidad tal como se lee en pantalla.
@@ -161,7 +161,7 @@ const iconos = ref<Record<string, string>>({});
  * no está vuelve como el cuadrito de imagen rota, con forma de icono válido.
  */
 const resolverIconos = async () => {
-	iconos.value = await resolverIconosDeProveedores(
+	iconos.value = await resolveProviderIcons(
 		providers.value.map((provider) => provider.id),
 		getSymbolSource,
 		hasSymbol

@@ -5,7 +5,7 @@ import {
 	PANEL_INDICATORS,
 	readPanelIndicators,
 	writePanelIndicators,
-} from '../src/tools/config-values';
+} from '../src/utils/config-values';
 
 /**
  * Los interruptores de «Indicadores», y el del indicador de cámara y micrófono

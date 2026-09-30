@@ -1,7 +1,7 @@
 {
 	"name": "vasak-settings",
 	"private": true,
-	"version": "0.31.1",
+	"version": "0.31.2",
 	"type": "module",
 	"scripts": {
 		"dev": "bunx --bun vite",
@@ -19,7 +19,7 @@
 		"@tauri-apps/api": "^2.12.0",
 		"@tauri-apps/plugin-dialog": "^2.8.0",
 		"@tauri-apps/plugin-shell": "^2.4.0",
-		"@vasakgroup/plugin-bluetooth-manager": "^2.1.0",
+		"@vasakgroup/plugin-bluetooth-manager": "^2.1.1",
 		"@vasakgroup/plugin-config-manager": "^2.9.0",
 		"@vasakgroup/plugin-network-manager": "^2.2.1",
 		"@vasakgroup/plugin-vicons": "^2.2.2",
@@ -34,7 +34,7 @@
 		"vue-router": "^5.3.1"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.14",
+		"@biomejs/biome": "^2.5.15",
 		"@happy-dom/global-registrator": "^20.14.5",
 		"@tailwindcss/postcss": "^4.3.3",
 		"@tauri-apps/cli": "^2.12.0",
