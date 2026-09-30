@@ -1239,9 +1239,17 @@ views:
         Google calls it a secret, but it is not one: it travels inside any
         program that uses it. What actually protects the connection is PKCE,
         which this system always uses.
+      manage: Credentials
       clear: Remove credentials
+      clearConfirm: >-
+        Remove your credentials for {0}? Accounts you already had keep working,
+        but to connect a new one you will have to paste them again.
+      clearConfirmAction: Yes, remove them
       saved: Credentials for {0} saved. You can connect the account now.
       cleared: Credentials for {0} removed. Accounts you already had keep working.
+      clearedSystemRemains: >-
+        Your credentials for {0} were removed. It is still ready to connect
+        accounts with the ones the system administrator set up.
     linkedAccounts: Linked accounts
     customDialogDescription: Set up your mail and sync server details manually.
     displayName: Display name

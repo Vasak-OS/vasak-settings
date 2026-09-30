@@ -22,6 +22,7 @@ import {
 	testMailConnection,
 } from '@/services/accounts.service';
 import { ICONO_DE_CAPACIDAD, resolverIconosDeProveedores } from '@/tools/icono-de-proveedor';
+import { canManageCredentials, clearOutcome } from '@/utils/provider-credentials';
 import {
 	type CapabilityOwner,
 	connectionBlocker,
@@ -68,17 +69,6 @@ const unavailableReason = (provider: ProviderInfo): string | undefined => {
 			return undefined;
 	}
 };
-
-/**
- * Si a este proveedor se le pueden cambiar o quitar las credenciales.
- *
- * Son los OAuth2 que ya están listos. Hace falta preguntarlo aparte porque el
- * clic en la tarjeta de uno configurado **conecta la cuenta**, que es lo que
- * corresponde: sin esto, el botón de quitar credenciales quedaba escrito y sin
- * forma de llegar a él.
- */
-const tieneCredenciales = (provider: ProviderInfo) =>
-	provider.kind === 'oauth2' && provider.configured;
 
 const errors = ref('');
 const success = ref('');
@@ -269,7 +259,7 @@ const connectProvider = async (provider: ProviderInfo) => {
 	// se abre el formulario para pegarlas. Antes el botón estaba apagado y lo
 	// único que se podía hacer era editar un archivo como administrador.
 	if (blocker === 'credentialsNeeded') {
-		abrirCredenciales(provider);
+		openCredentials(provider);
 		return;
 	}
 
@@ -311,9 +301,9 @@ const nextcloudError = ref('');
  * VasakOS no incluye un `client_id` para Google ni Microsoft, así que el de cada
  * quien se pega acá en vez de editar un archivo del sistema como administrador.
  */
-const credencialesDe = ref<ProviderInfo | null>(null);
-const credencialesForm = reactive({ clientId: '', clientSecret: '' });
-const guardandoCredenciales = ref(false);
+const credentialsFor = ref<ProviderInfo | null>(null);
+const credentialsForm = reactive({ clientId: '', clientSecret: '' });
+const savingCredentials = ref(false);
 /**
  * El error va **dentro** del formulario y no en el aviso de arriba.
  *
@@ -321,36 +311,50 @@ const guardandoCredenciales = ref(false);
  * queda abajo: quien apreta guardar y falla se queda mirando el formulario sin
  * ver por qué no pasó nada.
  */
-const credencialesError = ref('');
+const credentialsError = ref('');
+/**
+ * Si se está preguntando «¿quitar?». Quitar las credenciales no se deshace: hay
+ * que volver a la consola del proveedor a sacar otras.
+ */
+const confirmingClear = ref(false);
+const clearingCredentials = ref(false);
+/**
+ * Si hay un guardado o un borrado de credenciales en curso. Mientras dura, no se
+ * abre el formulario de otro proveedor: al terminar, el de éste se cierra, y se
+ * llevaría puesto el otro con lo que la persona ya había escrito.
+ */
+const credentialsBusy = computed(() => savingCredentials.value || clearingCredentials.value);
 
-const abrirCredenciales = (provider: ProviderInfo) => {
+const openCredentials = (provider: ProviderInfo) => {
 	errors.value = '';
 	success.value = '';
 	aviso.value = '';
-	credencialesForm.clientId = '';
-	credencialesForm.clientSecret = '';
-	credencialesError.value = '';
-	credencialesDe.value = provider;
+	credentialsForm.clientId = '';
+	credentialsForm.clientSecret = '';
+	credentialsError.value = '';
+	confirmingClear.value = false;
+	credentialsFor.value = provider;
 };
 
-const cerrarCredenciales = () => {
-	credencialesDe.value = null;
-	credencialesError.value = '';
+const closeCredentials = () => {
+	credentialsFor.value = null;
+	credentialsError.value = '';
+	confirmingClear.value = false;
 };
 
-const guardarCredenciales = async () => {
-	const provider = credencialesDe.value;
-	if (!provider || !credencialesForm.clientId.trim()) return;
+const saveCredentials = async () => {
+	const provider = credentialsFor.value;
+	if (!provider || !credentialsForm.clientId.trim()) return;
 
-	guardandoCredenciales.value = true;
-	credencialesError.value = '';
+	savingCredentials.value = true;
+	credentialsError.value = '';
 	try {
 		await setProviderCredentials(
 			provider.id,
-			credencialesForm.clientId,
-			credencialesForm.clientSecret
+			credentialsForm.clientId,
+			credentialsForm.clientSecret
 		);
-		credencialesDe.value = null;
+		if (credentialsFor.value?.id === provider.id) credentialsFor.value = null;
 		// El catálogo cambió: ese proveedor pasa a estar listo, y el botón se
 		// tiene que encender sin que haya que volver a entrar a la pantalla.
 		await fetchProviders();
@@ -359,25 +363,36 @@ const guardarCredenciales = async () => {
 			provider.display_name
 		);
 	} catch (err) {
-		credencialesError.value = String(err);
+		credentialsError.value = String(err);
 	} finally {
-		guardandoCredenciales.value = false;
+		savingCredentials.value = false;
 	}
 };
 
-const quitarCredenciales = async (provider: ProviderInfo) => {
-	credencialesError.value = '';
+const clearCredentials = async (provider: ProviderInfo) => {
+	credentialsError.value = '';
 	success.value = '';
+	clearingCredentials.value = true;
 	try {
 		await clearProviderCredentials(provider.id);
-		credencialesDe.value = null;
-		await fetchProviders();
-		success.value = t('views.onlineAccounts.credentials.cleared').replace(
-			'{0}',
-			provider.display_name
-		);
+		if (credentialsFor.value?.id === provider.id) {
+			credentialsFor.value = null;
+			confirmingClear.value = false;
+		}
+		const refreshed = await fetchProviders();
+		// Las que se borran son las propias: si el proveedor sigue listo, tiene
+		// unas del sistema, y «quitadas» a secas haría creer que ya no se puede
+		// conectar nada nuevo con él.
+		const after = providers.value.find((p) => p.id === provider.id);
+		const key =
+			clearOutcome(after, refreshed) === 'systemRemains'
+				? 'views.onlineAccounts.credentials.clearedSystemRemains'
+				: 'views.onlineAccounts.credentials.cleared';
+		success.value = t(key).replace('{0}', provider.display_name);
 	} catch (err) {
-		credencialesError.value = String(err);
+		credentialsError.value = String(err);
+	} finally {
+		clearingCredentials.value = false;
 	}
 };
 
@@ -642,15 +657,22 @@ const deleteAccount = async (account: AccountInfo) => {
 	}
 };
 
-const fetchProviders = async () => {
+/**
+ * Relee el catálogo. Devuelve si lo pudo releer: quien acaba de cambiar algo
+ * necesita saber si lo que ve después es el catálogo nuevo o el de antes.
+ */
+const fetchProviders = async (): Promise<boolean> => {
+	let refreshed = false;
 	try {
 		providers.value = await listProviders();
+		refreshed = true;
 		await resolverIconos();
 	} catch (err) {
 		// El catálogo no es imprescindible para ver las cuentas que ya están, así
 		// que el fallo se cuenta y la pantalla sigue sirviendo.
 		errors.value = t('views.onlineAccounts.errors.loadProviders').replace('{0}', String(err));
 	}
+	return refreshed;
 };
 
 /**
@@ -731,18 +753,18 @@ onMounted(async () => {
 			</ul>
 		</SectionCard>
 
-		<SectionCard v-if="credencialesDe">
+		<SectionCard v-if="credentialsFor">
 			<h3 class="mb-1 text-lg font-medium text-tx-main">
-				{{ t('views.onlineAccounts.credentials.title').replace('{0}', credencialesDe.display_name) }}
+				{{ t('views.onlineAccounts.credentials.title').replace('{0}', credentialsFor.display_name) }}
 			</h3>
 			<p class="mb-2 text-sm text-tx-muted">
-				{{ t('views.onlineAccounts.credentials.why').replace('{0}', credencialesDe.display_name) }}
+				{{ t('views.onlineAccounts.credentials.why').replace('{0}', credentialsFor.display_name) }}
 			</p>
 			<p class="mb-4 text-xs text-tx-muted">
 				{{ t('views.onlineAccounts.credentials.how') }}
 			</p>
 
-			<AlertMessage v-if="credencialesError" tone="error">{{ credencialesError }}</AlertMessage>
+			<AlertMessage v-if="credentialsError" tone="error">{{ credentialsError }}</AlertMessage>
 
 			<div class="flex flex-col gap-3">
 				<label class="flex flex-col gap-1">
@@ -750,11 +772,11 @@ onMounted(async () => {
 						{{ t('views.onlineAccounts.credentials.clientId') }}
 					</span>
 					<input
-						v-model="credencialesForm.clientId"
+						v-model="credentialsForm.clientId"
 						type="text"
-						:disabled="guardandoCredenciales"
+						:disabled="savingCredentials"
 						class="rounded-corner border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
-						@keyup.enter="guardarCredenciales"
+						@keyup.enter="saveCredentials"
 					/>
 				</label>
 
@@ -763,12 +785,12 @@ onMounted(async () => {
 						{{ t('views.onlineAccounts.credentials.clientSecret') }}
 					</span>
 					<input
-						v-model="credencialesForm.clientSecret"
+						v-model="credentialsForm.clientSecret"
 						type="password"
-						:disabled="guardandoCredenciales"
+						:disabled="savingCredentials"
 						:placeholder="t('views.onlineAccounts.credentials.clientSecretPlaceholder')"
 						class="rounded-corner border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
-						@keyup.enter="guardarCredenciales"
+						@keyup.enter="saveCredentials"
 					/>
 					<!-- Google lo llama secreto y no lo es: viaja dentro de cualquier
 					     programa que lo use. Decirlo evita que alguien no lo pegue
@@ -780,27 +802,51 @@ onMounted(async () => {
 
 				<div class="flex gap-2">
 					<button
-						:disabled="guardandoCredenciales || !credencialesForm.clientId.trim()"
+						:disabled="savingCredentials || !credentialsForm.clientId.trim()"
 						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary disabled:opacity-50"
-						@click="guardarCredenciales"
+						@click="saveCredentials"
 					>
-						{{ guardandoCredenciales ? t('common.saving') : t('common.save') }}
+						{{ savingCredentials ? t('common.saving') : t('common.save') }}
 					</button>
 					<button
-						:disabled="guardandoCredenciales"
+						:disabled="savingCredentials"
 						class="rounded-corner border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
-						@click="cerrarCredenciales"
+						@click="closeCredentials"
 					>
 						{{ t('common.cancel') }}
 					</button>
 					<button
-						v-if="tieneCredenciales(credencialesDe)"
-						:disabled="guardandoCredenciales"
+						v-if="canManageCredentials(credentialsFor) && !confirmingClear"
+						:disabled="savingCredentials"
 						class="rounded-corner border border-ui-border px-4 py-2 text-sm text-tx-muted transition-colors hover:border-status-error/40 hover:text-status-error disabled:opacity-50"
-						@click="quitarCredenciales(credencialesDe)"
+						@click="confirmingClear = true"
 					>
 						{{ t('views.onlineAccounts.credentials.clear') }}
 					</button>
+				</div>
+				<div
+					v-if="confirmingClear"
+					class="mt-3 rounded-corner border border-status-error/40 bg-status-error/10 p-3"
+				>
+					<p class="text-sm text-tx-main">
+						{{ t('views.onlineAccounts.credentials.clearConfirm').replace('{0}', credentialsFor.display_name) }}
+					</p>
+					<div class="mt-2 flex gap-2">
+						<button
+							:disabled="clearingCredentials"
+							class="rounded-corner bg-status-error px-4 py-2 text-sm font-medium text-tx-on-error disabled:opacity-50"
+							@click="clearCredentials(credentialsFor)"
+						>
+							{{ t('views.onlineAccounts.credentials.clearConfirmAction') }}
+						</button>
+						<button
+							:disabled="clearingCredentials"
+							class="rounded-corner border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
+							@click="confirmingClear = false"
+						>
+							{{ t('common.cancel') }}
+						</button>
+					</div>
 				</div>
 			</div>
 		</SectionCard>
@@ -878,52 +924,64 @@ onMounted(async () => {
 			<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.onlineAccounts.providers') }}</h3>
 
 			<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-				<button
-					v-for="provider in providers"
-					:key="provider.id"
-					:disabled="loading"
-					:title="unavailableReason(provider)"
-					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-5 text-center transition-colors"
-					:class="
-						loading
-							? 'opacity-60 cursor-not-allowed'
-							: 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'
-					"
-					@click="connectProvider(provider)"
-				>
-					<img
-						v-if="iconos[provider.id]"
-						:src="iconos[provider.id]"
-						:alt="provider.display_name"
-						class="h-10 w-10"
-					/>
-					<span class="text-sm font-medium text-tx-main">{{ provider.display_name }}</span>
-					<ul class="flex flex-wrap justify-center gap-1.5">
-						<!-- Las que todavía no existen en VasakOS siguen acá, atenuadas
-						     y con el texto que lo dice: una casilla que desaparece
-						     parece una que el proveedor no tiene. -->
-						<li
-							v-for="c in provider.capabilities"
-							:key="c"
-							class="flex items-center gap-1 text-xs text-tx-muted"
-							:class="{ 'opacity-60': !isCapabilityAvailable(provider, c) }"
-						>
-							<ThemeIcon :name="capabilityIcon(c)" type="symbol" :size="14" />
-							{{ capabilityLabel(provider, c) }}
-						</li>
-					</ul>
-					<!-- Ya no está apagado: falta un paso y el botón lleva a darlo.
-					     Antes esto decía «no se puede» y lo único que se podía hacer
-					     era editar un archivo del sistema como administrador. Y sólo
-					     si pegarlas sirve: con nada disponible, las casillas ya dicen
-					     por qué, y el clic lo explica sin pedir nada. -->
-					<span
-						v-if="connectionBlocker(provider) === 'credentialsNeeded'"
-						class="text-xs text-status-warning"
+				<div v-for="provider in providers" :key="provider.id" class="flex flex-col gap-1">
+					<button
+						:disabled="loading"
+						:title="unavailableReason(provider)"
+						class="flex w-full flex-1 flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-5 text-center transition-colors"
+						:class="
+							loading
+								? 'opacity-60 cursor-not-allowed'
+								: 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'
+						"
+						@click="connectProvider(provider)"
 					>
-						{{ t('views.onlineAccounts.credentials.needed') }}
-					</span>
-				</button>
+						<img
+							v-if="iconos[provider.id]"
+							:src="iconos[provider.id]"
+							:alt="provider.display_name"
+							class="h-10 w-10"
+						/>
+						<span class="text-sm font-medium text-tx-main">{{ provider.display_name }}</span>
+						<ul class="flex flex-wrap justify-center gap-1.5">
+							<!-- Las que todavía no existen en VasakOS siguen acá, atenuadas
+							     y con el texto que lo dice: una casilla que desaparece
+							     parece una que el proveedor no tiene. -->
+							<li
+								v-for="c in provider.capabilities"
+								:key="c"
+								class="flex items-center gap-1 text-xs text-tx-muted"
+								:class="{ 'opacity-60': !isCapabilityAvailable(provider, c) }"
+							>
+								<ThemeIcon :name="capabilityIcon(c)" type="symbol" :size="14" />
+								{{ capabilityLabel(provider, c) }}
+							</li>
+						</ul>
+						<!-- Ya no está apagado: falta un paso y el botón lleva a darlo.
+						     Antes esto decía «no se puede» y lo único que se podía hacer
+						     era editar un archivo del sistema como administrador. Y sólo
+						     si pegarlas sirve: con nada disponible, las casillas ya dicen
+						     por qué, y el clic lo explica sin pedir nada. -->
+						<span
+							v-if="connectionBlocker(provider) === 'credentialsNeeded'"
+							class="text-xs text-status-warning"
+						>
+							{{ t('views.onlineAccounts.credentials.needed') }}
+						</span>
+					</button>
+					<!-- Aparte de la tarjeta y no adentro: la tarjeta es un botón que
+					     conecta, y un botón no puede ir dentro de otro. Sin esto, las
+					     credenciales ya guardadas no se podían cambiar ni quitar
+					     (Vasak-OS/vasak-settings#132). -->
+					<button
+						v-if="canManageCredentials(provider)"
+						:disabled="loading || credentialsBusy"
+						class="self-center rounded-corner px-2 py-1 text-xs text-tx-muted transition-colors hover:text-tx-main disabled:opacity-50"
+						@click="openCredentials(provider)"
+					>
+						{{ t('views.onlineAccounts.credentials.manage') }}
+					</button>
+				</div>
 
 				<button
 					:disabled="loading"
