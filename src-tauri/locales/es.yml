@@ -1245,11 +1245,20 @@ views:
         Google lo llama secreto, pero no lo es: viaja dentro de cualquier
         programa que lo use. Lo que de verdad protege la conexión es PKCE, que
         este sistema usa siempre.
+      manage: Credenciales
       clear: Quitar credenciales
+      clearConfirm: >-
+        ¿Quitar tus credenciales de {0}? Las cuentas que ya tenías siguen
+        funcionando, pero para conectar una nueva vas a tener que volver a
+        pegarlas.
+      clearConfirmAction: Sí, quitarlas
       saved: Credenciales de {0} guardadas. Ya podés conectar la cuenta.
       cleared: >-
         Credenciales de {0} quitadas. Las cuentas que ya tenías siguen
         funcionando.
+      clearedSystemRemains: >-
+        Se quitaron tus credenciales de {0}. Sigue listo para conectar cuentas
+        con las que dejó el administrador del sistema.
     linkedAccounts: Cuentas vinculadas
     customDialogDescription: Configura manualmente los datos de tu servidor de correo y sincronización.
     displayName: Nombre para mostrar
