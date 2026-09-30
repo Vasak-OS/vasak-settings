@@ -10,12 +10,12 @@ describe('sanitizeUrl', () => {
 	test('una URL relativa al protocolo no deja pasar las credenciales', () => {
 		// El caso reportado: `new URL` sin base rechaza estas direcciones, y la
 		// versión anterior caía a cortar por `?` y `#`, que deja el token.
-		const limpia = sanitizeUrl('//user:token@example.test/path?access_token=secret#frag');
+		const sanitized = sanitizeUrl('//user:token@example.test/path?access_token=secret#frag');
 
-		for (const secreto of ['user', 'token', 'access_token', 'secret', 'frag']) {
-			expect(limpia).not.toContain(secreto);
+		for (const secret of ['user', 'token', 'access_token', 'secret', 'frag']) {
+			expect(sanitized).not.toContain(secret);
 		}
-		expect(limpia).toBe('//example.test/path');
+		expect(sanitized).toBe('//example.test/path');
 	});
 
 	test('y sin credenciales conserva el sitio y la ruta', () => {
@@ -31,22 +31,22 @@ describe('sanitizeUrl', () => {
 	 * el token entero en `href`. O sea que también filtraba por la rama buena.
 	 */
 	test('un esquema opaco no deja pasar lo que lleva adentro', () => {
-		const limpia = sanitizeUrl('user:token@example.test/path');
-		expect(limpia).not.toContain('token');
-		expect(limpia).toBe('user:(recortado)');
+		const sanitized = sanitizeUrl('user:token@example.test/path');
+		expect(sanitized).not.toContain('token');
+		expect(sanitized).toBe('user:(recortado)');
 	});
 
 	test('las credenciales de una URL absoluta tampoco', () => {
-		const limpia = sanitizeUrl('https://user:token@example.test/p?x=1#f');
-		for (const secreto of ['user', 'token', 'x=1', '#f']) {
-			expect(limpia).not.toContain(secreto);
+		const sanitized = sanitizeUrl('https://user:token@example.test/p?x=1#f');
+		for (const secret of ['user', 'token', 'x=1', '#f']) {
+			expect(sanitized).not.toContain(secret);
 		}
-		expect(limpia).toBe('https://example.test/p');
+		expect(sanitized).toBe('https://example.test/p');
 	});
 
 	test('los marcadores de la especificación se dejan tal cual', () => {
-		for (const marcador of CSP_KEYWORDS) {
-			expect(sanitizeUrl(marcador)).toBe(marcador);
+		for (const keyword of CSP_KEYWORDS) {
+			expect(sanitizeUrl(keyword)).toBe(keyword);
 		}
 	});
 
@@ -82,18 +82,18 @@ describe('sanitizeUrl', () => {
 	test('nunca devuelve algo que parezca credencial', () => {
 		// Una red de seguridad sobre todos los casos de arriba juntos: si en el
 		// resultado queda un `@` antes de la primera barra, hay userinfo.
-		for (const entrada of [
+		for (const input of [
 			'//u:p@sitio/x',
 			'https://u:p@sitio/x',
 			'user:p@sitio/x',
 			'ftp://u:p@sitio/x',
 		]) {
-			const limpia = sanitizeUrl(entrada);
-			const autoridad = limpia
+			const sanitized = sanitizeUrl(input);
+			const authority = sanitized
 				.replace(/^[a-z]+:/, '')
 				.replace(/^\/\//, '')
 				.split('/')[0];
-			expect(autoridad).not.toContain('@');
+			expect(authority).not.toContain('@');
 		}
 	});
 
@@ -105,13 +105,13 @@ describe('sanitizeUrl', () => {
 	 * `blob:` es el caso más claro: su contenido es **otra URL entera**.
 	 */
 	test('un esquema conocido en forma opaca tampoco deja pasar nada', () => {
-		for (const entrada of [
+		for (const input of [
 			'blob:https://user:token@example.test/path',
 			'tauri:user:token@example.test',
 			'asset:user:token@example.test',
 			'ipc:user:token@example.test',
 		]) {
-			expect(sanitizeUrl(entrada)).not.toContain('token');
+			expect(sanitizeUrl(input)).not.toContain('token');
 		}
 		expect(sanitizeUrl('blob:https://user:token@example.test/x')).toBe('blob:(recortado)');
 	});
@@ -124,7 +124,7 @@ describe('sanitizeUrl', () => {
 	 * `new URL` completa una ruta ausente con «/». Eso cambia la forma de lo
 	 * que llegó, y lo que se registra tiene que parecerse a lo que se bloqueó.
 	 */
-	test('una autoridad sola no gana una barra que no tenía', () => {
+	test('una authority sola no gana una barra que no tenía', () => {
 		expect(sanitizeUrl('//example.test')).toBe('//example.test');
 		expect(sanitizeUrl('//example.test?x=1')).toBe('//example.test');
 		// Y la que sí la tenía la conserva.
@@ -138,7 +138,7 @@ describe('sanitizeUrl', () => {
 	 * credenciales enteras. Perder la línea del diario es mejor que dejar un
 	 * token escrito ahí para siempre.
 	 */
-	test('lo que declara autoridad y no parsea no se registra', () => {
+	test('lo que declara authority y no parsea no se registra', () => {
 		expect(sanitizeUrl('//user:token@[malformado/x')).toBe('');
 		expect(sanitizeUrl('https://user:token@[malformado/x')).toBe('');
 	});

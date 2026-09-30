@@ -37,7 +37,7 @@ import {
  * el camino de IMAP/SMTP con contraseña de aplicación, que no habla OAuth con
  * nadie, así que se dibuja al lado pero no sale de la misma lista.
  */
-const PERSONALIZADO = 'custom';
+const CUSTOM_PROVIDER = 'custom';
 
 const { t } = useI18n();
 
@@ -81,7 +81,7 @@ const success = ref('');
  * antes de recargar la lista se borraba **antes de dibujarse**, y lo único que
  * este aviso venía a agregar no se veía nunca.
  */
-const aviso = ref('');
+const notice = ref('');
 const loading = ref(false);
 const accounts = ref<AccountInfo[]>([]);
 
@@ -146,7 +146,7 @@ const capabilityLabel = (
  * Se resuelven cuando llega el catálogo y no antes: la lista de proveedores la
  * decide el servicio, así que acá no se puede saber de antemano cuáles hay.
  */
-const iconos = ref<Record<string, string>>({});
+const icons = ref<Record<string, string>>({});
 
 /**
  * Se piden derecho al plugin, y no con el componente compartido.
@@ -160,8 +160,8 @@ const iconos = ref<Record<string, string>>({});
  * —si el tema lo tiene, y traerlo— y pedir no contesta la primera: un nombre que
  * no está vuelve como el cuadrito de imagen rota, con forma de icono válido.
  */
-const resolverIconos = async () => {
-	iconos.value = await resolveProviderIcons(
+const refreshProviderIcons = async () => {
+	icons.value = await resolveProviderIcons(
 		providers.value.map((provider) => provider.id),
 		getSymbolSource,
 		hasSymbol
@@ -251,7 +251,7 @@ const connectProvider = async (provider: ProviderInfo) => {
 	if (blocker === 'nothingAvailable') {
 		errors.value = '';
 		success.value = '';
-		aviso.value = unavailableReason(provider) ?? '';
+		notice.value = unavailableReason(provider) ?? '';
 		return;
 	}
 
@@ -266,14 +266,14 @@ const connectProvider = async (provider: ProviderInfo) => {
 	// Nextcloud no puede empezar sin la dirección: no hay un servidor conocido al
 	// que mandar el navegador, porque el servidor es el de la propia persona.
 	if (provider.kind === 'nextcloud') {
-		abrirFormularioNextcloud(provider);
+		openNextcloudForm(provider);
 		return;
 	}
 
 	loading.value = true;
 	errors.value = '';
 	success.value = '';
-	aviso.value = '';
+	notice.value = '';
 
 	try {
 		await connectOauthAccount(provider.id, requestedCapabilities(provider), provider.display_name);
@@ -328,7 +328,7 @@ const credentialsBusy = computed(() => savingCredentials.value || clearingCreden
 const openCredentials = (provider: ProviderInfo) => {
 	errors.value = '';
 	success.value = '';
-	aviso.value = '';
+	notice.value = '';
 	credentialsForm.clientId = '';
 	credentialsForm.clientSecret = '';
 	credentialsError.value = '';
@@ -396,17 +396,17 @@ const clearCredentials = async (provider: ProviderInfo) => {
 	}
 };
 
-const abrirFormularioNextcloud = (provider: ProviderInfo) => {
+const openNextcloudForm = (provider: ProviderInfo) => {
 	errors.value = '';
 	success.value = '';
-	aviso.value = '';
+	notice.value = '';
 	nextcloudError.value = '';
 	nextcloudForm.server = '';
 	nextcloudForm.displayName = '';
 	nextcloudProvider.value = provider;
 };
 
-const cancelarNextcloud = () => {
+const cancelNextcloud = () => {
 	nextcloudProvider.value = null;
 	nextcloudError.value = '';
 };
@@ -419,9 +419,9 @@ const cancelarNextcloud = () => {
  * que decirle que se fue al navegador — con el `loading` general parecería que
  * la pantalla se colgó.
  */
-const esperandoNextcloud = ref(false);
+const connectingNextcloud = ref(false);
 
-const conectarNextcloud = async () => {
+const connectNextcloud = async () => {
 	const provider = nextcloudProvider.value;
 	if (!provider) return;
 
@@ -430,7 +430,7 @@ const conectarNextcloud = async () => {
 		return;
 	}
 
-	esperandoNextcloud.value = true;
+	connectingNextcloud.value = true;
 	nextcloudError.value = '';
 
 	try {
@@ -446,14 +446,14 @@ const conectarNextcloud = async () => {
 		// escrita, y cerrarlo obligaría a tipearla de nuevo.
 		nextcloudError.value = String(err);
 	} finally {
-		esperandoNextcloud.value = false;
+		connectingNextcloud.value = false;
 	}
 };
 
-const abrirFormularioPersonalizado = () => {
+const openCustomForm = () => {
 	errors.value = '';
 	success.value = '';
-	aviso.value = '';
+	notice.value = '';
 	showCustomForm.value = true;
 };
 
@@ -464,7 +464,7 @@ const abrirFormularioPersonalizado = () => {
  * vio un fallo — porque después de verlo puede decidir guardar igual.
  */
 const probe = ref<MailProbe | null>(null);
-const probando = ref(false);
+const probing = ref(false);
 
 const probeOk = computed(() => probe.value?.imap.ok === true && probe.value?.smtp.ok === true);
 
@@ -489,38 +489,40 @@ const forgetProbe = () => {
  * autodescubrimiento y aun así funcionan perfecto para el correo.
  */
 const dav = ref<DavDiscovery | null>(null);
-const buscandoDav = ref(false);
+const discoveringDav = ref(false);
 
-const buscarDav = async () => {
+const lookUpDav = async () => {
 	if (!customForm.username.trim() || !customForm.password) {
 		errors.value = t('views.onlineAccounts.errors.usernameRequired');
 		return;
 	}
 
-	buscandoDav.value = true;
+	discoveringDav.value = true;
 	errors.value = '';
 	success.value = '';
-	aviso.value = '';
+	notice.value = '';
 
 	try {
 		// El usuario suele ser el correo, y de ahí sale el dominio contra el que
 		// buscar. Si no lo fuera, el servidor IMAP es la mejor pista que hay.
-		const donde = customForm.username.includes('@') ? customForm.username : customForm.imapServer;
-		dav.value = await discoverDav(donde, customForm.username, customForm.password);
+		const lookupTarget = customForm.username.includes('@')
+			? customForm.username
+			: customForm.imapServer;
+		dav.value = await discoverDav(lookupTarget, customForm.username, customForm.password);
 	} catch (err) {
 		errors.value = t('views.onlineAccounts.errors.discoverFailed').replace('{0}', String(err));
 	} finally {
-		buscandoDav.value = false;
+		discoveringDav.value = false;
 	}
 };
 
-const probarConexion = async (): Promise<boolean> => {
+const testConnection = async (): Promise<boolean> => {
 	if (!validateCustomForm()) return false;
 
-	probando.value = true;
+	probing.value = true;
 	errors.value = '';
 	success.value = '';
-	aviso.value = '';
+	notice.value = '';
 
 	try {
 		probe.value = await testMailConnection(
@@ -536,7 +538,7 @@ const probarConexion = async (): Promise<boolean> => {
 		errors.value = t('views.onlineAccounts.errors.probeFailed').replace('{0}', String(err));
 		return false;
 	} finally {
-		probando.value = false;
+		probing.value = false;
 	}
 };
 
@@ -554,14 +556,14 @@ const submitCustomProvider = async () => {
 
 	// La primera vez se prueba; si ya se probó y falló, el segundo clic guarda.
 	if (probe.value === null) {
-		const anduvo = await probarConexion();
-		if (!anduvo) return;
+		const connectionWorks = await testConnection();
+		if (!connectionWorks) return;
 	}
 
 	loading.value = true;
 	errors.value = '';
 	success.value = '';
-	aviso.value = '';
+	notice.value = '';
 
 	try {
 		// El correo siempre; el calendario y los contactos sólo si se los
@@ -592,7 +594,7 @@ const submitCustomProvider = async () => {
 		}
 
 		await registerPasswordAccount(
-			PERSONALIZADO,
+			CUSTOM_PROVIDER,
 			customForm.displayName,
 			capabilities,
 			customForm.password
@@ -635,22 +637,22 @@ const cancelCustomForm = () => {
 const deleteAccount = async (account: AccountInfo) => {
 	try {
 		errors.value = '';
-		aviso.value = '';
-		const resultado = await removeAccount(account.id);
-		const nombre = account.display_name || account.provider_type;
+		notice.value = '';
+		const result = await removeAccount(account.id);
+		const accountName = account.display_name || account.provider_type;
 
 		// Recargar primero: `fetchAccounts()` limpia `errors`, y el aviso se
 		// escribe después para que sobreviva a esa limpieza.
 		await fetchAccounts();
 
-		success.value = t('views.onlineAccounts.accountRemoved').replace('{0}', nombre);
+		success.value = t('views.onlineAccounts.accountRemoved').replace('{0}', accountName);
 
 		// La cuenta se borró igual, pero del otro lado quedó algo que la persona
 		// puede terminar. Va como aviso y no como error: no falló lo que pidió.
-		if (!resultado.revoked) {
-			aviso.value = t('views.onlineAccounts.errors.notRevoked')
-				.replace('{0}', nombre)
-				.replace('{1}', resultado.detail);
+		if (!result.revoked) {
+			notice.value = t('views.onlineAccounts.errors.notRevoked')
+				.replace('{0}', accountName)
+				.replace('{1}', result.detail);
 		}
 	} catch (err) {
 		errors.value = t('views.onlineAccounts.errors.deleteAccount').replace('{0}', String(err));
@@ -666,7 +668,7 @@ const fetchProviders = async (): Promise<boolean> => {
 	try {
 		providers.value = await listProviders();
 		refreshed = true;
-		await resolverIconos();
+		await refreshProviderIcons();
 	} catch (err) {
 		// El catálogo no es imprescindible para ver las cuentas que ya están, así
 		// que el fallo se cuenta y la pantalla sigue sirviendo.
@@ -686,8 +688,8 @@ const fetchProviders = async (): Promise<boolean> => {
  * Los del catálogo necesitan esto y los demás no, porque los demás son
  * `ThemeIcon` y se encargan solos.
  */
-const versionDelTema = usarLaVersionDelTema();
-watch(versionDelTema, resolverIconos);
+const themeVersion = usarLaVersionDelTema();
+watch(themeVersion, refreshProviderIcons);
 
 onMounted(async () => {
 	await Promise.all([fetchAccounts(), fetchProviders()]);
@@ -703,7 +705,7 @@ onMounted(async () => {
 		/>
 
 		<AlertMessage v-if="errors" tone="error">{{ errors }}</AlertMessage>
-		<AlertMessage v-if="aviso" tone="warning">{{ aviso }}</AlertMessage>
+		<AlertMessage v-if="notice" tone="warning">{{ notice }}</AlertMessage>
 		<AlertMessage v-if="success" tone="success">{{ success }}</AlertMessage>
 
 		<SectionCard v-if="accounts.length > 0">
@@ -867,10 +869,10 @@ onMounted(async () => {
 					<input
 						v-model="nextcloudForm.server"
 						type="text"
-						:disabled="esperandoNextcloud"
+						:disabled="connectingNextcloud"
 						:placeholder="t('views.onlineAccounts.nextcloud.serverPlaceholder')"
 						class="rounded-corner border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
-						@keyup.enter="conectarNextcloud"
+						@keyup.enter="connectNextcloud"
 					/>
 					<!-- Se dice antes y no después de fallar: quien tiene un servidor
 					     casero sin certificado tiene que enterarse acá, no cuando ya
@@ -887,32 +889,32 @@ onMounted(async () => {
 					<input
 						v-model="nextcloudForm.displayName"
 						type="text"
-						:disabled="esperandoNextcloud"
+						:disabled="connectingNextcloud"
 						:placeholder="t('views.onlineAccounts.nextcloud.namePlaceholder')"
 						class="rounded-corner border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
-						@keyup.enter="conectarNextcloud"
+						@keyup.enter="connectNextcloud"
 					/>
 				</label>
 
 				<!-- Mientras espera, se dice dónde está la pelota. Sin esto la
 				     ventana parece colgada durante todo el tiempo que la persona
 				     tarda en autenticarse en su servidor. -->
-				<p v-if="esperandoNextcloud" class="text-sm text-tx-muted">
+				<p v-if="connectingNextcloud" class="text-sm text-tx-muted">
 					{{ t('views.onlineAccounts.nextcloud.waiting') }}
 				</p>
 
 				<div class="flex gap-2">
 					<button
-						:disabled="esperandoNextcloud"
+						:disabled="connectingNextcloud"
 						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary disabled:opacity-50"
-						@click="conectarNextcloud"
+						@click="connectNextcloud"
 					>
 						{{ t('views.onlineAccounts.nextcloud.connect') }}
 					</button>
 					<button
-						:disabled="esperandoNextcloud"
+						:disabled="connectingNextcloud"
 						class="rounded-corner border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
-						@click="cancelarNextcloud"
+						@click="cancelNextcloud"
 					>
 						{{ t('common.cancel') }}
 					</button>
@@ -937,8 +939,8 @@ onMounted(async () => {
 						@click="connectProvider(provider)"
 					>
 						<img
-							v-if="iconos[provider.id]"
-							:src="iconos[provider.id]"
+							v-if="icons[provider.id]"
+							:src="icons[provider.id]"
 							:alt="provider.display_name"
 							class="h-10 w-10"
 						/>
@@ -987,7 +989,7 @@ onMounted(async () => {
 					:disabled="loading"
 					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-5 text-center transition-colors"
 					:class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'"
-					@click="abrirFormularioPersonalizado"
+					@click="openCustomForm"
 				>
 					<ThemeIcon
 						name="computer-symbolic"
@@ -1135,23 +1137,23 @@ onMounted(async () => {
 				     campos en vez de los tres que corresponden. -->
 				<div v-if="probe" class="mt-4 flex flex-col gap-2">
 					<div
-						v-for="punta in [
-							{ clave: 'imap', resultado: probe.imap },
-							{ clave: 'smtp', resultado: probe.smtp },
+						v-for="endpoint in [
+							{ key: 'imap', result: probe.imap },
+							{ key: 'smtp', result: probe.smtp },
 						]"
-						:key="punta.clave"
+						:key="endpoint.key"
 						class="rounded-corner border px-3 py-2 text-xs"
 						:class="
-							punta.resultado.ok
+							endpoint.result.ok
 								? 'border-status-success/30 bg-status-success/10 text-status-success'
 								: 'border-status-error/30 bg-status-error/10 text-status-error'
 						"
 					>
 						<span class="font-medium">
-							{{ punta.resultado.ok ? '✓' : '✕' }}
-							{{ t(`views.onlineAccounts.probe.${punta.clave}`) }}
+							{{ endpoint.result.ok ? '✓' : '✕' }}
+							{{ t(`views.onlineAccounts.probe.${endpoint.key}`) }}
 						</span>
-						<span v-if="punta.resultado.detail"> — {{ punta.resultado.detail }}</span>
+						<span v-if="endpoint.result.detail"> — {{ endpoint.result.detail }}</span>
 					</div>
 
 					<!-- Una prueba puede dar un falso negativo, así que el fallo no
@@ -1166,26 +1168,26 @@ onMounted(async () => {
 				     servidor tenga uno y no el otro. -->
 				<div v-if="dav" class="mt-4 flex flex-col gap-2">
 					<div
-						v-for="hallazgo in [
-							{ clave: 'calendar', resultado: dav.calendar },
-							{ clave: 'contacts', resultado: dav.contacts },
+						v-for="finding in [
+							{ key: 'calendar', result: dav.calendar },
+							{ key: 'contacts', result: dav.contacts },
 						]"
-						:key="hallazgo.clave"
+						:key="finding.key"
 						class="rounded-corner border px-3 py-2 text-xs"
 						:class="
-							hallazgo.resultado.url
+							finding.result.url
 								? 'border-status-success/30 bg-status-success/10 text-status-success'
 								: 'border-ui-border bg-ui-surface/70 text-tx-muted'
 						"
 					>
 						<span class="font-medium">
-							{{ hallazgo.resultado.url ? '✓' : '—' }}
-							{{ t(`views.onlineAccounts.capabilities.${hallazgo.clave}`) }}
+							{{ finding.result.url ? '✓' : '—' }}
+							{{ t(`views.onlineAccounts.capabilities.${finding.key}`) }}
 						</span>
-						<span v-if="hallazgo.resultado.url" class="break-all">
-							— {{ hallazgo.resultado.url }}
+						<span v-if="finding.result.url" class="break-all">
+							— {{ finding.result.url }}
 						</span>
-						<span v-else-if="hallazgo.resultado.detail"> — {{ hallazgo.resultado.detail }}</span>
+						<span v-else-if="finding.result.detail"> — {{ finding.result.detail }}</span>
 					</div>
 
 					<!-- No encontrar no impide nada: hay servidores que no hacen
@@ -1201,29 +1203,29 @@ onMounted(async () => {
 				<div class="mt-5 flex justify-end gap-2">
 					<button
 						class="rounded-corner border border-ui-border px-4 py-1.5 text-sm text-tx-muted transition-colors hover:bg-ui-surface"
-						:disabled="loading || probando"
+						:disabled="loading || probing"
 						@click="cancelCustomForm"
 					>
 						{{ t('common.cancel') }}
 					</button>
 					<button
 						class="rounded-corner border border-ui-border px-4 py-1.5 text-sm text-tx-main transition-colors hover:bg-ui-surface"
-						:disabled="loading || probando || buscandoDav || !isCustomValid"
-						@click="probarConexion"
+						:disabled="loading || probing || discoveringDav || !isCustomValid"
+						@click="testConnection"
 					>
-						{{ probando ? t('views.onlineAccounts.probe.testing') : t('views.onlineAccounts.probe.test') }}
+						{{ probing ? t('views.onlineAccounts.probe.testing') : t('views.onlineAccounts.probe.test') }}
 					</button>
 					<button
 						class="rounded-corner border border-ui-border px-4 py-1.5 text-sm text-tx-main transition-colors hover:bg-ui-surface"
-						:disabled="loading || probando || buscandoDav || !isCustomValid"
+						:disabled="loading || probing || discoveringDav || !isCustomValid"
 						:title="t('views.onlineAccounts.dav.hint')"
-						@click="buscarDav"
+						@click="lookUpDav"
 					>
-						{{ buscandoDav ? t('views.onlineAccounts.dav.searching') : t('views.onlineAccounts.dav.search') }}
+						{{ discoveringDav ? t('views.onlineAccounts.dav.searching') : t('views.onlineAccounts.dav.search') }}
 					</button>
 					<button
 						class="rounded-corner border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/15"
-						:disabled="loading || probando || buscandoDav || !isCustomValid"
+						:disabled="loading || probing || discoveringDav || !isCustomValid"
 						@click="submitCustomProvider"
 					>
 						{{

@@ -37,11 +37,11 @@ import {
 } from '@/services/aplicaciones-por-defecto.service';
 
 /** Una fila, con lo que hace falta para dibujarla. */
-interface Fila {
-	categoria: CategoriaDeAplicacion;
-	candidatas: Candidata[];
+interface Row {
+	category: CategoriaDeAplicacion;
+	candidates: Candidata[];
 	/** El `.desktop` elegido, o vacío si no hay ninguno. */
-	elegida: string;
+	selected: string;
 	/**
 	 * Si hay una escritura en curso para esta fila.
 	 *
@@ -51,82 +51,82 @@ interface Fila {
 	 * segunda y dejar guardada la elección vieja — y si la primera falla, su
 	 * vuelta atrás pisa la segunda elección, que ya se había dibujado.
 	 */
-	guardando: boolean;
+	saving: boolean;
 }
 
 const { t } = useI18n();
 
-const filas = ref<Fila[]>([]);
-const cargando = ref(true);
+const rows = ref<Row[]>([]);
+const loading = ref(true);
 const error = ref('');
-const aviso = ref('');
+const notice = ref('');
 
 /** El icono que le toca a la elegida, para mostrarlo al lado del selector. */
-function iconoDe(fila: Fila): string {
-	return fila.candidatas.find((c) => c.id === fila.elegida)?.icono ?? '';
+function selectedIcon(row: Row): string {
+	return row.candidates.find((c) => c.id === row.selected)?.icono ?? '';
 }
 
-async function cargarFila(categoria: CategoriaDeAplicacion): Promise<Fila> {
-	if (categoria.id === TERMINAL) {
-		const [candidatas, elegida] = await Promise.all([
+async function loadRow(category: CategoriaDeAplicacion): Promise<Row> {
+	if (category.id === TERMINAL) {
+		const [candidates, selected] = await Promise.all([
 			terminalesDisponibles(),
 			terminalPorDefecto(),
 		]);
 
-		return { categoria, candidatas, elegida: elegida ?? '', guardando: false };
+		return { category, candidates, selected: selected ?? '', saving: false };
 	}
 
-	const tipo = tipoPrincipal(categoria);
-	const [candidatas, elegida] = await Promise.all([
-		candidatasPara(tiposQueIdentifican(categoria)),
-		tipo ? aplicacionPorDefecto(tipo) : Promise.resolve(null),
+	const primaryType = tipoPrincipal(category);
+	const [candidates, selected] = await Promise.all([
+		candidatasPara(tiposQueIdentifican(category)),
+		primaryType ? aplicacionPorDefecto(primaryType) : Promise.resolve(null),
 	]);
 
-	return { categoria, candidatas, elegida: elegida ?? '', guardando: false };
+	return { category, candidates, selected: selected ?? '', saving: false };
 }
 
 onMounted(async () => {
 	try {
-		filas.value = await Promise.all(CATEGORIAS.map(cargarFila));
+		rows.value = await Promise.all(CATEGORIAS.map(loadRow));
 	} catch (err) {
 		error.value = t('views.defaultApps.errorCargando').replace('{0}', String(err));
 		console.error(err);
 	} finally {
-		cargando.value = false;
+		loading.value = false;
 	}
 });
 
-async function elegir(fila: Fila, id: string) {
-	if (fila.guardando) return;
+async function choose(row: Row, id: string) {
+	if (row.saving) return;
 
-	const anterior = fila.elegida;
+	const previous = row.selected;
 	// Se mueve el selector antes de guardar y se vuelve atrás si falla: dejarlo
 	// en el valor viejo mientras se escribe hace que el clic parezca ignorado.
-	fila.elegida = id;
-	fila.guardando = true;
+	row.selected = id;
+	row.saving = true;
 	error.value = '';
-	aviso.value = '';
+	notice.value = '';
 
 	try {
-		if (fila.categoria.id === TERMINAL) {
-			const elegida = fila.candidatas.find((c) => c.id === id);
+		if (row.category.id === TERMINAL) {
+			const terminal = row.candidates.find((c) => c.id === id);
 
-			if (!elegida) return;
+			if (!terminal) return;
 
-			await definirTerminal(elegida.id, elegida.programa);
+			await definirTerminal(terminal.id, terminal.programa);
 			// La variable la lee systemd al iniciar la sesión, así que lo que se
 			// acaba de elegir no rige para lo que ya está abierto. Decirlo es la
 			// diferencia entre «no funcionó» y «funciona en el próximo inicio».
-			aviso.value = t('views.defaultApps.terminalEnLaProxima');
+			notice.value = t('views.defaultApps.terminalEnLaProxima');
 		} else {
-			await definirAplicacion(fila.categoria.tipos, id);
+			await definirAplicacion(row.category.tipos, id);
 		}
 	} catch (err) {
-		fila.elegida = anterior;
+		row.selected = previous;
 		error.value = t('views.defaultApps.errorGuardando').replace('{0}', String(err));
 		console.error(err);
 	} finally {
-		fila.guardando = false;
+		row.saving = false;
 	}
 }
 </script>
@@ -139,26 +139,26 @@ async function elegir(fila: Fila, id: string) {
 			:description="t('views.defaultApps.description')" />
 
 		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
-		<AlertMessage v-if="aviso" tone="info">{{ aviso }}</AlertMessage>
+		<AlertMessage v-if="notice" tone="info">{{ notice }}</AlertMessage>
 
-		<p v-if="cargando" class="text-sm text-tx-muted">{{ t('common.loading') }}</p>
+		<p v-if="loading" class="text-sm text-tx-muted">{{ t('common.loading') }}</p>
 
 		<SectionCard v-else>
 			<div class="flex flex-col gap-5">
-				<div v-for="fila in filas" :key="fila.categoria.id" class="flex items-center gap-4">
-					<AppIcon :name="iconoDe(fila) || fila.categoria.icono" />
+				<div v-for="row in rows" :key="row.category.id" class="flex items-center gap-4">
+					<AppIcon :name="selectedIcon(row) || row.category.icono" />
 
 					<FormGroup
-						:label="t(`views.defaultApps.categorias.${fila.categoria.id}`)"
-						:html-for="`app-${fila.categoria.id}`"
+						:label="t(`views.defaultApps.categorias.${row.category.id}`)"
+						:html-for="`app-${row.category.id}`"
 						custom-class="flex-1">
 						<SelectInput
-							v-if="fila.candidatas.length"
-							:id="`app-${fila.categoria.id}`"
-							:model-value="fila.elegida"
-							:disabled="fila.guardando"
-							:options="fila.candidatas.map((c) => ({ label: c.nombre, value: c.id }))"
-							@update:model-value="elegir(fila, $event)" />
+							v-if="row.candidates.length"
+							:id="`app-${row.category.id}`"
+							:model-value="row.selected"
+							:disabled="row.saving"
+							:options="row.candidates.map((c) => ({ label: c.nombre, value: c.id }))"
+							@update:model-value="choose(row, $event)" />
 
 						<!-- Sin candidatas no hay nada que elegir, y un selector vacío
 						     se lee como que la pantalla está rota. -->
