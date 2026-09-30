@@ -13,44 +13,44 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const RAIZ = fileURLToPath(new URL('..', import.meta.url));
-const leer = (ruta: string) => readFileSync(join(RAIZ, ruta), 'utf8');
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
+const read = (path: string) => readFileSync(join(ROOT, path), 'utf8');
 
-const pantalla = leer('src/views/AppearancePanelView.vue');
-const es = leer('src-tauri/locales/es.yml');
-const en = leer('src-tauri/locales/en.yml');
+const viewSource = read('src/views/AppearancePanelView.vue');
+const es = read('src-tauri/locales/es.yml');
+const en = read('src-tauri/locales/en.yml');
 
 describe('la pantalla del panel', () => {
 	test('escribe con el mismo ayudante que se prueba aparte', () => {
 		// La lógica —qué se considera una posición válida, y no apagar los
 		// indicadores que comparten la sección— vive en `utils/config-values`.
-		expect(pantalla).toContain('writePanelPosition');
-		expect(pantalla).toContain('readPanelPosition');
+		expect(viewSource).toContain('writePanelPosition');
+		expect(viewSource).toContain('readPanelPosition');
 	});
 
 	test('y sigue guardando los indicadores en el mismo viaje', () => {
 		// Las dos cosas viven en la sección `panel` y se guardan con el mismo
 		// botón: si una de las dos escrituras se perdiera, aplicar los cambios
 		// devolvería la otra a como estaba.
-		expect(pantalla).toContain('writePanelIndicators');
+		expect(viewSource).toContain('writePanelIndicators');
 	});
 
 	test('usa el `select` de la librería, con su etiqueta asociada', () => {
 		// Un `<label>` suelto al lado no está asociado a nada: un lector de
 		// pantalla anuncia un desplegable sin nombre.
-		expect(pantalla).toContain('<SelectField');
-		expect(pantalla).toContain(':label="t(\'views.appearancePanel.position\')"');
+		expect(viewSource).toContain('<SelectField');
+		expect(viewSource).toContain(':label="t(\'views.appearancePanel.position\')"');
 	});
 
 	test('los cuatro lados salen de la lista y no escritos a mano', () => {
-		expect(pantalla).toContain('v-for="lado in PANEL_POSITIONS"');
+		expect(viewSource).toContain('v-for="side in PANEL_POSITIONS"');
 	});
 
 	test('y los textos están en los dos idiomas', () => {
-		for (const catalogo of [es, en]) {
-			expect(catalogo).toContain('    position: ');
-			expect(catalogo).toContain('    positionHint: ');
-			expect(catalogo).toContain('    bar: ');
+		for (const catalog of [es, en]) {
+			expect(catalog).toContain('    position: ');
+			expect(catalog).toContain('    positionHint: ');
+			expect(catalog).toContain('    bar: ');
 		}
 	});
 });

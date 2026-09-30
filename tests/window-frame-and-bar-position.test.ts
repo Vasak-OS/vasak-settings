@@ -19,15 +19,15 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const RAIZ = fileURLToPath(new URL('..', import.meta.url));
-const leer = (ruta: string) => readFileSync(join(RAIZ, ruta), 'utf8');
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
+const read = (path: string) => readFileSync(join(ROOT, path), 'utf8');
 
-const layout = leer('src/layouts/WindowAppLayout.vue');
-const rutas = leer('src/routes/index.ts');
-const menu = leer('src/composables/menu.ts');
-const pantalla = leer('src/views/AppearanceWindowsView.vue');
-const es = leer('src-tauri/locales/es.yml');
-const en = leer('src-tauri/locales/en.yml');
+const layout = read('src/layouts/WindowAppLayout.vue');
+const routes = read('src/routes/index.ts');
+const menu = read('src/composables/menu.ts');
+const viewSource = read('src/views/AppearanceWindowsView.vue');
+const es = read('src-tauri/locales/es.yml');
+const en = read('src-tauri/locales/en.yml');
 
 describe('el marco de la ventana', () => {
 	test('sale de la librería y no está dibujado acá', () => {
@@ -39,7 +39,7 @@ describe('el marco de la ventana', () => {
 
 	test('y la barra propia ya no existe', () => {
 		// Mientras el archivo exista, alguien lo va a importar sin querer.
-		expect(() => leer('src/components/topbar/TopBarComponent.vue')).toThrow();
+		expect(() => read('src/components/topbar/TopBarComponent.vue')).toThrow();
 		expect(layout).not.toContain('TopBarComponent');
 	});
 
@@ -57,8 +57,8 @@ describe('el marco de la ventana', () => {
 		// Sin esto salen en inglés, que son los valores por omisión de la
 		// librería. Es el nombre accesible, así que lo único que lo dice es el
 		// lector de pantalla.
-		for (const clave of ['minimize', 'maximize', 'close']) {
-			expect(layout).toContain(`t('windowControls.${clave}')`);
+		for (const key of ['minimize', 'maximize', 'close']) {
+			expect(layout).toContain(`t('windowControls.${key}')`);
 		}
 	});
 });
@@ -72,36 +72,36 @@ describe('la pantalla de las ventanas', () => {
 	test('y tiene su ruta con el mismo nombre', () => {
 		// El menú navega por nombre de ruta: con el `id` y el `name` distintos,
 		// hacer clic no lleva a ningún lado y no hay ningún error.
-		expect(rutas).toContain("name: 'appearance-windows'");
-		expect(rutas).toContain("import('@/views/AppearanceWindowsView.vue')");
+		expect(routes).toContain("name: 'appearance-windows'");
+		expect(routes).toContain("import('@/views/AppearanceWindowsView.vue')");
 	});
 
 	test('escribe con el mismo ayudante que se prueba aparte', () => {
 		// La lógica —qué se considera una posición válida, y no pisar lo que ya
 		// hubiera en la sección— vive en `utils/config-values`, que se
 		// prueba sin montar nada.
-		expect(pantalla).toContain('writeBarPosition');
-		expect(pantalla).toContain('readBarPosition');
+		expect(viewSource).toContain('writeBarPosition');
+		expect(viewSource).toContain('readBarPosition');
 	});
 
 	test('usa el `select` de la librería, con su etiqueta asociada', () => {
 		// Un `<label>` suelto al lado no está asociado a nada: un lector de
 		// pantalla anuncia un desplegable sin nombre, y hacer clic en el texto
 		// no abre la lista.
-		expect(pantalla).toContain('<SelectField');
-		expect(pantalla).toContain(':label="t(\'views.appearanceWindows.barPosition\')"');
+		expect(viewSource).toContain('<SelectField');
+		expect(viewSource).toContain(':label="t(\'views.appearanceWindows.barPosition\')"');
 	});
 
 	test('los cuatro lados salen de la lista y no escritos a mano', () => {
 		// Escritos a mano, agregar un lado en la librería deja esta pantalla
 		// sin ofrecerlo y nadie se entera.
-		expect(pantalla).toContain('v-for="lado in BAR_POSITIONS"');
+		expect(viewSource).toContain('v-for="side in BAR_POSITIONS"');
 	});
 
 	test('y los cuatro tienen texto en los dos idiomas', () => {
-		for (const lado of ['top', 'bottom', 'left', 'right']) {
-			expect(es).toContain(`      ${lado}:`);
-			expect(en).toContain(`      ${lado}:`);
+		for (const side of ['top', 'bottom', 'left', 'right']) {
+			expect(es).toContain(`      ${side}:`);
+			expect(en).toContain(`      ${side}:`);
 		}
 	});
 });

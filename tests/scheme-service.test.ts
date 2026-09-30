@@ -12,7 +12,7 @@ import vasakDefault from './fixtures/scheme-vasak-default.json';
  *
  * El nombre del comando y la forma del argumento los prueba el propio plugin
  * (`guest-js/save-user-scheme.test.ts`). Acá se espía su `saveUserScheme` y no
- * el `invoke`: `iconos-reactivos.test.ts` simula `@tauri-apps/api/core` para
+ * el `invoke`: `reactive-icons.test.ts` simula `@tauri-apps/api/core` para
  * toda la corrida, y un segundo `mock.module` del mismo módulo se pisa con ése
  * según el orden. El espía se restaura después de cada prueba.
  */

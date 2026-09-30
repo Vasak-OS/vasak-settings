@@ -101,8 +101,8 @@ async function loadThumbnail(path: string) {
 	if (!path || thumbnails.value[path]) return;
 
 	try {
-		const miniatura = await invoke<string>('wallpaper_thumbnail', { path });
-		thumbnails.value = { ...thumbnails.value, [path]: convertFileSrc(miniatura) };
+		const thumbnail = await invoke<string>('wallpaper_thumbnail', { path });
+		thumbnails.value = { ...thumbnails.value, [path]: convertFileSrc(thumbnail) };
 	} catch {
 		// Sin miniatura se muestra el original: peor para la memoria, pero es
 		// mejor que un recuadro vacío.
@@ -136,12 +136,12 @@ const saveWallpaperConfig = async () => {
 			optimizeDetail.value = '';
 
 			try {
-				const preparado = await invoke<{ path: string; optimized: boolean; detail: string }>(
+				const prepared = await invoke<{ path: string; optimized: boolean; detail: string }>(
 					'prepare_wallpaper_video',
 					{ path: finalPath }
 				);
-				finalPath = preparado.path;
-				optimizeDetail.value = preparado.detail;
+				finalPath = prepared.path;
+				optimizeDetail.value = prepared.detail;
 			} catch (err) {
 				// Que no se pueda optimizar no es motivo para no poder poner el
 				// fondo: se guarda el original y el escritorio lo reproduce igual.
@@ -183,8 +183,8 @@ onMounted(async () => {
 		officialWallpapers.value = await getOfficialWallpapers<string[]>();
 
 		// De a una y en orden, para no lanzar diez ffmpeg a la vez.
-		for (const ruta of officialWallpapers.value) {
-			await loadThumbnail(ruta);
+		for (const wallpaperPath of officialWallpapers.value) {
+			await loadThumbnail(wallpaperPath);
 		}
 
 		await loadThumbnail(selectedWallpaperPath.value);

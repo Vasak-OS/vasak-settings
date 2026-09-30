@@ -37,10 +37,10 @@ import { Glob } from 'bun';
  * qué tema salió, que es lo único que distingue «volvió a pedirlo» de «se quedó
  * con el de antes».
  */
-let variante = 'claro';
+let variant = 'claro';
 
 /** Los manejadores del cambio de tema, para dispararlos a mano. */
-const oyentesDelTema: Array<() => void> = [];
+const themeListeners: Array<() => void> = [];
 
 /**
  * Los dobles van **encima** del módulo de verdad, no en su lugar.
@@ -51,25 +51,25 @@ const oyentesDelTema: Array<() => void> = [];
  * monta uno, la corrida se cae con un «Export named 'once' not found» que no
  * nombra ninguna prueba.
  */
-const eventos = await import('@tauri-apps/api/event');
-const nucleo = await import('@tauri-apps/api/core');
+const eventModule = await import('@tauri-apps/api/event');
+const coreModule = await import('@tauri-apps/api/core');
 
 mock.module('@tauri-apps/api/event', () => ({
-	...eventos,
-	listen: async (nombre: string, manejador: () => void) => {
-		if (nombre === 'vicons:theme-changed') oyentesDelTema.push(manejador);
+	...eventModule,
+	listen: async (name: string, handler: () => void) => {
+		if (name === 'vicons:theme-changed') themeListeners.push(handler);
 		return () => {
-			const donde = oyentesDelTema.indexOf(manejador);
-			if (donde >= 0) oyentesDelTema.splice(donde, 1);
+			const index = themeListeners.indexOf(handler);
+			if (index >= 0) themeListeners.splice(index, 1);
 		};
 	},
 }));
 
 /** El catálogo mínimo: un proveedor, para mirarle el icono. */
 mock.module('@tauri-apps/api/core', () => ({
-	...nucleo,
-	invoke: async (comando: string) => {
-		if (comando.includes('list_providers')) {
+	...coreModule,
+	invoke: async (command: string) => {
+		if (command.includes('list_providers')) {
 			return [{ id: 'google', display_name: 'Google', capabilities: [] }];
 		}
 		return [];
@@ -77,20 +77,20 @@ mock.module('@tauri-apps/api/core', () => ({
 }));
 
 mock.module('@vasakgroup/plugin-vicons', () => ({
-	getIconSource: async (nombre: string) => `icono:${variante}:${nombre}`,
-	getSymbolSource: async (nombre: string) => `simbolo:${variante}:${nombre}`,
+	getIconSource: async (name: string) => `icono:${variant}:${name}`,
+	getSymbolSource: async (name: string) => `simbolo:${variant}:${name}`,
 	hasSymbol: async () => true,
 }));
 
 mock.module('@vasakgroup/tauri-plugin-i18n', () => ({
-	useI18n: () => ({ t: (clave: string) => clave, locale: { value: 'es' } }),
+	useI18n: () => ({ t: (key: string) => key, locale: { value: 'es' } }),
 }));
 
 // `fileURLToPath` y no `.pathname`: éste deja los caracteres codificados tal
 // como están, así que un checkout en una ruta con un espacio llega con `%20` y
 // `scanSync` no encuentra nada.
-const FUENTE = fileURLToPath(new URL('../src/', import.meta.url));
-const fuentes = [...new Glob('**/*.{vue,ts}').scanSync(FUENTE)];
+const SOURCE_DIR = fileURLToPath(new URL('../src/', import.meta.url));
+const sources = [...new Glob('**/*.{vue,ts}').scanSync(SOURCE_DIR)];
 
 /**
  * Los dos que sí resuelven a mano, y por qué.
@@ -105,29 +105,29 @@ const fuentes = [...new Glob('**/*.{vue,ts}').scanSync(FUENTE)];
  *   **función** que resuelva el nombre a una ruta porque lo pinta el complemento
  *   fuera de esta ventana.
  */
-const EXCEPCIONES = new Set(['views/OnlineAccountsView.vue', 'main.ts']);
+const EXCEPTIONS = new Set(['views/OnlineAccountsView.vue', 'main.ts']);
 
 describe('el composable de iconos propio', () => {
 	test('hay algo que mirar', () => {
 		// Sin esto las de abajo pasan sobre una lista vacía, que es en lo que
 		// quedan si el patrón deja de encontrar archivos. Una guardia que se
 		// apaga sola dice que sí.
-		expect(fuentes).toContain('layouts/WindowAppLayout.vue');
-		expect(fuentes.length).toBeGreaterThan(50);
+		expect(sources).toContain('layouts/WindowAppLayout.vue');
+		expect(sources.length).toBeGreaterThan(50);
 	});
 
 	test('ya no está', () => {
-		expect(fuentes.filter((ruta) => ruta.includes('useReactiveIcon'))).toEqual([]);
+		expect(sources.filter((path) => path.includes('useReactiveIcon'))).toEqual([]);
 	});
 
 	test('y nadie lo llama', async () => {
-		const culpables: string[] = [];
-		for (const ruta of fuentes) {
-			const texto = await Bun.file(join(FUENTE, ruta)).text();
-			if (/\buseReactive(?:Icon|Symbol)\s*\(/.test(texto)) culpables.push(ruta);
+		const offenders: string[] = [];
+		for (const path of sources) {
+			const text = await Bun.file(join(SOURCE_DIR, path)).text();
+			if (/\buseReactive(?:Icon|Symbol)\s*\(/.test(text)) offenders.push(path);
 		}
 
-		expect(culpables).toEqual([]);
+		expect(offenders).toEqual([]);
 	});
 });
 
@@ -137,15 +137,15 @@ describe('quién resuelve iconos a mano', () => {
 		// nombrarlos. `utils/provider-icon.ts` recibe el resolvedor como
 		// parámetro —por eso se puede probar sin arrastrar Vue— y lo nombra en un
 		// `@param`: buscando el nombre a secas aparecía como culpable.
-		const aMano: string[] = [];
-		for (const ruta of fuentes) {
-			const texto = await Bun.file(join(FUENTE, ruta)).text();
-			const importa = /from '@vasakgroup\/plugin-vicons'/.test(texto);
-			const escucha = /listen\(\s*'vicons:theme-changed'/.test(texto);
-			if (importa || escucha) aMano.push(ruta);
+		const resolvedByHand: string[] = [];
+		for (const path of sources) {
+			const text = await Bun.file(join(SOURCE_DIR, path)).text();
+			const importsVicons = /from '@vasakgroup\/plugin-vicons'/.test(text);
+			const listensToTheme = /listen\(\s*'vicons:theme-changed'/.test(text);
+			if (importsVicons || listensToTheme) resolvedByHand.push(path);
 		}
 
-		expect(aMano.sort()).toEqual([...EXCEPCIONES].sort());
+		expect(resolvedByHand.sort()).toEqual([...EXCEPTIONS].sort());
 	});
 
 	test('y el que resuelve a mano sigue al tema por la librería', async () => {
@@ -158,10 +158,10 @@ describe('quién resuelve iconos a mano', () => {
 		// sigue en verde. Lo que cierra el agujero es la prueba de más abajo, que
 		// monta la vista y mira el dibujo. Ésta queda por lo otro que el texto sí
 		// puede decir: que no haya vuelto a aparecer un `listen` propio.
-		const texto = await Bun.file(join(FUENTE, 'views/OnlineAccountsView.vue')).text();
+		const text = await Bun.file(join(SOURCE_DIR, 'views/OnlineAccountsView.vue')).text();
 
-		expect(texto).toContain('usarLaVersionDelTema');
-		expect(texto).not.toContain("listen('vicons:theme-changed'");
+		expect(text).toContain('usarLaVersionDelTema');
+		expect(text).not.toContain("listen('vicons:theme-changed'");
 	});
 });
 
@@ -184,24 +184,22 @@ describe('las tarjetas de proveedor vuelven a pedir el icono al cambiar el tema'
 		const { olvidarLosIconosDelTema } = await import('@vasakgroup/vue-libvasak');
 
 		olvidarLosIconosDelTema();
-		variante = 'claro';
+		variant = 'claro';
 
 		const OnlineAccountsView = (await import('@/views/OnlineAccountsView.vue')).default;
-		const vista = mount(OnlineAccountsView, { attachTo: document.body });
+		const view = mount(OnlineAccountsView, { attachTo: document.body });
 		for (let i = 0; i < 12; i++) await nextTick();
 
-		const antes = vista.find('img[alt="Google"]').attributes('src');
-		expect(antes).toBe('simbolo:claro:google-symbolic');
+		const before = view.find('img[alt="Google"]').attributes('src');
+		expect(before).toBe('simbolo:claro:google-symbolic');
 
-		variante = 'oscuro';
-		for (const manejador of oyentesDelTema) manejador();
+		variant = 'oscuro';
+		for (const handler of themeListeners) handler();
 		for (let i = 0; i < 12; i++) await nextTick();
 
-		expect(vista.find('img[alt="Google"]').attributes('src')).toBe(
-			'simbolo:oscuro:google-symbolic'
-		);
+		expect(view.find('img[alt="Google"]').attributes('src')).toBe('simbolo:oscuro:google-symbolic');
 
-		vista.unmount();
+		view.unmount();
 		olvidarLosIconosDelTema();
 	});
 });
@@ -242,23 +240,23 @@ describe('la recarga de los iconos del tema se agenda', () => {
 		// import o el `mount` fallaran antes, el `finally` no correría y las
 		// pruebas siguientes heredarían el reloj detenido y la variante puesta
 		// acá. Lo marcó la revisión.
-		const varianteDeAntes = variante;
-		let icono: ReturnType<typeof mount> | null = null;
+		const previousVariant = variant;
+		let icon: ReturnType<typeof mount> | null = null;
 		try {
 			jest.useFakeTimers();
 			olvidarLosIconosDelTema();
-			variante = 'claro';
+			variant = 'claro';
 
 			const ProfileIcon = (await import('@/components/ui/ProfileIcon.vue')).default;
-			icono = mount(ProfileIcon, { props: { profile: 'balanced' } });
+			icon = mount(ProfileIcon, { props: { profile: 'balanced' } });
 			await settle();
-			expect(icono.get('img').attributes('src')).toBe('icono:claro:battery-profile-balanced');
+			expect(icon.get('img').attributes('src')).toBe('icono:claro:battery-profile-balanced');
 
-			variante = 'oscuro';
-			for (const manejador of oyentesDelTema) manejador();
+			variant = 'oscuro';
+			for (const handler of themeListeners) handler();
 			await settle();
 
-			expect(icono.get('img').attributes('src')).not.toBe('icono:oscuro:battery-profile-balanced');
+			expect(icon.get('img').attributes('src')).not.toBe('icono:oscuro:battery-profile-balanced');
 
 			// El planificador `await`ea entre tandas, así que se avanza en pasos
 			// con microtareas en el medio.
@@ -267,10 +265,10 @@ describe('la recarga de los iconos del tema se agenda', () => {
 				await settle(2);
 			}
 
-			expect(icono.get('img').attributes('src')).toBe('icono:oscuro:battery-profile-balanced');
+			expect(icon.get('img').attributes('src')).toBe('icono:oscuro:battery-profile-balanced');
 		} finally {
-			icono?.unmount();
-			variante = varianteDeAntes;
+			icon?.unmount();
+			variant = previousVariant;
 			olvidarLosIconosDelTema();
 			jest.useRealTimers();
 		}
