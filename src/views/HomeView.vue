@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage } from '@vasakgroup/vue-libvasak';
+import { AlertMessage, EmptyState, PageHeader } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import CpuMemoryCard from '@/components/systeminformation/CpuMemoryCard.vue';
 import DisksCard from '@/components/systeminformation/DisksCard.vue';
@@ -9,8 +9,6 @@ import SystemDetailsCard from '@/components/systeminformation/SystemDetailsCard.
 import SystemOverviewCard, {
 	type SystemMetricItem,
 } from '@/components/systeminformation/SystemOverviewCard.vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
 import { getSystemInfo } from '@/services/system.service';
 import type { SystemInfo } from '@/types/system';
 
@@ -171,18 +169,19 @@ onUnmounted(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4">
 		<PageHeader
-			:section="t('views.home.section')"
+			size="lg"
+			:eyebrow="t('views.home.section')"
 			:title="t('views.home.title')"
 			:description="t('views.home.description')"
 		>
 			<template #actions>
-				<span class="rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-2 text-xs text-tx-muted">
+				<span class="rounded-corner-m border border-ui-border bg-ui-surface/70 px-3 py-2 text-xs text-tx-muted">
 					{{ t('views.home.lastUpdated').replace('{0}', formatLastUpdatedAt(lastUpdatedAt)) }}
 				</span>
 
 				<button
 					type="button"
-					class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-2 text-sm font-medium hover:bg-ui-surface"
+					class="w-fit rounded-corner-m border border-ui-border bg-ui-surface/70 px-3 py-2 text-sm font-medium hover:bg-ui-surface"
 					@click="loadSystemInfo(false)"
 				>
 					{{ t('views.home.refresh') }}
@@ -190,7 +189,7 @@ onUnmounted(() => {
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" :message="t('views.home.loading')" padding="lg" />
+		<EmptyState icon="" size="sm" bordered v-if="loading" :title="t('views.home.loading')" />
 
 		<AlertMessage v-else-if="errorMessage" tone="error">{{ errorMessage }}</AlertMessage>
 

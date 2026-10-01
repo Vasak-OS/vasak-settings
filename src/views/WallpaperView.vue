@@ -8,12 +8,15 @@ import {
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	EmptyState,
+	PageHeader,
+	Panel,
+	ProgressBar,
+	SwitchToggle,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import ProgressBar from '@/components/ui/ProgressBar.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
 import { getOfficialWallpapers } from '@/services/style.service';
 import { configBoolean } from '@/utils/config-values';
 
@@ -220,14 +223,15 @@ onUnmounted(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.appearance')"
+			size="lg"
+			:eyebrow="t('sidebar.appearance')"
 			:title="t('views.appearanceWallpaper.title')"
 			:description="t('views.appearanceWallpaper.description')"
 		>
 			<template #actions>
 				<button
 					type="button"
-					class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
+					class="w-fit rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
 					:disabled="saving"
 					@click="saveWallpaperConfig"
 				>
@@ -236,7 +240,7 @@ onUnmounted(() => {
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" :message="t('views.appearanceWallpaper.loading')" padding="lg" />
+		<EmptyState icon="" size="sm" bordered v-if="loading" :title="t('views.appearanceWallpaper.loading')" />
 
 		<template v-else>
 			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
@@ -245,7 +249,7 @@ onUnmounted(() => {
 
 			<!-- Sólo aparece cuando hace falta: con una imagen de fondo, esto no
 			     significa nada y sería una opción más para leer y descartar. -->
-			<SectionCard v-if="selectedIsVideo">
+			<Panel as="article" v-if="selectedIsVideo">
 				<h2 class="text-lg font-semibold">{{ t('views.appearanceWallpaper.videoTitle') }}</h2>
 				<p class="mt-1 text-sm text-tx-muted">{{ t('views.appearanceWallpaper.videoPowerNote') }}</p>
 
@@ -253,7 +257,7 @@ onUnmounted(() => {
 					<p class="mb-2 text-sm text-tx-muted">
 						{{ t('views.appearanceWallpaper.optimizing') }}
 					</p>
-					<ProgressBar :value="optimizeProgress" :label="`${optimizeProgress}%`" />
+					<ProgressBar show-value :decimals="1" :value="optimizeProgress" :label="`${optimizeProgress}%`" />
 				</div>
 
 				<p v-else-if="optimizeDetail" class="mt-4 text-sm text-tx-muted">
@@ -271,17 +275,17 @@ onUnmounted(() => {
 						@update:model-value="(val: boolean) => (pauseVideoOnBattery = val)"
 					/>
 				</div>
-			</SectionCard>
+			</Panel>
 
 			<div class="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
-				<SectionCard>
+				<Panel as="article">
 					<div class="flex items-center justify-between">
 						<h2 class="text-lg font-semibold">{{ t('views.appearanceWallpaper.officialTitle') }}</h2>
 						<span class="text-sm text-tx-muted">{{ t('views.appearanceWallpaper.optionsCount').replace('{0}', String(officialWallpapers.length)) }}</span>
 					</div>
 
 					<div v-if="officialWallpapers.length === 0" class="mt-4">
-						<EmptyStateBox :message="t('views.appearanceWallpaper.noWallpapers')" />
+						<EmptyState icon="" size="sm" bordered :title="t('views.appearanceWallpaper.noWallpapers')" />
 					</div>
 
 					<div v-else class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -289,7 +293,7 @@ onUnmounted(() => {
 							v-for="wallpaperPath in officialWallpapers"
 							:key="wallpaperPath"
 							type="button"
-							class="group overflow-hidden rounded-corner border text-left transition-all duration-200"
+							class="group overflow-hidden rounded-corner-m border text-left transition-all duration-200"
 							:class="isSelected(wallpaperPath) ? 'border-primary bg-primary/10' : 'border-ui-border bg-ui-surface/30 hover:border-primary/50'"
 							@click="applyWallpaperPath(wallpaperPath)"
 						>
@@ -304,9 +308,9 @@ onUnmounted(() => {
 							</div>
 						</button>
 					</div>
-				</SectionCard>
+				</Panel>
 
-				<SectionCard>
+				<Panel as="article">
 					<h2 class="text-lg font-semibold">{{ t('views.appearanceWallpaper.customPathTitle') }}</h2>
 					<p class="mt-1 text-sm text-tx-muted">{{ t('views.appearanceWallpaper.customPathHint') }}</p>
 
@@ -317,14 +321,14 @@ onUnmounted(() => {
 							type="text"
 							v-model="selectedWallpaperPath"
 							:placeholder="t('views.appearanceWallpaper.pathPlaceholder')"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-2 text-sm focus:border-primary"
+							class="w-full rounded-corner-m border border-ui-border bg-ui-surface/70 px-3 py-2 text-sm focus:border-primary"
 						/>
 						<p class="mt-2 text-xs text-tx-muted">{{ t('views.appearanceWallpaper.dragHint') }}</p>
 					</div>
 
-					<div v-if="selectedWallpaperPath" class="mt-4 rounded-corner border border-ui-border bg-ui-surface/30 p-3">
+					<div v-if="selectedWallpaperPath" class="mt-4 rounded-corner-m border border-ui-border bg-ui-surface/30 p-3">
 						<p class="mb-2 text-xs uppercase tracking-[0.16em] text-tx-muted">{{ t('views.appearanceWallpaper.preview') }}</p>
-						<div class="group relative flex h-40 w-full items-center justify-center overflow-hidden rounded-corner border-2 border-dashed border-primary/30 bg-ui-surface/80 transition-colors hover:border-primary/50 hover:bg-primary/5">
+						<div class="group relative flex h-40 w-full items-center justify-center overflow-hidden rounded-corner-m border-2 border-dashed border-primary/30 bg-ui-surface/80 transition-colors hover:border-primary/50 hover:bg-primary/5">
 							<!-- También la previsualización va por miniatura, y de un video
 							     muestra un cuadro. Un elemento multimedia apuntando al
 							     protocolo interno falla y reintenta, y cada intento entrega el
@@ -341,9 +345,9 @@ onUnmounted(() => {
 						</div>
 						<p class="mt-2 break-all text-xs text-tx-muted">{{ selectedWallpaperPath }}</p>
 					</div>
-					<div v-else class="mt-4 rounded-corner border border-ui-border bg-ui-surface/30 p-3">
+					<div v-else class="mt-4 rounded-corner-m border border-ui-border bg-ui-surface/30 p-3">
 						<p class="mb-2 text-xs uppercase tracking-[0.16em] text-tx-muted">{{ t('views.appearanceWallpaper.preview') }}</p>
-						<div class="group relative flex h-40 w-full items-center justify-center overflow-hidden rounded-corner border-2 border-dashed border-primary/30 bg-ui-surface/80 transition-colors hover:border-primary/50 hover:bg-primary/5">
+						<div class="group relative flex h-40 w-full items-center justify-center overflow-hidden rounded-corner-m border-2 border-dashed border-primary/30 bg-ui-surface/80 transition-colors hover:border-primary/50 hover:bg-primary/5">
 							<div class="absolute inset-0 flex items-center justify-center bg-black/50 transition-colors hover:bg-black/40">
 								<div class="pointer-events-none text-center">
 									<span class="mb-2 block text-sm text-white">📂 {{ t('views.appearanceWallpaper.dropHere') }}</span>
@@ -351,7 +355,7 @@ onUnmounted(() => {
 							</div>
 						</div>
 					</div>
-				</SectionCard>
+				</Panel>
 			</div>
 		</template>
 	</div>

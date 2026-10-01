@@ -20,35 +20,35 @@
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import {
-	ProgressBar as BarraDeLaLibreria,
-	olvidarLosIconosDelTema,
-} from '@vasakgroup/vue-libvasak';
+import { olvidarLosIconosDelTema, ProgressBar } from '@vasakgroup/vue-libvasak';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { Glob } from 'bun';
 import { nextTick } from 'vue';
-import ModalDialog from '@/components/ui/ModalDialog.vue';
-import ProgressBar from '@/components/ui/ProgressBar.vue';
+import ShortcutDeleteModal from '@/components/shortcuts/ShortcutDeleteModal.vue';
+import MountedDiskCard from '@/components/systeminformation/MountedDiskCard.vue';
 
-const montadas: VueWrapper[] = [];
+const mountedViews: VueWrapper[] = [];
 
-function montar(componente: Parameters<typeof mount>[0], opciones: Record<string, unknown> = {}) {
-	const vista = mount(componente, { attachTo: document.body, ...opciones } as never);
-	montadas.push(vista);
-	return vista;
+function mountAttached(
+	component: Parameters<typeof mount>[0],
+	options: Record<string, unknown> = {}
+) {
+	const view = mount(component, { attachTo: document.body, ...options } as never);
+	mountedViews.push(view);
+	return view;
 }
 
-const elPanel = () => document.body.querySelector<HTMLElement>('[role="dialog"]');
+const dialogPanel = () => document.body.querySelector<HTMLElement>('[role="dialog"]');
 
 beforeEach(() => {
 	olvidarLosIconosDelTema();
 });
 
 afterEach(() => {
-	for (const vista of montadas.splice(0)) vista.unmount();
+	for (const view of mountedViews.splice(0)) view.unmount();
 	// El panel se teletransporta al `body`, así que no se va con el desmontaje.
-	for (const suelto of document.body.querySelectorAll('[role="dialog"]')) {
-		suelto.parentElement?.remove();
+	for (const leftover of document.body.querySelectorAll('[role="dialog"]')) {
+		leftover.parentElement?.remove();
 	}
 });
 
@@ -77,18 +77,18 @@ afterEach(() => {
  * bloque, que es exactamente la clase de duplicado que este archivo existe para
  * cazar en el código de la aplicación.
  */
-function sinComentarios(texto: string): string {
-	let anterior: string;
-	let actual = texto;
+function stripComments(text: string): string {
+	let previous: string;
+	let current = text;
 
 	do {
-		anterior = actual;
-		actual = actual.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '');
-	} while (actual !== anterior);
+		previous = current;
+		current = current.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '');
+	} while (current !== previous);
 
-	return actual
+	return current
 		.split('\n')
-		.filter((linea) => !/^\s*\/\//.test(linea))
+		.filter((line) => !/^\s*\/\//.test(line))
 		.join('\n');
 }
 
@@ -100,28 +100,28 @@ describe('el aviso, en las sesenta y nueve etiquetas convertidas', () => {
 	//
 	// Por eso esto mira el fuente y no monta: lo que puede fallar es una
 	// etiqueta suelta entre sesenta y nueve, no el componente.
-	const raiz = new URL('../src/', import.meta.url).pathname;
-	const fuentes = [...new Glob('**/*.vue').scanSync(raiz)].map((ruta) => ({
-		ruta,
-		texto: readFileSync(raiz + ruta, 'utf8'),
+	const root = new URL('../src/', import.meta.url).pathname;
+	const sources = [...new Glob('**/*.vue').scanSync(root)].map((path) => ({
+		path,
+		text: readFileSync(root + path, 'utf8'),
 	}));
 
-	function conteniendo(patron: RegExp): string[] {
-		return fuentes.filter(({ texto }) => patron.test(texto)).map(({ ruta }) => ruta);
+	function containing(patron: RegExp): string[] {
+		return sources.filter(({ text }) => patron.test(text)).map(({ path }) => path);
 	}
 
 	test('ninguna quedó pasando el mensaje como propiedad', () => {
-		expect(conteniendo(/<AlertMessage\b[^>]*:?message=/s)).toEqual([]);
+		expect(containing(/<AlertMessage\b[^>]*:?message=/s)).toEqual([]);
 	});
 
 	test('y todas siguen diciendo algo', () => {
 		// Una etiqueta vacía es el otro final del mismo error: la conversión
 		// sacó el `:message` y no puso nada en su lugar.
-		expect(conteniendo(/<AlertMessage\b[^>]*>\s*<\/AlertMessage>/s)).toEqual([]);
+		expect(containing(/<AlertMessage\b[^>]*>\s*<\/AlertMessage>/s)).toEqual([]);
 	});
 
 	test('y ninguna pantalla importa el aviso viejo', () => {
-		expect(conteniendo(/components\/ui\/AlertMessage\.vue/)).toEqual([]);
+		expect(containing(/components\/ui\/AlertMessage\.vue/)).toEqual([]);
 	});
 
 	test('el guardia encuentra lo que busca', () => {
@@ -134,83 +134,116 @@ describe('el aviso, en las sesenta y nueve etiquetas convertidas', () => {
 	});
 });
 
+/**
+ * El modal, que dejó de ser una capa propia (`ModalDialog`) y es la composición
+ * de `Dialog` de la librería. Se prueba sobre un consumidor de verdad —el que
+ * pregunta antes de borrar un atajo—, que es donde se ve si la mudanza dejó
+ * algo en el camino: el nombre, el Escape, el contenido y el botón de cerrar
+ * escrito, que es el formato de Configuración.
+ */
 describe('el modal', () => {
-	function abrir(props: Record<string, unknown> = {}) {
-		const vista = montar(ModalDialog, {
-			props: { open: false, title: 'Borrar el atajo', ...props },
-			slots: { default: '<button class="dentro">Confirmar</button>' },
+	const shortcut = { keys: '<super> KEY_T', action: 'command', target: 'vasak-terminal' };
+
+	function open() {
+		return mountAttached(ShortcutDeleteModal, {
+			props: { open: true, shortcut },
+			global: { stubs: { ThemeIcon: true } },
 		});
-		return vista;
 	}
 
-	test('se anuncia como diálogo, que antes no', async () => {
-		// La copia de acá era un `div` con un velo: ni `role`, ni `aria-modal`,
-		// ni nombre. Un lector de pantalla no tenía forma de saber que lo de
-		// atrás había dejado de estar disponible.
-		const vista = abrir();
-		await vista.setProps({ open: true });
+	test('se anuncia como diálogo', async () => {
+		open();
 		await nextTick();
 
-		expect(elPanel()).not.toBeNull();
-		expect(elPanel()?.getAttribute('aria-modal')).toBe('true');
+		expect(dialogPanel()).not.toBeNull();
+		expect(dialogPanel()?.getAttribute('aria-modal')).toBe('true');
 	});
 
 	test('y con su título, no con un nombre escrito aparte', async () => {
-		const vista = abrir({ title: 'Borrar el atajo' });
-		await vista.setProps({ open: true });
+		open();
 		await nextTick();
 
-		const id = elPanel()?.getAttribute('aria-labelledby');
+		const id = dialogPanel()?.getAttribute('aria-labelledby');
 		expect(id).toBeTruthy();
-		expect(document.getElementById(id as string)?.textContent).toContain('Borrar el atajo');
+		expect(document.getElementById(id as string)?.textContent?.trim()).toBeTruthy();
 	});
 
-	test('Escape lo cierra, que antes sólo lo hacía el clic en el velo', async () => {
-		const vista = abrir();
-		await vista.setProps({ open: true });
+	test('Escape lo cierra y avisa que se canceló', async () => {
+		const view = open();
 		await nextTick();
 
 		document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 		await nextTick();
 
-		expect(vista.emitted('close')).toHaveLength(1);
+		expect(view.emitted('cancel')).toHaveLength(1);
+		expect(view.emitted('update:open')?.[0]).toEqual([false]);
 	});
 
 	test('el contenido sigue adentro del panel', async () => {
-		// La ranura pasó por tres piezas nuevas; si se hubiera desconectado, lo
-		// que se le ponga desaparece sin dar ningún error.
-		const vista = abrir();
-		await vista.setProps({ open: true });
+		// La ranura pasó por cuatro piezas; si se hubiera desconectado, lo que
+		// se le ponga desaparece sin dar ningún error.
+		open();
 		await nextTick();
 
-		expect(elPanel()?.querySelector('.dentro')).not.toBeNull();
+		expect(dialogPanel()?.textContent).toContain('vasak-terminal');
+	});
+
+	test('el cerrar es un botón con la palabra, arriba, como antes', async () => {
+		// `closeStyle="label"`: la forma que tenía la copia de acá. Con el de
+		// icono la pantalla cambiaría de formato.
+		const view = open();
+		await nextTick();
+
+		const buttons = [...(dialogPanel()?.querySelectorAll('button') ?? [])];
+		const close = buttons.find(
+			(b) => b.textContent?.trim() === 'common.close' || b.textContent?.trim() === 'Cerrar'
+		);
+		expect(close).toBeDefined();
+		close?.click();
+		await nextTick();
+		expect(view.emitted('cancel')).toHaveLength(1);
 	});
 });
 
+/**
+ * La fila de progreso: la etiqueta, el porcentaje con un decimal y la barra.
+ * Era la capa `ProgressBar` de acá; ahora es `show-value` y `decimals` de la de
+ * la librería. Se prueba sobre la tarjeta del disco, que es quien la usa.
+ */
 describe('la barra de progreso', () => {
-	test('ahora dice su valor a quien no la ve', () => {
-		// Es lo único que le faltaba, y no se notaba: el espacio en disco y la
-		// memoria se leían sólo mirando el ancho de una caja de colores.
-		const vista = montar(ProgressBar, { props: { label: 'Disco', value: 62.5 } });
-		const barra = vista.find('[role="progressbar"]');
+	const disk = {
+		device: '/dev/nvme0n1p2',
+		mountpoint: '/',
+		mountpoints: ['/'],
+		fstype: 'btrfs',
+		total_gb: 100,
+		used_gb: 62.5,
+		available_gb: 37.5,
+		usage_percent: 62.5,
+	};
 
-		expect(barra.exists()).toBe(true);
-		expect(barra.attributes('aria-valuenow')).toBe('62.5');
-		expect(barra.attributes('aria-label')).toBe('Disco');
+	test('dice su valor a quien no la ve', () => {
+		const view = mountAttached(MountedDiskCard, { props: { disk } });
+		const bar = view.find('[role="progressbar"]');
+
+		expect(bar.exists()).toBe(true);
+		expect(bar.attributes('aria-valuenow')).toBe('62.5');
 	});
 
-	test('y el número escrito al lado dice lo mismo que la barra', () => {
+	test('y el número escrito al lado dice lo mismo, con un decimal', () => {
 		// Los dos leen el mismo valor acotado: si se separan, uno miente.
-		const vista = montar(ProgressBar, { props: { label: 'Memoria', value: 140 } });
+		const view = mountAttached(MountedDiskCard, {
+			props: { disk: { ...disk, usage_percent: 140 } },
+		});
 
-		expect(vista.text()).toContain('100.0%');
-		expect(vista.find('[role="progressbar"]').attributes('aria-valuenow')).toBe('100');
+		expect(view.text()).toContain('100.0%');
+		expect(view.find('[role="progressbar"]').attributes('aria-valuenow')).toBe('100');
 	});
 
 	test('la barra es la de la librería y no una dibujada acá', () => {
-		const vista = montar(ProgressBar, { props: { label: 'Disco', value: 10 } });
+		const view = mountAttached(MountedDiskCard, { props: { disk } });
 
-		expect(vista.findComponent(BarraDeLaLibreria).exists()).toBe(true);
+		expect(view.findComponent(ProgressBar).exists()).toBe(true);
 	});
 });
 
@@ -227,15 +260,15 @@ describe('la barra de progreso', () => {
  * o pasar `label-class` en dieciocho lugares.
  */
 describe('el grupo de formulario', () => {
-	const FUENTE = new URL('../src/', import.meta.url).pathname;
-	const fuentes = [...new Glob('**/*.vue').scanSync(FUENTE)];
+	const SOURCE = new URL('../src/', import.meta.url).pathname;
+	const sources = [...new Glob('**/*.vue').scanSync(SOURCE)];
 
 	test('hay algo que mirar', () => {
-		expect(fuentes.length).toBeGreaterThan(30);
+		expect(sources.length).toBeGreaterThan(30);
 	});
 
 	test('ya no hay copia propia', () => {
-		expect(fuentes.filter((ruta) => ruta.endsWith('ui/FormGroup.vue'))).toEqual([]);
+		expect(sources.filter((path) => path.endsWith('ui/FormGroup.vue'))).toEqual([]);
 	});
 
 	/**
@@ -251,21 +284,21 @@ describe('el grupo de formulario', () => {
 	 * cualquier `//`: así una URL adentro de una cadena no se lleva media línea
 	 * puesta.
 	 */
-	const leer = (ruta: string) => sinComentarios(readFileSync(FUENTE + ruta, 'utf8'));
+	const read = (path: string) => stripComments(readFileSync(SOURCE + path, 'utf8'));
 
 	test('y nadie la importa de acá adentro', () => {
-		const culpables = fuentes.filter((ruta) => leer(ruta).includes('components/ui/FormGroup.vue'));
+		const offenders = sources.filter((path) => read(path).includes('components/ui/FormGroup.vue'));
 
-		expect(culpables).toEqual([]);
+		expect(offenders).toEqual([]);
 	});
 
 	test('la guardia mira importaciones vivas, no texto comentado', () => {
 		// Un import comentado no es un import: el componente no queda disponible.
-		const comentado = "// import { FormGroup } from '@vasakgroup/vue-libvasak';";
+		const commented = "// import { FormGroup } from '@vasakgroup/vue-libvasak';";
 
-		expect(sinComentarios(comentado)).toBe('');
+		expect(stripComments(commented)).toBe('');
 		// Y una URL adentro de una cadena sobrevive entera.
-		expect(sinComentarios("const u = 'https://vasak.net.ar';")).toContain('https://vasak.net.ar');
+		expect(stripComments("const u = 'https://vasak.net.ar';")).toContain('https://vasak.net.ar');
 	});
 
 	test('y no deja marcadores atrás cuando vienen anidados', () => {
@@ -274,22 +307,22 @@ describe('el grupo de formulario', () => {
 		// Es lo que CodeQL marca como sanitización incompleta, y con un import
 		// escondido ahí adentro la guardia miraría un texto que no es el que se
 		// compila.
-		expect(sinComentarios('<!-- <!-- x --> -->')).not.toContain('<!--');
-		expect(sinComentarios('/* /* x */ */')).not.toContain('/*');
+		expect(stripComments('<!-- <!-- x --> -->')).not.toContain('<!--');
+		expect(stripComments('/* /* x */ */')).not.toContain('/*');
 		// Y lo de siempre sigue andando igual.
-		expect(sinComentarios('<!-- fuera -->adentro')).toBe('adentro');
+		expect(stripComments('<!-- fuera -->adentro')).toBe('adentro');
 	});
 
 	test('las dieciocho la piden a la librería', () => {
 		// Si alguna la usa sin importarla, Vue dibuja un elemento desconocido y
 		// no falla: la vista queda sin el campo y nadie se entera.
-		const culpables = fuentes.filter((ruta) => {
-			const texto = leer(ruta);
-			if (!/<FormGroup\b/.test(texto)) return false;
-			return !/import \{[^}]*\bFormGroup\b[^}]*\} from '@vasakgroup\/vue-libvasak'/.test(texto);
+		const offenders = sources.filter((path) => {
+			const text = read(path);
+			if (!/<FormGroup\b/.test(text)) return false;
+			return !/import \{[^}]*\bFormGroup\b[^}]*\} from '@vasakgroup\/vue-libvasak'/.test(text);
 		});
 
-		expect(culpables).toEqual([]);
+		expect(offenders).toEqual([]);
 	});
 });
 
@@ -309,53 +342,53 @@ describe('el grupo de formulario', () => {
  */
 describe('la tarjeta de dispositivo de Bluetooth', () => {
 	// Propios: los del bloque de arriba viven dentro de aquel `describe`.
-	const FUENTE = new URL('../src/', import.meta.url).pathname;
-	const fuentes = [...new Glob('**/*.vue').scanSync(FUENTE)];
-	const VISTA = 'views/NetworkBluetoothView.vue';
+	const SOURCE = new URL('../src/', import.meta.url).pathname;
+	const sources = [...new Glob('**/*.vue').scanSync(SOURCE)];
+	const VIEW = 'views/NetworkBluetoothView.vue';
 
-	const vista = () => sinComentarios(readFileSync(FUENTE + VISTA, 'utf8'));
+	const view = () => stripComments(readFileSync(SOURCE + VIEW, 'utf8'));
 
 	test('ya no hay copia propia', () => {
-		expect(fuentes.filter((ruta) => ruta.endsWith('cards/BluetoothDeviceCard.vue'))).toEqual([]);
+		expect(sources.filter((path) => path.endsWith('cards/BluetoothDeviceCard.vue'))).toEqual([]);
 	});
 
 	test('y nadie la importa de acá adentro', () => {
-		const culpables = fuentes.filter((ruta) =>
-			sinComentarios(readFileSync(FUENTE + ruta, 'utf8')).includes('BluetoothDeviceCard')
+		const offenders = sources.filter((path) =>
+			stripComments(readFileSync(SOURCE + path, 'utf8')).includes('BluetoothDeviceCard')
 		);
 
-		expect(culpables).toEqual([]);
+		expect(offenders).toEqual([]);
 	});
 
 	test('la vista la pide a la librería', () => {
 		// Si la usa sin importarla, Vue dibuja un elemento desconocido y no
 		// falla: la lista de dispositivos queda vacía y nadie se entera.
-		const texto = vista();
+		const text = view();
 
-		expect(texto).toMatch(/<DeviceCard\b/);
-		expect(texto).toMatch(/import \{[^}]*\bDeviceCard\b[^}]*\} from '@vasakgroup\/vue-libvasak'/);
+		expect(text).toMatch(/<DeviceCard\b/);
+		expect(text).toMatch(/import \{[^}]*\bDeviceCard\b[^}]*\} from '@vasakgroup\/vue-libvasak'/);
 	});
 
 	test('el botón de desconectar sigue siendo el rojo, y el de conectar no', () => {
-		const texto = vista();
+		const text = view();
 		// Las dos tarjetas de la vista, en orden: la del dispositivo conectado
 		// —que desconecta— y la del disponible —que conecta—.
-		const tarjetas = texto.split(/<DeviceCard\b/).slice(1);
+		const cards = text.split(/<DeviceCard\b/).slice(1);
 
-		expect(tarjetas).toHaveLength(2);
+		expect(cards).toHaveLength(2);
 
-		const [conectado, disponible] = tarjetas.map((t) => t.slice(0, t.indexOf('/>')));
+		const [connected, available] = cards.map((t) => t.slice(0, t.indexOf('/>')));
 
-		expect(conectado).toContain('action-kind="destructive"');
-		expect(conectado).toContain('is-connected');
-		expect(disponible).not.toContain('action-kind');
+		expect(connected).toContain('action-kind="destructive"');
+		expect(connected).toContain('is-connected');
+		expect(available).not.toContain('action-kind');
 	});
 
 	test('y la fila conectada muestra su indicador de estado', () => {
 		// La copia dibujaba un punto verde cuando el dispositivo estaba
 		// conectado. En la librería eso no viene solo: hay que pedirlo.
-		const conectado = vista().split(/<DeviceCard\b/)[1];
+		const connected = view().split(/<DeviceCard\b/)[1];
 
-		expect(conectado.slice(0, conectado.indexOf('/>'))).toContain('show-status-indicator');
+		expect(connected.slice(0, connected.indexOf('/>'))).toContain('show-status-indicator');
 	});
 });

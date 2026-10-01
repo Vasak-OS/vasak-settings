@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup, SwitchToggle, TextInput } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	FormGroup,
+	NumberField,
+	PageHeader,
+	SelectField,
+	Slider,
+	SwitchToggle,
+	TextInput,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted } from 'vue';
 import KeyBindingInput from '@/components/ui/KeyBindingInput.vue';
-import NumberInput from '@/components/ui/NumberInput.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import PluginSection from '@/components/ui/PluginSection.vue';
-import RangeSlider from '@/components/ui/RangeSlider.vue';
-import SelectInput from '@/components/ui/SelectInput.vue';
+import PluginSection from '@/components/wayfire/PluginSection.vue';
 import { useWayfirePlugins } from '@/composables/useWayfirePlugins';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 
@@ -101,7 +106,8 @@ async function saveAll() {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.windows')"
+			size="lg"
+			:eyebrow="t('sidebar.windows')"
 			:title="t('views.wayfireEffects.title')"
 			:description="t('views.wayfireEffects.description')"
 		/>
@@ -113,14 +119,16 @@ async function saveAll() {
 			<PluginSection plugin-id="blur" icon="applications-graphics">
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup :label="t('views.wayfireEffects.method')">
-						<SelectInput
+						<SelectField
 							:modelValue="blur.getVal('method', 'kawase')"
 							:options="blurMethods"
 							@update:modelValue="blur.setVal('method', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireEffects.saturation')">
-						<RangeSlider
+						<Slider
+							:label="t('views.wayfireEffects.saturation')"
+							class="flex-1"
 							:modelValue="blur.getFloat('saturation', 1.0)"
 							:min="0" :max="3" :step="0.1"
 							@update:modelValue="blur.setVal('saturation', String($event))"
@@ -141,14 +149,14 @@ async function saveAll() {
 							/>
 						</FormGroup>
 						<FormGroup :label="t('views.wayfireEffects.offset')">
-							<NumberInput
+							<NumberField
 								:model-value="blur.getFloat('offset', 1.7)"
 								:min="0" :max="20" :step="0.1"
 								@update:model-value="blur.setVal('offset', $event)"
 							/>
 						</FormGroup>
 						<FormGroup :label="t('views.wayfireEffects.iterations')">
-							<NumberInput
+							<NumberField
 								:model-value="blur.getInt('iterations', 2)"
 								:min="1" :max="20"
 								@update:model-value="blur.setVal('iterations', $event)"
@@ -170,21 +178,21 @@ async function saveAll() {
 			<PluginSection plugin-id="wobbly" icon="preferences-desktop-effects">
 				<div class="grid gap-4 sm:grid-cols-3">
 					<FormGroup :label="t('views.wayfireEffects.friction')">
-						<NumberInput
+						<NumberField
 							:model-value="wobbly.getFloat('friction', 3.0)"
 							:min="0" :max="20" :step="0.5"
 							@update:model-value="wobbly.setVal('friction', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireEffects.springK')">
-						<NumberInput
+						<NumberField
 							:model-value="wobbly.getFloat('spring_k', 8.0)"
 							:min="0" :max="20" :step="0.5"
 							@update:model-value="wobbly.setVal('spring_k', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireEffects.gridResolution')">
-						<NumberInput
+						<NumberField
 							:model-value="wobbly.getInt('grid_resolution', 6)"
 							:min="2" :max="20"
 							@update:model-value="wobbly.setVal('grid_resolution', $event)"
@@ -220,14 +228,14 @@ async function saveAll() {
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireEffects.radius')">
-						<NumberInput
+						<NumberField
 							:model-value="fisheye.getInt('radius', 450)"
 							:min="50" :max="2000"
 							@update:model-value="fisheye.setVal('radius', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireEffects.zoom')">
-						<NumberInput
+						<NumberField
 							:model-value="fisheye.getFloat('zoom', 7.0)"
 							:min="1" :max="20" :step="0.5"
 							@update:model-value="fisheye.setVal('zoom', $event)"
@@ -245,7 +253,9 @@ async function saveAll() {
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireEffects.zoom')">
-						<RangeSlider
+						<Slider
+							:label="t('views.wayfireEffects.zoom')"
+							class="flex-1"
 							:modelValue="cube.getFloat('zoom', 0.1)"
 							:min="0" :max="1" :step="0.05"
 							@update:modelValue="cube.setVal('zoom', String($event))"
@@ -259,7 +269,7 @@ async function saveAll() {
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireEffects.backgroundMode')">
-						<SelectInput
+						<SelectField
 							:modelValue="cube.getVal('background_mode', 'simple')"
 							:options="backgroundModes"
 							@update:modelValue="cube.setVal('background_mode', $event)"
@@ -280,7 +290,7 @@ async function saveAll() {
 			<div class="flex justify-end">
 				<button
 					type="submit"
-					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90"
+					class="rounded-corner-m bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90"
 				>
 					{{ t('common.save') }}
 				</button>

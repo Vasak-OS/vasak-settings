@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { FormGroup } from '@vasakgroup/vue-libvasak';
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+	FormGroup,
+} from '@vasakgroup/vue-libvasak';
 import { computed, ref, watch } from 'vue';
-import ModalDialog from '@/components/ui/ModalDialog.vue';
 import { normalizeShortcutKeys } from '@/services/shortcuts.service';
 import type { ShortcutRule } from '@/types/shortcuts';
 
@@ -294,88 +300,97 @@ const handleCancel = () => {
 </script>
 
 <template>
-	<ModalDialog :open="open" :title="dialogTitle" :description="dialogDescription" @close="handleCancel">
-		<div class="space-y-4">
-			<div v-if="formError" class="rounded border border-status-error/30 bg-status-error/10 p-2 text-xs text-status-error">
-				{{ formError }}
-			</div>
-
-			<FormGroup :label="t('views.shortcuts.editor.keysLabel')" html-for="shortcut-keys">
-				<div class="space-y-2">
-					<div
-						id="shortcut-keys"
-						tabindex="0"
-						class="min-h-10 w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-main transition-colors focus:border-primary flex flex-wrap gap-2 items-center"
-						@keydown="handleKeyDown"
-						@keyup="handleKeyUp"
-					>
-						<span
-							v-for="key in displayKeys"
-							:key="key"
-							class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold whitespace-nowrap"
-							:class="keys ? 'border-primary/30 bg-primary/10 text-primary' : 'border-primary/50 bg-primary/20 text-primary opacity-70'"
-						>
-							{{ key }}
-						</span>
-						<span v-if="displayKeys.length === 0" class="text-tx-muted">
-							{{ t('views.shortcuts.editor.keysPlaceholder') }}
-						</span>
+	<Dialog :open="open" @update:open="(stillOpen: boolean) => { if (!stillOpen) handleCancel(); }">
+		<DialogContent size="lg">
+			<DialogHeader close-style="label" :close-label="t('common.close')">
+				<DialogTitle>{{ dialogTitle }}</DialogTitle>
+				<DialogDescription>{{ dialogDescription }}</DialogDescription>
+			</DialogHeader>
+			<div class="mt-4">
+				<div class="space-y-4">
+					<div v-if="formError" class="rounded border border-status-error/30 bg-status-error/10 p-2 text-xs text-status-error">
+						{{ formError }}
 					</div>
-					<div class="flex items-center justify-between gap-2">
-						<p class="text-xs text-tx-muted">
-							{{ t('views.shortcuts.editor.keysHint') }} <strong>Ctrl</strong> {{ t('views.shortcuts.editor.keysHintJoin') }} <strong>T</strong>.
-						</p>
+
+					<FormGroup :label="t('views.shortcuts.editor.keysLabel')" html-for="shortcut-keys">
+						<div class="space-y-2">
+							<div
+								id="shortcut-keys"
+								tabindex="0"
+								class="min-h-10 w-full rounded-corner-m border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-main transition-colors focus:border-primary flex flex-wrap gap-2 items-center"
+								@keydown="handleKeyDown"
+								@keyup="handleKeyUp"
+							>
+								<span
+									v-for="key in displayKeys"
+									:key="key"
+									class="inline-flex rounded-full border px-3 py-1 text-xs font-semibold whitespace-nowrap"
+									:class="keys ? 'border-primary/30 bg-primary/10 text-primary' : 'border-primary/50 bg-primary/20 text-primary opacity-70'"
+								>
+									{{ key }}
+								</span>
+								<span v-if="displayKeys.length === 0" class="text-tx-muted">
+									{{ t('views.shortcuts.editor.keysPlaceholder') }}
+								</span>
+							</div>
+							<div class="flex items-center justify-between gap-2">
+								<p class="text-xs text-tx-muted">
+									{{ t('views.shortcuts.editor.keysHint') }} <strong>Ctrl</strong> {{ t('views.shortcuts.editor.keysHintJoin') }} <strong>T</strong>.
+								</p>
+								<button
+									type="button"
+									class="rounded-corner-m border border-ui-border bg-ui-surface/60 px-2.5 py-1.5 text-xs font-medium text-tx-main transition-colors hover:bg-ui-surface"
+									@click="clearShortcut"
+								>
+									{{ t('views.shortcuts.editor.clear') }}
+								</button>
+							</div>
+						</div>
+					</FormGroup>
+
+					<FormGroup :label="t('views.shortcuts.editor.actionLabel')" html-for="shortcut-action">
+						<input
+							id="shortcut-action"
+							:aria-label="t('views.shortcuts.editor.actionLabel')"
+							v-model="action"
+							type="text"
+							placeholder="launch"
+							class="w-full rounded-corner-m border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-main transition-colors placeholder:text-tx-muted/70 focus:border-primary"
+						/>
+					</FormGroup>
+
+					<FormGroup :label="t('views.shortcuts.editor.targetLabel')" html-for="shortcut-target">
+						<textarea
+							id="shortcut-target"
+							:aria-label="t('views.shortcuts.editor.targetLabel')"
+							v-model="target"
+							rows="3"
+							placeholder="firefox"
+							class="w-full rounded-corner-m border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-main transition-colors placeholder:text-tx-muted/70 focus:border-primary"
+						/>
+					</FormGroup>
+
+					<p class="text-xs text-tx-muted">{{ t('views.shortcuts.editor.normalizeNote') }}</p>
+
+					<div class="flex justify-end gap-2 pt-2">
 						<button
 							type="button"
-							class="rounded-corner border border-ui-border bg-ui-surface/60 px-2.5 py-1.5 text-xs font-medium text-tx-main transition-colors hover:bg-ui-surface"
-							@click="clearShortcut"
+							class="rounded-corner-m border border-ui-border bg-ui-surface/60 px-4 py-2 text-sm font-medium text-tx-main transition-colors hover:bg-ui-surface"
+							@click="handleCancel"
 						>
-							{{ t('views.shortcuts.editor.clear') }}
+							{{ t('common.cancel') }}
+						</button>
+						<button
+							type="button"
+							class="rounded-corner-m border border-primary bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary transition-colors hover:bg-primary/90"
+							@click="handleSubmit"
+						>
+							{{ isEditing ? t('common.save') : t('views.shortcuts.editor.submitCreate') }}
 						</button>
 					</div>
 				</div>
-			</FormGroup>
-
-			<FormGroup :label="t('views.shortcuts.editor.actionLabel')" html-for="shortcut-action">
-				<input
-					id="shortcut-action"
-					:aria-label="t('views.shortcuts.editor.actionLabel')"
-					v-model="action"
-					type="text"
-					placeholder="launch"
-					class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-main transition-colors placeholder:text-tx-muted/70 focus:border-primary"
-				/>
-			</FormGroup>
-
-			<FormGroup :label="t('views.shortcuts.editor.targetLabel')" html-for="shortcut-target">
-				<textarea
-					id="shortcut-target"
-					:aria-label="t('views.shortcuts.editor.targetLabel')"
-					v-model="target"
-					rows="3"
-					placeholder="firefox"
-					class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-main transition-colors placeholder:text-tx-muted/70 focus:border-primary"
-				/>
-			</FormGroup>
-
-			<p class="text-xs text-tx-muted">{{ t('views.shortcuts.editor.normalizeNote') }}</p>
-
-			<div class="flex justify-end gap-2 pt-2">
-				<button
-					type="button"
-					class="rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2 text-sm font-medium text-tx-main transition-colors hover:bg-ui-surface"
-					@click="handleCancel"
-				>
-					{{ t('common.cancel') }}
-				</button>
-				<button
-					type="button"
-					class="rounded-corner border border-primary bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary transition-colors hover:bg-primary/90"
-					@click="handleSubmit"
-				>
-					{{ isEditing ? t('common.save') : t('views.shortcuts.editor.submitCreate') }}
-				</button>
+	
 			</div>
-		</div>
-	</ModalDialog>
+		</DialogContent>
+	</Dialog>
 </template>

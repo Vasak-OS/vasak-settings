@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { getSymbolSource, hasSymbol } from '@vasakgroup/plugin-vicons';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, ThemeIcon, usarLaVersionDelTema } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	ConfigSection,
+	PageHeader,
+	Panel,
+	ThemeIcon,
+	usarLaVersionDelTema,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
 import {
 	type AccountInfo,
 	clearProviderCredentials,
@@ -699,7 +704,8 @@ onMounted(async () => {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.system')"
+			size="lg"
+			:eyebrow="t('sidebar.system')"
 			:title="t('views.onlineAccounts.title')"
 			:description="t('views.onlineAccounts.description')"
 		/>
@@ -708,14 +714,13 @@ onMounted(async () => {
 		<AlertMessage v-if="notice" tone="warning">{{ notice }}</AlertMessage>
 		<AlertMessage v-if="success" tone="success">{{ success }}</AlertMessage>
 
-		<SectionCard v-if="accounts.length > 0">
-			<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.onlineAccounts.linkedAccounts') }}</h3>
+		<ConfigSection v-if="accounts.length > 0" :title="t('views.onlineAccounts.linkedAccounts')">
 
 			<ul class="flex flex-col gap-2">
 				<li
 					v-for="account in accounts"
 					:key="account.id"
-					class="flex items-center justify-between rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-3"
+					class="flex items-center justify-between rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-3"
 				>
 					<div class="flex min-w-0 flex-col">
 						<span class="truncate text-sm font-medium text-tx-main">
@@ -730,7 +735,7 @@ onMounted(async () => {
 							<li
 								v-for="c in account.capabilities"
 								:key="c"
-								class="flex items-center gap-1 rounded-corner-sm bg-ui-surface/70 px-1.5 py-0.5 text-xs text-tx-muted"
+								class="flex items-center gap-1 rounded-corner-xs bg-ui-surface/70 px-1.5 py-0.5 text-xs text-tx-muted"
 								:class="{ 'opacity-60': !isCapabilityAvailable(account, c) }"
 							>
 								<ThemeIcon :name="capabilityIcon(c)" type="symbol" :size="14" />
@@ -746,16 +751,16 @@ onMounted(async () => {
 					</div>
 
 					<button
-						class="rounded-corner border border-ui-border px-3 py-1.5 text-xs text-tx-muted transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
+						class="rounded-corner-m border border-ui-border px-3 py-1.5 text-xs text-tx-muted transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
 						@click="deleteAccount(account)"
 					>
 						{{ t('common.delete') }}
 					</button>
 				</li>
 			</ul>
-		</SectionCard>
+		</ConfigSection>
 
-		<SectionCard v-if="credentialsFor">
+		<Panel as="article" v-if="credentialsFor">
 			<h3 class="mb-1 text-lg font-medium text-tx-main">
 				{{ t('views.onlineAccounts.credentials.title').replace('{0}', credentialsFor.display_name) }}
 			</h3>
@@ -777,7 +782,7 @@ onMounted(async () => {
 						v-model="credentialsForm.clientId"
 						type="text"
 						:disabled="savingCredentials"
-						class="rounded-corner border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
+						class="rounded-corner-m border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
 						@keyup.enter="saveCredentials"
 					/>
 				</label>
@@ -791,7 +796,7 @@ onMounted(async () => {
 						type="password"
 						:disabled="savingCredentials"
 						:placeholder="t('views.onlineAccounts.credentials.clientSecretPlaceholder')"
-						class="rounded-corner border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
+						class="rounded-corner-m border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
 						@keyup.enter="saveCredentials"
 					/>
 					<!-- Google lo llama secreto y no lo es: viaja dentro de cualquier
@@ -805,14 +810,14 @@ onMounted(async () => {
 				<div class="flex gap-2">
 					<button
 						:disabled="savingCredentials || !credentialsForm.clientId.trim()"
-						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary disabled:opacity-50"
+						class="rounded-corner-m bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary disabled:opacity-50"
 						@click="saveCredentials"
 					>
 						{{ savingCredentials ? t('common.saving') : t('common.save') }}
 					</button>
 					<button
 						:disabled="savingCredentials"
-						class="rounded-corner border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
+						class="rounded-corner-m border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
 						@click="closeCredentials"
 					>
 						{{ t('common.cancel') }}
@@ -820,7 +825,7 @@ onMounted(async () => {
 					<button
 						v-if="canManageCredentials(credentialsFor) && !confirmingClear"
 						:disabled="savingCredentials"
-						class="rounded-corner border border-ui-border px-4 py-2 text-sm text-tx-muted transition-colors hover:border-status-error/40 hover:text-status-error disabled:opacity-50"
+						class="rounded-corner-m border border-ui-border px-4 py-2 text-sm text-tx-muted transition-colors hover:border-status-error/40 hover:text-status-error disabled:opacity-50"
 						@click="confirmingClear = true"
 					>
 						{{ t('views.onlineAccounts.credentials.clear') }}
@@ -828,7 +833,7 @@ onMounted(async () => {
 				</div>
 				<div
 					v-if="confirmingClear"
-					class="mt-3 rounded-corner border border-status-error/40 bg-status-error/10 p-3"
+					class="mt-3 rounded-corner-m border border-status-error/40 bg-status-error/10 p-3"
 				>
 					<p class="text-sm text-tx-main">
 						{{ t('views.onlineAccounts.credentials.clearConfirm').replace('{0}', credentialsFor.display_name) }}
@@ -836,14 +841,14 @@ onMounted(async () => {
 					<div class="mt-2 flex gap-2">
 						<button
 							:disabled="clearingCredentials"
-							class="rounded-corner bg-status-error px-4 py-2 text-sm font-medium text-tx-on-error disabled:opacity-50"
+							class="rounded-corner-m bg-status-error px-4 py-2 text-sm font-medium text-tx-on-error disabled:opacity-50"
 							@click="clearCredentials(credentialsFor)"
 						>
 							{{ t('views.onlineAccounts.credentials.clearConfirmAction') }}
 						</button>
 						<button
 							:disabled="clearingCredentials"
-							class="rounded-corner border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
+							class="rounded-corner-m border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
 							@click="confirmingClear = false"
 						>
 							{{ t('common.cancel') }}
@@ -851,9 +856,9 @@ onMounted(async () => {
 					</div>
 				</div>
 			</div>
-		</SectionCard>
+		</Panel>
 
-		<SectionCard v-if="nextcloudProvider">
+		<Panel as="article" v-if="nextcloudProvider">
 			<h3 class="mb-1 text-lg font-medium text-tx-main">
 				{{ t('views.onlineAccounts.nextcloud.title').replace('{0}', nextcloudProvider.display_name) }}
 			</h3>
@@ -871,7 +876,7 @@ onMounted(async () => {
 						type="text"
 						:disabled="connectingNextcloud"
 						:placeholder="t('views.onlineAccounts.nextcloud.serverPlaceholder')"
-						class="rounded-corner border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
+						class="rounded-corner-m border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
 						@keyup.enter="connectNextcloud"
 					/>
 					<!-- Se dice antes y no después de fallar: quien tiene un servidor
@@ -891,7 +896,7 @@ onMounted(async () => {
 						type="text"
 						:disabled="connectingNextcloud"
 						:placeholder="t('views.onlineAccounts.nextcloud.namePlaceholder')"
-						class="rounded-corner border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
+						class="rounded-corner-m border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
 						@keyup.enter="connectNextcloud"
 					/>
 				</label>
@@ -906,31 +911,30 @@ onMounted(async () => {
 				<div class="flex gap-2">
 					<button
 						:disabled="connectingNextcloud"
-						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary disabled:opacity-50"
+						class="rounded-corner-m bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary disabled:opacity-50"
 						@click="connectNextcloud"
 					>
 						{{ t('views.onlineAccounts.nextcloud.connect') }}
 					</button>
 					<button
 						:disabled="connectingNextcloud"
-						class="rounded-corner border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
+						class="rounded-corner-m border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
 						@click="cancelNextcloud"
 					>
 						{{ t('common.cancel') }}
 					</button>
 				</div>
 			</div>
-		</SectionCard>
+		</Panel>
 
-		<SectionCard>
-			<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.onlineAccounts.providers') }}</h3>
+		<ConfigSection :title="t('views.onlineAccounts.providers')">
 
 			<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
 				<div v-for="provider in providers" :key="provider.id" class="flex flex-col gap-1">
 					<button
 						:disabled="loading"
 						:title="unavailableReason(provider)"
-						class="flex w-full flex-1 flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-5 text-center transition-colors"
+						class="flex w-full flex-1 flex-col items-center gap-3 rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-5 text-center transition-colors"
 						:class="
 							loading
 								? 'opacity-60 cursor-not-allowed'
@@ -978,7 +982,7 @@ onMounted(async () => {
 					<button
 						v-if="canManageCredentials(provider)"
 						:disabled="loading || credentialsBusy"
-						class="self-center rounded-corner px-2 py-1 text-xs text-tx-muted transition-colors hover:text-tx-main disabled:opacity-50"
+						class="self-center rounded-corner-m px-2 py-1 text-xs text-tx-muted transition-colors hover:text-tx-main disabled:opacity-50"
 						@click="openCredentials(provider)"
 					>
 						{{ t('views.onlineAccounts.credentials.manage') }}
@@ -987,7 +991,7 @@ onMounted(async () => {
 
 				<button
 					:disabled="loading"
-					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-5 text-center transition-colors"
+					class="flex flex-col items-center gap-3 rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-5 text-center transition-colors"
 					:class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'"
 					@click="openCustomForm"
 				>
@@ -1003,13 +1007,13 @@ onMounted(async () => {
 				</button>
 			</div>
 
-		</SectionCard>
+		</ConfigSection>
 
 		<div
 			v-if="showCustomForm"
 			class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
 		>
-			<div class="w-full max-w-lg rounded-corner border border-ui-border bg-ui-bg p-5 shadow-xl">
+			<div class="w-full max-w-lg rounded-corner-m border border-ui-border bg-ui-bg p-5 shadow-xl">
 				<h2 class="text-lg font-semibold text-tx-main">{{ t('views.onlineAccounts.customProvider') }}</h2>
 				<p class="mt-1 text-sm text-tx-muted">
 					{{ t('views.onlineAccounts.customDialogDescription') }}
@@ -1024,7 +1028,7 @@ onMounted(async () => {
 							@input="forgetProbe"
 							type="text"
 							:placeholder="t('views.onlineAccounts.displayNamePlaceholder')"
-							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
+							class="mt-1 w-full rounded-corner-m border bg-ui-surface/50 px-3 py-2 text-sm"
 							:class="customFormErrors.displayName ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 						/>
 						<span v-if="customFormErrors.displayName" class="mt-0.5 block text-xs text-status-error">
@@ -1041,7 +1045,7 @@ onMounted(async () => {
 								@input="forgetProbe"
 								type="text"
 								placeholder="imap.example.com"
-								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
+								class="mt-1 w-full rounded-corner-m border bg-ui-surface/50 px-3 py-2 text-sm"
 								:class="customFormErrors.imapServer ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 							/>
 							<span v-if="customFormErrors.imapServer" class="mt-0.5 block text-xs text-status-error">
@@ -1056,7 +1060,7 @@ onMounted(async () => {
 								@input="forgetProbe"
 								type="number"
 								placeholder="993"
-								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
+								class="mt-1 w-full rounded-corner-m border bg-ui-surface/50 px-3 py-2 text-sm"
 								:class="customFormErrors.imapPort ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 							/>
 							<span v-if="customFormErrors.imapPort" class="mt-0.5 block text-xs text-status-error">
@@ -1074,7 +1078,7 @@ onMounted(async () => {
 								@input="forgetProbe"
 								type="text"
 								placeholder="smtp.example.com"
-								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
+								class="mt-1 w-full rounded-corner-m border bg-ui-surface/50 px-3 py-2 text-sm"
 								:class="customFormErrors.smtpServer ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 							/>
 							<span v-if="customFormErrors.smtpServer" class="mt-0.5 block text-xs text-status-error">
@@ -1089,7 +1093,7 @@ onMounted(async () => {
 								@input="forgetProbe"
 								type="number"
 								placeholder="587"
-								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
+								class="mt-1 w-full rounded-corner-m border bg-ui-surface/50 px-3 py-2 text-sm"
 								:class="customFormErrors.smtpPort ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 							/>
 							<span v-if="customFormErrors.smtpPort" class="mt-0.5 block text-xs text-status-error">
@@ -1106,7 +1110,7 @@ onMounted(async () => {
 							@input="forgetProbe"
 							type="text"
 							:placeholder="t('views.onlineAccounts.usernamePlaceholder')"
-							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
+							class="mt-1 w-full rounded-corner-m border bg-ui-surface/50 px-3 py-2 text-sm"
 							:class="customFormErrors.username ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 						/>
 						<span v-if="customFormErrors.username" class="mt-0.5 block text-xs text-status-error">
@@ -1122,7 +1126,7 @@ onMounted(async () => {
 							@input="forgetProbe"
 							type="password"
 							:placeholder="t('views.onlineAccounts.passwordPlaceholder')"
-							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
+							class="mt-1 w-full rounded-corner-m border bg-ui-surface/50 px-3 py-2 text-sm"
 							:class="customFormErrors.password ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 						/>
 						<span v-if="customFormErrors.password" class="mt-0.5 block text-xs text-status-error">
@@ -1142,7 +1146,7 @@ onMounted(async () => {
 							{ key: 'smtp', result: probe.smtp },
 						]"
 						:key="endpoint.key"
-						class="rounded-corner border px-3 py-2 text-xs"
+						class="rounded-corner-m border px-3 py-2 text-xs"
 						:class="
 							endpoint.result.ok
 								? 'border-status-success/30 bg-status-success/10 text-status-success'
@@ -1173,7 +1177,7 @@ onMounted(async () => {
 							{ key: 'contacts', result: dav.contacts },
 						]"
 						:key="finding.key"
-						class="rounded-corner border px-3 py-2 text-xs"
+						class="rounded-corner-m border px-3 py-2 text-xs"
 						:class="
 							finding.result.url
 								? 'border-status-success/30 bg-status-success/10 text-status-success'
@@ -1202,21 +1206,21 @@ onMounted(async () => {
 
 				<div class="mt-5 flex justify-end gap-2">
 					<button
-						class="rounded-corner border border-ui-border px-4 py-1.5 text-sm text-tx-muted transition-colors hover:bg-ui-surface"
+						class="rounded-corner-m border border-ui-border px-4 py-1.5 text-sm text-tx-muted transition-colors hover:bg-ui-surface"
 						:disabled="loading || probing"
 						@click="cancelCustomForm"
 					>
 						{{ t('common.cancel') }}
 					</button>
 					<button
-						class="rounded-corner border border-ui-border px-4 py-1.5 text-sm text-tx-main transition-colors hover:bg-ui-surface"
+						class="rounded-corner-m border border-ui-border px-4 py-1.5 text-sm text-tx-main transition-colors hover:bg-ui-surface"
 						:disabled="loading || probing || discoveringDav || !isCustomValid"
 						@click="testConnection"
 					>
 						{{ probing ? t('views.onlineAccounts.probe.testing') : t('views.onlineAccounts.probe.test') }}
 					</button>
 					<button
-						class="rounded-corner border border-ui-border px-4 py-1.5 text-sm text-tx-main transition-colors hover:bg-ui-surface"
+						class="rounded-corner-m border border-ui-border px-4 py-1.5 text-sm text-tx-main transition-colors hover:bg-ui-surface"
 						:disabled="loading || probing || discoveringDav || !isCustomValid"
 						:title="t('views.onlineAccounts.dav.hint')"
 						@click="lookUpDav"
@@ -1224,7 +1228,7 @@ onMounted(async () => {
 						{{ discoveringDav ? t('views.onlineAccounts.dav.searching') : t('views.onlineAccounts.dav.search') }}
 					</button>
 					<button
-						class="rounded-corner border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/15"
+						class="rounded-corner-m border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/15"
 						:disabled="loading || probing || discoveringDav || !isCustomValid"
 						@click="submitCustomProvider"
 					>

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import InfoRow from '@/components/ui/InfoRow.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
+import { Panel, type PropertyItem, PropertyList } from '@vasakgroup/vue-libvasak';
+import { computed } from 'vue';
 import type { GpuInfo, SystemDetails } from '@/types/system';
 
-defineProps<{
+const props = defineProps<{
 	system: SystemDetails;
 	gpu: GpuInfo | null;
 }>();
@@ -18,28 +18,31 @@ const formatUptime = (seconds: number) => {
 };
 
 const { t } = useI18n();
+
+/** Los datos del equipo, como pares de nombre y valor. */
+const details = computed<PropertyItem[]>(() => [
+	{ label: t('views.home.cards.host'), value: props.system.hostname },
+	{ label: t('views.home.cards.kernel'), value: props.system.kernel },
+	{ label: t('views.home.cards.operatingSystem'), value: props.system.os_name },
+	{ label: t('views.home.cards.display'), value: props.system.display_server },
+	{ label: t('views.home.cards.uptime'), value: formatUptime(props.system.uptime_seconds) },
+]);
 </script>
 
 <template>
 	<div class="grid gap-4">
-		<SectionCard>
+		<Panel as="article">
 			<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">{{ t('views.home.cards.system') }}</p>
-			<div class="mt-3 grid gap-3 text-sm">
-				<InfoRow :label="t('views.home.cards.host')" :value="system.hostname" />
-				<InfoRow :label="t('views.home.cards.kernel')" :value="system.kernel" />
-				<InfoRow :label="t('views.home.cards.operatingSystem')" :value="system.os_name" />
-				<InfoRow :label="t('views.home.cards.display')" :value="system.display_server" />
-				<InfoRow :label="t('views.home.cards.uptime')" :value="formatUptime(system.uptime_seconds)" />
-			</div>
-		</SectionCard>
+			<PropertyList class="mt-3" layout="rows" :items="details" />
+		</Panel>
 
-		<SectionCard>
+		<Panel as="article">
 			<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">{{ t('views.home.cards.gpu') }}</p>
 			<div v-if="gpu" class="mt-3 space-y-2 text-sm">
 				<p class="font-medium">{{ gpu.vendor }}</p>
 				<p class="text-tx-muted">{{ gpu.model }}</p>
 			</div>
 			<p v-else class="mt-3 text-sm text-tx-muted">{{ t('views.home.noGpu') }}</p>
-		</SectionCard>
+		</Panel>
 	</div>
 </template>

@@ -7,12 +7,16 @@ import {
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup, SwitchToggle } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	EmptyState,
+	FormGroup,
+	PageHeader,
+	Panel,
+	SelectField,
+	SwitchToggle,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, type Ref, ref } from 'vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import SelectInput from '@/components/ui/SelectInput.vue';
 import { fijarNitidez, nitidezActiva } from '@/services/nitidez.service';
 import { getSystemFonts, type SystemFontItem } from '@/services/style.service';
 
@@ -49,9 +53,9 @@ const selectedFonts = ref<Record<FontTarget, string>>({
 });
 
 const targetOptions = computed(() => [
-	{ label: t('views.appearanceFonts.targets.terminal'), value: 'terminal' },
-	{ label: t('views.appearanceFonts.targets.title'), value: 'title' },
-	{ label: t('views.appearanceFonts.targets.apps'), value: 'apps' },
+	{ label: t('views.appearanceFonts.targets.terminal'), value: 'terminal' as const },
+	{ label: t('views.appearanceFonts.targets.title'), value: 'title' as const },
+	{ label: t('views.appearanceFonts.targets.apps'), value: 'apps' as const },
 ]);
 
 const uniqueFonts = computed(() => {
@@ -172,7 +176,8 @@ const isFormValid = computed(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4">
 		<PageHeader
-			:section="t('sidebar.appearance')"
+			size="lg"
+			:eyebrow="t('sidebar.appearance')"
 			:title="t('views.appearanceFonts.title')"
 			:description="t('views.appearanceFonts.description')"
 		>
@@ -180,7 +185,7 @@ const isFormValid = computed(() => {
 				<button
 					v-if="!loading"
 					type="button"
-					class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
+					class="w-fit rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
 					:disabled="!isFormValid || saving"
 					@click="saveConfig"
 				>
@@ -189,17 +194,17 @@ const isFormValid = computed(() => {
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" :message="t('views.appearanceFonts.loading')" padding="lg" />
+		<EmptyState icon="" size="sm" bordered v-if="loading" :title="t('views.appearanceFonts.loading')" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
 			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
 			<div class="grid gap-4 xl:grid-cols-[360px_1fr]">
-				<SectionCard>
+				<Panel as="article">
 					<div class="flex flex-col gap-4">
 						<FormGroup :label="t('views.appearanceFonts.activeTarget')" html-for="font-target">
-							<SelectInput id="font-target" v-model="activeTarget" :options="targetOptions" />
+							<SelectField v-bind="{ id: 'font-target' }" v-model="activeTarget" :options="targetOptions" />
 						</FormGroup>
 
 						<FormGroup :label="t('views.appearanceFonts.searchFont')" html-for="font-search">
@@ -209,12 +214,12 @@ const isFormValid = computed(() => {
 									v-model="searchQuery"
 									type="text"
 									:placeholder="t('views.appearanceFonts.searchPlaceholder')"
-									class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-main transition-colors placeholder:text-tx-muted/70 focus:border-primary"
+									class="w-full rounded-corner-m border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-main transition-colors placeholder:text-tx-muted/70 focus:border-primary"
 								/>
 							</template>
 						</FormGroup>
 
-						<div class="rounded-corner border border-ui-border bg-ui-bg/60 p-4">
+						<div class="rounded-corner-m border border-ui-border bg-ui-bg/60 p-4">
 							<div class="mb-3 text-sm font-medium text-tx-main">{{ t('views.appearanceFonts.currentSelections') }}</div>
 							<div class="space-y-3 text-sm text-tx-muted">
 								<div>
@@ -238,14 +243,14 @@ const isFormValid = computed(() => {
 							</div>
 						</div>
 					</div>
-				</SectionCard>
+				</Panel>
 
 				<!-- El engrosado de trazos. Va aparte de las familias porque es otra
 				     cosa: arriba se elige **qué** letra se usa, acá **cómo** se
 				     dibuja. Y se guarda solo, sin pasar por «Aplicar cambios»,
 				     porque no vive en la configuración de VasakOS sino en un
 				     archivo de entorno de la sesión. -->
-				<SectionCard>
+				<Panel as="article">
 					<div class="flex items-center justify-between gap-3">
 						<div class="min-w-0">
 							<h3 class="text-lg font-medium text-tx-main">
@@ -266,9 +271,9 @@ const isFormValid = computed(() => {
 							@update:model-value="alternarNitidez"
 						/>
 					</div>
-				</SectionCard>
+				</Panel>
 
-				<SectionCard>
+				<Panel as="article">
 					<div class="flex items-center justify-between gap-3">
 						<div>
 							<h3 class="text-lg font-medium text-tx-main">{{ t('views.appearanceFonts.library') }}</h3>
@@ -286,7 +291,7 @@ const isFormValid = computed(() => {
 							v-for="font in filteredFonts"
 							:key="font.id"
 							type="button"
-							class="group rounded-corner border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary hover:bg-ui-surface/70"
+							class="group rounded-corner-m border p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-primary hover:bg-ui-surface/70"
 							:class="selectedFonts[activeTarget] === font.name ? 'border-primary bg-ui-surface/80 shadow-[0_0_0_1px_var(--color-primary)]/20' : 'border-ui-border bg-ui-bg/40'"
 							@click="pickFont(font)"
 						>
@@ -300,7 +305,7 @@ const isFormValid = computed(() => {
 								</div>
 							</div>
 
-							<div class="mt-4 rounded-corner border border-ui-border bg-ui-bg/80 p-3">
+							<div class="mt-4 rounded-corner-m border border-ui-border bg-ui-bg/80 p-3">
 								<div class="text-[11px] uppercase tracking-wider text-tx-muted">{{ t('views.appearanceFonts.preview') }}</div>
 								<div
 									class="mt-2 text-sm leading-6 text-tx-main"
@@ -316,7 +321,7 @@ const isFormValid = computed(() => {
 							</div>
 						</button>
 					</div>
-				</SectionCard>
+				</Panel>
 			</div>
 		</div>
 	</div>

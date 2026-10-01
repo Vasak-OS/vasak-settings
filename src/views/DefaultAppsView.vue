@@ -12,13 +12,16 @@
  * funcionar.
  */
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	EmptyState,
+	FormGroup,
+	PageHeader,
+	Panel,
+	SelectField,
+} from '@vasakgroup/vue-libvasak';
 import { onMounted, ref } from 'vue';
 import AppIcon from '@/components/permissions/AppIcon.vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import SelectInput from '@/components/ui/SelectInput.vue';
 import {
 	CATEGORIAS,
 	type CategoriaDeAplicacion,
@@ -134,7 +137,8 @@ async function choose(row: Row, id: string) {
 <template>
 	<section class="flex flex-col gap-6">
 		<PageHeader
-			:section="t('sidebar.general')"
+			size="lg"
+			:eyebrow="t('sidebar.general')"
 			:title="t('views.defaultApps.title')"
 			:description="t('views.defaultApps.description')" />
 
@@ -143,7 +147,7 @@ async function choose(row: Row, id: string) {
 
 		<p v-if="loading" class="text-sm text-tx-muted">{{ t('common.loading') }}</p>
 
-		<SectionCard v-else>
+		<Panel as="article" v-else>
 			<div class="flex flex-col gap-5">
 				<div v-for="row in rows" :key="row.category.id" class="flex items-center gap-4">
 					<AppIcon :name="selectedIcon(row) || row.category.icono" />
@@ -152,20 +156,19 @@ async function choose(row: Row, id: string) {
 						:label="t(`views.defaultApps.categorias.${row.category.id}`)"
 						:html-for="`app-${row.category.id}`"
 						custom-class="flex-1">
-						<SelectInput
+						<SelectField
+							v-bind="{ id: `app-${row.category.id}`, disabled: row.saving }"
 							v-if="row.candidates.length"
-							:id="`app-${row.category.id}`"
 							:model-value="row.selected"
-							:disabled="row.saving"
 							:options="row.candidates.map((c) => ({ label: c.nombre, value: c.id }))"
 							@update:model-value="choose(row, $event)" />
 
 						<!-- Sin candidatas no hay nada que elegir, y un selector vacío
 						     se lee como que la pantalla está rota. -->
-						<EmptyStateBox v-else :message="t('views.defaultApps.sinCandidatas')" />
+						<EmptyState icon="" size="sm" bordered v-else :title="t('views.defaultApps.sinCandidatas')" />
 					</FormGroup>
 				</div>
 			</div>
-		</SectionCard>
+		</Panel>
 	</section>
 </template>

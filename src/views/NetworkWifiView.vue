@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { listen } from '@tauri-apps/api/event';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, SwitchToggle, TextInput, ThemeIcon } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	ConfigSection,
+	EmptyState,
+	PageHeader,
+	Panel,
+	StatTile,
+	SwitchToggle,
+	TextInput,
+	ThemeIcon,
+} from '@vasakgroup/vue-libvasak';
 import { computed, nextTick, onMounted, onUnmounted, type Ref, ref } from 'vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import StatTile from '@/components/ui/StatTile.vue';
 import {
 	connectToWifi,
 	getCurrentNetworkState,
@@ -283,12 +289,13 @@ onUnmounted(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.network')"
+			size="lg"
+			:eyebrow="t('sidebar.network')"
 			:title="t('views.networkWifi.title')"
 			:description="t('views.networkWifi.description')"
 		>
 			<template #actions>
-				<div class="flex items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2">
+				<div class="flex items-center gap-3 rounded-corner-m border border-ui-border bg-ui-surface/60 px-4 py-2">
 					<div class="flex items-center gap-2">
 						<ThemeIcon
 							:name="currentNetworkIcon"
@@ -313,7 +320,7 @@ onUnmounted(() => {
 		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 
 		<div class="grid gap-4 xl:grid-cols-3">
-			<SectionCard class="xl:col-span-2">
+			<Panel as="article" class="xl:col-span-2">
 				<div class="mb-4 flex items-center justify-between">
 					<h3 class="text-lg font-medium text-tx-main">{{ t('views.networkWifi.availableNetworks') }}</h3>
 					<button
@@ -328,16 +335,16 @@ onUnmounted(() => {
 					</button>
 				</div>
 
-				<EmptyStateBox v-if="!wifiAvailable" :message="t('views.networkWifi.emptyNoHardware')" />
-				<EmptyStateBox v-else-if="!wifiEnabled" :message="t('views.networkWifi.emptyDisabled')" />
-				<EmptyStateBox v-else-if="loading" :message="t('views.networkWifi.emptySearching')" />
-				<EmptyStateBox v-else-if="availableNetworks.length === 0" :message="t('views.networkWifi.emptyNoNetworks')" />
+				<EmptyState icon="" size="sm" bordered v-if="!wifiAvailable" :title="t('views.networkWifi.emptyNoHardware')" />
+				<EmptyState icon="" size="sm" bordered v-else-if="!wifiEnabled" :title="t('views.networkWifi.emptyDisabled')" />
+				<EmptyState icon="" size="sm" bordered v-else-if="loading" :title="t('views.networkWifi.emptySearching')" />
+				<EmptyState icon="" size="sm" bordered v-else-if="availableNetworks.length === 0" :title="t('views.networkWifi.emptyNoNetworks')" />
 
 				<ul v-else class="flex max-h-[55vh] flex-col gap-2 overflow-y-auto pr-1">
 					<li
 						v-for="network in availableNetworks"
 						:key="network.ssid"
-						class="group flex cursor-pointer items-center justify-between gap-3 rounded-corner border px-4 py-3 transition-colors"
+						class="group flex cursor-pointer items-center justify-between gap-3 rounded-corner-m border px-4 py-3 transition-colors"
 						:class="
 							network.is_connected
 								? 'border-status-success/40 bg-status-success/10'
@@ -370,10 +377,9 @@ onUnmounted(() => {
 						</div>
 					</li>
 				</ul>
-			</SectionCard>
+			</Panel>
 
-			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.networkWifi.networkStatus') }}</h3>
+			<ConfigSection :title="t('views.networkWifi.networkStatus')">
 				<div class="space-y-3">
 					<StatTile label="Wi-Fi" :value="wifiStatus" />
 					<StatTile label="Ethernet" :value="ethernetStatus" />
@@ -391,14 +397,14 @@ onUnmounted(() => {
 						:value="formatBytesPerSecond(networkStats?.upload_speed || 0)"
 					/>
 				</div>
-			</SectionCard>
+			</ConfigSection>
 		</div>
 
 		<div
 			v-if="showPasswordDialog && selectedNetwork"
 			class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
 		>
-			<div class="w-full max-w-md rounded-corner border border-ui-border bg-ui-bg p-4 shadow-xl">
+			<div class="w-full max-w-md rounded-corner-m border border-ui-border bg-ui-bg p-4 shadow-xl">
 				<h2 class="text-lg font-semibold text-tx-main">
 					{{ t('views.networkWifi.dialog.title').replace('{0}', getNetworkName(selectedNetwork)) }}
 				</h2>
@@ -414,14 +420,14 @@ onUnmounted(() => {
 
 				<div class="mt-4 flex justify-end gap-2">
 					<button
-						class="rounded-corner border border-ui-border px-3 py-1.5 text-sm text-tx-muted hover:bg-ui-surface"
+						class="rounded-corner-m border border-ui-border px-3 py-1.5 text-sm text-tx-muted hover:bg-ui-surface"
 						@click="showPasswordDialog = false"
 						:disabled="isConnecting"
 					>
 						{{ t('common.cancel') }}
 					</button>
 					<button
-						class="rounded-corner border border-primary/20 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15"
+						class="rounded-corner-m border border-primary/20 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15"
 						@click="confirmConnect"
 						:disabled="isConnecting"
 					>

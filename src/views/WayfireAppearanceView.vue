@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup, TextInput } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	FormGroup,
+	NumberField,
+	PageHeader,
+	SelectField,
+	TextInput,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted } from 'vue';
-import NumberInput from '@/components/ui/NumberInput.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import PluginSection from '@/components/ui/PluginSection.vue';
-import SelectInput from '@/components/ui/SelectInput.vue';
+import PluginSection from '@/components/wayfire/PluginSection.vue';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 
 const { t } = useI18n();
@@ -48,7 +52,8 @@ async function saveAll() {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.windows')"
+			size="lg"
+			:eyebrow="t('sidebar.windows')"
 			:title="t('views.wayfireAppearance.title')"
 			:description="t('views.wayfireAppearance.description')"
 		/>
@@ -70,14 +75,14 @@ async function saveAll() {
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireAppearance.titleHeight')">
-						<NumberInput
+						<NumberField
 							:model-value="decoration.getInt('title_height', 30)"
 							:min="0" :max="100"
 							@update:model-value="decoration.setVal('title_height', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireAppearance.borderSize')">
-						<NumberInput
+						<NumberField
 							:model-value="decoration.getInt('border_size', 4)"
 							:min="0" :max="100"
 							@update:model-value="decoration.setVal('border_size', $event)"
@@ -104,7 +109,7 @@ async function saveAll() {
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireAppearance.borderRadius')">
-						<NumberInput
+						<NumberField
 							:model-value="decoration.getInt('border_radius', 0)"
 							:min="0" :max="50"
 							@update:model-value="decoration.setVal('border_radius', $event)"
@@ -128,21 +133,21 @@ async function saveAll() {
 			>
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup :label="t('views.wayfireAppearance.openAnimation')">
-						<SelectInput
+						<SelectField
 							:modelValue="animate.getVal('open_animation', 'zoom')"
 							:options="animationOptions"
 							@update:modelValue="animate.setVal('open_animation', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireAppearance.closeAnimation')">
-						<SelectInput
+						<SelectField
 							:modelValue="animate.getVal('close_animation', 'zoom')"
 							:options="animationOptions"
 							@update:modelValue="animate.setVal('close_animation', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireAppearance.duration')">
-						<NumberInput
+						<NumberField
 							:model-value="animate.getInt('duration', 500)"
 							:min="0" :max="2000" :step="50"
 							@update:model-value="animate.setVal('duration', $event)"
@@ -154,7 +159,7 @@ async function saveAll() {
 			<div class="flex justify-end">
 				<button
 					type="submit"
-					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90"
+					class="rounded-corner-m bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90"
 				>
 					{{ t('common.save') }}
 				</button>

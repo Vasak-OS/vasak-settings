@@ -57,7 +57,7 @@ const onText = (event: Event) => {
 </script>
 
 <template>
-	<div class="flex items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 p-2">
+	<div class="flex items-center gap-3 rounded-corner-m border border-ui-border bg-ui-surface/70 p-2">
 		<input
 			:id="`${id}-picker`"
 			type="color"
@@ -78,7 +78,7 @@ const onText = (event: Event) => {
 				:aria-invalid="invalid ? 'true' : 'false'"
 				:aria-describedby="invalid ? errorId : undefined"
 				:class="[
-					'w-full rounded-corner border bg-transparent px-1.5 py-0.5 font-mono text-sm tabular-nums text-tx-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+					'w-full rounded-corner-m border bg-transparent px-1.5 py-0.5 font-mono text-sm tabular-nums text-tx-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
 					invalid ? 'border-status-error' : 'border-transparent',
 				]"
 				@input="onText"

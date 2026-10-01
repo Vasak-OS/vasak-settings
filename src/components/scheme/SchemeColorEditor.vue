@@ -203,7 +203,7 @@ const onTabKeydown = async (event: KeyboardEvent, index: number) => {
 		<div
 			role="tablist"
 			:aria-label="t('views.appearanceTheme.custom.variants')"
-			class="flex w-fit gap-1 rounded-corner border border-ui-border bg-ui-surface/70 p-1"
+			class="flex w-fit gap-1 rounded-corner-m border border-ui-border bg-ui-surface/70 p-1"
 		>
 			<button
 				v-for="(variant, index) in SCHEME_VARIANTS"
@@ -216,7 +216,7 @@ const onTabKeydown = async (event: KeyboardEvent, index: number) => {
 				:aria-controls="`scheme-panel-${variant}`"
 				:tabindex="activeVariant === variant ? 0 : -1"
 				:class="[
-					'rounded-corner px-3 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+					'rounded-corner-m px-3 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
 					activeVariant === variant ? 'bg-ui-bg/80 text-tx-main ring-2 ring-inset ring-primary' : 'text-tx-muted hover:bg-ui-surface',
 				]"
 				@click="activeVariant = variant"
@@ -256,11 +256,11 @@ const onTabKeydown = async (event: KeyboardEvent, index: number) => {
 						<li
 							v-for="item in contrast"
 							:key="item.id"
-							class="flex items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 p-2"
+							class="flex items-center gap-3 rounded-corner-m border border-ui-border bg-ui-surface/70 p-2"
 							:data-contrast="item.id"
 						>
 							<span
-								class="flex h-8 w-10 shrink-0 items-center justify-center rounded-corner border border-ui-border text-sm font-semibold"
+								class="flex h-8 w-10 shrink-0 items-center justify-center rounded-corner-m border border-ui-border text-sm font-semibold"
 								:style="contrastPreview(item.id)"
 								aria-hidden="true"
 							>Aa</span>
@@ -280,8 +280,8 @@ const onTabKeydown = async (event: KeyboardEvent, index: number) => {
 				</section>
 			</div>
 
-			<details class="rounded-corner border border-ui-border bg-ui-surface/70 p-3">
-				<summary class="cursor-pointer rounded-corner text-sm font-medium text-tx-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+			<details class="rounded-corner-m border border-ui-border bg-ui-surface/70 p-3">
+				<summary class="cursor-pointer rounded-corner-m text-sm font-medium text-tx-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
 					{{ t('views.appearanceTheme.custom.terminal') }}
 				</summary>
 				<div class="mt-3 flex flex-col gap-3">

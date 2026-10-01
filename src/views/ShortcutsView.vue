@@ -1,13 +1,10 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage } from '@vasakgroup/vue-libvasak';
+import { AlertMessage, EmptyState, PageHeader, Panel } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
 import ShortcutDeleteModal from '@/components/shortcuts/ShortcutDeleteModal.vue';
 import ShortcutEditorModal from '@/components/shortcuts/ShortcutEditorModal.vue';
 import SpecialKeysCard from '@/components/shortcuts/SpecialKeysCard.vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
 import { SPECIAL_KEYS, type SpecialKeyDef } from '@/config/specialKeys';
 import { getShortcuts, normalizeShortcutKeys, saveShortcuts } from '@/services/shortcuts.service';
 import type { ShortcutRule } from '@/types/shortcuts';
@@ -174,14 +171,15 @@ onMounted(loadShortcuts);
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.general')"
+			size="lg"
+			:eyebrow="t('sidebar.general')"
 			:title="t('views.shortcuts.title')"
 			:description="t('views.shortcuts.description')"
 		>
 			<template #actions>
 				<button
 					type="button"
-					class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
+					class="w-fit rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
 					:disabled="loading || saving"
 					@click="openCreateModal"
 				>
@@ -190,13 +188,13 @@ onMounted(loadShortcuts);
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" :message="t('views.shortcuts.loading')" padding="lg" />
+		<EmptyState icon="" size="sm" bordered v-if="loading" :title="t('views.shortcuts.loading')" />
 
 		<div v-else class="flex flex-col gap-4">
 			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
-			<SectionCard>
+			<Panel as="article">
 				<div class="flex flex-col gap-4">
 					<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 						<div>
@@ -208,7 +206,7 @@ onMounted(loadShortcuts);
 							v-model="searchQuery"
 							type="text"
 							:placeholder="t('views.shortcuts.searchPlaceholder')"
-							class="w-full rounded-corner border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-main transition-colors placeholder:text-tx-muted/70 focus:border-primary sm:max-w-sm"
+							class="w-full rounded-corner-m border border-ui-border bg-ui-surface/60 px-3 py-2 text-sm text-tx-main transition-colors placeholder:text-tx-muted/70 focus:border-primary sm:max-w-sm"
 						/>
 					</div>
 
@@ -216,7 +214,7 @@ onMounted(loadShortcuts);
 						<div
 							v-for="item in visibleShortcuts"
 							:key="`${item.index}-${item.shortcut.keys}-${item.shortcut.target}`"
-							class="rounded-corner border border-ui-border bg-ui-surface/70 p-4"
+							class="rounded-corner-m border border-ui-border bg-ui-surface/70 p-4"
 						>
 							<div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
 								<div class="min-w-0 flex-1">
@@ -236,14 +234,14 @@ onMounted(loadShortcuts);
 								<div class="flex gap-2">
 									<button
 										type="button"
-										class="rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-2 text-sm font-medium text-tx-main transition-colors hover:bg-ui-surface"
+										class="rounded-corner-m border border-ui-border bg-ui-surface/70 px-3 py-2 text-sm font-medium text-tx-main transition-colors hover:bg-ui-surface"
 										@click="openEditModal(item.index)"
 									>
 										{{ t('common.edit') }}
 									</button>
 									<button
 										type="button"
-										class="rounded-corner border border-status-error/30 bg-status-error/10 px-3 py-2 text-sm font-medium text-status-error transition-colors hover:bg-status-error/20"
+										class="rounded-corner-m border border-status-error/30 bg-status-error/10 px-3 py-2 text-sm font-medium text-status-error transition-colors hover:bg-status-error/20"
 										@click="openDeleteModal(item.shortcut, item.index)"
 									>
 										{{ t('common.delete') }}
@@ -253,9 +251,9 @@ onMounted(loadShortcuts);
 						</div>
 					</div>
 
-					<EmptyStateBox v-else :message="t('views.shortcuts.empty')" padding="md" />
+					<EmptyState icon="" size="sm" bordered v-else :title="t('views.shortcuts.empty')" />
 				</div>
-			</SectionCard>
+			</Panel>
 
 			<SpecialKeysCard
 				:shortcuts="shortcuts"
@@ -265,7 +263,7 @@ onMounted(loadShortcuts);
 
 			<button
 				type="button"
-				class="self-start rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2 text-sm font-medium text-tx-main transition-colors hover:bg-ui-surface"
+				class="self-start rounded-corner-m border border-ui-border bg-ui-surface/60 px-4 py-2 text-sm font-medium text-tx-main transition-colors hover:bg-ui-surface"
 				:disabled="saving"
 				@click="resetSpecialDefaults"
 			>

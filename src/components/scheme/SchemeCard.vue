@@ -23,7 +23,7 @@ const emit = defineEmits<{ select: [] }>();
 		type="button"
 		:aria-pressed="selected ? 'true' : 'false'"
 		:class="[
-			'flex w-full flex-col gap-3 rounded-corner border bg-ui-surface/70 p-3 text-left transition-colors hover:bg-ui-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+			'flex w-full flex-col gap-3 rounded-corner-m border bg-ui-surface/70 p-3 text-left transition-colors hover:bg-ui-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
 			selected ? 'border-primary ring-2 ring-primary' : 'border-ui-border',
 		]"
 		@click="emit('select')"

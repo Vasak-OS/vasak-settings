@@ -73,7 +73,14 @@ describe('etiquetas de formulario', () => {
 		const broken: string[] = [];
 		for (const file of files) {
 			const html = template(file);
-			const ids = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]));
+			// También el `id` que va en un `v-bind` de objeto: el `SelectField`
+			// de la librería no lo declara como propiedad, y con plantillas
+			// estrictas es la única forma de pasárselo (llega al `<select>`).
+			const ids = new Set(
+				[...html.matchAll(/\sid="([^"]+)"|v-bind="\{[^"]*\bid: '([^']+)'/g)].map(
+					(m) => m[1] ?? m[2]
+				)
+			);
 			for (const m of html.matchAll(/<label\b[^>]*\sfor="([^"]+)"/g)) {
 				if (!ids.has(m[1])) broken.push(`${relative(root, file)}: ${m[1]}`);
 			}

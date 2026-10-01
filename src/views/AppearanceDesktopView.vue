@@ -6,12 +6,16 @@ import {
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup, SwitchToggle } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	ConfigSection,
+	EmptyState,
+	FormGroup,
+	PageHeader,
+	Slider,
+	SwitchToggle,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, type Ref, ref } from 'vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import RangeSlider from '@/components/ui/RangeSlider.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
 
 const { t } = useI18n();
 
@@ -82,7 +86,8 @@ const isFormValid = computed(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4">
 		<PageHeader
-			:section="t('sidebar.appearance')"
+			size="lg"
+			:eyebrow="t('sidebar.appearance')"
 			:title="t('views.appearanceDesktop.title')"
 			:description="t('views.appearanceDesktop.description')"
 		>
@@ -90,7 +95,7 @@ const isFormValid = computed(() => {
 				<button
 					v-if="!loading"
 					type="button"
-					class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
+					class="w-fit rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
 					:disabled="!isFormValid || saving"
 					@click="saveConfig"
 				>
@@ -99,7 +104,7 @@ const isFormValid = computed(() => {
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" :message="t('views.appearanceDesktop.loading')" padding="lg" />
+		<EmptyState icon="" size="sm" bordered v-if="loading" :title="t('views.appearanceDesktop.loading')" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
 			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
@@ -107,8 +112,7 @@ const isFormValid = computed(() => {
 			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
 			<div class="grid gap-4 xl:grid-cols-2">
-				<SectionCard>
-					<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.appearanceDesktop.files') }}</h3>
+				<ConfigSection :title="t('views.appearanceDesktop.files')">
 					<div class="flex flex-col gap-5">
 						<!-- Mostrar u ocultar los archivos ya no es un interruptor: se
 						     hace poniendo o sacando el widget de archivos del escritorio,
@@ -127,16 +131,17 @@ const isFormValid = computed(() => {
 							</div>
 						</div>
 					</div>
-				</SectionCard>
+				</ConfigSection>
 
-				<SectionCard>
-					<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.appearanceDesktop.dimensions') }}</h3>
+				<ConfigSection :title="t('views.appearanceDesktop.dimensions')">
 					<div class="flex flex-col gap-5">
 						<FormGroup :label="t('views.appearanceDesktop.iconSize')" html-for="icon-size" :label-class="'flex justify-between w-full'">
 							<template #default>
 								<div class="flex items-center gap-3">
 									<span class="text-xs text-tx-muted w-8">24px</span>
-									<RangeSlider
+									<Slider
+										:label="t('views.appearanceDesktop.iconSize')"
+										class="flex-1"
 										id="icon-size"
 										v-model="iconSize"
 										:min="24"
@@ -147,7 +152,7 @@ const isFormValid = computed(() => {
 							</template>
 						</FormGroup>
 					</div>
-				</SectionCard>
+				</ConfigSection>
 			</div>
 		</div>
 	</div>

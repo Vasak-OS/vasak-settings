@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	ConfigSection,
+	FormGroup,
+	PageHeader,
+	SelectField,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import SelectInput from '@/components/ui/SelectInput.vue';
 import {
 	getAvailableKeyboardLayouts,
 	getAvailableKeyboardSwitchOptions,
@@ -185,7 +188,8 @@ onMounted(loadData);
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.system')"
+			size="lg"
+			:eyebrow="t('sidebar.system')"
 			:title="t('views.languageKeyboard.title')"
 			:description="t('views.languageKeyboard.description')"
 		/>
@@ -198,14 +202,14 @@ onMounted(loadData);
 		</div>
 
 		<template v-else>
-			<SectionCard :title="t('views.languageKeyboard.systemLanguage')">
-				<p class="mb-3 text-sm text-tx-muted">
-					{{ t('views.languageKeyboard.systemLanguageDescription') }}
-				</p>
+			<ConfigSection
+				:title="t('views.languageKeyboard.systemLanguage')"
+				:description="t('views.languageKeyboard.systemLanguageDescription')"
+			>
 				<div class="flex items-end gap-3">
 					<div class="flex-1">
 						<FormGroup :label="t('views.languageKeyboard.language')">
-							<SelectInput
+							<SelectField
 								:modelValue="currentLocale"
 								:options="localeOptions"
 								@update:modelValue="(v: string) => currentLocaleMap.LANG = v"
@@ -215,43 +219,42 @@ onMounted(loadData);
 					<button
 						type="button"
 						:disabled="saving"
-						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary transition-opacity disabled:opacity-50 hover:opacity-90"
+						class="rounded-corner-m bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary transition-opacity disabled:opacity-50 hover:opacity-90"
 						@click="saveLocale"
 					>
 						{{ saving ? t('common.saving') : t('common.apply') }}
 					</button>
 				</div>
-			</SectionCard>
+			</ConfigSection>
 
-			<SectionCard :title="t('views.languageKeyboard.keyboardLayout')">
-				<p class="mb-3 text-sm text-tx-muted">
-					{{ t('views.languageKeyboard.keyboardLayoutDescription') }}
-				</p>
-
+			<ConfigSection
+				:title="t('views.languageKeyboard.keyboardLayout')"
+				:description="t('views.languageKeyboard.keyboardLayoutDescription')"
+			>
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup :label="t('views.languageKeyboard.primaryLayout')">
-						<SelectInput
+						<SelectField
 							:modelValue="layout1"
 							:options="layout1Options"
 							@update:modelValue="selectLayout1"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.languageKeyboard.secondaryLayout')">
-						<SelectInput
+						<SelectField
 							:modelValue="layout2"
 							:options="layout2Options"
 							@update:modelValue="selectLayout2"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.languageKeyboard.variant')">
-						<SelectInput
+						<SelectField
 							:modelValue="layoutVariant"
 							:options="variantOptions"
 							@update:modelValue="(v: string) => layoutVariant = v"
 						/>
 					</FormGroup>
 					<FormGroup v-if="layout2" :label="t('views.languageKeyboard.switchShortcut')">
-						<SelectInput
+						<SelectField
 							:modelValue="switchOption"
 							:options="switchOptionChoices"
 							@update:modelValue="(v: string) => switchOption = v"
@@ -259,17 +262,17 @@ onMounted(loadData);
 					</FormGroup>
 				</div>
 
-				<div class="mt-4 flex justify-end">
+				<template #actions>
 					<button
 						type="button"
 						:disabled="saving"
-						class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary transition-opacity disabled:opacity-50 hover:opacity-90"
+						class="rounded-corner-m bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary transition-opacity disabled:opacity-50 hover:opacity-90"
 						@click="saveLayouts"
 					>
 						{{ saving ? t('common.saving') : t('views.languageKeyboard.saveLayout') }}
 					</button>
-				</div>
-			</SectionCard>
+				</template>
+			</ConfigSection>
 		</template>
 	</div>
 </template>

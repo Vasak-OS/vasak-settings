@@ -32,7 +32,7 @@ defineProps<Props>();
 
 <template>
 	<span
-		class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-corner-sm border border-ui-border bg-ui-bg/60"
+		class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-corner-xs border border-ui-border bg-ui-bg/60"
 	>
 		<ThemeIcon :name="name" :size="28" />
 	</span>

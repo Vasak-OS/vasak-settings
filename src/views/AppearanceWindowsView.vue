@@ -18,11 +18,14 @@ import {
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, SelectField } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	ConfigSection,
+	EmptyState,
+	PageHeader,
+	SelectField,
+} from '@vasakgroup/vue-libvasak';
 import { onMounted, type Ref, ref } from 'vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
 import {
 	BAR_POSITIONS,
 	type BarPosition,
@@ -78,7 +81,8 @@ const saveConfig = async () => {
 <template>
 	<div class="flex min-h-full flex-col gap-4">
 		<PageHeader
-			:section="t('sidebar.appearance')"
+			size="lg"
+			:eyebrow="t('sidebar.appearance')"
 			:title="t('views.appearanceWindows.title')"
 			:description="t('views.appearanceWindows.description')"
 		>
@@ -86,7 +90,7 @@ const saveConfig = async () => {
 				<button
 					v-if="!loading"
 					type="button"
-					class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
+					class="w-fit rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
 					:disabled="saving"
 					@click="saveConfig"
 				>
@@ -95,16 +99,13 @@ const saveConfig = async () => {
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" :message="t('views.appearanceWindows.loading')" padding="lg" />
+		<EmptyState icon="" size="sm" bordered v-if="loading" :title="t('views.appearanceWindows.loading')" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
 			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
-			<SectionCard>
-				<h3 class="mb-4 font-medium text-lg text-tx-main">
-					{{ t('views.appearanceWindows.bar') }}
-				</h3>
+			<ConfigSection :title="t('views.appearanceWindows.bar')">
 
 				<div class="flex items-start justify-between gap-4">
 					<!-- Sólo la explicación: el nombre del control lo dice el `label`
@@ -126,7 +127,7 @@ const saveConfig = async () => {
 						</option>
 					</SelectField>
 				</div>
-			</SectionCard>
+			</ConfigSection>
 		</div>
 	</div>
 </template>

@@ -13,11 +13,15 @@ import {
 	toggleBluetooth,
 } from '@vasakgroup/plugin-bluetooth-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, DeviceCard, SwitchToggle } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	DeviceCard,
+	EmptyState,
+	PageHeader,
+	Panel,
+	SwitchToggle,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
 import { shouldRefresh } from '@/utils/bluetooth-change';
 import { deviceCardProps } from '@/utils/bluetooth-device-card';
 
@@ -150,12 +154,13 @@ onUnmounted(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.network')"
+			size="lg"
+			:eyebrow="t('sidebar.network')"
 			:title="t('views.networkBluetooth.title')"
 			:description="t('views.networkBluetooth.description')"
 		>
 			<template #actions>
-				<div class="flex items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/60 px-4 py-2">
+				<div class="flex items-center gap-3 rounded-corner-m border border-ui-border bg-ui-surface/60 px-4 py-2">
 					<span class="text-sm font-medium">{{ isBluetoothOn ? t('views.networkBluetooth.on') : t('views.networkBluetooth.off') }}</span>
 					<SwitchToggle :label="t('views.networkBluetooth.title')"
 						:model-value="isBluetoothOn"
@@ -169,7 +174,7 @@ onUnmounted(() => {
 		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 
 		<!-- Estado Apagado -->
-		<div v-if="!isBluetoothOn && !loading && !isTogglingBluetooth" class="grid flex-1 place-items-center rounded-corner border border-dashed border-ui-border bg-ui-surface/20 p-6">
+		<div v-if="!isBluetoothOn && !loading && !isTogglingBluetooth" class="grid flex-1 place-items-center rounded-corner-m border border-dashed border-ui-border bg-ui-surface/20 p-6">
 			<div class="text-center text-tx-muted">
 				<div class="mx-auto mb-3 h-12 w-12 rounded-full bg-ui-surface flex items-center justify-center border border-ui-border">
 					<svg class="h-6 w-6 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -182,13 +187,13 @@ onUnmounted(() => {
 		</div>
 
 		<!-- Estado Cargando -->
-		<EmptyStateBox v-else-if="loading || isTogglingBluetooth" :message="t('views.networkBluetooth.syncing')" padding="lg" />
+		<EmptyState icon="" size="sm" bordered v-else-if="loading || isTogglingBluetooth" :title="t('views.networkBluetooth.syncing')" />
 
 		<!-- Estado Listando Dispositivos -->
 		<template v-else>
 			<div class="grid gap-4 xl:grid-cols-2">
 				<!-- Conectados -->
-				<SectionCard>
+				<Panel as="article">
 					<h3 class="mb-4 text-lg font-medium text-tx-main flex items-center justify-between">
 						{{ t('views.networkBluetooth.connectedDevices') }}
 						<span class="text-xs text-tx-muted rounded bg-ui-surface/50 px-2 py-0.5 border border-ui-border">
@@ -196,7 +201,7 @@ onUnmounted(() => {
 						</span>
 					</h3>
 					
-					<EmptyStateBox v-if="connectedDevices.length === 0" :message="t('views.networkBluetooth.emptyConnected')" />
+					<EmptyState icon="" size="sm" bordered v-if="connectedDevices.length === 0" :title="t('views.networkBluetooth.emptyConnected')" />
 					
 					<ul v-else class="flex flex-col gap-1">
 						<li v-for="dev in connectedDevices" :key="dev.path">
@@ -210,10 +215,10 @@ onUnmounted(() => {
 							/>
 						</li>
 					</ul>
-				</SectionCard>
+				</Panel>
 
 				<!-- Disponibles -->
-				<SectionCard>
+				<Panel as="article">
 					<div class="mb-4 flex items-center justify-between">
 						<h3 class="text-lg font-medium text-tx-main">{{ t('views.networkBluetooth.availableDevices') }}</h3>
 						
@@ -229,7 +234,7 @@ onUnmounted(() => {
 						</button>
 					</div>
 
-					<EmptyStateBox v-if="availableDevices.length === 0" :message="t('views.networkBluetooth.emptyAvailable')" />
+					<EmptyState icon="" size="sm" bordered v-if="availableDevices.length === 0" :title="t('views.networkBluetooth.emptyAvailable')" />
 					
 					<ul v-else class="flex flex-col gap-1 max-h-[50vh] overflow-y-auto pr-1">
 						<li v-for="dev in availableDevices" :key="dev.path">
@@ -240,7 +245,7 @@ onUnmounted(() => {
 							/>
 						</li>
 					</ul>
-				</SectionCard>
+				</Panel>
 			</div>
 		</template>
 	</div>

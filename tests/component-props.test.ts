@@ -25,23 +25,23 @@ import { basename, join } from 'node:path';
  * Son los atributos que Vue pasa al elemento raíz a propósito, más los que el
  * propio Vue interpreta. Todo lo demás tiene que estar declarado.
  */
-const SIEMPRE_VALE = /^(class|style|id|key|ref|slot|is|title|role|tabindex)$/;
-const PREFIJOS_VALIDOS = /^(v-|@|:|#|aria-|data-)/;
+const ALWAYS_VALID = /^(class|style|id|key|ref|slot|is|title|role|tabindex)$/;
+const VALID_PREFIXES = /^(v-|@|:|#|aria-|data-)/;
 
 /** `is-on` → `isOn`. */
-function aCamello(nombre: string): string {
-	return nombre.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+function toCamel(name: string): string {
+	return name.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 }
 
 /** Todos los `.vue` del proyecto. */
-function archivosVue(dir: string): string[] {
-	const salida: string[] = [];
-	for (const entrada of readdirSync(dir)) {
-		const ruta = join(dir, entrada);
-		if (statSync(ruta).isDirectory()) salida.push(...archivosVue(ruta));
-		else if (entrada.endsWith('.vue')) salida.push(ruta);
+function vueFiles(dir: string): string[] {
+	const output: string[] = [];
+	for (const entry of readdirSync(dir)) {
+		const path = join(dir, entry);
+		if (statSync(path).isDirectory()) output.push(...vueFiles(path));
+		else if (entry.endsWith('.vue')) output.push(path);
 	}
-	return salida;
+	return output;
 }
 
 /**
@@ -52,12 +52,12 @@ function archivosVue(dir: string): string[] {
  * cualquier atributo que reciba es paso al elemento raíz — no hay nada que
  * comprobar y se lo saltea.
  */
-function propsDe(fuente: string): Set<string> | null {
-	const m = fuente.match(/interface\s+Props\s*\{([\s\S]*?)\n\}/);
+function propsOf(source: string): Set<string> | null {
+	const m = source.match(/interface\s+Props\s*\{([\s\S]*?)\n\}/);
 	if (!m) return null;
 	const props = new Set<string>();
-	for (const linea of m[1].split('\n')) {
-		const p = linea.match(/^\s*(\w+)\??\s*:/);
+	for (const line of m[1].split('\n')) {
+		const p = line.match(/^\s*(\w+)\??\s*:/);
 		if (p) props.add(p[1]);
 	}
 	return props;
@@ -72,76 +72,76 @@ function propsDe(fuente: string): Set<string> | null {
  * `move.error.value`—, y además cortaba la etiqueta en el primer `>`, que
  * puede estar adentro de una expresión (`:x="a > b"`).
  */
-function usos(fuente: string, componente: string): string[][] {
-	const salida: string[][] = [];
-	const apertura = new RegExp(`<${componente}(?=[\\s/>])`, 'g');
+function usages(source: string, component: string): string[][] {
+	const output: string[][] = [];
+	const opening = new RegExp(`<${component}(?=[\\s/>])`, 'g');
 
-	for (const m of fuente.matchAll(apertura)) {
+	for (const m of source.matchAll(opening)) {
 		let i = m.index + m[0].length;
-		const atributos: string[] = [];
+		const attributes: string[] = [];
 		let token = '';
-		let comilla: string | null = null;
+		let quote: string | null = null;
 
-		for (; i < fuente.length; i++) {
-			const c = fuente[i];
-			if (comilla) {
-				if (c === comilla) comilla = null;
+		for (; i < source.length; i++) {
+			const c = source[i];
+			if (quote) {
+				if (c === quote) quote = null;
 				continue;
 			}
 			if (c === '"' || c === "'") {
-				comilla = c;
+				quote = c;
 				// Lo que había antes del `=` era el nombre; el valor se salta.
 				token = '';
 				continue;
 			}
 			if (c === '>') break;
 			if (c === '=' || /\s/.test(c) || c === '/') {
-				const nombre = token.trim();
-				if (nombre) atributos.push(nombre);
+				const name = token.trim();
+				if (name) attributes.push(name);
 				token = '';
 				continue;
 			}
 			token += c;
 		}
-		const ultimo = token.trim();
-		if (ultimo) atributos.push(ultimo);
-		salida.push(atributos);
+		const last = token.trim();
+		if (last) attributes.push(last);
+		output.push(attributes);
 	}
-	return salida;
+	return output;
 }
 
-const componentes = new Map<string, Set<string>>();
-for (const ruta of archivosVue('src/components/ui')) {
-	const props = propsDe(readFileSync(ruta, 'utf8'));
-	if (props) componentes.set(basename(ruta, '.vue'), props);
+const components = new Map<string, Set<string>>();
+for (const path of vueFiles('src/components')) {
+	const props = propsOf(readFileSync(path, 'utf8'));
+	if (props) components.set(basename(path, '.vue'), props);
 }
 
 describe('las props de los componentes propios', () => {
 	test('hay componentes con props que revisar', () => {
-		expect(componentes.size).toBeGreaterThan(5);
+		expect(components.size).toBeGreaterThan(5);
 	});
 
 	test('todo atributo que se les pasa es una prop suya', () => {
-		const problemas: string[] = [];
-		for (const archivo of archivosVue('src')) {
-			const fuente = readFileSync(archivo, 'utf8');
-			for (const [nombre, props] of componentes) {
-				for (const atributos of usos(fuente, nombre)) {
-					for (const bruto of atributos) {
+		const problems: string[] = [];
+		for (const file of vueFiles('src')) {
+			const source = readFileSync(file, 'utf8');
+			for (const [name, props] of components) {
+				for (const attributes of usages(source, name)) {
+					for (const raw of attributes) {
 						// `:cosa` ata la misma prop que `cosa`, y en la plantilla
 						// las props en camelCase se escriben con guiones:
 						// `is-on` es `isOn`. Es la forma normal de Vue, y sin
 						// convertirla el test acusaba ciento veintiocho usos
 						// perfectamente correctos.
-						const atributo = aCamello(bruto.replace(/^:/, ''));
-						if (PREFIJOS_VALIDOS.test(bruto) && !bruto.startsWith(':')) continue;
-						if (SIEMPRE_VALE.test(atributo)) continue;
-						if (props.has(atributo)) continue;
-						problemas.push(`${archivo}: <${nombre}> no tiene «${atributo}»`);
+						const attribute = toCamel(raw.replace(/^:/, ''));
+						if (VALID_PREFIXES.test(raw) && !raw.startsWith(':')) continue;
+						if (ALWAYS_VALID.test(attribute)) continue;
+						if (props.has(attribute)) continue;
+						problems.push(`${file}: <${name}> no tiene «${attribute}»`);
 					}
 				}
 			}
 		}
-		expect(problemas).toEqual([]);
+		expect(problems).toEqual([]);
 	});
 });
