@@ -7,16 +7,21 @@ import {
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup, SwitchToggle } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	ConfigSection,
+	EmptyState,
+	FormGroup,
+	PageHeader,
+	Panel,
+	SelectField,
+	Slider,
+	SwitchToggle,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onBeforeUnmount, onMounted, type Ref, ref, watch } from 'vue';
 import SchemeCard from '@/components/scheme/SchemeCard.vue';
 import SchemeColorEditor from '@/components/scheme/SchemeColorEditor.vue';
 import SchemeResetControl from '@/components/scheme/SchemeResetControl.vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import RangeSlider from '@/components/ui/RangeSlider.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import SelectInput from '@/components/ui/SelectInput.vue';
 import { useCustomScheme } from '@/composables/useCustomScheme';
 import {
 	getCurrentSystemState,
@@ -358,7 +363,8 @@ const isFormValid = computed(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4">
 		<PageHeader
-			:section="t('sidebar.appearance')"
+			size="lg"
+			:eyebrow="t('sidebar.appearance')"
 			:title="t('views.appearanceTheme.title')"
 			:description="t('views.appearanceTheme.description')"
 		>
@@ -366,7 +372,7 @@ const isFormValid = computed(() => {
 				<button
 					v-if="!loading"
 					type="button"
-					class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
+					class="w-fit rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
 					:disabled="!isFormValid || saving"
 					@click="saveConfig"
 				>
@@ -375,21 +381,20 @@ const isFormValid = computed(() => {
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" :message="t('views.appearanceTheme.loading')" padding="lg" />
+		<EmptyState icon="" size="sm" bordered v-if="loading" :title="t('views.appearanceTheme.loading')" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
 			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
 			<div class="grid gap-4 xl:grid-cols-2">
-				<SectionCard>
-					<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.appearanceTheme.baseStyles') }}</h3>
+				<ConfigSection :title="t('views.appearanceTheme.baseStyles')">
 					<div class="flex flex-col gap-5">
 						<FormGroup :label="t('views.appearanceTheme.borderRadius')" html-for="border-radius" :label-class="'flex justify-between w-full'">
 							<template #default>
 								<div class="flex items-center gap-3">
 									<span class="w-6 text-xs text-tx-muted">1px</span>
-									<RangeSlider v-if="vskConfig" id="border-radius" v-model="vskConfig.style.radius" :min="1" :max="20" />
+									<Slider :label="t('views.appearanceTheme.borderRadius')" class="flex-1" v-if="vskConfig" id="border-radius" v-model="vskConfig.style.radius" :min="1" :max="20" />
 									<span class="w-8 text-right text-xs text-tx-muted">{{ vskConfig?.style.radius }}px</span>
 								</div>
 							</template>
@@ -403,23 +408,22 @@ const isFormValid = computed(() => {
 							</div>
 						</div>
 					</div>
-				</SectionCard>
+				</ConfigSection>
 
-				<SectionCard>
-					<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.appearanceTheme.systemThemes') }}</h3>
+				<ConfigSection :title="t('views.appearanceTheme.systemThemes')">
 					<div class="flex flex-col gap-5">
 						<FormGroup :label="t('views.appearanceTheme.gtkTheme')" html-for="gtk-theme">
-							<SelectInput id="gtk-theme" v-model="selectedGtkTheme" :options="gtkThemes" />
+							<SelectField v-bind="{ id: 'gtk-theme' }" v-model="selectedGtkTheme" :options="gtkThemes" />
 						</FormGroup>
 
 						<FormGroup :label="t('views.appearanceTheme.cursorTheme')" html-for="cursor-theme">
-							<SelectInput id="cursor-theme" v-model="selectedCursorTheme" :options="cursorThemes" />
+							<SelectField v-bind="{ id: 'cursor-theme' }" v-model="selectedCursorTheme" :options="cursorThemes" />
 						</FormGroup>
 					</div>
-				</SectionCard>
+				</ConfigSection>
 			</div>
 
-			<SectionCard>
+			<Panel as="article">
 				<div class="mb-4 flex flex-col gap-1">
 					<h3 class="text-lg font-medium text-tx-main">{{ t('views.appearanceTheme.schemeSection') }}</h3>
 					<p class="text-sm text-tx-muted">
@@ -443,7 +447,7 @@ const isFormValid = computed(() => {
 							/>
 							<div
 								v-else
-								class="flex h-full flex-col justify-between gap-3 rounded-corner border border-dashed border-ui-border bg-ui-surface/70 p-3"
+								class="flex h-full flex-col justify-between gap-3 rounded-corner-m border border-dashed border-ui-border bg-ui-surface/70 p-3"
 							>
 								<div class="min-w-0">
 									<p class="text-sm font-medium text-tx-main">{{ t('views.appearanceTheme.custom.name') }}</p>
@@ -452,7 +456,7 @@ const isFormValid = computed(() => {
 								<button
 									type="button"
 									data-create-custom
-									class="w-fit rounded-corner border border-primary bg-ui-surface/70 px-3 py-1.5 text-sm font-medium text-tx-main transition-colors hover:bg-ui-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
+									class="w-fit rounded-corner-m border border-primary bg-ui-surface/70 px-3 py-1.5 text-sm font-medium text-tx-main transition-colors hover:bg-ui-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
 									:disabled="creatingCustom || !(activeSchemeId || selectedSchemeId)"
 									@click="createCustom"
 								>
@@ -471,7 +475,7 @@ const isFormValid = computed(() => {
 						</li>
 					</ul>
 
-					<div v-if="isCustomSelected && custom.scheme.value" class="flex flex-col gap-4 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
+					<div v-if="isCustomSelected && custom.scheme.value" class="flex flex-col gap-4 rounded-corner-m border border-ui-border bg-ui-surface/70 p-4">
 						<div class="flex flex-wrap items-start justify-between gap-3">
 							<div class="min-w-0">
 								<h4 class="text-base font-medium text-tx-main">{{ custom.scheme.value.name }}</h4>
@@ -497,7 +501,7 @@ const isFormValid = computed(() => {
 					</div>
 
 					<div v-else-if="selectedScheme && selectedScheme.scheme.id !== CUSTOM_SCHEME_ID" class="grid gap-4 xl:grid-cols-[1.15fr_1fr]">
-						<div class="rounded-corner border border-ui-border bg-ui-surface/70 p-4">
+						<div class="rounded-corner-m border border-ui-border bg-ui-surface/70 p-4">
 							<div class="mb-4 flex flex-col gap-1">
 								<div class="flex items-center justify-between gap-3">
 									<h4 class="text-base font-medium text-tx-main">{{ selectedScheme.scheme.name }}</h4>
@@ -509,7 +513,7 @@ const isFormValid = computed(() => {
 							</div>
 
 							<div class="grid gap-3 sm:grid-cols-2">
-								<div class="rounded-corner border border-ui-border bg-ui-bg/80 p-3">
+								<div class="rounded-corner-m border border-ui-border bg-ui-bg/80 p-3">
 									<div class="mb-3 flex items-center justify-between">
 										<span class="text-sm font-medium text-tx-main">{{ t('views.appearanceTheme.dark') }}</span>
 										<span class="text-xs text-tx-muted">{{ selectedScheme.scheme.colors.dark.ui.background }}</span>
@@ -518,9 +522,9 @@ const isFormValid = computed(() => {
 										<div
 											v-for="swatch in selectedDarkPreview"
 											:key="`dark-${swatch.label}`"
-											class="flex items-center gap-2 rounded-corner border border-ui-border/70 bg-ui-surface/70 p-2"
+											class="flex items-center gap-2 rounded-corner-m border border-ui-border/70 bg-ui-surface/70 p-2"
 										>
-											<div class="h-8 w-8 rounded-corner border border-ui-border/60" :style="{ backgroundColor: swatch.value }" />
+											<div class="h-8 w-8 rounded-corner-m border border-ui-border/60" :style="{ backgroundColor: swatch.value }" />
 											<div class="min-w-0 flex-1">
 												<p class="truncate text-xs font-medium text-tx-main">{{ swatch.label }}</p>
 												<p class="truncate text-[11px] text-tx-muted">{{ swatch.value }}</p>
@@ -529,7 +533,7 @@ const isFormValid = computed(() => {
 									</div>
 								</div>
 
-								<div class="rounded-corner border border-ui-border bg-ui-bg/80 p-3">
+								<div class="rounded-corner-m border border-ui-border bg-ui-bg/80 p-3">
 									<div class="mb-3 flex items-center justify-between">
 										<span class="text-sm font-medium text-tx-main">{{ t('views.appearanceTheme.light') }}</span>
 										<span class="text-xs text-tx-muted">{{ selectedScheme.scheme.colors.light.ui.background }}</span>
@@ -538,9 +542,9 @@ const isFormValid = computed(() => {
 										<div
 											v-for="swatch in selectedLightPreview"
 											:key="`light-${swatch.label}`"
-											class="flex items-center gap-2 rounded-corner border border-ui-border/70 bg-ui-surface/70 p-2"
+											class="flex items-center gap-2 rounded-corner-m border border-ui-border/70 bg-ui-surface/70 p-2"
 										>
-											<div class="h-8 w-8 rounded-corner border border-ui-border/60" :style="{ backgroundColor: swatch.value }" />
+											<div class="h-8 w-8 rounded-corner-m border border-ui-border/60" :style="{ backgroundColor: swatch.value }" />
 											<div class="min-w-0 flex-1">
 												<p class="truncate text-xs font-medium text-tx-main">{{ swatch.label }}</p>
 												<p class="truncate text-[11px] text-tx-muted">{{ swatch.value }}</p>
@@ -551,7 +555,7 @@ const isFormValid = computed(() => {
 							</div>
 						</div>
 
-						<div class="rounded-corner border border-ui-border bg-ui-surface/30 p-4">
+						<div class="rounded-corner-m border border-ui-border bg-ui-surface/30 p-4">
 							<h4 class="mb-3 text-sm font-medium text-tx-main">{{ t('views.appearanceTheme.schemeInfo') }}</h4>
 							<div class="space-y-3 text-sm text-tx-muted">
 								<p><span class="font-medium text-tx-main">ID:</span> {{ selectedScheme.scheme.id }}</p>
@@ -561,9 +565,9 @@ const isFormValid = computed(() => {
 						</div>
 					</div>
 
-					<EmptyStateBox v-else :message="t('views.appearanceTheme.noSchemes')" padding="md" />
+					<EmptyState icon="" size="sm" bordered v-else :title="t('views.appearanceTheme.noSchemes')" />
 				</div>
-			</SectionCard>
+			</Panel>
 		</div>
 	</div>
 </template>

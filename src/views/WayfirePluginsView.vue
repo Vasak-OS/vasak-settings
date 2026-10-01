@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
+import { AlertMessage, PageHeader, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { onMounted } from 'vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
 import { useWayfirePlugins } from '@/composables/useWayfirePlugins';
 
 const { t } = useI18n();
@@ -23,7 +22,8 @@ function etiquetaDe(plugin: { id: string; unknown?: boolean }) {
 <template>
 	<section class="flex flex-col gap-4">
 		<PageHeader
-			:section="t('sidebar.windows')"
+			size="lg"
+			:eyebrow="t('sidebar.windows')"
 			:title="t('views.wayfirePlugins.title')"
 			:description="`${t('views.wayfirePlugins.description')} ${t('views.wayfirePlugins.activeCount').replace('{0}', String(enabledCount))}`"
 		/>
@@ -36,7 +36,7 @@ function etiquetaDe(plugin: { id: string; unknown?: boolean }) {
 				{{ t(`wayfire.plugins.categories.${group.category}`) }}
 			</h2>
 
-			<ul class="divide-y divide-ui-border overflow-hidden rounded-corner border border-ui-border bg-ui-surface/70">
+			<ul class="divide-y divide-ui-border overflow-hidden rounded-corner-m border border-ui-border bg-ui-surface/70">
 				<li
 					v-for="plugin in group.items"
 					:key="plugin.id"

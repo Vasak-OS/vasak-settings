@@ -7,11 +7,14 @@ import {
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	ConfigSection,
+	EmptyState,
+	FormGroup,
+	PageHeader,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, type Ref, ref } from 'vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
 import { getIconPackIcons, getIconPacks } from '@/services/style.service';
 
 interface IconPackPreview {
@@ -134,7 +137,8 @@ const isChanged = computed(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4">
 		<PageHeader
-			:section="t('sidebar.appearance')"
+			size="lg"
+			:eyebrow="t('sidebar.appearance')"
 			:title="t('views.appearanceIconPacks.title')"
 			:description="t('views.appearanceIconPacks.description')"
 		>
@@ -142,7 +146,7 @@ const isChanged = computed(() => {
 				<button
 					v-if="!loading"
 					type="button"
-					class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
+					class="w-fit rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
 					:disabled="!isFormValid || saving || !isChanged"
 					@click="saveConfig"
 				>
@@ -151,7 +155,7 @@ const isChanged = computed(() => {
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" :message="t('views.appearanceIconPacks.loading')" padding="lg" />
+		<EmptyState icon="" size="sm" bordered v-if="loading" :title="t('views.appearanceIconPacks.loading')" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
 			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
@@ -159,8 +163,7 @@ const isChanged = computed(() => {
 			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
 			<!-- Modo Oscuro -->
-			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.appearanceIconPacks.darkMode') }}</h3>
+			<ConfigSection :title="t('views.appearanceIconPacks.darkMode')">
 				<FormGroup :label="t('views.appearanceIconPacks.selectPack')" html-for="dark-pack" :label-class="'flex justify-between w-full'">
 					<div class="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
 						<div
@@ -170,7 +173,7 @@ const isChanged = computed(() => {
 							@click="selectDarkPack(pack)"
 						>
 							<div
-								class="rounded-corner border-2 p-4 flex flex-col gap-3 hover:bg-ui-surface/50"
+								class="rounded-corner-m border-2 p-4 flex flex-col gap-3 hover:bg-ui-surface/50"
 								:class="[
 									selectedDarkPack === pack
 										? 'border-primary bg-primary/10'
@@ -198,11 +201,10 @@ const isChanged = computed(() => {
 						</div>
 					</div>
 				</FormGroup>
-			</SectionCard>
+			</ConfigSection>
 
 			<!-- Modo Claro -->
-			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.appearanceIconPacks.lightMode') }}</h3>
+			<ConfigSection :title="t('views.appearanceIconPacks.lightMode')">
 				<FormGroup :label="t('views.appearanceIconPacks.selectPack')" html-for="light-pack" :label-class="'flex justify-between w-full'">
 					<div class="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
 						<div
@@ -212,7 +214,7 @@ const isChanged = computed(() => {
 							@click="selectLightPack(pack)"
 						>
 							<div
-								class="rounded-corner border-2 p-4 flex flex-col gap-3 hover:bg-ui-surface/50"
+								class="rounded-corner-m border-2 p-4 flex flex-col gap-3 hover:bg-ui-surface/50"
 								:class="[
 									selectedLightPack === pack
 										? 'border-primary bg-primary/10'
@@ -246,11 +248,10 @@ const isChanged = computed(() => {
 						</div>
 					</div>
 				</FormGroup>
-			</SectionCard>
+			</ConfigSection>
 
 			<!-- Información -->
-			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.appearanceIconPacks.info') }}</h3>
+			<ConfigSection :title="t('views.appearanceIconPacks.info')">
 				<div class="text-sm text-tx-muted space-y-2">
 					<p>
 						<span class="font-medium text-tx-main">{{ t('views.appearanceIconPacks.darkMode') }}:</span>
@@ -266,7 +267,7 @@ const isChanged = computed(() => {
 						<code class="text-xs">~/.local/share/icons</code>
 					</p>
 				</div>
-			</SectionCard>
+			</ConfigSection>
 		</div>
 	</div>
 </template>

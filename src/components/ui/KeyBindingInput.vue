@@ -151,7 +151,7 @@ function clear() {
 	<div class="space-y-1">
 		<div
 			tabindex="0"
-			class="flex min-h-10 w-full flex-wrap items-center gap-2 rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm transition-colors focus:border-primary"
+			class="flex min-h-10 w-full flex-wrap items-center gap-2 rounded-corner-m border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm transition-colors focus:border-primary"
 			@keydown="handleKeyDown"
 		>
 			<span
@@ -177,7 +177,7 @@ function clear() {
 			<button
 				v-if="modelValue"
 				type="button"
-				class="rounded-corner border border-ui-border bg-ui-surface/60 px-2 py-1 text-xs font-medium transition-colors hover:bg-ui-surface"
+				class="rounded-corner-m border border-ui-border bg-ui-surface/60 px-2 py-1 text-xs font-medium transition-colors hover:bg-ui-surface"
 				@click="clear"
 			>
 				{{ t('common.clear') }}

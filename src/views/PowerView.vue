@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup, SwitchToggle, ThemeIcon } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	FormGroup,
+	NumberField,
+	PageHeader,
+	Panel,
+	SwitchToggle,
+	ThemeIcon,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
-import NumberInput from '@/components/ui/NumberInput.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import ProfileIcon from '@/components/ui/ProfileIcon.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
 import { useBattery, usePowerProfiles } from '@/composables/useBattery';
+import { powerProfileIcon } from '@/utils/power-profile-icon';
 
 interface IdleConfig {
 	enabled: boolean;
@@ -147,7 +152,8 @@ async function selectProfile(profile: string) {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.system')"
+			size="lg"
+			:eyebrow="t('sidebar.system')"
 			:title="t('views.power.title')"
 			:description="t('views.power.description')"
 		/>
@@ -155,7 +161,7 @@ async function selectProfile(profile: string) {
 		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 
 		<!-- Battery info -->
-		<SectionCard>
+		<Panel as="article">
 			<div class="flex items-start gap-3">
 				<ThemeIcon :name="batteryIcon" :size="40" class="mt-0.5" />
 				<div class="flex-1">
@@ -214,10 +220,10 @@ async function selectProfile(profile: string) {
 					</template>
 				</div>
 			</div>
-		</SectionCard>
+		</Panel>
 
 		<!-- Power profiles -->
-		<SectionCard>
+		<Panel as="article">
 			<div class="flex items-start gap-3">
 				<div class="flex-1">
 					<h3 class="text-base font-medium">{{ t('views.power.profiles') }}</h3>
@@ -241,14 +247,14 @@ async function selectProfile(profile: string) {
 							:key="profile"
 							type="button"
 							:class="[
-								'flex items-center gap-2 rounded-corner border px-4 py-2.5 text-sm font-medium transition-all',
+								'flex items-center gap-2 rounded-corner-m border px-4 py-2.5 text-sm font-medium transition-all',
 								active === profile
 									? 'border-primary bg-primary/10 text-primary shadow-sm shadow-primary/20'
 									: 'border-ui-border bg-ui-surface/50 text-tx-main hover:bg-ui-surface hover:border-ui-border-strong'
 							]"
 							@click="selectProfile(profile)"
 						>
-							<ProfileIcon :profile="profile" />
+							<ThemeIcon :name="powerProfileIcon(profile)" :size="20" />
 							<span>{{ label(profile) }}</span>
 							<span
 								v-if="active === profile"
@@ -258,9 +264,9 @@ async function selectProfile(profile: string) {
 					</div>
 				</div>
 			</div>
-		</SectionCard>
+		</Panel>
 
-		<SectionCard v-if="idle">
+		<Panel as="article" v-if="idle">
 			<div class="flex items-start gap-3">
 				<div class="min-w-0 flex-1">
 					<h3 class="text-base font-medium">{{ t('views.power.idleLock') }}</h3>
@@ -296,7 +302,7 @@ async function selectProfile(profile: string) {
 				<SwitchToggle :label="t('views.power.lockScreen')" :model-value="idle.lock_enabled" @update:model-value="idle.lock_enabled = $event" />
 			</div>
 			<FormGroup v-if="idle.lock_enabled" :label="t('views.power.lockMinutes')" class="mt-2">
-				<NumberInput v-model="idle.lock_minutes" :min="1" :max="180" narrow />
+				<NumberField v-model="idle.lock_minutes" :min="1" :max="180" narrow />
 			</FormGroup>
 
 			<div class="mt-4 flex items-start gap-3">
@@ -314,7 +320,7 @@ async function selectProfile(profile: string) {
 				/>
 			</div>
 			<FormGroup v-if="idle.screen_off_enabled" :label="t('views.power.screenOffMinutes')" class="mt-2">
-				<NumberInput v-model="idle.screen_off_minutes" :min="1" :max="180" narrow />
+				<NumberField v-model="idle.screen_off_minutes" :min="1" :max="180" narrow />
 			</FormGroup>
 
 			<div class="mt-4 flex items-start gap-3">
@@ -332,12 +338,12 @@ async function selectProfile(profile: string) {
 				<button
 					type="button"
 					:disabled="savingIdle || !idle.available"
-					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90 disabled:opacity-50"
+					class="rounded-corner-m bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90 disabled:opacity-50"
 					@click="saveIdle"
 				>
 					{{ savingIdle ? t('common.saving') : t('common.save') }}
 				</button>
 			</div>
-		</SectionCard>
+		</Panel>
 	</div>
 </template>

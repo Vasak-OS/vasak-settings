@@ -21,8 +21,18 @@ const scheme = (): SchemeFile => JSON.parse(readFileSync(FIXTURE, 'utf8')) as Sc
 
 const mounted: VueWrapper[] = [];
 
+/**
+ * `ThemeIcon` va en un doble: desde que el selector es el `SelectField` de la
+ * librería, su flecha es un icono del tema, y el icono se suscribe al cambio de
+ * tema al montar —que sin Tauri revienta—. Lo que se prueba acá es el diálogo
+ * de confirmar, no la flecha.
+ */
 function mountAttached(component: Parameters<typeof mount>[0], options: Record<string, unknown>) {
-	const wrapper = mount(component, { attachTo: document.body, ...options } as never);
+	const wrapper = mount(component, {
+		attachTo: document.body,
+		global: { stubs: { ThemeIcon: true } },
+		...options,
+	} as never);
 	mounted.push(wrapper);
 	return wrapper;
 }

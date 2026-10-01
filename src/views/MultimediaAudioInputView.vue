@@ -1,13 +1,16 @@
 <script lang="ts" setup>
 import { listen } from '@tauri-apps/api/event';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { ThemeIcon } from '@vasakgroup/vue-libvasak';
+import {
+	Badge,
+	ConfigSection,
+	EmptyState,
+	PageHeader,
+	Panel,
+	Slider,
+	ThemeIcon,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import RangeSlider from '@/components/ui/RangeSlider.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import StatusBadge from '@/components/ui/StatusBadge.vue';
 import {
 	getAudioInputDevices,
 	getAudioInputVolume,
@@ -156,15 +159,17 @@ onUnmounted(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.multimedia')"
+			size="lg"
+			:eyebrow="t('sidebar.multimedia')"
 			:title="t('views.multimediaAudioInput.title')"
 			:description="t('views.multimediaAudioInput.description')"
 		>
 			<template #actions>
 				<div class="flex flex-col items-center">
 					<p class="mb-2 text-xs uppercase tracking-[0.2em] text-tx-muted">{{ t('views.multimediaAudioInput.statusLabel') }}</p>
-					<StatusBadge
-						:text="inputVolumeInfo.is_muted ? t('views.multimediaAudioInput.muted') : t('views.multimediaAudioInput.active')"
+					<Badge
+						size="md"
+						:label="inputVolumeInfo.is_muted ? t('views.multimediaAudioInput.muted') : t('views.multimediaAudioInput.active')"
 						:tone="inputVolumeInfo.is_muted ? 'error' : 'success'"
 					/>
 				</div>
@@ -172,11 +177,10 @@ onUnmounted(() => {
 		</PageHeader>
 
 		<div class="mt-2 grid gap-6 xl:grid-cols-2">
-			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.multimediaAudioInput.inputLevel') }}</h3>
-				<div class="flex items-center gap-4 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
+			<ConfigSection :title="t('views.multimediaAudioInput.inputLevel')">
+				<div class="flex items-center gap-4 rounded-corner-m border border-ui-border bg-ui-surface/70 p-4">
 					<button
-						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner border transition-colors hover:bg-primary hover:text-tx-on-primary"
+						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner-m border transition-colors hover:bg-primary hover:text-tx-on-primary"
 						:class="
 							inputVolumeInfo.is_muted
 								? 'border-status-error/40 text-status-error'
@@ -193,7 +197,9 @@ onUnmounted(() => {
 					</button>
 
 					<div class="flex-1 px-2">
-						<RangeSlider
+						<Slider
+							:label="t('views.multimediaAudioInput.inputLevel')"
+							class="flex-1"
 							id="input-volume-slider"
 							v-model="currentInputVolume"
 							:min="inputVolumeInfo.min"
@@ -215,9 +221,9 @@ onUnmounted(() => {
 						</span>
 					</div>
 				</div>
-			</SectionCard>
+			</ConfigSection>
 
-			<SectionCard>
+			<Panel as="article">
 				<h3 class="mb-4 flex items-center justify-between text-lg font-medium text-tx-main">
 					{{ t('views.multimediaAudioInput.inputDevices') }}
 					<button
@@ -236,14 +242,14 @@ onUnmounted(() => {
 					</button>
 				</h3>
 
-				<EmptyStateBox v-if="inputDevicesLoading" :message="t('views.multimediaAudioInput.loadingDevices')" />
-				<EmptyStateBox v-else-if="inputDevices.length === 0" :message="t('views.multimediaAudioInput.emptyDevices')" />
+				<EmptyState icon="" size="sm" bordered v-if="inputDevicesLoading" :title="t('views.multimediaAudioInput.loadingDevices')" />
+				<EmptyState icon="" size="sm" bordered v-else-if="inputDevices.length === 0" :title="t('views.multimediaAudioInput.emptyDevices')" />
 
 				<ul v-else class="flex max-h-[14rem] flex-col gap-2 overflow-y-auto pr-1" role="radiogroup">
 					<li
 						v-for="device in inputDevices"
 						:key="device.id"
-						class="group flex cursor-pointer items-center justify-between gap-3 rounded-corner border px-4 py-3 transition-colors"
+						class="group flex cursor-pointer items-center justify-between gap-3 rounded-corner-m border px-4 py-3 transition-colors"
 						:class="
 							selectedInputDeviceId === device.id
 								? 'border-primary/50 bg-primary/5 shadow-sm'
@@ -288,7 +294,7 @@ onUnmounted(() => {
 						</span>
 					</li>
 				</ul>
-			</SectionCard>
+			</Panel>
 		</div>
 	</div>
 </template>

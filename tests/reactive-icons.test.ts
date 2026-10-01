@@ -247,8 +247,8 @@ describe('la recarga de los iconos del tema se agenda', () => {
 			olvidarLosIconosDelTema();
 			variant = 'claro';
 
-			const ProfileIcon = (await import('@/components/ui/ProfileIcon.vue')).default;
-			icon = mount(ProfileIcon, { props: { profile: 'balanced' } });
+			const PowerProfileIcon = (await import('./fixtures/PowerProfileIcon.vue')).default;
+			icon = mount(PowerProfileIcon, { props: { profile: 'balanced' } });
 			await settle();
 			expect(icon.get('img').attributes('src')).toBe('icono:claro:battery-profile-balanced');
 

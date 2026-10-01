@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup, SwitchToggle } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	FormGroup,
+	NumberField,
+	PageHeader,
+	Panel,
+	SelectField,
+	SwitchToggle,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
 import MonitorCanvas, { type CanvasMonitor } from '@/components/monitors/MonitorCanvas.vue';
-import NumberInput from '@/components/ui/NumberInput.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import SelectInput from '@/components/ui/SelectInput.vue';
 import {
 	applyMonitorLayout,
 	type BrightnessKind,
@@ -267,7 +271,8 @@ onMounted(load);
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.system')"
+			size="lg"
+			:eyebrow="t('sidebar.system')"
 			:title="t('views.monitors.title')"
 			:description="t('views.monitors.description')"
 		/>
@@ -284,15 +289,15 @@ onMounted(load);
 		</div>
 
 		<template v-else-if="monitors.length === 0">
-			<SectionCard>
+			<Panel as="article">
 				<p class="py-4 text-center text-sm text-tx-muted">
 					{{ t('views.monitors.emptyState') }}
 				</p>
-			</SectionCard>
+			</Panel>
 		</template>
 
 		<template v-else>
-			<SectionCard v-if="canvasMonitors.length > 0">
+			<Panel as="article" v-if="canvasMonitors.length > 0">
 				<h3 class="mb-1 text-sm font-medium">{{ t('views.monitors.arrangement') }}</h3>
 				<p class="mb-3 text-xs text-tx-muted">{{ t('views.monitors.dragHint') }}</p>
 				<MonitorCanvas
@@ -300,9 +305,9 @@ onMounted(load);
 					:primaryName="primaryName"
 					@position-change="onCanvasPositionChange"
 				/>
-			</SectionCard>
+			</Panel>
 
-			<SectionCard v-for="monitor in monitors" :key="monitor.name">
+			<Panel as="article" v-for="monitor in monitors" :key="monitor.name">
 				<div class="mb-3 flex items-center justify-between">
 					<div class="flex items-center gap-2">
 						<h3 class="text-base font-medium">{{ monitor.name }}</h3>
@@ -334,7 +339,7 @@ onMounted(load);
 						<button
 							v-if="monitor.name !== primaryName"
 							type="button"
-							class="rounded-corner border border-ui-border px-3 py-1 text-xs text-tx-muted transition-colors hover:border-primary/40 hover:text-primary"
+							class="rounded-corner-m border border-ui-border px-3 py-1 text-xs text-tx-muted transition-colors hover:border-primary/40 hover:text-primary"
 							@click="makePrimary(monitor)"
 						>
 							{{ t('views.monitors.setPrimary') }}
@@ -343,25 +348,25 @@ onMounted(load);
 
 					<div class="grid gap-4 sm:grid-cols-2">
 						<FormGroup :label="t('views.monitors.resolution')">
-							<SelectInput
+							<SelectField
+								v-bind="{ disabled: resolutionOptions(monitor).length === 0 }"
 								:modelValue="`${monitor.mode.width}x${monitor.mode.height}`"
 								:options="resolutionOptions(monitor)"
-								:disabled="resolutionOptions(monitor).length === 0"
 								@update:modelValue="(v: string) => onResolutionChange(monitor, v)"
 							/>
 						</FormGroup>
 
 						<FormGroup :label="t('views.monitors.refreshRate')">
-							<SelectInput
+							<SelectField
+								v-bind="{ disabled: refreshOptions(monitor).length === 0 }"
 								:modelValue="String(monitor.mode.refresh_mhz)"
 								:options="refreshOptions(monitor)"
-								:disabled="refreshOptions(monitor).length === 0"
 								@update:modelValue="(v: string) => onRefreshChange(monitor, v)"
 							/>
 						</FormGroup>
 
 						<FormGroup :label="t('views.monitors.scale')">
-							<NumberInput
+							<NumberField
 								:model-value="monitor.scale"
 								:min="0.5"
 								:max="3"
@@ -371,7 +376,7 @@ onMounted(load);
 						</FormGroup>
 
 						<FormGroup :label="t('views.monitors.rotation')">
-							<SelectInput
+							<SelectField
 								:modelValue="monitor.transform"
 								:options="transforms"
 								@update:modelValue="(v: string) => (monitor.transform = v)"
@@ -414,7 +419,7 @@ onMounted(load);
 				<p v-else-if="!monitor.connected" class="text-sm text-tx-muted">
 					{{ t('views.monitors.connectHint') }}
 				</p>
-			</SectionCard>
+			</Panel>
 
 			<AlertMessage v-if="ddcHint" tone="info">{{ ddcHint }}</AlertMessage>
 
@@ -422,7 +427,7 @@ onMounted(load);
 				<button
 					type="button"
 					:disabled="!isDirty || saving"
-					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary transition-opacity disabled:cursor-not-allowed disabled:opacity-50 hover:enabled:opacity-90"
+					class="rounded-corner-m bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary transition-opacity disabled:cursor-not-allowed disabled:opacity-50 hover:enabled:opacity-90"
 					@click="save"
 				>
 					{{ saving ? t('common.saving') : t('views.monitors.saveAll') }}

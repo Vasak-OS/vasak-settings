@@ -25,12 +25,15 @@
  */
 import { open } from '@tauri-apps/plugin-shell';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	EmptyState,
+	PageHeader,
+	Panel,
+	SelectField,
+	SwitchToggle,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import SelectInput from '@/components/ui/SelectInput.vue';
 import {
 	type Actualizacion,
 	activarAviso,
@@ -200,14 +203,14 @@ onMounted(async () => {
 
 <template>
   <div>
-    <PageHeader
-      :section="t('sidebar.system')"
+    <PageHeader size="lg"
+      :eyebrow="t('sidebar.system')"
       :title="t('views.actualizaciones.titulo')"
       :description="t('views.actualizaciones.intro')"
     />
 
     <div class="space-y-4">
-      <SectionCard>
+      <Panel as="article">
         <header>
           <h2 class="mb-3 font-medium text-lg text-tx-main">
             {{ t('views.actualizaciones.ajustes') }}
@@ -225,27 +228,27 @@ onMounted(async () => {
           <label class="text-sm" for="intervalo-actualizaciones">
             {{ t('views.actualizaciones.cadaCuanto') }}
           </label>
-          <SelectInput
-            id="intervalo-actualizaciones"
+          <SelectField
+            v-bind="{ id: 'intervalo-actualizaciones' }"
             :model-value="intervalo"
             :options="INTERVALOS.map((d) => ({ value: d, label: nombreDelIntervalo(d) }))"
             @update:model-value="cambiarIntervalo(Number($event))"
           />
         </div>
-      </SectionCard>
+      </Panel>
 
       <AlertMessage
         v-if="!hayPrograma"
         tone="warning">{{ t('views.actualizaciones.sinProgramaDetalle') }}</AlertMessage>
 
-      <EmptyStateBox v-else-if="cargando" :message="t('views.actualizaciones.comprobando')" />
+      <EmptyState icon="" size="sm" bordered v-else-if="cargando" :title="t('views.actualizaciones.comprobando')" />
 
       <!--
         No se pudo comprobar. Va antes que cualquier otra cosa y en lugar de
         la lista: decir «el sistema está al día» cuando en realidad no se sabe
         es exactamente lo que este aviso viene a evitar.
       -->
-      <SectionCard v-else-if="fallo">
+      <Panel as="article" v-else-if="fallo">
         <header>
           <h2 class="mb-2 font-medium text-lg text-tx-main">
             {{ t('views.actualizaciones.noSePudo') }}
@@ -258,13 +261,13 @@ onMounted(async () => {
         </p>
         <template v-if="fallo.arreglo">
           <p class="mt-3 text-sm">{{ t('views.actualizaciones.elArreglo') }}</p>
-          <pre class="mt-1 rounded-corner bg-ui-surface/60 p-2 font-mono text-sm">{{ fallo.arreglo }}</pre>
+          <pre class="mt-1 rounded-corner-m bg-ui-surface/60 p-2 font-mono text-sm">{{ fallo.arreglo }}</pre>
         </template>
-      </SectionCard>
+      </Panel>
 
-      <EmptyStateBox
+      <EmptyState icon="" size="sm" bordered
         v-else-if="pendientes.length === 0"
-        :message="`${t('views.actualizaciones.alDia')} ${t('views.actualizaciones.alDiaDetalle')}`"
+        :title="`${t('views.actualizaciones.alDia')} ${t('views.actualizaciones.alDiaDetalle')}`"
       />
 
       <template v-else>
@@ -273,7 +276,7 @@ onMounted(async () => {
           de cuatrocientos nombres con el aviso al pie es un aviso que no se
           lee.
         -->
-        <SectionCard v-if="preflight && hayQueMirar">
+        <Panel as="article" v-if="preflight && hayQueMirar">
           <header>
             <h2 class="font-medium text-lg text-tx-main">
               {{ t('views.actualizaciones.antesDeAplicar') }}
@@ -304,9 +307,9 @@ onMounted(async () => {
               </ul>
             </template>
           </div>
-        </SectionCard>
+        </Panel>
 
-        <SectionCard>
+        <Panel as="article">
           <header>
             <h2 class="mb-3 font-medium text-lg text-tx-main">
               {{
@@ -345,18 +348,18 @@ onMounted(async () => {
           <p class="mt-3 text-tx-muted text-xs">
             {{ t('views.actualizaciones.queCambiaNota') }}
           </p>
-        </SectionCard>
+        </Panel>
 
-        <SectionCard>
+        <Panel as="article">
           <header>
             <h2 class="mb-2 font-medium text-lg text-tx-main">
               {{ t('views.actualizaciones.comoAplicar') }}
             </h2>
           </header>
           <p class="text-sm">{{ t('views.actualizaciones.comoAplicarDetalle') }}</p>
-          <pre class="mt-2 rounded-corner bg-ui-surface/60 p-2 font-mono text-sm">sudo pacman -Syu</pre>
+          <pre class="mt-2 rounded-corner-m bg-ui-surface/60 p-2 font-mono text-sm">sudo pacman -Syu</pre>
           <p class="mt-2 text-tx-muted text-xs">{{ t('views.actualizaciones.aplicarNota') }}</p>
-        </SectionCard>
+        </Panel>
       </template>
     </div>
   </div>

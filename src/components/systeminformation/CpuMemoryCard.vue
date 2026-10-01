@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import ProgressBar from '@/components/ui/ProgressBar.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import StatTile from '@/components/ui/StatTile.vue';
+import { Panel, ProgressBar, StatTile } from '@vasakgroup/vue-libvasak';
 import type { CpuInfo, MemoryInfo, TemperatureInfo } from '@/types/system';
 
 const { t, locale } = useI18n();
@@ -24,17 +22,17 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 </script>
 
 <template>
-	<SectionCard>
+	<Panel as="article">
 		<div class="flex items-center justify-between gap-3">
 			<div>
 				<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">{{ t('views.home.cards.performanceSection') }}</p>
 				<h2 class="mt-1 text-lg font-semibold">{{ t('views.home.cards.performanceTitle') }}</h2>
 			</div>
-			<span class="rounded-corner bg-ui-surface px-3 py-1 text-sm font-medium text-tx-muted">{{ updatedAtLabel }}</span>
+			<span class="rounded-corner-m bg-ui-surface px-3 py-1 text-sm font-medium text-tx-muted">{{ updatedAtLabel }}</span>
 		</div>
 
 		<div class="mt-5 grid gap-4 xl:grid-cols-2">
-			<div class="rounded-corner bg-ui-surface/30 p-4">
+			<div class="rounded-corner-m bg-ui-surface/30 p-4">
 				<!-- `min-w-0` en el bloque de texto: en una fila flex un hijo no baja
 				     de la anchura de su contenido salvo que se lo permita, y sin eso
 				     el `truncate` del nombre del procesador no recorta nada — el
@@ -45,11 +43,11 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 						<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">{{ t('views.home.cards.processor') }}</p>
 						<p class="mt-1 truncate text-base font-semibold">{{ cpu.model }}</p>
 					</div>
-					<span class="shrink-0 rounded-corner bg-ui-bg px-2 py-1 text-sm font-medium">{{ formatNumber(cpu.usage, 1) }}%</span>
+					<span class="shrink-0 rounded-corner-m bg-ui-bg px-2 py-1 text-sm font-medium">{{ formatNumber(cpu.usage, 1) }}%</span>
 				</div>
 
 				<div class="mt-4">
-					<ProgressBar :label="t('views.home.cards.cpuUsage')" :value="cpu.usage" />
+					<ProgressBar show-value :decimals="1" :label="t('views.home.cards.cpuUsage')" :value="cpu.usage" />
 				</div>
 
 				<!-- Las columnas se acomodan al ancho **real** y no al de la ventana.
@@ -64,17 +62,17 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 				</div>
 			</div>
 
-			<div class="rounded-corner bg-ui-surface/30 p-4">
+			<div class="rounded-corner-m bg-ui-surface/30 p-4">
 				<div class="flex items-center justify-between gap-3">
 					<div class="min-w-0">
 						<p class="text-xs uppercase tracking-[0.16em] text-tx-muted">{{ t('views.home.cards.memory') }}</p>
 						<p class="mt-1 truncate text-base font-semibold">{{ t('views.home.cards.currentUse') }}</p>
 					</div>
-					<span class="shrink-0 rounded-corner bg-ui-bg px-2 py-1 text-sm font-medium">{{ formatNumber(memory.usage_percent, 1) }}%</span>
+					<span class="shrink-0 rounded-corner-m bg-ui-bg px-2 py-1 text-sm font-medium">{{ formatNumber(memory.usage_percent, 1) }}%</span>
 				</div>
 
 				<div class="mt-4">
-					<ProgressBar :label="t('views.home.cards.ramUsage')" :value="memory.usage_percent" />
+					<ProgressBar show-value :decimals="1" :label="t('views.home.cards.ramUsage')" :value="memory.usage_percent" />
 				</div>
 
 				<div class="mt-4 grid gap-3">
@@ -83,5 +81,5 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 				</div>
 			</div>
 		</div>
-	</SectionCard>
+	</Panel>
 </template>

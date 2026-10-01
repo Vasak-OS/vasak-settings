@@ -172,7 +172,7 @@ const handleCancel = () => {
 
 <template>
 	<div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
-		<div class="w-full max-w-2xl rounded-corner border border-ui-border bg-ui-bg p-4 shadow-xl">
+		<div class="w-full max-w-2xl rounded-corner-m border border-ui-border bg-ui-bg p-4 shadow-xl">
 			<h2 class="text-lg font-semibold text-tx-main">{{ dialogTitle }}</h2>
 			<p class="mt-1 text-sm text-tx-muted">{{ t('views.networkVpn.dialog.description') }}</p>
 
@@ -190,7 +190,7 @@ const handleCancel = () => {
 					{{ t('views.networkVpn.dialog.vpnType') }}
 					<select
 						v-model="profileType"
-						class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
+						class="mt-1 w-full rounded-corner-m border border-ui-border bg-ui-surface/50 px-3 py-2 text-sm"
 					>
 						<option v-for="opt in vpnTypes" :key="opt.value" :value="opt.value">
 							{{ opt.label }}
@@ -240,7 +240,7 @@ const handleCancel = () => {
 					<textarea
 						v-model="profileSettingsJson"
 						rows="4"
-						class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-xs"
+						class="mt-1 w-full rounded-corner-m border border-ui-border bg-ui-surface/50 px-3 py-2 text-xs"
 						placeholder='{"remote":"vpn.example.com:51820"}'
 					/>
 				</label>
@@ -250,7 +250,7 @@ const handleCancel = () => {
 					<textarea
 						v-model="profileSecretsJson"
 						rows="4"
-						class="mt-1 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-2 text-xs"
+						class="mt-1 w-full rounded-corner-m border border-ui-border bg-ui-surface/50 px-3 py-2 text-xs"
 						placeholder='{"private_key":"***"}'
 					/>
 				</label>
@@ -263,14 +263,14 @@ const handleCancel = () => {
 
 			<div class="mt-4 flex justify-end gap-2">
 				<button
-					class="rounded-corner border border-ui-border px-3 py-1.5 text-sm text-tx-muted hover:bg-ui-surface"
+					class="rounded-corner-m border border-ui-border px-3 py-1.5 text-sm text-tx-muted hover:bg-ui-surface"
 					@click="handleCancel"
 					:disabled="isSubmitting"
 				>
 					{{ t('common.cancel') }}
 				</button>
 				<button
-					class="rounded-corner border border-primary/20 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+					class="rounded-corner-m border border-primary/20 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
 					@click="handleSubmit"
 					:disabled="isSubmitting"
 				>

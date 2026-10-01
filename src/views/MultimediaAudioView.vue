@@ -1,13 +1,16 @@
 <script lang="ts" setup>
 import { listen } from '@tauri-apps/api/event';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { ThemeIcon } from '@vasakgroup/vue-libvasak';
+import {
+	Badge,
+	ConfigSection,
+	EmptyState,
+	PageHeader,
+	Panel,
+	Slider,
+	ThemeIcon,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import RangeSlider from '@/components/ui/RangeSlider.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import StatusBadge from '@/components/ui/StatusBadge.vue';
 import {
 	getAudioDevices,
 	getAudioVolume,
@@ -161,15 +164,17 @@ onUnmounted(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.multimedia')"
+			size="lg"
+			:eyebrow="t('sidebar.multimedia')"
 			:title="t('views.multimediaAudio.title')"
 			:description="t('views.multimediaAudio.description')"
 		>
 			<template #actions>
 				<div class="flex flex-col items-center">
 					<p class="text-xs uppercase tracking-[0.2em] text-tx-muted mb-2">{{ t('views.multimediaAudio.statusLabel') }}</p>
-					<StatusBadge
-						:text="volumeInfo.is_muted ? t('views.multimediaAudio.muted') : t('views.multimediaAudio.active')"
+					<Badge
+						size="md"
+						:label="volumeInfo.is_muted ? t('views.multimediaAudio.muted') : t('views.multimediaAudio.active')"
 						:tone="volumeInfo.is_muted ? 'error' : 'success'"
 					/>
 				</div>
@@ -178,11 +183,10 @@ onUnmounted(() => {
 
 		<div class="mt-2 grid gap-6 xl:grid-cols-2">
 			<!-- Slider Volumen -->
-			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.multimediaAudio.masterVolume') }}</h3>
-				<div class="flex items-center gap-4 rounded-corner border border-ui-border bg-ui-surface/70 p-4">
+			<ConfigSection :title="t('views.multimediaAudio.masterVolume')">
+				<div class="flex items-center gap-4 rounded-corner-m border border-ui-border bg-ui-surface/70 p-4">
 					<button 
-						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner bg-ui-surface transition-colors hover:bg-primary hover:text-tx-on-primary"
+						class="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-corner-m bg-ui-surface transition-colors hover:bg-primary hover:text-tx-on-primary"
 						:class="volumeInfo.is_muted ? 'text-status-error border border-status-error/40' : 'text-tx-main border border-ui-border'"
 						@click="toggleMute"
 						:title="t('views.multimediaAudio.muteTooltip')" :aria-label="t('views.multimediaAudio.muteTooltip')">
@@ -195,7 +199,9 @@ onUnmounted(() => {
 					</button>
 
 					<div class="flex-1 px-2">
-						<RangeSlider
+						<Slider
+							:label="t('views.multimediaAudio.masterVolume')"
+							class="flex-1"
 							id="volume-slider"
 							v-model="currentVolume"
 							:min="volumeInfo.min"
@@ -210,10 +216,10 @@ onUnmounted(() => {
 						</span>
 					</div>
 				</div>
-			</SectionCard>
+			</ConfigSection>
 
 			<!-- Dispositivos Salida -->
-			<SectionCard>
+			<Panel as="article">
 				<h3 class="mb-4 text-lg font-medium text-tx-main flex items-center justify-between">
 					{{ t('views.multimediaAudio.outputDevices') }}
 					<button
@@ -227,14 +233,14 @@ onUnmounted(() => {
 					</button>
 				</h3>
 
-				<EmptyStateBox v-if="devicesLoading" :message="t('views.multimediaAudio.loadingDevices')" />
-				<EmptyStateBox v-else-if="devices.length === 0" :message="t('views.multimediaAudio.emptyDevices')" />
+				<EmptyState icon="" size="sm" bordered v-if="devicesLoading" :title="t('views.multimediaAudio.loadingDevices')" />
+				<EmptyState icon="" size="sm" bordered v-else-if="devices.length === 0" :title="t('views.multimediaAudio.emptyDevices')" />
 				
 				<ul v-else class="flex flex-col gap-2 max-h-[14rem] overflow-y-auto pr-1" role="radiogroup">
 					<li 
 						v-for="device in devices" 
 						:key="device.id"
-						class="group flex cursor-pointer items-center justify-between gap-3 rounded-corner border px-4 py-3 transition-colors"
+						class="group flex cursor-pointer items-center justify-between gap-3 rounded-corner-m border px-4 py-3 transition-colors"
 						:class="selectedDeviceId === device.id 
 							? 'border-primary/50 bg-primary/5 shadow-sm' 
 							: 'border-ui-border bg-ui-surface/70 hover:border-ui-border.hover hover:bg-ui-surface'"
@@ -270,7 +276,7 @@ onUnmounted(() => {
 						</span>
 					</li>
 				</ul>
-			</SectionCard>
+			</Panel>
 		</div>
 	</div>
 </template>

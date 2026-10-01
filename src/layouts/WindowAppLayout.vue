@@ -77,7 +77,7 @@ const sidebarCategories = computed<SidebarCategory[]>(() =>
         :expand-label="t('sidebar.expand')"
       />
 
-			<main class="min-h-0 min-w-0 flex-1 rounded-corner border border-ui-border bg-ui-surface/70 p-4 md:ml-1 overflow-y-auto overflow-x-hidden">
+			<main class="min-h-0 min-w-0 flex-1 rounded-corner-m border border-ui-border bg-ui-surface/70 p-4 md:ml-1 overflow-y-auto overflow-x-hidden">
 				<slot />
 			</main>
     </div>
