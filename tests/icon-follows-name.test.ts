@@ -42,8 +42,8 @@ mock.module('@tauri-apps/api/event', () => ({
 }));
 
 mock.module('@vasakgroup/plugin-vicons', () => ({
-	getIconSource: async (nombre: string) => `icono:${nombre}`,
-	getSymbolSource: async (nombre: string) => `simbolo:${nombre}`,
+	getIconSource: async (name: string) => `icono:${name}`,
+	getSymbolSource: async (name: string) => `simbolo:${name}`,
 	hasSymbol: async () => true,
 }));
 

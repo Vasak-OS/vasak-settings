@@ -72,9 +72,9 @@ function propsOf(source: string): Set<string> | null {
  * `move.error.value`—, y además cortaba la etiqueta en el primer `>`, que
  * puede estar adentro de una expresión (`:x="a > b"`).
  */
-function usages(source: string, componente: string): string[][] {
+function usages(source: string, component: string): string[][] {
 	const output: string[][] = [];
-	const opening = new RegExp(`<${componente}(?=[\\s/>])`, 'g');
+	const opening = new RegExp(`<${component}(?=[\\s/>])`, 'g');
 
 	for (const m of source.matchAll(opening)) {
 		let i = m.index + m[0].length;
@@ -137,7 +137,7 @@ describe('las props de los componentes propios', () => {
 						if (VALID_PREFIXES.test(raw) && !raw.startsWith(':')) continue;
 						if (ALWAYS_VALID.test(attribute)) continue;
 						if (props.has(attribute)) continue;
-						problems.push(`${archivo}: <${nombre}> no tiene «${atributo}»`);
+						problems.push(`${file}: <${name}> no tiene «${attribute}»`);
 					}
 				}
 			}
