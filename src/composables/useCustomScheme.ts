@@ -7,6 +7,11 @@
  * fijados a mano se van a resolver en este mismo lugar. El editor no tiene que
  * enterarse de nada de eso.
  *
+ * Los colores fijados a mano también se resuelven acá: un cambio que viene del
+ * editor (`origin: 'manual'`, el de siempre) deja fijados los colores que
+ * nombra, y uno que viene del fondo (`origin: 'wallpaper'`) no toca los
+ * fijados. Ni el editor ni la detección tienen que saber de la otra.
+ *
  * El guardado va con antirrebote: arrastrar el selector de color dispara un
  * cambio por cuadro, y cada uno reescribe el archivo y hace que todas las
  * aplicaciones abiertas reapliquen el esquema. Se espera a que el usuario se
@@ -21,7 +26,18 @@ import {
 	type CloneIdentity,
 	cloneAsCustom,
 	cloneScheme,
+	SCHEME_VARIANTS,
 } from '@/utils/custom-scheme';
+import {
+	omitPaths,
+	readWallpaperState,
+	uiPathsOf,
+	type WallpaperColorsState,
+	withWallpaperState,
+} from '@/utils/wallpaper-scheme';
+
+/** De dónde viene un cambio de colores. */
+export type ColorChangeOrigin = 'manual' | 'wallpaper';
 
 /** Cuánto se espera sin cambios antes de guardar. */
 export const SAVE_DELAY_MS = 400;
@@ -56,8 +72,29 @@ export type CustomScheme = {
 		existing: SchemeFile | null,
 		getBase: () => Promise<{ base: SchemeFile; identity: CloneIdentity }>
 	) => Promise<{ created: boolean }>;
-	/** Cambia colores de una variante y agenda el guardado. */
-	updateColors: (variant: SchemeVariantName, patch: SchemeColorPatch) => void;
+	/**
+	 * Cambia colores de una variante y agenda el guardado. Lo manual fija los
+	 * colores que toca; lo que viene del fondo no pisa los fijados.
+	 */
+	updateColors: (
+		variant: SchemeVariantName,
+		patch: SchemeColorPatch,
+		origin?: ColorChangeOrigin
+	) => void;
+	/**
+	 * Los colores sacados del fondo, en las dos variantes, y el fondo del que
+	 * salieron. Se guarda **en el acto**, sin antirrebote: el cambio de fondo ya
+	 * pasó y el acento tiene que seguirlo enseguida.
+	 */
+	applyWallpaper: (
+		patches: Record<SchemeVariantName, SchemeColorPatch>,
+		source: string
+	) => Promise<void>;
+	/** Cambia el estado del modo automático: «Seguir al fondo», los fijados. */
+	updateWallpaperState: (
+		change: (state: WallpaperColorsState) => WallpaperColorsState,
+		options?: { immediate?: boolean }
+	) => Promise<void>;
 	/** Guarda ya lo que esté pendiente, si hay algo. */
 	flush: () => Promise<void>;
 };
@@ -147,18 +184,22 @@ export function useCustomScheme(options: CustomSchemeOptions = {}): CustomScheme
 		return { created: true };
 	};
 
-	const updateColors = (variant: SchemeVariantName, patch: SchemeColorPatch) => {
+	/**
+	 * Deja `next` como el esquema en edición y lo guarda: con antirrebote, o ya
+	 * mismo si `immediate`. Un cambio que no cambió nada —un hex inválido, que
+	 * se descarta, o el mismo color de antes— no reescribe el archivo ni hace
+	 * reaplicar el esquema en todo el escritorio.
+	 */
+	const commit = async (next: SchemeFile, immediate: boolean) => {
 		const current = scheme.value;
-		if (!current) return;
-
-		const next = applyColorPatch(current, variant, patch);
-		// Un cambio que no cambió nada —un hex inválido, que se descarta, o el
-		// mismo color de antes— no reescribe el archivo ni hace reaplicar el
-		// esquema en todo el escritorio.
-		if (JSON.stringify(next) === JSON.stringify(current)) return;
+		if (!current || JSON.stringify(next) === JSON.stringify(current)) return;
 
 		scheme.value = next;
 		cancelPending();
+		if (immediate) {
+			await persist(next);
+			return;
+		}
 		timer = setTimeout(() => {
 			timer = null;
 			// El error ya queda en `error`, que es lo que mira la vista; acá no
@@ -167,11 +208,65 @@ export function useCustomScheme(options: CustomSchemeOptions = {}): CustomScheme
 		}, delay);
 	};
 
+	const updateColors: CustomScheme['updateColors'] = (variant, patch, origin = 'manual') => {
+		const current = scheme.value;
+		if (!current) return;
+
+		const state = readWallpaperState(current);
+		let next: SchemeFile;
+		if (origin === 'wallpaper') {
+			next = applyColorPatch(current, variant, omitPaths(patch, state.pinned[variant]));
+		} else {
+			next = applyColorPatch(current, variant, patch);
+			// Sólo se fija lo que de verdad cambió: un hex inválido no llega al
+			// esquema, y no tiene por qué dejar el color fijado.
+			const touched = uiPathsOf(patch);
+			if (touched.length && JSON.stringify(next) !== JSON.stringify(current)) {
+				const pinned = [...new Set([...state.pinned[variant], ...touched])];
+				next = withWallpaperState(next, {
+					...state,
+					pinned: { ...state.pinned, [variant]: pinned },
+				});
+			}
+		}
+		commit(next, false).catch(() => {});
+	};
+
+	const applyWallpaper: CustomScheme['applyWallpaper'] = async (patches, source) => {
+		const current = scheme.value;
+		if (!current) return;
+		const state = readWallpaperState(current);
+		let next = current;
+		for (const variant of SCHEME_VARIANTS) {
+			next = applyColorPatch(next, variant, omitPaths(patches[variant], state.pinned[variant]));
+		}
+		next = withWallpaperState(next, { ...state, source });
+		await commit(next, true);
+	};
+
+	const updateWallpaperState: CustomScheme['updateWallpaperState'] = async (change, options) => {
+		const current = scheme.value;
+		if (!current) return;
+		const next = withWallpaperState(current, change(readWallpaperState(current)));
+		await commit(next, options?.immediate ?? false);
+	};
+
 	const flush = async () => {
 		if (timer === null || !scheme.value) return;
 		cancelPending();
 		await persist(scheme.value);
 	};
 
-	return { scheme, saving, error, load, createFrom, ensureCustom, updateColors, flush };
+	return {
+		scheme,
+		saving,
+		error,
+		load,
+		createFrom,
+		ensureCustom,
+		updateColors,
+		applyWallpaper,
+		updateWallpaperState,
+		flush,
+	};
 }

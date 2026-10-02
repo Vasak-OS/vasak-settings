@@ -218,6 +218,7 @@ pub fn run() {
             commands::monitors::get_detected_monitors,
             commands::wallpaper_video::prepare_wallpaper_video,
             commands::wallpaper_video::wallpaper_thumbnail,
+            commands::wallpaper_colors::wallpaper_pixels,
             commands::monitors::apply_monitor_layout,
             commands::brightness::get_monitor_brightness,
             commands::brightness::set_monitor_brightness,
