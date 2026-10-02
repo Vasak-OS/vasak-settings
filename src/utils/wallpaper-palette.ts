@@ -104,7 +104,10 @@ const distance2 = (first: Oklab, second: Oklab) =>
 	(first.l - second.l) ** 2 + (first.a - second.a) ** 2 + (first.b - second.b) ** 2;
 
 function seeds(buckets: Bucket[], k: number): Oklab[] {
-	const heaviest = buckets.reduce((best, bucket) => (bucket.count > best.count ? bucket : best));
+	const heaviest = buckets.reduce(
+		(best, bucket) => (bucket.count > best.count ? bucket : best),
+		buckets[0] as Bucket
+	);
 	const chosen: Oklab[] = [heaviest.lab];
 	while (chosen.length < k) {
 		let best: Bucket | null = null;

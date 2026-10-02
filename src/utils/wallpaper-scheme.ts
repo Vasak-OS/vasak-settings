@@ -41,7 +41,7 @@ import type {
 	SchemeVariantColors,
 	SchemeVariantName,
 } from '@/types/scheme';
-import { hexToOklch, hueDistance, oklchToHex } from '@/utils/color-space';
+import { hexToOklch, hueDistance, type Oklch, oklchToHex } from '@/utils/color-space';
 import { SCHEME_VARIANTS } from '@/utils/custom-scheme';
 import type { PaletteColor } from '@/utils/wallpaper-palette';
 
@@ -322,25 +322,39 @@ export function ensureContrast(color: string, against: readonly string[], minimu
 		against.length;
 	const firstDirection = lch.l >= mean ? 1 : -1;
 
-	let bestHex = color;
-	let bestRatio = worst(color);
+	let best = { hex: color, ratio: worst(color) };
 	for (const direction of [firstDirection, -firstDirection]) {
-		for (let step = 1; step <= 200; step++) {
-			const l = lch.l + direction * step * 0.005;
-			if (l < 0 || l > 1) break;
-			const candidate = oklchToHex({ ...lch, l });
-			const ratio = worst(candidate);
-			if (ratio >= minimum) return candidate;
-			if (ratio > bestRatio) {
-				bestRatio = ratio;
-				bestHex = candidate;
-			}
-		}
-		// Los extremos exactos, por si el paso de 0,005 los saltea.
-		const edge = oklchToHex({ ...lch, l: direction > 0 ? 1 : 0, c: 0 });
-		if (worst(edge) >= minimum) return edge;
+		const found = walkLightness(lch, direction, worst, minimum);
+		if (found.ratio >= minimum) return found.hex;
+		if (found.ratio > best.ratio) best = found;
 	}
-	return bestHex;
+	return best.hex;
+}
+
+/**
+ * Un lado de la búsqueda de `ensureContrast`: aclara (`direction` 1) u
+ * oscurece (-1) de a 0,005 hasta llegar al mínimo o al extremo. Devuelve el
+ * primero que llega, o el mejor que encontró.
+ */
+function walkLightness(
+	lch: Oklch,
+	direction: number,
+	worst: (hex: string) => number,
+	minimum: number
+): { hex: string; ratio: number } {
+	let best = { hex: oklchToHex(lch), ratio: 0 };
+	for (let step = 1; step <= 200; step++) {
+		const l = lch.l + direction * step * 0.005;
+		if (l < 0 || l > 1) break;
+		const hex = oklchToHex({ ...lch, l });
+		const ratio = worst(hex);
+		if (ratio >= minimum) return { hex, ratio };
+		if (ratio > best.ratio) best = { hex, ratio };
+	}
+	// El extremo exacto, por si el paso de 0,005 lo saltea.
+	const edge = oklchToHex({ ...lch, l: direction > 0 ? 1 : 0, c: 0 });
+	const edgeRatio = worst(edge);
+	return edgeRatio >= best.ratio ? { hex: edge, ratio: edgeRatio } : best;
 }
 
 type UiDraft = {
@@ -367,6 +381,83 @@ const PATH_OF: Record<keyof UiDraft, UiColorPath> = {
 	border: 'ui.border',
 };
 
+type IsPinned = (key: keyof UiDraft) => boolean;
+
+/** Lo que sale del fondo, sin mirar lo fijado ni el contraste todavía. */
+function generatedDraft(
+	current: SchemeVariantColors,
+	variant: SchemeVariantName,
+	accents: Accents
+): UiDraft {
+	const ui = current.ui;
+	const hue = accents.primary.hue;
+	const tone = ACCENT_LIGHTNESS[variant];
+	const neutral = variant === 'dark' ? 0.24 : 0.96;
+	const relit = (hex: string | undefined, fallback: number, chroma: number) =>
+		tinted(relightOrDefault(hex, fallback), chroma, hue);
+	return {
+		primary: tinted(tone.primary, accentChroma(accents.primary.chroma), hue),
+		secondary: tinted(
+			tone.secondary,
+			accentChroma(accents.secondary.chroma),
+			accents.secondary.hue
+		),
+		background: relit(ui.background, neutral, NEUTRAL_CHROMA.background),
+		surface: relit(ui.surface, neutral, NEUTRAL_CHROMA.surface),
+		border: relit(ui.border, neutral, NEUTRAL_CHROMA.border),
+		main: relit(ui.text.main, 1 - neutral, NEUTRAL_CHROMA.main),
+		muted: relit(ui.text.muted, 0.6, NEUTRAL_CHROMA.muted),
+		onPrimary: '',
+		onSecondary: undefined,
+	};
+}
+
+/** El texto sobre un acento: el neutro del extremo que más contraste, con su tinte. */
+function textOn(background: string, hue: number): string {
+	const dark = tinted(0.22, NEUTRAL_CHROMA.main, hue);
+	const light = tinted(0.985, NEUTRAL_CHROMA.main / 2, hue);
+	return contraste(dark, background) >= contraste(light, background) ? dark : light;
+}
+
+/**
+ * Los textos sobre la ventana y las tarjetas. Si el texto está fijado, se
+ * mueven el fondo y la superficie, cada uno contra el texto.
+ */
+function enforceTexts(draft: UiDraft, isPinned: IsPinned): void {
+	const surfaces = () => [draft.background, draft.surface];
+	for (const key of ['main', 'muted'] as const) {
+		if (!isPinned(key)) {
+			draft[key] = ensureContrast(draft[key], surfaces(), TEXT_CONTRAST);
+			continue;
+		}
+		for (const surface of ['background', 'surface'] as const) {
+			if (!isPinned(surface))
+				draft[surface] = ensureContrast(draft[surface], [draft[key]], TEXT_CONTRAST);
+		}
+	}
+	// Mover un fondo por el `muted` puede haber dejado corto al `main`.
+	if (!isPinned('main')) draft.main = ensureContrast(draft.main, surfaces(), TEXT_CONTRAST);
+}
+
+/**
+ * Cada acento sobre la ventana, como indicador, y su texto encima. Si el texto
+ * está fijado, se mueve el acento.
+ */
+function enforceAccent(
+	draft: UiDraft,
+	isPinned: IsPinned,
+	accent: 'primary' | 'secondary',
+	text: 'onPrimary' | 'onSecondary'
+): void {
+	if (!isPinned(accent))
+		draft[accent] = ensureContrast(draft[accent], [draft.background], INDICATOR_CONTRAST);
+	const textValue = draft[text];
+	if (textValue === undefined) return;
+	if (!isPinned(text)) draft[text] = ensureContrast(textValue, [draft[accent]], TEXT_CONTRAST);
+	else if (!isPinned(accent))
+		draft[accent] = ensureContrast(draft[accent], [textValue], TEXT_CONTRAST);
+}
+
 /**
  * Los colores de `ui` de una variante a partir de los acentos, con los fijados
  * respetados y el contraste garantizado.
@@ -377,89 +468,25 @@ export function generateVariantUi(
 	accents: Accents,
 	pinned: readonly UiColorPath[] = []
 ): UiDraft {
-	const isPinned = (key: keyof UiDraft) => pinned.includes(PATH_OF[key]);
-	const ui = current.ui;
+	const isPinned: IsPinned = (key) => pinned.includes(PATH_OF[key]);
 	const hue = accents.primary.hue;
-	const tone = ACCENT_LIGHTNESS[variant];
-	const fallbackNeutral = variant === 'dark' ? 0.24 : 0.96;
-
-	const generated: UiDraft = {
-		primary: tinted(tone.primary, accentChroma(accents.primary.chroma), hue),
-		secondary: tinted(
-			tone.secondary,
-			accentChroma(accents.secondary.chroma),
-			accents.secondary.hue
-		),
-		background: tinted(
-			relightOrDefault(ui.background, fallbackNeutral),
-			NEUTRAL_CHROMA.background,
-			hue
-		),
-		surface: tinted(relightOrDefault(ui.surface, fallbackNeutral), NEUTRAL_CHROMA.surface, hue),
-		border: tinted(relightOrDefault(ui.border, fallbackNeutral), NEUTRAL_CHROMA.border, hue),
-		main: tinted(relightOrDefault(ui.text.main, 1 - fallbackNeutral), NEUTRAL_CHROMA.main, hue),
-		muted: tinted(relightOrDefault(ui.text.muted, 0.6), NEUTRAL_CHROMA.muted, hue),
-		onPrimary: '',
-		onSecondary: undefined,
-	};
 
 	// Lo fijado entra como está, y todo lo que se calcula después lo toma como
 	// dado.
-	const draft: UiDraft = { ...generated };
+	const draft = generatedDraft(current, variant, accents);
 	for (const key of Object.keys(PATH_OF) as (keyof UiDraft)[]) {
-		if (!isPinned(key)) continue;
-		const value = readUiColor(current, PATH_OF[key]);
+		const value = isPinned(key) ? readUiColor(current, PATH_OF[key]) : undefined;
 		if (value) draft[key] = value;
 	}
 
-	// El texto sobre el acento: el neutro del extremo que más contraste, con el
-	// tinte del acento.
-	const textOn = (background: string) => {
-		const dark = tinted(0.22, NEUTRAL_CHROMA.main, hue);
-		const light = tinted(0.985, NEUTRAL_CHROMA.main / 2, hue);
-		return contraste(dark, background) >= contraste(light, background) ? dark : light;
-	};
-	if (!isPinned('onPrimary')) draft.onPrimary = textOn(draft.primary);
-	const hasOnSecondary = typeof ui.text['on-secondary'] === 'string';
-	if (hasOnSecondary && !isPinned('onSecondary')) draft.onSecondary = textOn(draft.secondary);
+	if (!isPinned('onPrimary')) draft.onPrimary = textOn(draft.primary, hue);
+	const hasOnSecondary = typeof current.ui.text['on-secondary'] === 'string';
 	if (!hasOnSecondary) draft.onSecondary = undefined;
+	else if (!isPinned('onSecondary')) draft.onSecondary = textOn(draft.secondary, hue);
 
-	const surfaces = () => [draft.background, draft.surface];
-
-	// 1. Los textos sobre la ventana y las tarjetas. Si el texto está fijado se
-	//    mueven el fondo y la superficie, cada uno contra el texto.
-	for (const key of ['main', 'muted'] as const) {
-		if (!isPinned(key)) {
-			draft[key] = ensureContrast(draft[key], surfaces(), TEXT_CONTRAST);
-		} else {
-			if (!isPinned('background'))
-				draft.background = ensureContrast(draft.background, [draft[key]], TEXT_CONTRAST);
-			if (!isPinned('surface'))
-				draft.surface = ensureContrast(draft.surface, [draft[key]], TEXT_CONTRAST);
-		}
-	}
-	// Mover un fondo por el `muted` puede haber dejado corto al `main`.
-	if (!isPinned('main')) draft.main = ensureContrast(draft.main, surfaces(), TEXT_CONTRAST);
-
-	// 2. Los acentos sobre la ventana, como indicadores.
-	if (!isPinned('primary'))
-		draft.primary = ensureContrast(draft.primary, [draft.background], INDICATOR_CONTRAST);
-	if (!isPinned('secondary'))
-		draft.secondary = ensureContrast(draft.secondary, [draft.background], INDICATOR_CONTRAST);
-
-	// 3. El texto sobre cada acento. Si el texto está fijado, se mueve el acento.
-	const onAccent = (accent: 'primary' | 'secondary', text: 'onPrimary' | 'onSecondary') => {
-		const textValue = draft[text];
-		if (textValue === undefined) return;
-		if (!isPinned(text)) {
-			draft[text] = ensureContrast(textValue, [draft[accent]], TEXT_CONTRAST);
-		} else if (!isPinned(accent)) {
-			draft[accent] = ensureContrast(draft[accent], [textValue], TEXT_CONTRAST);
-		}
-	};
-	onAccent('primary', 'onPrimary');
-	onAccent('secondary', 'onSecondary');
-
+	enforceTexts(draft, isPinned);
+	enforceAccent(draft, isPinned, 'primary', 'onPrimary');
+	enforceAccent(draft, isPinned, 'secondary', 'onSecondary');
 	return draft;
 }
 
