@@ -484,6 +484,21 @@ views:
       mainOnSurface: Texto sobre la superficie
       onPrimary: Texto sobre el primario
       onSecondary: Texto sobre el secundario
+    wallpaperColors:
+      title: Colores del fondo
+      automatic: Automático
+      automaticHint: Crea el esquema Personalizado y saca sus colores del fondo de pantalla.
+      follow: Seguir al fondo
+      followHint: Al cambiar el fondo, los colores de la interfaz se vuelven a sacar de él. Los colores que cambiaste a mano se mantienen.
+      regenerate: Volver a sacar del fondo
+      unpin: Soltar
+      unpinHint: 'Soltar {0} para que vuelva a seguir al fondo'
+      previewAlt: El fondo de pantalla actual
+      paletteLabel: Colores sacados del fondo
+      accentFrom: de acá sale el primario
+      noWallpaper: No hay un fondo de pantalla elegido del que sacar colores.
+      unreadable: No se pudo leer el fondo de pantalla. Se mantienen los colores anteriores.
+      saveError: No se pudieron guardar los colores sacados del fondo.
     custom:
       name: Personalizado
       basedOn: 'Basado en {0}'

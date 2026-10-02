@@ -5,8 +5,16 @@
  * No guarda nada: emite cada cambio como un parche parcial sobre una variante,
  * y quien lo usa lo pasa a `updateColors` de `useCustomScheme`, que es el único
  * lugar que escribe el esquema.
+ *
+ * Un color de la interfaz que se cambió a mano queda **fijado**: «Seguir al
+ * fondo» no lo pisa. Al lado de cada uno fijado va «Soltar», que emite
+ * `unpin` para que el próximo recálculo lo vuelva a sacar del fondo.
+ *
+ * Las columnas se deciden con consultas de contenedor sobre el propio editor,
+ * no con el ancho de la pantalla: el editor no sabe en qué ventana está.
  */
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { ActionButton } from '@vasakgroup/vue-libvasak';
 import { computed, nextTick, ref } from 'vue';
 import ColorSwatch from '@/components/scheme/ColorSwatch.vue';
 import type {
@@ -22,15 +30,21 @@ import {
 	measureContrast,
 	SCHEME_VARIANTS,
 } from '@/utils/custom-scheme';
+import type { UiColorPath } from '@/utils/wallpaper-scheme';
 
 interface Props {
 	scheme: SchemeFile;
 	/** La variante que se abre primero: la que está usando el escritorio. */
 	initialVariant?: SchemeVariantName;
+	/** Los colores fijados a mano, por variante. */
+	pinned?: Partial<Record<SchemeVariantName, readonly UiColorPath[]>>;
 }
 
-const props = withDefaults(defineProps<Props>(), { initialVariant: 'dark' });
-const emit = defineEmits<{ update: [variant: SchemeVariantName, patch: SchemeColorPatch] }>();
+const props = withDefaults(defineProps<Props>(), { initialVariant: 'dark', pinned: () => ({}) });
+const emit = defineEmits<{
+	update: [variant: SchemeVariantName, patch: SchemeColorPatch];
+	unpin: [variant: SchemeVariantName, path: UiColorPath];
+}>();
 
 const { t } = useI18n();
 
@@ -42,6 +56,8 @@ type ColorField = {
 	label: string;
 	value: string;
 	patch: (value: string) => SchemeColorPatch;
+	/** El camino del color en `ui`; los de terminal no se fijan. */
+	path?: UiColorPath;
 };
 
 const uiFields = computed<ColorField[]>(() => {
@@ -49,30 +65,35 @@ const uiFields = computed<ColorField[]>(() => {
 	const fields: ColorField[] = [
 		{
 			key: 'primary',
+			path: 'ui.color.primary',
 			label: t('views.appearanceTheme.colors.primary'),
 			value: ui.color.primary,
 			patch: (value) => ({ ui: { color: { primary: value } } }),
 		},
 		{
 			key: 'secondary',
+			path: 'ui.color.secondary',
 			label: t('views.appearanceTheme.colors.secondary'),
 			value: ui.color.secondary,
 			patch: (value) => ({ ui: { color: { secondary: value } } }),
 		},
 		{
 			key: 'text-main',
+			path: 'ui.text.main',
 			label: t('views.appearanceTheme.colors.text'),
 			value: ui.text.main,
 			patch: (value) => ({ ui: { text: { main: value } } }),
 		},
 		{
 			key: 'text-muted',
+			path: 'ui.text.muted',
 			label: t('views.appearanceTheme.colors.textMuted'),
 			value: ui.text.muted,
 			patch: (value) => ({ ui: { text: { muted: value } } }),
 		},
 		{
 			key: 'text-on-primary',
+			path: 'ui.text.on-primary',
 			label: t('views.appearanceTheme.colors.onPrimary'),
 			value: ui.text['on-primary'],
 			patch: (value) => ({ ui: { text: { 'on-primary': value } } }),
@@ -85,6 +106,7 @@ const uiFields = computed<ColorField[]>(() => {
 	if (typeof onSecondary === 'string') {
 		fields.push({
 			key: 'text-on-secondary',
+			path: 'ui.text.on-secondary',
 			label: t('views.appearanceTheme.colors.onSecondary'),
 			value: onSecondary,
 			patch: (value) => ({ ui: { text: { 'on-secondary': value } } }),
@@ -94,18 +116,21 @@ const uiFields = computed<ColorField[]>(() => {
 	fields.push(
 		{
 			key: 'background',
+			path: 'ui.background',
 			label: t('views.appearanceTheme.colors.background'),
 			value: ui.background,
 			patch: (value) => ({ ui: { background: value } }),
 		},
 		{
 			key: 'surface',
+			path: 'ui.surface',
 			label: t('views.appearanceTheme.colors.surface'),
 			value: ui.surface,
 			patch: (value) => ({ ui: { surface: value } }),
 		},
 		{
 			key: 'border',
+			path: 'ui.border',
 			label: t('views.appearanceTheme.colors.border'),
 			value: ui.border,
 			patch: (value) => ({ ui: { border: value } }),
@@ -173,6 +198,13 @@ const contrastPreview = (id: string) => {
 
 const fieldId = (key: string) => `scheme-${activeVariant.value}-${key}`;
 
+const isPinned = (field: ColorField) =>
+	field.path !== undefined && (props.pinned[activeVariant.value] ?? []).includes(field.path);
+
+const unpin = (field: ColorField) => {
+	if (field.path) emit('unpin', activeVariant.value, field.path);
+};
+
 const onField = (field: ColorField, value: string) => {
 	emit('update', activeVariant.value, field.patch(value));
 };
@@ -199,7 +231,7 @@ const onTabKeydown = async (event: KeyboardEvent, index: number) => {
 </script>
 
 <template>
-	<div class="flex flex-col gap-4">
+	<div class="@container flex flex-col gap-4">
 		<div
 			role="tablist"
 			:aria-label="t('views.appearanceTheme.custom.variants')"
@@ -232,19 +264,31 @@ const onTabKeydown = async (event: KeyboardEvent, index: number) => {
 			:aria-labelledby="`scheme-tab-${activeVariant}`"
 			class="flex flex-col gap-4"
 		>
-			<div class="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-				<fieldset class="min-w-0">
+			<div class="grid gap-4 @3xl:grid-cols-[1.4fr_1fr]">
+				<fieldset class="@container min-w-0">
 					<legend class="mb-2 text-sm font-medium text-tx-main">{{ t('views.appearanceTheme.custom.interface') }}</legend>
-					<div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-						<ColorSwatch
-							v-for="field in uiFields"
-							:id="fieldId(field.key)"
-							:key="field.key"
-							:label="field.label"
-							:model-value="field.value"
-							:invalid-message="t('views.appearanceTheme.custom.invalidHex')"
-							@update:model-value="onField(field, $event)"
-						/>
+					<div class="grid gap-2 @sm:grid-cols-2 @2xl:grid-cols-3">
+						<div v-for="field in uiFields" :key="field.key" class="flex min-w-0 flex-col gap-1" :data-swatch="field.key">
+							<ColorSwatch
+								:id="fieldId(field.key)"
+								:label="field.label"
+								:model-value="field.value"
+								:invalid-message="t('views.appearanceTheme.custom.invalidHex')"
+								@update:model-value="onField(field, $event)"
+							/>
+							<ActionButton
+								v-if="isPinned(field)"
+								v-bind="{ 'data-unpin': '' }"
+								size="sm"
+								variant="ghost"
+								icon="changes-prevent"
+								icon-type="symbol"
+								:label="t('views.appearanceTheme.wallpaperColors.unpin')"
+								:title="t('views.appearanceTheme.wallpaperColors.unpinHint').replace('{0}', field.label)"
+								custom-class="self-start"
+								@click="unpin(field)"
+							/>
+						</div>
 					</div>
 				</fieldset>
 
@@ -270,7 +314,7 @@ const onTabKeydown = async (event: KeyboardEvent, index: number) => {
 							</div>
 							<span
 								v-if="!item.passes"
-								class="rounded-full border border-status-warning px-2 py-0.5 text-[11px] text-status-warning"
+								class="rounded-corner-full border border-status-warning px-2 py-0.5 text-[11px] text-status-warning"
 								data-contrast-warning
 							>
 								{{ t('views.appearanceTheme.custom.lowContrast').replace('{0}', String(MINIMUM_TEXT_CONTRAST)) }}
@@ -284,8 +328,8 @@ const onTabKeydown = async (event: KeyboardEvent, index: number) => {
 				<summary class="cursor-pointer rounded-corner-m text-sm font-medium text-tx-main focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
 					{{ t('views.appearanceTheme.custom.terminal') }}
 				</summary>
-				<div class="mt-3 flex flex-col gap-3">
-					<div class="grid gap-2 sm:grid-cols-3">
+				<div class="@container mt-3 flex flex-col gap-3">
+					<div class="grid gap-2 @sm:grid-cols-3">
 						<ColorSwatch
 							v-for="field in terminalFields"
 							:id="fieldId(field.key)"
@@ -298,7 +342,7 @@ const onTabKeydown = async (event: KeyboardEvent, index: number) => {
 					</div>
 					<fieldset>
 						<legend class="mb-2 text-xs text-tx-muted">{{ t('views.appearanceTheme.custom.ansi') }}</legend>
-						<div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+						<div class="grid gap-2 @sm:grid-cols-2 @3xl:grid-cols-4">
 							<ColorSwatch
 								v-for="field in ansiFields"
 								:id="fieldId(field.key)"

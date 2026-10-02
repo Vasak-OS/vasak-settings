@@ -480,6 +480,21 @@ views:
       mainOnSurface: Text on surface
       onPrimary: Text on primary
       onSecondary: Text on secondary
+    wallpaperColors:
+      title: Wallpaper colors
+      automatic: Automatic
+      automaticHint: Creates the Custom scheme and takes its colors from the wallpaper.
+      follow: Follow the wallpaper
+      followHint: When the wallpaper changes, the interface colors are taken from it again. Colors you changed by hand are kept.
+      regenerate: Take colors from the wallpaper again
+      unpin: Release
+      unpinHint: 'Release {0} so it follows the wallpaper again'
+      previewAlt: The current wallpaper
+      paletteLabel: Colors taken from the wallpaper
+      accentFrom: the primary comes from here
+      noWallpaper: There is no wallpaper selected to take colors from.
+      unreadable: The wallpaper could not be read. The previous colors are kept.
+      saveError: The colors taken from the wallpaper could not be saved.
     custom:
       name: Custom
       basedOn: 'Based on {0}'

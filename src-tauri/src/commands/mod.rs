@@ -23,6 +23,7 @@ pub mod shortcuts;
 pub mod system_config;
 pub mod system_info;
 pub mod users;
+pub mod wallpaper_colors;
 pub mod wallpaper_video;
 pub mod wayfire_config;
 pub mod wayfire_ini;
