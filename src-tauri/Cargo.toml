@@ -1,6 +1,6 @@
 [package]
 name = "vasak-settings"
-version = "0.34.0"
+version = "0.35.0"
 description = "A Vasak Application (template)"
 authors = ["Vasak Group", "Joaquin (Pato) Decima"]
 edition = "2021"
@@ -38,7 +38,7 @@ base64 = "0.23"
 chrono = "0.4"
 uuid = { version = "1", features = ["v4"] }
 open = "5"
-tokio = { version = "1", features = ["net", "io-util", "time", "macros"] }
+tokio = { version = "1", features = ["net", "io-util", "time", "macros", "fs"] }
 # TLS para la prueba de conexión de las cuentas de correo. rustls y no
 # native-tls: es Rust puro, así que no suma ninguna biblioteca compartida al
 # paquete.

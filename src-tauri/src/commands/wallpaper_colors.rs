@@ -19,7 +19,7 @@ use std::process::Stdio;
 use serde::Serialize;
 use tokio::process::Command;
 
-use super::wallpaper_video::{es_video, wallpaper_thumbnail};
+use super::wallpaper_video::{is_video, wallpaper_thumbnail};
 
 /// El ancho de la muestra. Más no cambia la paleta y cuesta más mandarla.
 pub const SAMPLE_WIDTH: u32 = 96;
@@ -98,7 +98,7 @@ pub async fn read_raw_pixels(image: &str, width: u32) -> Result<Vec<u8>, String>
 /// tenía y lo avisa.
 #[tauri::command]
 pub async fn wallpaper_pixels(path: String) -> Result<WallpaperPixels, String> {
-    let video = es_video(&PathBuf::from(&path));
+    let video = is_video(&PathBuf::from(&path));
     let thumbnail = wallpaper_thumbnail(path).await?;
     let data = read_raw_pixels(&thumbnail, SAMPLE_WIDTH).await?;
     pixels_from_raw(data, SAMPLE_WIDTH, video)

@@ -15,6 +15,7 @@ import {
 	Panel,
 	ProgressBar,
 	SwitchToggle,
+	WallpaperThumbnail,
 } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import { getOfficialWallpapers } from '@/services/style.service';
@@ -84,10 +85,11 @@ const handleDropPath = (path: string) => {
  */
 const pauseVideoOnBattery = ref(true);
 
-const selectedIsVideo = computed(() => {
-	const lowered = selectedWallpaperPath.value.toLowerCase();
-	return ['.mp4', '.webm', '.ogv'].some((ext) => lowered.endsWith(ext));
-});
+/** Los fondos en movimiento que el escritorio sabe reproducir. */
+const isVideoPath = (path: string) =>
+	['.mp4', '.webm', '.ogv'].some((ext) => path.toLowerCase().endsWith(ext));
+
+const selectedIsVideo = computed(() => isVideoPath(selectedWallpaperPath.value));
 
 /** El avance de la optimización, para no dejar la ventana muda mientras recodifica. */
 /**
@@ -298,7 +300,9 @@ onUnmounted(() => {
 							@click="applyWallpaperPath(wallpaperPath)"
 						>
 							<div class="aspect-video w-full overflow-hidden bg-ui-surface/70">
-								<img v-if="thumbnailFor(wallpaperPath)" :src="thumbnailFor(wallpaperPath)" :alt="getWallpaperLabel(wallpaperPath)" class="h-full w-full object-cover" loading="lazy" />
+								<!-- La misma miniatura que el selector rápido del escritorio
+								     (vasak-desktop#133), para que los dos muestren los fondos igual. -->
+								<WallpaperThumbnail v-if="thumbnailFor(wallpaperPath)" fill :src="thumbnailFor(wallpaperPath)" :alt="getWallpaperLabel(wallpaperPath)" :video="isVideoPath(wallpaperPath)" />
 							<!-- Mientras se genera: un recuadro, no un icono de imagen rota. -->
 							<div v-else class="h-full w-full animate-pulse bg-ui-surface/60"></div>
 							</div>

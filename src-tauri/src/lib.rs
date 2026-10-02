@@ -4,6 +4,7 @@ mod logger;
 mod structs;
 mod tools;
 mod utils;
+mod wallpaper_cli;
 
 use std::path::PathBuf;
 
@@ -96,6 +97,12 @@ async fn pedir_al_frente() {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // `vasak-settings --wallpaper …` contesta y sale sin armar la aplicación:
+    // ver `wallpaper_cli.rs`, que explica por qué tiene que ser antes.
+    if let Some(code) = wallpaper_cli::run_from_args(std::env::args()) {
+        std::process::exit(code);
+    }
+
     tauri::Builder::default()
         // Una sola ventana de configuración.
         //
