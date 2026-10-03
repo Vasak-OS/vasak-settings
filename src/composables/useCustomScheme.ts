@@ -18,6 +18,13 @@
  * quede quieto un momento y se guarda una sola vez, con todo junto.
  */
 
+import {
+	omitPaths,
+	readWallpaperState,
+	uiPathsOf,
+	type WallpaperColorsState,
+	withWallpaperState,
+} from '@vasakgroup/plugin-config-manager';
 import { type Ref, ref, shallowRef } from 'vue';
 import { saveUserScheme } from '@/services/scheme.service';
 import type { SchemeColorPatch, SchemeEntry, SchemeFile, SchemeVariantName } from '@/types/scheme';
@@ -28,13 +35,6 @@ import {
 	cloneScheme,
 	SCHEME_VARIANTS,
 } from '@/utils/custom-scheme';
-import {
-	omitPaths,
-	readWallpaperState,
-	uiPathsOf,
-	type WallpaperColorsState,
-	withWallpaperState,
-} from '@/utils/wallpaper-scheme';
 
 /** De dónde viene un cambio de colores. */
 export type ColorChangeOrigin = 'manual' | 'wallpaper';
@@ -59,6 +59,19 @@ export type CustomScheme = {
 	error: Ref<unknown>;
 	/** Toma un esquema ya guardado, sin escribir nada. */
 	load: (scheme: SchemeFile | null) => void;
+	/**
+	 * Toma lo que hay en disco si no hay nada propio sin guardar. Es para cuando
+	 * otro escribió el archivo —el escritorio, al seguir al fondo—: sin esto, el
+	 * próximo cambio en el editor guardaría encima los colores de antes. Si hay
+	 * un cambio pendiente, gana el del editor y devuelve `false`.
+	 */
+	reload: (scheme: SchemeFile, readAt?: number) => boolean;
+	/**
+	 * Cuántas veces cambió el esquema en edición. Quien lee el disco anota el
+	 * número antes de leer y se lo pasa a `reload`: si mientras tanto hubo un
+	 * cambio, lo leído es viejo y se descarta.
+	 */
+	revision: () => number;
 	/** Clona `base` como «Personalizado» y lo guarda en el acto, sin antirrebote. */
 	createFrom: (base: SchemeFile, identity: CloneIdentity) => Promise<SchemeEntry>;
 	/**
@@ -118,6 +131,12 @@ export function useCustomScheme(options: CustomSchemeOptions = {}): CustomScheme
 	let pending = 0;
 	/** Lo último que se sabe que está en disco: lo cargado o lo último guardado. */
 	let persisted: SchemeFile | null = null;
+	/** Sube con cada cambio del esquema en edición. Ver `revision`. */
+	let revision = 0;
+	const setScheme = (next: SchemeFile | null) => {
+		scheme.value = next;
+		revision += 1;
+	};
 
 	const cancelPending = () => {
 		if (timer !== null) {
@@ -152,8 +171,17 @@ export function useCustomScheme(options: CustomSchemeOptions = {}): CustomScheme
 
 	const load = (loaded: SchemeFile | null) => {
 		cancelPending();
-		scheme.value = loaded ? cloneScheme(loaded) : null;
+		setScheme(loaded ? cloneScheme(loaded) : null);
 		persisted = scheme.value;
+	};
+
+	const reload = (loaded: SchemeFile, readAt?: number) => {
+		if (timer !== null || pending > 0) return false;
+		// Lo leído empezó antes de un cambio de acá: es una foto vieja del
+		// archivo, y tomarla haría que el próximo guardado la escriba encima.
+		if (readAt !== undefined && readAt !== revision) return false;
+		if (JSON.stringify(loaded) !== JSON.stringify(scheme.value)) load(loaded);
+		return true;
 	};
 
 	const createFrom = async (base: SchemeFile, identity: CloneIdentity) => {
@@ -161,14 +189,14 @@ export function useCustomScheme(options: CustomSchemeOptions = {}): CustomScheme
 		// recién clonado y pisarlo con los colores viejos.
 		cancelPending();
 		const clone = cloneAsCustom(base, identity);
-		scheme.value = clone;
+		setScheme(clone);
 		try {
 			return await persist(clone);
 		} catch (err) {
 			// El clon no llegó al disco: el editor vuelve a lo que sí está, en vez
 			// de mostrar como guardado algo que el archivo no tiene.
 			if (scheme.value === clone) {
-				scheme.value = persisted ? cloneScheme(persisted) : null;
+				setScheme(persisted ? cloneScheme(persisted) : null);
 			}
 			throw err;
 		}
@@ -194,7 +222,7 @@ export function useCustomScheme(options: CustomSchemeOptions = {}): CustomScheme
 		const current = scheme.value;
 		if (!current || JSON.stringify(next) === JSON.stringify(current)) return;
 
-		scheme.value = next;
+		setScheme(next);
 		cancelPending();
 		if (immediate) {
 			await persist(next);
@@ -262,6 +290,8 @@ export function useCustomScheme(options: CustomSchemeOptions = {}): CustomScheme
 		saving,
 		error,
 		load,
+		reload,
+		revision: () => revision,
 		createFrom,
 		ensureCustom,
 		updateColors,

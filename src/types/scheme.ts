@@ -82,24 +82,8 @@ export type SchemeEntry = {
 };
 
 /**
- * Un cambio parcial de colores sobre una variante.
- *
- * Es lo que recibe la única función que escribe el esquema «Personalizado»
- * (`updateColors` en `useCustomScheme`). El editor manda un color por vez; la
- * detección de colores del fondo (#134) va a mandar varios juntos.
+ * Un cambio parcial de colores sobre una variante: el del plugin (2.10.0), que
+ * es con el que escriben el esquema el editor y el escritorio cuando sigue al
+ * fondo. Es lo que recibe `updateColors` de `useCustomScheme`.
  */
-export type SchemeColorPatch = {
-	ui?: {
-		color?: { primary?: string; secondary?: string };
-		text?: { main?: string; muted?: string; 'on-primary'?: string; 'on-secondary'?: string };
-		background?: string;
-		border?: string;
-		surface?: string;
-	};
-	terminal?: {
-		foreground?: string;
-		background?: string;
-		cursor?: string;
-		ansi?: Partial<Record<AnsiColorName, string>>;
-	};
-};
+export type { SchemeColorPatch } from '@vasakgroup/plugin-config-manager';

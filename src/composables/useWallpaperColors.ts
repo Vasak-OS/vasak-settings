@@ -2,12 +2,16 @@
  * «Seguir al fondo»: los colores del esquema «Personalizado» sacados del fondo
  * de pantalla (Vasak-OS/vasak-settings#134).
  *
+ * **Quien sigue al fondo es vasak-desktop** (`followWallpaper` del plugin, en
+ * cada cambio de configuración): está siempre abierto, así que el acento cambia
+ * aunque Configuración esté cerrada. Acá queda lo que la persona hace a mano
+ * —prender «Seguir al fondo», «Volver a sacar del fondo», la vista previa— y
+ * mantener el editor al día cuando el escritorio reescribe `custom.json`.
+ *
  * Hay **una sola** instancia para toda la aplicación, igual que hay un solo
- * esquema «Personalizado» en edición: la usan `App.vue`, que mira cada cambio
- * de configuración —el fondo puede cambiar desde esta ventana o desde el
- * escritorio—, y Apariencia, que muestra la paleta y el interruptor. Si cada
- * una tuviera la suya, la de Apariencia guardaría encima de lo que acababa de
- * escribir la otra con los colores viejos.
+ * esquema «Personalizado» en edición: la usan `App.vue`, que la refresca en
+ * cada `config-changed`, y Apariencia. Si cada una tuviera la suya, la de
+ * Apariencia guardaría encima con los colores viejos.
  *
  * El camino de escritura es el del editor: `useCustomScheme` →
  * `saveUserScheme` del plugin, que escribe `~/.config/vasak/schemes/custom.json`
@@ -16,21 +20,24 @@
  */
 
 import { invoke } from '@tauri-apps/api/core';
-import { getSchemeById, readConfig, type VSKConfig } from '@vasakgroup/plugin-config-manager';
+import {
+	buildWallpaperPatches,
+	extractPalette,
+	getSchemeById,
+	type PaletteColor,
+	readWallpaperState,
+	type WallpaperPixels,
+} from '@vasakgroup/plugin-config-manager';
 import { type Ref, ref, shallowRef } from 'vue';
 import { type CustomScheme, useCustomScheme } from '@/composables/useCustomScheme';
 import type { SchemeEntry, SchemeFile } from '@/types/scheme';
-import { SCHEME_KEY } from '@/utils/config-values';
 import { CUSTOM_SCHEME_ID } from '@/utils/custom-scheme';
-import { extractPalette, type PaletteColor, type WallpaperPixels } from '@/utils/wallpaper-palette';
-import { buildWallpaperPatches, readWallpaperState } from '@/utils/wallpaper-scheme';
 
 /** Por qué no se pudieron sacar los colores. La vista lo traduce. */
 export type WallpaperColorsError = 'unreadable' | 'save' | null;
 
 export type WallpaperColorsDeps = {
 	readPixels: (path: string) => Promise<WallpaperPixels>;
-	readConfig: () => Promise<VSKConfig | null>;
 	loadCustom: () => Promise<SchemeFile | null>;
 	custom: CustomScheme;
 };
@@ -50,13 +57,12 @@ export type WallpaperColors = {
 	/** Saca los colores del fondo y los guarda en el «Personalizado». */
 	regenerate: (path: string) => Promise<boolean>;
 	/**
-	 * Lo que hace `App.vue` en cada `config-changed`: si el «Personalizado» está
-	 * en uso, sigue al fondo, y el fondo cambió desde la última vez, recalcula.
+	 * Lo que hace `App.vue` en cada `config-changed`: vuelve a leer
+	 * `custom.json` por si lo escribió otro (el escritorio, al seguir al fondo).
+	 * Un cambio del editor todavía sin guardar no se pisa.
 	 */
-	syncWithConfig: () => Promise<boolean>;
+	refreshFromDisk: () => Promise<boolean>;
 };
-
-const wallpaperOf = (config: VSKConfig | null) => config?.desktop?.wallpaper?.[0] ?? '';
 
 export function createWallpaperColors(deps: WallpaperColorsDeps): WallpaperColors {
 	const { custom } = deps;
@@ -149,15 +155,15 @@ export function createWallpaperColors(deps: WallpaperColorsDeps): WallpaperColor
 		return next;
 	};
 
-	const syncWithConfig: WallpaperColors['syncWithConfig'] = async () => {
-		const config = await deps.readConfig();
-		if (config?.style?.[SCHEME_KEY] !== CUSTOM_SCHEME_ID) return false;
-		const path = wallpaperOf(config);
-		if (!path) return false;
-		if (!(await ensureLoaded())) return false;
-		const state = readWallpaperState(custom.scheme.value);
-		if (!state.follow || state.source === path) return false;
-		return regenerate(path);
+	const refreshFromDisk: WallpaperColors['refreshFromDisk'] = async () => {
+		// Sólo si ya se estaba editando: si no, no hay nada que se pueda pisar,
+		// y el primero que lo necesite lo carga.
+		if (!custom.scheme.value) return false;
+		// La revisión se anota antes de leer: si el editor cambia algo mientras
+		// el disco contesta, lo que llega es viejo y `reload` lo descarta.
+		const readAt = custom.revision();
+		const loaded = await deps.loadCustom();
+		return loaded ? custom.reload(loaded, readAt) : false;
 	};
 
 	return {
@@ -169,7 +175,7 @@ export function createWallpaperColors(deps: WallpaperColorsDeps): WallpaperColor
 		error,
 		preview,
 		regenerate,
-		syncWithConfig,
+		refreshFromDisk,
 	};
 }
 
@@ -194,7 +200,6 @@ export function useWallpaperColors(): WallpaperColors {
 		shared = createWallpaperColors({
 			custom,
 			readPixels: (path) => invoke<WallpaperPixels>('wallpaper_pixels', { path }),
-			readConfig,
 			loadCustom: async () => {
 				try {
 					const entry = await getSchemeById(CUSTOM_SCHEME_ID);

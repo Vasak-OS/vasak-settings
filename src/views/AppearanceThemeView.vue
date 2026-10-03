@@ -2,7 +2,9 @@
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import {
 	readConfig,
+	readWallpaperState,
 	setDarkMode,
+	type UiColorPath,
 	useConfigStore,
 	type VSKConfig,
 	writeConfig,
@@ -43,7 +45,6 @@ import type {
 } from '@/types/scheme';
 import { clearStyle, SCHEME_KEY, writeScheme } from '@/utils/config-values';
 import { CUSTOM_SCHEME_ID } from '@/utils/custom-scheme';
-import { readWallpaperState, type UiColorPath } from '@/utils/wallpaper-scheme';
 
 interface SchemePreviewValue {
 	label: string;

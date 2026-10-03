@@ -4,6 +4,7 @@
 //! vasak-settings --wallpaper list                 # los fondos oficiales
 //! vasak-settings --wallpaper thumbnails RUTA…     # una miniatura por ruta
 //! vasak-settings --wallpaper prepare RUTA         # un video, listo para fondo
+//! vasak-settings --wallpaper pixels RUTA          # la muestra para sacar colores
 //! ```
 //!
 //! Lo usa el selector rápido de fondos del escritorio (vasak-desktop#133). Ese
@@ -13,6 +14,11 @@
 //! limitarlo a 30 fps, sacarle el audio—. Si el escritorio lo hiciera por su
 //! cuenta habría dos preparaciones que se separan; con esto hay una sola, la de
 //! `commands::wallpaper_video`, y el escritorio se la pide a este programa.
+//!
+//! `pixels` es para «Seguir al fondo» (vasak-settings#134), que corre en el
+//! escritorio: la muestra en RGB crudo del mismo cuadro que la miniatura, la
+//! misma que lee Apariencia con el comando `wallpaper_pixels`. Una sola lectura
+//! del fondo para las dos.
 //!
 //! # Por qué antes de Tauri
 //!
@@ -33,7 +39,7 @@
 
 use serde_json::{json, Value};
 
-use crate::commands::{system_config, wallpaper_video};
+use crate::commands::{system_config, wallpaper_colors, wallpaper_video};
 
 /// El argumento que lo activa, siempre primero. Con guiones porque ninguna
 /// sección del router empieza así (`vasak-settings appearance-wallpaper`), y
@@ -46,6 +52,7 @@ pub enum Request {
     List,
     Thumbnails(Vec<String>),
     Prepare(String),
+    Pixels(String),
 }
 
 /// Lee los argumentos. `None` si no son de acá —la aplicación arranca como
@@ -66,8 +73,9 @@ where
         Some("list") if rest.is_empty() => Ok(Request::List),
         Some("thumbnails") if !rest.is_empty() => Ok(Request::Thumbnails(rest)),
         Some("prepare") if rest.len() == 1 => Ok(Request::Prepare(rest[0].clone())),
+        Some("pixels") if rest.len() == 1 => Ok(Request::Pixels(rest[0].clone())),
         _ => Err(format!(
-            "uso: vasak-settings {FLAG} list | thumbnails RUTA… | prepare RUTA"
+            "uso: vasak-settings {FLAG} list | thumbnails RUTA… | prepare RUTA | pixels RUTA"
         )),
     })
 }
@@ -99,6 +107,7 @@ async fn answer(request: Request) -> Result<Value, String> {
             .await?;
             Ok(json!(prepared))
         }
+        Request::Pixels(path) => Ok(json!(wallpaper_colors::wallpaper_pixels(path).await?)),
     }
 }
 
@@ -148,7 +157,7 @@ mod tests {
     }
 
     #[test]
-    fn lee_los_tres_pedidos() {
+    fn lee_los_cuatro_pedidos() {
         assert_eq!(
             parse_request(args(&["--wallpaper", "list"])),
             Some(Ok(Request::List))
@@ -164,6 +173,10 @@ mod tests {
             parse_request(args(&["--wallpaper", "prepare", "/b.mp4"])),
             Some(Ok(Request::Prepare("/b.mp4".into())))
         );
+        assert_eq!(
+            parse_request(args(&["--wallpaper", "pixels", "/b.mp4"])),
+            Some(Ok(Request::Pixels("/b.mp4".into())))
+        );
     }
 
     #[test]
@@ -175,12 +188,23 @@ mod tests {
             &["--wallpaper", "prepare"],
             &["--wallpaper", "prepare", "/a.mp4", "/b.mp4"],
             &["--wallpaper", "list", "/sobra"],
+            &["--wallpaper", "pixels"],
+            &["--wallpaper", "pixels", "/a.jpg", "/b.jpg"],
         ] {
             assert!(
                 matches!(parse_request(args(bad)), Some(Err(_))),
                 "{bad:?} tenía que ser un error de uso"
             );
         }
+    }
+
+    /// Un fondo que no existe es un error, no una muestra vacía: el escritorio
+    /// lo cuenta como ilegible y deja los colores como estaban.
+    #[test]
+    fn los_pixeles_de_un_fondo_que_no_existe_son_un_error() {
+        let result =
+            tauri::async_runtime::block_on(answer(Request::Pixels("/no/existe.jpg".into())));
+        assert!(result.is_err());
     }
 
     #[test]

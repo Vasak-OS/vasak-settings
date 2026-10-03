@@ -8,33 +8,28 @@ import WindowAppLayout from '@/layouts/WindowAppLayout.vue';
 
 let unListenConfig: Ref<UnlistenFn | null> = ref(null);
 
-// «Seguir al fondo» se mira acá y no en Apariencia: el fondo puede cambiar
-// desde cualquier pantalla de esta ventana o desde el escritorio, y el acento
-// tiene que seguirlo aunque Apariencia no esté abierta. Si no está prendido, o
-// el «Personalizado» no está en uso, no hace nada.
+// «Seguir al fondo» lo corre vasak-desktop, que está siempre abierto. Cuando
+// reescribe `custom.json`, el editor de Apariencia tiene que tomar los colores
+// nuevos: si no, el próximo cambio a mano guardaría encima los de antes.
 const wallpaperColors = useWallpaperColors();
-const followWallpaper = () => {
-	wallpaperColors.syncWithConfig().catch((error) => {
-		console.error('Error al seguir los colores del fondo', error);
+const refreshCustomScheme = () => {
+	wallpaperColors.refreshFromDisk().catch((error) => {
+		console.error('Error al releer el esquema Personalizado', error);
 	});
 };
 
 onMounted(async () => {
 	try {
 		const configStore = useConfigStore();
+		// El fundido entre esquemas (`scheme-transition`) lo pone el store del
+		// plugin desde la 2.10.0, en todas las aplicaciones.
 		await configStore.loadConfig();
-		// Desde acá los cambios de esquema se funden en vez de saltar (el
-		// `@property` de `tokens.css`, vue-libvasak ≥ 2.5). Va después de la
-		// primera carga a propósito: antes, el fundido iría de los colores de
-		// fábrica a los del esquema al abrir la ventana, y se vería un parpadeo.
-		document.documentElement.classList.add('scheme-transition');
-		followWallpaper();
 
 		unListenConfig.value = await listen('config-changed', async () => {
 			document.startViewTransition(() => {
 				configStore.loadConfig();
 			});
-			followWallpaper();
+			refreshCustomScheme();
 		});
 	} catch (error: any) {
 		console.error('Error al cargar configuración en App.vue', error);

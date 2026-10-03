@@ -5,20 +5,26 @@
  * montar la vista. Lo que escribe en disco vive en `useCustomScheme`.
  */
 
-import { contraste, MINIMO_TEXTO } from '@vasakgroup/plugin-config-manager';
-import type {
-	AnsiColorName,
-	SchemeColorPatch,
-	SchemeFile,
-	SchemeVariantColors,
-	SchemeVariantName,
-} from '@/types/scheme';
+import {
+	applyColorPatch,
+	cloneScheme,
+	contrastRatio,
+	isHexColor,
+	MIN_TEXT_CONTRAST,
+	SCHEME_VARIANTS,
+} from '@vasakgroup/plugin-config-manager';
+import type { AnsiColorName, SchemeFile, SchemeVariantColors } from '@/types/scheme';
+
+/*
+ * Copiar, validar un color y aplicar un cambio parcial están en el plugin desde
+ * la 2.10.0: el escritorio escribe el mismo esquema cuando sigue al fondo, y
+ * tiene que hacerlo con la misma regla. Se reexportan para que el editor los
+ * siga encontrando acá.
+ */
+export { applyColorPatch, cloneScheme, isHexColor, SCHEME_VARIANTS };
 
 /** El id del esquema del usuario. Es también el nombre del archivo: `custom.json`. */
 export const CUSTOM_SCHEME_ID = 'custom';
-
-/** Las dos variantes, en el orden en que las muestra el editor. */
-export const SCHEME_VARIANTS: readonly SchemeVariantName[] = ['dark', 'light'];
 
 /** Los 16 colores ANSI de la terminal, en el orden de la paleta. */
 export const ANSI_COLOR_NAMES: readonly AnsiColorName[] = [
@@ -39,18 +45,6 @@ export const ANSI_COLOR_NAMES: readonly AnsiColorName[] = [
 	'brightCyan',
 	'brightWhite',
 ];
-
-/**
- * Una copia profunda de un esquema.
- *
- * Por JSON y no con `structuredClone`: el esquema suele llegar desde el estado
- * de Vue, envuelto en un `Proxy` reactivo, y `structuredClone` no copia un
- * `Proxy` —tira `DataCloneError`—. El esquema es un JSON, así que ida y vuelta
- * por JSON no pierde nada.
- */
-export function cloneScheme<T>(scheme: T): T {
-	return JSON.parse(JSON.stringify(scheme)) as T;
-}
 
 /** Lo que cambia al clonar: todo lo demás sale igual que en el esquema base. */
 export type CloneIdentity = {
@@ -79,13 +73,6 @@ export function cloneAsCustom(base: SchemeFile, identity: CloneIdentity): Scheme
 	return copy;
 }
 
-const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
-
-/** Si el valor es un color que el esquema acepta: `#rgb` o `#rrggbb`. */
-export function isHexColor(value: unknown): value is string {
-	return typeof value === 'string' && HEX_COLOR.test(value.trim());
-}
-
 /**
  * El color en `#rrggbb` minúscula, o `null` si no es un color.
  *
@@ -98,47 +85,6 @@ export function toLongHex(value: string): string | null {
 	const digits = trimmed.slice(1).toLowerCase();
 	if (digits.length === 6) return `#${digits}`;
 	return `#${[...digits].map((digit) => digit + digit).join('')}`;
-}
-
-/**
- * Copia en `target` los colores de `patch` que sean colores de verdad.
- *
- * Lo que no pasa `isHexColor` se descarta: un campo a medio escribir no puede
- * llegar al archivo y dejar a todo el escritorio sin un color. Las claves que
- * `target` ya tiene y el cambio no nombra quedan como estaban.
- */
-function mergeColors(target: Record<string, unknown>, patch: Record<string, unknown>): void {
-	for (const [key, value] of Object.entries(patch)) {
-		if (value === undefined) continue;
-		if (value !== null && typeof value === 'object') {
-			const current = target[key];
-			const nested =
-				current !== null && typeof current === 'object' ? (current as Record<string, unknown>) : {};
-			mergeColors(nested, value as Record<string, unknown>);
-			target[key] = nested;
-		} else if (isHexColor(value)) {
-			target[key] = value.trim();
-		}
-	}
-}
-
-/**
- * El esquema con los colores del cambio aplicados sobre una variante.
- *
- * Devuelve un esquema nuevo y deja el recibido intacto, para que quien lo
- * tenga guardado —el estado de Vue, una prueba— no lo vea cambiar por debajo.
- */
-export function applyColorPatch(
-	scheme: SchemeFile,
-	variant: SchemeVariantName,
-	patch: SchemeColorPatch
-): SchemeFile {
-	const next = cloneScheme(scheme);
-	mergeColors(
-		next.colors[variant] as unknown as Record<string, unknown>,
-		patch as Record<string, unknown>
-	);
-	return next;
 }
 
 /** Un par texto/fondo cuyo contraste se muestra al lado de sus colores. */
@@ -169,7 +115,7 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
 ];
 
 /** El mínimo de WCAG 1.4.3 para texto. Por debajo se avisa, no se prohíbe. */
-export const MINIMUM_TEXT_CONTRAST = MINIMO_TEXTO;
+export const MINIMUM_TEXT_CONTRAST = MIN_TEXT_CONTRAST;
 
 export type ContrastResult = {
 	id: string;
@@ -180,7 +126,7 @@ export type ContrastResult = {
 /**
  * El contraste de cada par de la variante.
  *
- * El cálculo es el del plugin (`contraste`), el mismo que usa el escritorio
+ * El cálculo es el del plugin (`contrastRatio`), el mismo que usa el escritorio
  * para corregir el texto sobre el primario: si acá se midiera distinto, la
  * pantalla podría avisar de un par que el escritorio da por bueno.
  *
@@ -193,7 +139,7 @@ export function measureContrast(colors: SchemeVariantColors): ContrastResult[] {
 		const text = pair.text(colors);
 		const background = pair.background(colors);
 		if (!text || !background) continue;
-		const ratio = contraste(text, background);
+		const ratio = contrastRatio(text, background);
 		results.push({ id: pair.id, ratio, passes: ratio >= MINIMUM_TEXT_CONTRAST });
 	}
 	return results;
