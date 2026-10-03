@@ -159,8 +159,11 @@ export function createWallpaperColors(deps: WallpaperColorsDeps): WallpaperColor
 		// Sólo si ya se estaba editando: si no, no hay nada que se pueda pisar,
 		// y el primero que lo necesite lo carga.
 		if (!custom.scheme.value) return false;
+		// La revisión se anota antes de leer: si el editor cambia algo mientras
+		// el disco contesta, lo que llega es viejo y `reload` lo descarta.
+		const readAt = custom.revision();
 		const loaded = await deps.loadCustom();
-		return loaded ? custom.reload(loaded) : false;
+		return loaded ? custom.reload(loaded, readAt) : false;
 	};
 
 	return {

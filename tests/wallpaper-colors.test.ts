@@ -150,6 +150,30 @@ describe('lo que escribe el escritorio', () => {
 		expect(lastSaved(h).colors.dark.ui.color.primary).toBe('#ffd700');
 	});
 
+	test('lo leído antes de un cambio de acá se descarta, aunque el cambio ya se guardó', async () => {
+		const h = harness(customScheme(following));
+		await h.colors.preview('/fondos/bosque.jpg');
+		const stale = customScheme(following);
+		stale.colors.dark.ui.color.primary = '#010101';
+		// El disco contesta tarde, con una foto de antes del cambio.
+		let answer: (scheme: SchemeFile) => void = () => {};
+		const slow = new Promise<SchemeFile>((resolve) => {
+			answer = resolve;
+		});
+		const colors = createWallpaperColors({
+			custom: h.custom,
+			loadCustom: () => slow,
+			readPixels: async () => solid(1, 2, 3),
+		});
+		const refreshing = colors.refreshFromDisk();
+		h.custom.updateColors('dark', { ui: { color: { primary: '#ffd700' } } });
+		await h.custom.flush();
+		answer(stale);
+
+		expect(await refreshing).toBe(false);
+		expect(h.custom.scheme.value?.colors.dark.ui.color.primary).toBe('#ffd700');
+	});
+
 	test('sin editar el Personalizado, no se lee nada', async () => {
 		const h = harness(customScheme(following));
 		expect(await h.colors.refreshFromDisk()).toBe(false);
