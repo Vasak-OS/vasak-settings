@@ -13,6 +13,8 @@
  * Las columnas se deciden con consultas de contenedor sobre el propio editor,
  * no con el ancho de la pantalla: el editor no sabe en qué ventana está.
  */
+
+import type { UiColorPath } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { ActionButton } from '@vasakgroup/vue-libvasak';
 import { computed, nextTick, ref } from 'vue';
@@ -30,7 +32,6 @@ import {
 	measureContrast,
 	SCHEME_VARIANTS,
 } from '@/utils/custom-scheme';
-import type { UiColorPath } from '@/utils/wallpaper-scheme';
 
 interface Props {
 	scheme: SchemeFile;

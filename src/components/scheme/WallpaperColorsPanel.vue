@@ -9,11 +9,12 @@
  * Responsive por contenedor: angosto, la vista previa va arriba de la lista de
  * colores; con lugar, al lado.
  */
+
+import type { PaletteColor } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { ActionButton, AlertMessage, SwitchRow } from '@vasakgroup/vue-libvasak';
 import { computed } from 'vue';
 import type { WallpaperColorsError } from '@/composables/useWallpaperColors';
-import type { PaletteColor } from '@/utils/wallpaper-palette';
 
 interface Props {
 	follow: boolean;

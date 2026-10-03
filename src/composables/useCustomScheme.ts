@@ -18,6 +18,13 @@
  * quede quieto un momento y se guarda una sola vez, con todo junto.
  */
 
+import {
+	omitPaths,
+	readWallpaperState,
+	uiPathsOf,
+	type WallpaperColorsState,
+	withWallpaperState,
+} from '@vasakgroup/plugin-config-manager';
 import { type Ref, ref, shallowRef } from 'vue';
 import { saveUserScheme } from '@/services/scheme.service';
 import type { SchemeColorPatch, SchemeEntry, SchemeFile, SchemeVariantName } from '@/types/scheme';
@@ -28,13 +35,6 @@ import {
 	cloneScheme,
 	SCHEME_VARIANTS,
 } from '@/utils/custom-scheme';
-import {
-	omitPaths,
-	readWallpaperState,
-	uiPathsOf,
-	type WallpaperColorsState,
-	withWallpaperState,
-} from '@/utils/wallpaper-scheme';
 
 /** De dónde viene un cambio de colores. */
 export type ColorChangeOrigin = 'manual' | 'wallpaper';
@@ -59,6 +59,13 @@ export type CustomScheme = {
 	error: Ref<unknown>;
 	/** Toma un esquema ya guardado, sin escribir nada. */
 	load: (scheme: SchemeFile | null) => void;
+	/**
+	 * Toma lo que hay en disco si no hay nada propio sin guardar. Es para cuando
+	 * otro escribió el archivo —el escritorio, al seguir al fondo—: sin esto, el
+	 * próximo cambio en el editor guardaría encima los colores de antes. Si hay
+	 * un cambio pendiente, gana el del editor y devuelve `false`.
+	 */
+	reload: (scheme: SchemeFile) => boolean;
 	/** Clona `base` como «Personalizado» y lo guarda en el acto, sin antirrebote. */
 	createFrom: (base: SchemeFile, identity: CloneIdentity) => Promise<SchemeEntry>;
 	/**
@@ -154,6 +161,12 @@ export function useCustomScheme(options: CustomSchemeOptions = {}): CustomScheme
 		cancelPending();
 		scheme.value = loaded ? cloneScheme(loaded) : null;
 		persisted = scheme.value;
+	};
+
+	const reload = (loaded: SchemeFile) => {
+		if (timer !== null || pending > 0) return false;
+		if (JSON.stringify(loaded) !== JSON.stringify(scheme.value)) load(loaded);
+		return true;
 	};
 
 	const createFrom = async (base: SchemeFile, identity: CloneIdentity) => {
@@ -262,6 +275,7 @@ export function useCustomScheme(options: CustomSchemeOptions = {}): CustomScheme
 		saving,
 		error,
 		load,
+		reload,
 		createFrom,
 		ensureCustom,
 		updateColors,

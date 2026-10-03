@@ -1,22 +1,24 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import type { VSKConfig } from '@vasakgroup/plugin-config-manager';
+import {
+	readWallpaperState,
+	WALLPAPER_STATE_KEY,
+	type WallpaperPixels,
+	withWallpaperState,
+} from '@vasakgroup/plugin-config-manager';
 import { useCustomScheme } from '@/composables/useCustomScheme';
 import { createWallpaperColors } from '@/composables/useWallpaperColors';
 import type { SchemeEntry, SchemeFile } from '@/types/scheme';
 import { cloneAsCustom } from '@/utils/custom-scheme';
-import type { WallpaperPixels } from '@/utils/wallpaper-palette';
-import {
-	readWallpaperState,
-	WALLPAPER_STATE_KEY,
-	withWallpaperState,
-} from '@/utils/wallpaper-scheme';
 
 /**
- * «Seguir al fondo» de punta a punta, sin Tauri: la lectura del fondo, la
- * configuración y el guardado son dobles pasados por parámetro. El guardado de
- * verdad es `saveUserScheme` del plugin; acá se anota lo que recibe, así que
- * ninguna prueba escribe en `~/.config` ni en el `vasak.conf` de nadie.
+ * Lo que queda en Configuración de «Seguir al fondo»: el recálculo a mano, los
+ * colores fijados desde el editor y tomar lo que el escritorio escribió.
+ * Seguir el fondo en cada cambio lo hace vasak-desktop con `followWallpaper`
+ * del plugin, que se prueba allá.
+ *
+ * La lectura del fondo y el guardado son dobles pasados por parámetro: ninguna
+ * prueba escribe en `~/.config` ni en el `vasak.conf` de nadie.
  */
 
 const FIXTURE = new URL('./fixtures/scheme-vasak-default.json', import.meta.url);
@@ -43,34 +45,22 @@ const WALLPAPERS: Record<string, WallpaperPixels> = {
 	'/fondos/video.mp4': solid(240, 140, 40),
 };
 
-type Harness = ReturnType<typeof harness>;
-
-function harness(options: { scheme: SchemeFile | null; wallpaper: string; colorScheme?: string }) {
+function harness(scheme: SchemeFile | null) {
 	const saved: SchemeFile[] = [];
 	const read: string[] = [];
-	let config: VSKConfig = {
-		style: { darkmode: true, 'color-scheme': options.colorScheme ?? 'custom', radius: 8 },
-		desktop: {
-			wallpaper: [options.wallpaper],
-			iconsize: 48,
-			showfiles: true,
-			showhiddenfiles: false,
-		},
-	} as unknown as VSKConfig;
-	let onDisk = options.scheme;
+	const disk = { scheme };
 
 	const custom = useCustomScheme({
 		delay: 5,
-		save: async (scheme): Promise<SchemeEntry> => {
-			saved.push(structuredClone(scheme));
-			onDisk = scheme;
-			return { path: '/home/u/.config/vasak/schemes/custom.json', scheme };
+		save: async (next): Promise<SchemeEntry> => {
+			saved.push(structuredClone(next));
+			disk.scheme = next;
+			return { path: '/home/u/.config/vasak/schemes/custom.json', scheme: next };
 		},
 	});
 	const colors = createWallpaperColors({
 		custom,
-		readConfig: async () => config,
-		loadCustom: async () => (onDisk ? structuredClone(onDisk) : null),
+		loadCustom: async () => (disk.scheme ? structuredClone(disk.scheme) : null),
 		readPixels: async (path) => {
 			read.push(path);
 			const pixels = WALLPAPERS[path];
@@ -78,96 +68,51 @@ function harness(options: { scheme: SchemeFile | null; wallpaper: string; colorS
 			return pixels;
 		},
 	});
-	return {
-		colors,
-		custom,
-		saved,
-		read,
-		setWallpaper: (path: string) => {
-			config = { ...config, desktop: { ...config.desktop, wallpaper: [path] } } as VSKConfig;
-		},
-	};
+	return { colors, custom, saved, read, disk };
 }
 
+type Harness = ReturnType<typeof harness>;
 const lastSaved = (h: Harness) => h.saved[h.saved.length - 1] as SchemeFile;
 const following = { follow: true, source: '', pinned: { dark: [], light: [] } };
 
-describe('Seguir al fondo', () => {
-	test('apagado, un cambio de fondo no toca nada', async () => {
-		const h = harness({ scheme: customScheme(), wallpaper: '/fondos/rojo.jpg' });
-		expect(await h.colors.syncWithConfig()).toBe(false);
-		expect(h.saved).toHaveLength(0);
-		expect(h.read).toHaveLength(0);
-	});
-
-	test('con otro esquema en uso tampoco, aunque el Personalizado lo tenga prendido', async () => {
-		const h = harness({
-			scheme: customScheme(following),
-			wallpaper: '/fondos/rojo.jpg',
-			colorScheme: 'vasak-default',
-		});
-		expect(await h.colors.syncWithConfig()).toBe(false);
-		expect(h.saved).toHaveLength(0);
-	});
-
-	test('prendido, el fondo nuevo cambia el acento al instante y sólo los colores de ui', async () => {
+describe('Volver a sacar del fondo', () => {
+	test('cambia sólo los colores de ui y guarda en el acto', async () => {
 		const before = customScheme(following);
-		const h = harness({ scheme: before, wallpaper: '/fondos/bosque.jpg' });
+		const h = harness(before);
+		expect(await h.colors.regenerate('/fondos/bosque.jpg')).toBe(true);
 
-		expect(await h.colors.syncWithConfig()).toBe(true);
-
-		// Se guardó en el acto, sin esperar el antirrebote.
 		expect(h.saved).toHaveLength(1);
 		const after = lastSaved(h);
 		expect(after.colors.dark.ui.color.primary).not.toBe(before.colors.dark.ui.color.primary);
 		expect(after.colors.light.ui.color.primary).not.toBe(before.colors.light.ui.color.primary);
 		expect(after.colors.dark.terminal).toEqual(before.colors.dark.terminal);
-		expect(after.colors.light.terminal).toEqual(before.colors.light.terminal);
 		expect(after.id).toBe('custom');
 		expect(readWallpaperState(after).source).toBe('/fondos/bosque.jpg');
 	});
 
-	test('el mismo fondo no se vuelve a leer: guardar el esquema no entra en un bucle', async () => {
-		const h = harness({ scheme: customScheme(following), wallpaper: '/fondos/bosque.jpg' });
-		await h.colors.syncWithConfig();
-		// El guardado dispara otro `config-changed`; el fondo es el mismo.
-		expect(await h.colors.syncWithConfig()).toBe(false);
-		expect(h.saved).toHaveLength(1);
-		expect(h.read).toEqual(['/fondos/bosque.jpg']);
-	});
-
-	test('un fondo que cambia otra vez vuelve a cambiar los colores', async () => {
-		const h = harness({ scheme: customScheme(following), wallpaper: '/fondos/bosque.jpg' });
-		await h.colors.syncWithConfig();
-		const forest = lastSaved(h).colors.dark.ui.color.primary;
-		h.setWallpaper('/fondos/rojo.jpg');
-		await h.colors.syncWithConfig();
-		expect(lastSaved(h).colors.dark.ui.color.primary).not.toBe(forest);
-	});
-
 	test('un fondo de video se lee por su cuadro, como cualquier imagen', async () => {
-		const h = harness({ scheme: customScheme(following), wallpaper: '/fondos/video.mp4' });
-		expect(await h.colors.syncWithConfig()).toBe(true);
+		const h = harness(customScheme(following));
+		expect(await h.colors.regenerate('/fondos/video.mp4')).toBe(true);
 		expect(h.read).toEqual(['/fondos/video.mp4']);
 	});
 
 	test('un fondo que no se puede leer deja los colores como estaban y lo avisa', async () => {
 		const before = customScheme(following);
-		const h = harness({ scheme: before, wallpaper: '/fondos/roto.mp4' });
-		expect(await h.colors.syncWithConfig()).toBe(false);
+		const h = harness(before);
+		expect(await h.colors.regenerate('/fondos/roto.mp4')).toBe(false);
 		expect(h.saved).toHaveLength(0);
 		expect(h.colors.error.value).toBe('unreadable');
 		expect(h.custom.scheme.value?.colors).toEqual(before.colors);
 	});
 
-	test('sin Personalizado todavía no se crea nada por un cambio de fondo', async () => {
-		const h = harness({ scheme: null, wallpaper: '/fondos/rojo.jpg' });
-		expect(await h.colors.syncWithConfig()).toBe(false);
+	test('sin Personalizado no se crea nada', async () => {
+		const h = harness(null);
+		expect(await h.colors.regenerate('/fondos/rojo.jpg')).toBe(false);
 		expect(h.saved).toHaveLength(0);
 	});
 
 	test('dos pedidos del mismo fondo a la vez leen el fondo una sola vez', async () => {
-		const h = harness({ scheme: customScheme(following), wallpaper: '/fondos/rojo.jpg' });
+		const h = harness(customScheme(following));
 		await Promise.all([
 			h.colors.regenerate('/fondos/rojo.jpg'),
 			h.colors.regenerate('/fondos/rojo.jpg'),
@@ -176,38 +121,70 @@ describe('Seguir al fondo', () => {
 	});
 });
 
+describe('lo que escribe el escritorio', () => {
+	test('el editor toma el custom.json nuevo', async () => {
+		const h = harness(customScheme(following));
+		await h.colors.preview('/fondos/bosque.jpg');
+		const fromDesktop = customScheme({ ...following, source: '/fondos/rojo.jpg' });
+		fromDesktop.colors.dark.ui.color.primary = '#ffa098';
+		h.disk.scheme = fromDesktop;
+
+		expect(await h.colors.refreshFromDisk()).toBe(true);
+		expect(h.custom.scheme.value?.colors.dark.ui.color.primary).toBe('#ffa098');
+		// Releer no escribe nada.
+		expect(h.saved).toHaveLength(0);
+	});
+
+	test('un cambio a mano todavía sin guardar no se pisa', async () => {
+		const h = harness(customScheme(following));
+		await h.colors.preview('/fondos/bosque.jpg');
+		h.custom.updateColors('dark', { ui: { color: { primary: '#ffd700' } } });
+
+		const fromDesktop = customScheme(following);
+		fromDesktop.colors.dark.ui.color.primary = '#ffa098';
+		h.disk.scheme = fromDesktop;
+
+		expect(await h.colors.refreshFromDisk()).toBe(false);
+		expect(h.custom.scheme.value?.colors.dark.ui.color.primary).toBe('#ffd700');
+		await h.custom.flush();
+		expect(lastSaved(h).colors.dark.ui.color.primary).toBe('#ffd700');
+	});
+
+	test('sin editar el Personalizado, no se lee nada', async () => {
+		const h = harness(customScheme(following));
+		expect(await h.colors.refreshFromDisk()).toBe(false);
+		expect(h.custom.scheme.value).toBeNull();
+	});
+});
+
 describe('los colores editados a mano', () => {
-	test('quedan fijados y sobreviven a un cambio de fondo', async () => {
-		const h = harness({ scheme: customScheme(following), wallpaper: '/fondos/bosque.jpg' });
-		await h.colors.syncWithConfig();
+	test('quedan fijados y sobreviven a un recálculo', async () => {
+		const h = harness(customScheme(following));
+		await h.colors.regenerate('/fondos/bosque.jpg');
 
 		h.custom.updateColors('dark', { ui: { color: { primary: '#ffd700' } } });
 		await h.custom.flush();
 		expect(readWallpaperState(lastSaved(h)).pinned.dark).toEqual(['ui.color.primary']);
 
-		h.setWallpaper('/fondos/rojo.jpg');
-		await h.colors.syncWithConfig();
-
+		await h.colors.regenerate('/fondos/rojo.jpg');
 		const after = lastSaved(h);
 		expect(after.colors.dark.ui.color.primary).toBe('#ffd700');
-		// Lo que no estaba fijado sí siguió al fondo nuevo.
 		expect(readWallpaperState(after).source).toBe('/fondos/rojo.jpg');
 		expect(after.colors.light.ui.color.primary).not.toBe('#ffd700');
 	});
 
 	test('un valor inválido no fija nada', async () => {
-		const h = harness({ scheme: customScheme(following), wallpaper: '/fondos/bosque.jpg' });
-		await h.colors.syncWithConfig();
+		const h = harness(customScheme(following));
+		await h.colors.regenerate('/fondos/bosque.jpg');
 		h.custom.updateColors('dark', { ui: { color: { primary: '#12' } } });
 		await h.custom.flush();
 		expect(readWallpaperState(h.custom.scheme.value).pinned.dark).toEqual([]);
 	});
 
 	test('soltar un color hace que el próximo recálculo lo vuelva a sacar del fondo', async () => {
-		const h = harness({
-			scheme: customScheme({ ...following, pinned: { dark: ['ui.color.primary'], light: [] } }),
-			wallpaper: '/fondos/bosque.jpg',
-		});
+		const h = harness(
+			customScheme({ ...following, pinned: { dark: ['ui.color.primary'], light: [] } })
+		);
 		await h.colors.preview('/fondos/bosque.jpg');
 		const pinnedValue = h.custom.scheme.value?.colors.dark.ui.color.primary;
 		expect(pinnedValue).toBe('#eba0ac');
@@ -223,7 +200,7 @@ describe('los colores editados a mano', () => {
 	});
 
 	test('el estado se guarda en custom.json, al lado de los colores', async () => {
-		const h = harness({ scheme: customScheme(), wallpaper: '/fondos/bosque.jpg' });
+		const h = harness(customScheme());
 		await h.colors.preview('/fondos/bosque.jpg');
 		await h.custom.updateWallpaperState((state) => ({ ...state, follow: true }), {
 			immediate: true,
@@ -238,7 +215,7 @@ describe('los colores editados a mano', () => {
 
 describe('la vista previa', () => {
 	test('lee la paleta sin escribir el esquema', async () => {
-		const h = harness({ scheme: customScheme(), wallpaper: '/fondos/rojo.jpg' });
+		const h = harness(customScheme());
 		expect(await h.colors.preview('/fondos/rojo.jpg')).toBe(true);
 		expect(h.saved).toHaveLength(0);
 		expect(h.colors.palette.value.length).toBeGreaterThan(0);

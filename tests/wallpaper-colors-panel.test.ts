@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
+import type { PaletteColor } from '@vasakgroup/plugin-config-manager';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import SchemeColorEditor from '@/components/scheme/SchemeColorEditor.vue';
 import WallpaperColorsPanel from '@/components/scheme/WallpaperColorsPanel.vue';
 import type { SchemeFile } from '@/types/scheme';
-import type { PaletteColor } from '@/utils/wallpaper-palette';
 
 /**
  * Lo que se ve de «Seguir al fondo»: el panel con la vista previa y los
