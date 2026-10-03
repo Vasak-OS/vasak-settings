@@ -26,7 +26,7 @@
 		"@vasakgroup/plugin-vsk-contextual-menu": "^2.0.3",
 		"@vasakgroup/plugin-vsk-journal": "^2.0.1",
 		"@vasakgroup/tauri-plugin-i18n": "^2.3.1",
-		"@vasakgroup/vue-libvasak": "^2.10.1",
+		"@vasakgroup/vue-libvasak": "^2.11.0",
 		"path": "^0.12.7",
 		"pinia": "^3.0.4",
 		"url": "^0.11.4",
