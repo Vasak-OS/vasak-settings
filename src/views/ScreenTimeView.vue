@@ -42,6 +42,7 @@ import {
 	aggregateByApp,
 	aggregateByCategory,
 	aggregateHourly,
+	createRequestGate,
 	splitDuration,
 	totalMillis,
 } from '@/utils/screen-time';
@@ -162,27 +163,48 @@ function formatDuration(millis: number): string {
 /** El porcentaje de una barra relativa, acotado por si el tope fuera cero. */
 const relative = (millis: number, max: number) => (max > 0 ? (millis / max) * 100 : 0);
 
+/**
+ * El secuenciador de pedidos.
+ *
+ * `screenTime()` tarda, y entre que se pide y que contesta puede haberse cambiado
+ * de período, tocado el interruptor o borrado el historial. Sin esto, una
+ * respuesta vieja pisa el estado nuevo: los totales del período anterior bajo el
+ * rótulo nuevo, o el `enabled` de antes encima del que se acaba de elegir. La
+ * lógica, y sus pruebas, viven en `utils/screen-time`.
+ */
+const gate = createRequestGate();
+
 const load = async () => {
+	const ticket = gate.begin();
 	loading.value = true;
 	error.value = '';
 	try {
 		const { from, to } = range();
 		const result = await screenTime(from, to);
+		if (!ticket.isCurrent()) return;
 		report.value = result;
 		enabled.value = result.enabled;
 	} catch (err) {
-		error.value = t('views.screenTime.errorLoading').replace('{0}', String(err));
+		if (ticket.isCurrent()) {
+			error.value = t('views.screenTime.errorLoading').replace('{0}', String(err));
+		}
 	} finally {
-		loading.value = false;
+		if (ticket.done()) loading.value = false;
 	}
 };
 
 const changePeriod = async (value: Period) => {
 	period.value = value;
+	// Soltar los datos del período anterior: si la carga nueva falla, no quedan los
+	// totales viejos rotulados con el período nuevo.
+	report.value = null;
 	await load();
 };
 
 const toggleEnabled = async (value: boolean) => {
+	// Invalidar cualquier carga en vuelo: su `enabled` es de antes de este cambio y
+	// no debe pisar el que se acaba de elegir.
+	gate.invalidate();
 	busy.value = true;
 	error.value = '';
 	successMessage.value = '';
@@ -203,8 +225,20 @@ const toggleEnabled = async (value: boolean) => {
 			successMessage.value = '';
 		}, 3000);
 	} catch (err) {
-		// Que el interruptor vuelva a la verdad si algo falló.
+		// Volver el interruptor a la verdad, y también el archivo: si `writeConfig`
+		// salió bien pero `setEnabled` falló, el archivo quedó cambiado y el switch
+		// diría una cosa mientras el servicio lee otra al arrancar.
 		enabled.value = previous;
+		try {
+			const config = await readConfig();
+			if (config) {
+				writeScreenTimeEnabled(config as unknown as Record<string, unknown>, previous);
+				await writeConfig(config);
+			}
+		} catch {
+			// Si ni siquiera se pudo deshacer la escritura, no hay nada más que hacer
+			// acá: el error de abajo ya avisa que algo quedó a medias.
+		}
 		error.value = t('views.screenTime.errorSaving').replace('{0}', String(err));
 	} finally {
 		busy.value = false;
@@ -212,6 +246,9 @@ const toggleEnabled = async (value: boolean) => {
 };
 
 const doClear = async () => {
+	// Invalidar las cargas en vuelo: una que resuelva después del borrado traería
+	// de vuelta lo que se acaba de borrar.
+	gate.invalidate();
 	busy.value = true;
 	error.value = '';
 	try {

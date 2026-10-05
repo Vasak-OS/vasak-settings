@@ -3,6 +3,7 @@ import {
 	aggregateByApp,
 	aggregateByCategory,
 	aggregateHourly,
+	createRequestGate,
 	HOURS_IN_DAY,
 	type ScreenTimeReport,
 	splitDuration,
@@ -163,5 +164,52 @@ describe('splitDuration', () => {
 		// 90 s → 2 min (redondeo), no 1.
 		expect(splitDuration(90_000)).toEqual({ hours: 0, minutes: 2 });
 		expect(splitDuration(0)).toEqual({ hours: 0, minutes: 0 });
+	});
+});
+
+describe('createRequestGate', () => {
+	test('sólo el último pedido que arrancó puede aplicar', () => {
+		// Es la carrera que se arregla: se pide un período, se cambia a otro antes de
+		// que el primero conteste, y la respuesta vieja no debe pisar a la nueva.
+		const gate = createRequestGate();
+
+		const viejo = gate.begin();
+		const nuevo = gate.begin();
+
+		expect(viejo.isCurrent()).toBe(false);
+		expect(nuevo.isCurrent()).toBe(true);
+	});
+
+	test('el «Cargando» se apaga recién cuando no queda ninguno en vuelo', () => {
+		// `done()` da true sólo con el último que termina: si lo apagara el primero,
+		// el indicador se iría mientras otra carga sigue.
+		const gate = createRequestGate();
+
+		const a = gate.begin();
+		const b = gate.begin();
+
+		expect(a.done()).toBe(false); // todavía queda `b`
+		expect(b.done()).toBe(true); // ahora sí
+	});
+
+	test('invalidar deja viejo a lo que esté en vuelo, sin arrancar nada', () => {
+		// Es lo que hacen el toggle y «borrar historial»: una carga anterior que
+		// resuelva tarde no debe pisar el estado nuevo.
+		const gate = createRequestGate();
+
+		const enVuelo = gate.begin();
+		gate.invalidate();
+
+		expect(enVuelo.isCurrent()).toBe(false);
+		// Y aun invalidado, cerrarlo libera el «Cargando».
+		expect(enVuelo.done()).toBe(true);
+	});
+
+	test('un pedido solo es el vigente y se cierra limpio', () => {
+		const gate = createRequestGate();
+		const uno = gate.begin();
+
+		expect(uno.isCurrent()).toBe(true);
+		expect(uno.done()).toBe(true);
 	});
 });

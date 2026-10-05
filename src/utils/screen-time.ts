@@ -135,6 +135,63 @@ export function aggregateHourly(report: ScreenTimeReport): number[] {
 	return cubetas;
 }
 
+/** El control de un pedido en vuelo. */
+export interface RequestTicket {
+	/**
+	 * Si este pedido sigue siendo el último que arrancó. Sólo entonces se aplica
+	 * su resultado: uno más nuevo —otro período, un toggle, un borrado— lo deja
+	 * viejo, y aplicar lo viejo pisaría el estado nuevo.
+	 */
+	isCurrent(): boolean;
+	/**
+	 * Lo cierra. Devuelve `true` cuando ya no queda ninguno en vuelo, que es
+	 * cuándo se puede apagar el «Cargando…»: así invalidar un pedido no deja el
+	 * indicador trabado.
+	 */
+	done(): boolean;
+}
+
+/** Un secuenciador de pedidos: sólo el último que arrancó aplica su resultado. */
+export interface RequestGate {
+	/** Arranca un pedido y devuelve su control. */
+	begin(): RequestTicket;
+	/**
+	 * Invalida lo que esté en vuelo sin arrancar nada. Es para los cambios que no
+	 * son una carga —tocar el interruptor, borrar el historial— pero que igual no
+	 * deben ser pisados por una carga anterior que resuelva tarde.
+	 */
+	invalidate(): void;
+}
+
+/**
+ * Crea un secuenciador de pedidos.
+ *
+ * `screenTime()` tarda, y entre que se pide y que contesta puede haber cambiado
+ * el período, el interruptor o el historial. Sin esto, una respuesta vieja pisa
+ * el estado nuevo. Cada pedido toma un número; sólo el último puede aplicar.
+ */
+export function createRequestGate(): RequestGate {
+	let current = 0;
+	let inFlight = 0;
+
+	return {
+		begin(): RequestTicket {
+			const token = ++current;
+			inFlight++;
+			return {
+				isCurrent: () => token === current,
+				done: () => {
+					inFlight = Math.max(0, inFlight - 1);
+					return inFlight === 0;
+				},
+			};
+		},
+		invalidate(): void {
+			current++;
+		},
+	};
+}
+
 /**
  * Parte una duración en horas y minutos enteros.
  *

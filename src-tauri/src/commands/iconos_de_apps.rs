@@ -308,9 +308,12 @@ fn entrada_de_app_id<'a>(app_id: &str, entradas: &'a [Entrada]) -> Option<&'a En
         })
         .or_else(|| {
             let nombre = nombre_de_archivo(app_id)?;
-            entradas
-                .iter()
-                .find(|e| nombre_de_archivo(&e.programa).as_deref() == Some(nombre.as_str()))
+            // Sin distinguir mayúsculas, como los dos emparejados de arriba: el
+            // compositor puede informar `Grim` y el `.desktop` decir
+            // `Exec=/usr/bin/grim`.
+            entradas.iter().find(|e| {
+                nombre_de_archivo(&e.programa).is_some_and(|n| n.eq_ignore_ascii_case(&nombre))
+            })
         })
 }
 
@@ -562,6 +565,22 @@ mod tests {
         )];
 
         let info = entrada_de_app_id("grim", &entradas).unwrap();
+        assert_eq!(info.icono, "applets-screenshooter");
+    }
+
+    /// Y el emparejado por binario tampoco distingue mayúsculas.
+    #[test]
+    fn el_app_id_por_binario_no_distingue_mayusculas() {
+        let entradas = vec![una_entrada_completa(
+            "x",
+            "/usr/bin/grim",
+            "applets-screenshooter",
+            "Grim",
+            "",
+        )];
+
+        // El compositor informa `Grim` y el `.desktop` dice `Exec=/usr/bin/grim`.
+        let info = entrada_de_app_id("Grim", &entradas).unwrap();
         assert_eq!(info.icono, "applets-screenshooter");
     }
 
