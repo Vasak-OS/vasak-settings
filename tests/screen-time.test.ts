@@ -3,6 +3,7 @@ import {
 	aggregateByApp,
 	aggregateByCategory,
 	aggregateHourly,
+	canAdoptReportedEnabled,
 	createRequestGate,
 	HOURS_IN_DAY,
 	type ScreenTimeReport,
@@ -180,16 +181,31 @@ describe('createRequestGate', () => {
 		expect(nuevo.isCurrent()).toBe(true);
 	});
 
-	test('el «Cargando» se apaga recién cuando no queda ninguno en vuelo', () => {
-		// `done()` da true sólo con el último que termina: si lo apagara el primero,
-		// el indicador se iría mientras otra carga sigue.
+	test('el vigente suelta el «Cargando» en cuanto termina, aunque queden viejos', () => {
+		// Es el arreglo: si el vigente ya tiene su informe en pantalla, el indicador
+		// se apaga, sin esperar a un pedido viejo y superado que siga dando vueltas.
 		const gate = createRequestGate();
 
-		const a = gate.begin();
-		const b = gate.begin();
+		const viejo = gate.begin();
+		const actual = gate.begin();
 
-		expect(a.done()).toBe(false); // todavía queda `b`
-		expect(b.done()).toBe(true); // ahora sí
+		// El vigente termina primero: libera el «Cargando» ya.
+		expect(actual.done()).toBe(true);
+		// Y el viejo, al cerrarse después, da true porque no queda ninguno en vuelo
+		// —no deja el indicador trabado— pero no es él quien manda.
+		expect(viejo.done()).toBe(true);
+	});
+
+	test('un pedido superado que termina antes NO suelta el «Cargando»', () => {
+		// Apagarlo ahí taparía con datos viejos la carga del período elegido, que
+		// todavía no llegó.
+		const gate = createRequestGate();
+
+		const viejo = gate.begin();
+		const actual = gate.begin();
+
+		expect(viejo.done()).toBe(false); // el vigente sigue pendiente
+		expect(actual.done()).toBe(true); // ahora sí
 	});
 
 	test('invalidar deja viejo a lo que esté en vuelo, sin arrancar nada', () => {
@@ -211,5 +227,22 @@ describe('createRequestGate', () => {
 
 		expect(uno.isCurrent()).toBe(true);
 		expect(uno.done()).toBe(true);
+	});
+});
+
+describe('canAdoptReportedEnabled', () => {
+	test('la carga vigente adopta el enabled del servicio cuando no hay toggle', () => {
+		expect(canAdoptReportedEnabled(true, false)).toBe(true);
+	});
+
+	test('no lo adopta si hay un toggle en curso, aunque sea la vigente', () => {
+		// Es el arreglo: durante el toggle el interruptor lo gobierna el usuario, y
+		// la carga de período no debe pisarlo con el `enabled` viejo del servicio.
+		expect(canAdoptReportedEnabled(true, true)).toBe(false);
+	});
+
+	test('ni una carga superada, con o sin toggle', () => {
+		expect(canAdoptReportedEnabled(false, false)).toBe(false);
+		expect(canAdoptReportedEnabled(false, true)).toBe(false);
 	});
 });

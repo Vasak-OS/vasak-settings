@@ -144,9 +144,13 @@ export interface RequestTicket {
 	 */
 	isCurrent(): boolean;
 	/**
-	 * Lo cierra. Devuelve `true` cuando ya no queda ninguno en vuelo, que es
-	 * cuándo se puede apagar el «Cargando…»: así invalidar un pedido no deja el
-	 * indicador trabado.
+	 * Lo cierra. Devuelve `true` cuando se puede apagar el «Cargando…»: o bien
+	 * éste es el pedido vigente que acaba de terminar —su resultado ya está en
+	 * pantalla, aunque quede alguno viejo dando vueltas—, o bien no queda ninguno
+	 * en vuelo —así invalidar un pedido no deja el indicador trabado—. Un pedido
+	 * **superado** que termina antes que el vigente devuelve `false`: apagar el
+	 * indicador ahí taparía con datos viejos la carga del período elegido, que
+	 * todavía no llegó.
 	 */
 	done(): boolean;
 }
@@ -182,7 +186,10 @@ export function createRequestGate(): RequestGate {
 				isCurrent: () => token === current,
 				done: () => {
 					inFlight = Math.max(0, inFlight - 1);
-					return inFlight === 0;
+					// El vigente libera el «Cargando» en cuanto termina, aunque queden
+					// pedidos viejos en vuelo; un viejo sólo lo libera si ya no queda
+					// ninguno (para no dejarlo trabado tras una invalidación).
+					return token === current || inFlight === 0;
 				},
 			};
 		},
@@ -190,6 +197,19 @@ export function createRequestGate(): RequestGate {
 			current++;
 		},
 	};
+}
+
+/**
+ * Si una carga de período puede adoptar el `enabled` que trae el servicio.
+ *
+ * El dato del informe —apps, categorías, horas— se aplica siempre que la carga
+ * sea la vigente. El **interruptor** es aparte: mientras hay un toggle en curso,
+ * lo gobierna el usuario, y una carga de período que lea el `enabled` viejo del
+ * servicio —que todavía no procesó el `SetEnabled`— pisaría el estado optimista
+ * del switch. Así que durante el toggle no se toca.
+ */
+export function canAdoptReportedEnabled(isCurrent: boolean, togglePending: boolean): boolean {
+	return isCurrent && !togglePending;
 }
 
 /**

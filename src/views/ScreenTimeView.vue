@@ -42,6 +42,7 @@ import {
 	aggregateByApp,
 	aggregateByCategory,
 	aggregateHourly,
+	canAdoptReportedEnabled,
 	createRequestGate,
 	splitDuration,
 	totalMillis,
@@ -123,6 +124,14 @@ const error = ref('');
 const successMessage = ref('');
 const busy = ref(false);
 const confirmingClear = ref(false);
+/**
+ * Si hay un toggle del interruptor en curso.
+ *
+ * Mientras dura, el interruptor lo gobierna el usuario: una carga de período que
+ * resuelva en ese rato no debe adoptar el `enabled` que trae el servicio, que
+ * todavía puede ser el de antes del `SetEnabled`.
+ */
+const togglePending = ref(false);
 
 const byApp = computed(() => (report.value ? aggregateByApp(report.value) : []));
 const byCategory = computed(() => (report.value ? aggregateByCategory(report.value) : []));
@@ -183,9 +192,16 @@ const load = async () => {
 		const result = await screenTime(from, to);
 		if (!ticket.isCurrent()) return;
 		report.value = result;
-		enabled.value = result.enabled;
+		// El interruptor no se toca si hay un toggle en curso: su estado optimista
+		// manda hasta que el toggle se resuelva.
+		if (canAdoptReportedEnabled(ticket.isCurrent(), togglePending.value)) {
+			enabled.value = result.enabled;
+		}
 	} catch (err) {
 		if (ticket.isCurrent()) {
+			// Soltar lo que hubiera: una carga que falló no deja datos viejos en
+			// pantalla rotulados con el período que se acaba de elegir.
+			report.value = null;
 			error.value = t('views.screenTime.errorLoading').replace('{0}', String(err));
 		}
 	} finally {
@@ -205,11 +221,15 @@ const toggleEnabled = async (value: boolean) => {
 	// Invalidar cualquier carga en vuelo: su `enabled` es de antes de este cambio y
 	// no debe pisar el que se acaba de elegir.
 	gate.invalidate();
+	// Y mientras dure el toggle, ninguna carga de período —aunque sea la vigente—
+	// adopta el `enabled` del servicio: lo gobierna este toggle.
+	togglePending.value = true;
 	busy.value = true;
 	error.value = '';
 	successMessage.value = '';
 	const previous = enabled.value;
 	enabled.value = value;
+	let succeeded = false;
 	try {
 		// Persistir en el archivo —de donde el servicio lo lee al arrancar— y
 		// avisarle en el acto. Las dos cosas, o el cambio no sobrevive al próximo
@@ -220,6 +240,7 @@ const toggleEnabled = async (value: boolean) => {
 			await writeConfig(config);
 		}
 		await setScreenTimeEnabled(value);
+		succeeded = true;
 		successMessage.value = t('views.screenTime.saved');
 		setTimeout(() => {
 			successMessage.value = '';
@@ -241,8 +262,16 @@ const toggleEnabled = async (value: boolean) => {
 		}
 		error.value = t('views.screenTime.errorSaving').replace('{0}', String(err));
 	} finally {
+		togglePending.value = false;
 		busy.value = false;
 	}
+
+	// Ya resuelto el toggle, reconciliar con el servicio: refresca el informe del
+	// período vigente —que pudo quedar sin cargar si una carga de período fue
+	// invalidada por este toggle— y, con `togglePending` ya en falso, adopta el
+	// `enabled` real. Sólo tras un cambio aceptado: si falló, se conserva el
+	// mensaje de error y el estado revertido.
+	if (succeeded) await load();
 };
 
 const doClear = async () => {
