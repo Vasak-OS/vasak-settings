@@ -261,6 +261,10 @@ pub fn run() {
             commands::connect::connect_list_known_devices,
             commands::connect::connect_set_alias,
             commands::connect::connect_forget_device,
+            commands::screen_time::screen_time,
+            commands::screen_time::clear_screen_time,
+            commands::screen_time::screen_time_set_enabled,
+            commands::screen_time::screen_time_enabled,
         ])
         // One setup hook, not two: `Builder::setup` replaces whatever was
         // registered before it, so a second call silently threw the first away.

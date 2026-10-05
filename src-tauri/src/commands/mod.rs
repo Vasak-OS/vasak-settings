@@ -19,6 +19,7 @@ pub mod nitidez;
 pub mod online_accounts;
 pub mod permissions;
 pub mod power_profiles;
+pub mod screen_time;
 pub mod shortcuts;
 pub mod system_config;
 pub mod system_info;

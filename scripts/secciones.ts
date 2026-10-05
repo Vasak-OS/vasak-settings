@@ -189,6 +189,10 @@ export const PALABRAS: Record<string, Record<(typeof IDIOMAS)[number], string[]>
 		es: ['permisos', 'cortafuegos'],
 		en: ['permissions', 'firewall'],
 	},
+	'screen-time': {
+		es: ['uso', 'bienestar digital', 'hábitos', 'estadísticas'],
+		en: ['usage', 'digital wellbeing', 'habits', 'statistics'],
+	},
 	'login-screen': {
 		es: ['greeter', 'pantalla de bienvenida'],
 		en: ['greeter', 'display manager'],

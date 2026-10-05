@@ -63,6 +63,7 @@ sidebar:
     monitors: Pantallas
     actualizaciones: Actualizaciones
     privacySecurity: Privacidad y seguridad
+    screenTime: Tiempo de pantalla
     networkWifi: Wi-Fi
     networkBluetooth: Bluetooth
     networkVpn: VPN
@@ -267,6 +268,62 @@ views:
     aplicarNota: >-
       Aplicarlo desde esta pantalla necesita privilegios de administrador, y eso
       va a pasar por un servicio del sistema y no por esta ventana.
+  screenTime:
+    title: Tiempo de pantalla
+    description: >-
+      Cuánto se usa cada aplicación, en qué tipo de cosas y a qué hora. Lo mide un
+      servicio del equipo y nada de esto sale de acá.
+    record: Registrar el tiempo de pantalla
+    recordHint: >-
+      Con esto apagado, lo ya guardado se sigue pudiendo mirar, pero no se cuenta
+      nada nuevo.
+    saved: Preferencia guardada
+    loading: Cargando el tiempo de pantalla…
+    errorLoading: "No se pudo leer el tiempo de pantalla: {0}"
+    errorSaving: "No se pudo guardar la preferencia: {0}"
+    periodLabel: Período
+    period:
+      today: Hoy
+      week: 7 días
+      all: Todo
+    summary:
+      total: Tiempo total
+      apps: Aplicaciones
+    byApp:
+      title: Por aplicación
+    byCategory:
+      title: Por categoría
+    byHour:
+      title: Por horario
+      description: El total de cada hora del día, sumando todos los días del período.
+    noData:
+      title: Todavía no hay nada que mostrar
+      note: A medida que uses el equipo, acá va a aparecer en qué se te va el tiempo.
+      disabled: El registro está apagado. Prendelo para empezar a contar el uso.
+    duration:
+      hm: "{0} h {1} min"
+      hoursOnly: "{0} h"
+      minutesOnly: "{0} min"
+    categories:
+      audiovideo: Multimedia
+      development: Desarrollo
+      education: Educación
+      game: Juegos
+      graphics: Gráficos
+      network: Internet
+      office: Oficina
+      science: Ciencia
+      settings: Configuración
+      system: Sistema
+      utility: Utilidades
+      other: Otras
+    clear:
+      title: Borrar el historial
+      description: Elimina todo el tiempo de pantalla guardado. No se puede deshacer.
+      button: Borrar el historial
+      confirm: ¿Borrar todo el historial de tiempo de pantalla? No se puede deshacer.
+      confirmButton: Borrar todo
+      errorClearing: "No se pudo borrar el historial: {0}"
   privacySecurity:
     title: Privacidad y seguridad
     description: >-

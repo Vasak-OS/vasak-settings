@@ -60,6 +60,33 @@ export function clearStyle(style: Record<string, unknown>): void {
 	}
 }
 
+/**
+ * Si el registro del tiempo de pantalla está prendido.
+ *
+ * La sección `screen_time` no existe en el archivo hasta que alguien toca el
+ * interruptor, y la clave ausente significa **apagado**: el registro de uso no
+ * se enciende solo, se elige. El servicio de salud lee `screen_time.enabled` con
+ * este mismo criterio al arrancar.
+ */
+export function readScreenTimeEnabled(config: unknown): boolean {
+	const section =
+		config && typeof config === 'object'
+			? ((config as Record<string, unknown>).screen_time as Record<string, unknown> | undefined)
+			: undefined;
+	return configBoolean(section?.enabled, false);
+}
+
+/**
+ * Deja la sección `screen_time` con el interruptor puesto.
+ *
+ * Conserva lo que ya hubiera en la sección: es compartida con lo que el servicio
+ * guarde después, y reemplazarla entera borraría claves ajenas.
+ */
+export function writeScreenTimeEnabled(config: Record<string, unknown>, enabled: boolean): void {
+	const previous = (config.screen_time as Record<string, unknown> | undefined) ?? {};
+	config.screen_time = { ...previous, enabled };
+}
+
 /** Lo que el panel muestra y se puede apagar, en el orden en que aparece. */
 export const PANEL_INDICATORS = ['weather', 'music', 'transfer', 'tray', 'privacy'] as const;
 

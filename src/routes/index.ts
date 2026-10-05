@@ -155,6 +155,11 @@ const routes = [
 		component: () => import('@/views/PrivacySecurityView.vue'),
 	},
 	{
+		path: '/screen-time',
+		name: 'screen-time',
+		component: () => import('@/views/ScreenTimeView.vue'),
+	},
+	{
 		path: '/online-accounts',
 		name: 'online-accounts',
 		component: () => import('@/views/OnlineAccountsView.vue'),

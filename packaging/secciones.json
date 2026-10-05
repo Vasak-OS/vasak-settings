@@ -473,6 +473,28 @@
 		}
 	},
 	{
+		"id": "screen-time",
+		"icono": "preferences-system-time",
+		"nombres": {
+			"es": "Tiempo de pantalla",
+			"en": "Screen time"
+		},
+		"palabras": {
+			"es": [
+				"uso",
+				"bienestar digital",
+				"hábitos",
+				"estadísticas"
+			],
+			"en": [
+				"usage",
+				"digital wellbeing",
+				"habits",
+				"statistics"
+			]
+		}
+	},
+	{
 		"id": "login-screen",
 		"icono": "preferences-system-login",
 		"nombres": {

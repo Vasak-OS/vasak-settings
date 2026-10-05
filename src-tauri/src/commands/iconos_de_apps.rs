@@ -39,6 +39,32 @@ pub struct Entrada {
     /// El programa que ejecuta, sin argumentos.
     pub programa: String,
     pub icono: String,
+    /// El nombre visible de la aplicación (`Name` del `.desktop`), o vacío si no
+    /// lo declara.
+    ///
+    /// Lo pide el tiempo de pantalla: el servicio de salud informa el `app-id`
+    /// que da el compositor, que es un identificador y no un nombre para leer.
+    /// La pantalla de permisos no lo usa —ahí el nombre se lo da el servicio—,
+    /// pero vive en la misma entrada para no recorrer los `.desktop` dos veces.
+    pub name: String,
+    /// La clase de ventana que declara el `.desktop` (`StartupWMClass`), o vacío.
+    ///
+    /// Es el otro camino para emparejar un `app-id` del compositor: muchas
+    /// aplicaciones lo informan igual a su `StartupWMClass` y no al nombre del
+    /// archivo `.desktop`.
+    pub startup_wm_class: String,
+}
+
+/// El icono y el nombre de una aplicación, resueltos desde su `.desktop`.
+///
+/// Lo consume el tiempo de pantalla, que recibe `app-id`s del compositor y
+/// necesita las dos cosas para que la lista se lea: el icono para reconocerla de
+/// un vistazo y el nombre porque un `app-id` crudo —`org.gnome.Nautilus`— no es
+/// un nombre.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AppInfo {
+    pub icon: String,
+    pub name: String,
 }
 
 /// El programa que una línea `Exec=` lanza de verdad.
@@ -77,6 +103,8 @@ pub fn leer_entrada(id: &str, contenido: &str) -> Option<Entrada> {
     let mut en_el_grupo = false;
     let mut exec = None;
     let mut icono = None;
+    let mut name = String::new();
+    let mut startup_wm_class = String::new();
 
     for linea in contenido.lines() {
         let linea = linea.trim();
@@ -97,6 +125,13 @@ pub fn leer_entrada(id: &str, contenido: &str) -> Option<Entrada> {
         match clave.trim() {
             "Exec" if exec.is_none() => exec = programa_de_exec(valor.trim()),
             "Icon" if icono.is_none() => icono = Some(valor.trim().to_string()),
+            // Sólo la clave sin idioma: `Name[es]` termina en la clave `Name[es]`
+            // y no en `Name`, así que esto se queda con la genérica, que es la que
+            // el compositor y el servicio de salud ven.
+            "Name" if name.is_empty() => name = valor.trim().to_string(),
+            "StartupWMClass" if startup_wm_class.is_empty() => {
+                startup_wm_class = valor.trim().to_string()
+            }
             _ => {}
         }
     }
@@ -110,6 +145,8 @@ pub fn leer_entrada(id: &str, contenido: &str) -> Option<Entrada> {
         id: id.to_string(),
         programa: exec?,
         icono,
+        name,
+        startup_wm_class,
     })
 }
 
@@ -248,6 +285,60 @@ pub fn iconos_de(binarios: &[String]) -> HashMap<String, String> {
         .collect()
 }
 
+/// La entrada que le corresponde a un `app-id` del compositor, si alguna.
+///
+/// Se prueba, por orden, el identificador del `.desktop`, la clase de ventana
+/// (`StartupWMClass`) y, por último, el nombre del binario: un `app-id` como
+/// `org.gnome.Nautilus` coincide por el primero, uno como `Navigator`/`firefox`
+/// por la clase, y un programa suelto por su binario. Todo sin distinguir
+/// mayúsculas, que es donde se pierden las coincidencias cuando el compositor y
+/// el `.desktop` capitalizan distinto.
+fn entrada_de_app_id<'a>(app_id: &str, entradas: &'a [Entrada]) -> Option<&'a Entrada> {
+    if app_id.is_empty() {
+        return None;
+    }
+
+    entradas
+        .iter()
+        .find(|e| e.id.eq_ignore_ascii_case(app_id))
+        .or_else(|| {
+            entradas.iter().find(|e| {
+                !e.startup_wm_class.is_empty() && e.startup_wm_class.eq_ignore_ascii_case(app_id)
+            })
+        })
+        .or_else(|| {
+            let nombre = nombre_de_archivo(app_id)?;
+            entradas
+                .iter()
+                .find(|e| nombre_de_archivo(&e.programa).as_deref() == Some(nombre.as_str()))
+        })
+}
+
+/// El icono y el nombre de cada `app-id` del compositor.
+///
+/// Recibe la lista entera por lo mismo que `iconos_de`: para leer los
+/// directorios una sola vez por pantalla. Lo que no se encuentra cae en el icono
+/// genérico y en el propio `app-id` como nombre —que es mejor que nada y es lo
+/// que pide el tiempo de pantalla para una ventana sin `.desktop`.
+pub fn app_info(app_ids: &[String]) -> HashMap<String, AppInfo> {
+    let entradas = entradas();
+
+    app_ids
+        .iter()
+        .map(|app_id| {
+            let entrada = entrada_de_app_id(app_id, &entradas);
+            let icon = entrada
+                .map(|e| e.icono.clone())
+                .unwrap_or_else(|| ICONO_GENERICO.to_string());
+            let name = entrada
+                .map(|e| e.name.clone())
+                .filter(|n| !n.is_empty())
+                .unwrap_or_else(|| app_id.clone());
+            (app_id.clone(), AppInfo { icon, name })
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -304,6 +395,8 @@ mod tests {
                 id: "ar.net.vasak.os.Text".into(),
                 programa: "/usr/bin/vasak-text".into(),
                 icono: "accessories-text-editor".into(),
+                name: "Editor".into(),
+                startup_wm_class: String::new(),
             })
         );
     }
@@ -356,6 +449,8 @@ mod tests {
             id: String::new(),
             programa: "grim".into(),
             icono: "applets-screenshooter".into(),
+            name: String::new(),
+            startup_wm_class: String::new(),
         }];
 
         assert_eq!(
@@ -372,6 +467,8 @@ mod tests {
             id: String::new(),
             programa: "/usr/bin/otra".into(),
             icono: "otra".into(),
+            name: String::new(),
+            startup_wm_class: String::new(),
         }];
 
         assert_eq!(icono_de("/usr/bin/grim", &entradas), None);
@@ -388,7 +485,94 @@ mod tests {
             id: id.into(),
             programa: programa.into(),
             icono: icono.into(),
+            name: String::new(),
+            startup_wm_class: String::new(),
         }
+    }
+
+    fn una_entrada_completa(
+        id: &str,
+        programa: &str,
+        icono: &str,
+        name: &str,
+        startup_wm_class: &str,
+    ) -> Entrada {
+        Entrada {
+            id: id.into(),
+            programa: programa.into(),
+            icono: icono.into(),
+            name: name.into(),
+            startup_wm_class: startup_wm_class.into(),
+        }
+    }
+
+    /// El nombre y la clase de ventana se leen del `.desktop`.
+    #[test]
+    fn se_lee_el_nombre_y_la_clase_de_ventana() {
+        let entrada = leer_entrada(
+            "firefox",
+            "[Desktop Entry]\nName=Firefox\nName[es]=Zorro\nExec=/usr/bin/firefox %u\nIcon=firefox\nStartupWMClass=Navigator\n",
+        )
+        .unwrap();
+        // La genérica, no la traducida: es la que ve el compositor.
+        assert_eq!(entrada.name, "Firefox");
+        assert_eq!(entrada.startup_wm_class, "Navigator");
+    }
+
+    /// Un `app-id` se resuelve por el identificador del `.desktop`.
+    #[test]
+    fn el_app_id_se_resuelve_por_el_identificador() {
+        let entradas = vec![una_entrada_completa(
+            "org.gnome.Nautilus",
+            "/usr/bin/nautilus",
+            "org.gnome.Nautilus",
+            "Archivos",
+            "",
+        )];
+
+        let info = entrada_de_app_id("org.gnome.Nautilus", &entradas).unwrap();
+        assert_eq!(info.name, "Archivos");
+    }
+
+    /// Y si el identificador no coincide, por la clase de ventana.
+    #[test]
+    fn el_app_id_cae_en_la_clase_de_ventana() {
+        let entradas = vec![una_entrada_completa(
+            "firefox",
+            "/usr/bin/firefox",
+            "firefox",
+            "Firefox",
+            "Navigator",
+        )];
+
+        // El compositor informa la clase de ventana y no el id del archivo.
+        let info = entrada_de_app_id("Navigator", &entradas).unwrap();
+        assert_eq!(info.name, "Firefox");
+    }
+
+    /// Y por último por el nombre del binario.
+    #[test]
+    fn el_app_id_cae_en_el_binario() {
+        let entradas = vec![una_entrada_completa(
+            "x",
+            "/usr/bin/grim",
+            "applets-screenshooter",
+            "Grim",
+            "",
+        )];
+
+        let info = entrada_de_app_id("grim", &entradas).unwrap();
+        assert_eq!(info.icono, "applets-screenshooter");
+    }
+
+    /// Lo que no se encuentra cae en el genérico y en el propio `app-id`.
+    #[test]
+    fn un_app_id_sin_entrada_cae_en_el_generico() {
+        let info = app_info(&["algo.desconocido".to_string()]);
+        let entrada = info.get("algo.desconocido").unwrap();
+        assert_eq!(entrada.icon, ICONO_GENERICO);
+        // Sin `.desktop`, el nombre es el propio identificador: mejor que nada.
+        assert_eq!(entrada.name, "algo.desconocido");
     }
 
     /// Lo que llega por el portal se empareja por el identificador, no por `Exec`.

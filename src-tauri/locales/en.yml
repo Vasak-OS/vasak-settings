@@ -63,6 +63,7 @@ sidebar:
     monitors: Displays
     actualizaciones: Updates
     privacySecurity: Privacy and security
+    screenTime: Screen time
     networkWifi: Wi-Fi
     networkBluetooth: Bluetooth
     networkVpn: VPN
@@ -265,6 +266,62 @@ views:
     aplicarNota: >-
       Applying it from this screen needs administrator privileges, and that will
       go through a system service rather than this window.
+  screenTime:
+    title: Screen time
+    description: >-
+      How long each application is used, on what kind of things, and at what time.
+      A service on this computer measures it, and none of it leaves here.
+    record: Record screen time
+    recordHint: >-
+      With this off, what's already saved can still be viewed, but nothing new is
+      counted.
+    saved: Preference saved
+    loading: Loading screen time…
+    errorLoading: "Could not read screen time: {0}"
+    errorSaving: "Could not save the preference: {0}"
+    periodLabel: Period
+    period:
+      today: Today
+      week: 7 days
+      all: All
+    summary:
+      total: Total time
+      apps: Applications
+    byApp:
+      title: By application
+    byCategory:
+      title: By category
+    byHour:
+      title: By time of day
+      description: The total for each hour of the day, summed over every day in the period.
+    noData:
+      title: Nothing to show yet
+      note: As you use the computer, where your time goes will appear here.
+      disabled: Recording is off. Turn it on to start counting usage.
+    duration:
+      hm: "{0} h {1} min"
+      hoursOnly: "{0} h"
+      minutesOnly: "{0} min"
+    categories:
+      audiovideo: Multimedia
+      development: Development
+      education: Education
+      game: Games
+      graphics: Graphics
+      network: Internet
+      office: Office
+      science: Science
+      settings: Settings
+      system: System
+      utility: Utilities
+      other: Other
+    clear:
+      title: Clear history
+      description: Removes all saved screen time. This cannot be undone.
+      button: Clear history
+      confirm: Clear all screen time history? This cannot be undone.
+      confirmButton: Clear all
+      errorClearing: "Could not clear the history: {0}"
   privacySecurity:
     title: Privacy and security
     description: >-
