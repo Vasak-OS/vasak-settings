@@ -160,6 +160,11 @@ export function categoriasDelMenu(t: Traductor): SidebarCategory[] {
 					icon: 'security-high',
 				},
 				{
+					id: 'screen-time',
+					label: t('sidebar.items.screenTime'),
+					icon: 'preferences-system-time',
+				},
+				{
 					id: 'login-screen',
 					label: t('sidebar.items.loginScreen'),
 					icon: 'preferences-system-login',

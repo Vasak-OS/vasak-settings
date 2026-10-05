@@ -6,9 +6,11 @@ import {
 	PANEL_POSITIONS,
 	readBarPosition,
 	readPanelPosition,
+	readScreenTimeEnabled,
 	writeBarPosition,
 	writePanelPosition,
 	writeScheme,
+	writeScreenTimeEnabled,
 } from '../src/utils/config-values';
 
 /**
@@ -200,5 +202,48 @@ describe('writePanelPosition', () => {
 		writePanelPosition(config, 'left');
 
 		expect(config.panel).toEqual({ weather: false, tray: false, position: 'left' });
+	});
+});
+
+describe('readScreenTimeEnabled', () => {
+	test('la clave ausente significa apagado', () => {
+		// El registro de uso no se enciende solo: se elige. El servicio de salud
+		// lee con este mismo criterio, así que leerlo al revés acá prendería la
+		// medición en cada instalación nueva sin que nadie la pidiera.
+		expect(readScreenTimeEnabled({})).toBe(false);
+		expect(readScreenTimeEnabled({ screen_time: {} })).toBe(false);
+	});
+
+	test('toma el booleano cuando está', () => {
+		expect(readScreenTimeEnabled({ screen_time: { enabled: true } })).toBe(true);
+		expect(readScreenTimeEnabled({ screen_time: { enabled: false } })).toBe(false);
+	});
+
+	test('un valor que no es booleano cae en apagado', () => {
+		// Sale de un archivo editable a mano: un `"si"` no es `true`.
+		expect(readScreenTimeEnabled({ screen_time: { enabled: 'yes' } })).toBe(false);
+		expect(readScreenTimeEnabled({ screen_time: 'on' })).toBe(false);
+	});
+});
+
+describe('writeScreenTimeEnabled', () => {
+	test('deja el interruptor puesto', () => {
+		const config: Record<string, unknown> = {};
+
+		writeScreenTimeEnabled(config, true);
+
+		expect(config.screen_time).toEqual({ enabled: true });
+	});
+
+	test('y conserva lo que el servicio haya guardado en la sección', () => {
+		// La sección es compartida con lo que el servicio escriba después;
+		// reemplazarla entera le borraría esas claves.
+		const config: Record<string, unknown> = {
+			screen_time: { enabled: false, retention_days: 30 },
+		};
+
+		writeScreenTimeEnabled(config, true);
+
+		expect(config.screen_time).toEqual({ enabled: true, retention_days: 30 });
 	});
 });
