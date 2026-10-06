@@ -25,8 +25,16 @@ impl MonitorMode {
     /// The `WIDTHxHEIGHT@REFRESH` wayfire expects. It reads the refresh as
     /// millihertz when it is four digits or more, which is the only way to name
     /// 59.997 Hz exactly.
+    ///
+    /// A refresh of 0 means "unknown" — the kernel fallback does not carry one.
+    /// There we name the resolution alone and let wayfire pick the rate, instead
+    /// of asking for a fabricated 60 Hz the panel may not actually have.
     pub fn to_wayfire(&self) -> String {
-        format!("{}x{}@{}", self.width, self.height, self.refresh_mhz)
+        if self.refresh_mhz == 0 {
+            format!("{}x{}", self.width, self.height)
+        } else {
+            format!("{}x{}@{}", self.width, self.height, self.refresh_mhz)
+        }
     }
 }
 
@@ -433,6 +441,18 @@ fn kernel_modes(connector: &str) -> Vec<MonitorMode> {
         return Vec::new();
     };
 
+    parse_kernel_modes(&content)
+}
+
+/// Parses `/sys/class/drm/*/modes`: one `WIDTHxHEIGHT` per line, in the driver's
+/// preference order, with the first line the preferred mode.
+///
+/// sysfs does not carry the refresh, so each mode is left with an unknown rate
+/// (0) rather than a fabricated 60 Hz: inventing 60 was exactly what made every
+/// panel read as 60 Hz when wlr-randr was missing. `to_wayfire` then names the
+/// resolution alone so wayfire picks a rate the output actually has, and the UI
+/// shows "—" and asks the user to install wlr-randr.
+fn parse_kernel_modes(content: &str) -> Vec<MonitorMode> {
     let mut modes: Vec<MonitorMode> = Vec::new();
 
     for (index, line) in content.lines().enumerate() {
@@ -449,10 +469,7 @@ fn kernel_modes(connector: &str) -> Vec<MonitorMode> {
         modes.push(MonitorMode {
             width,
             height,
-            // sysfs does not carry the refresh; the first entry is the
-            // preferred mode, and wayfire picks the highest rate the output has
-            // for a resolution when the one asked for is not exact.
-            refresh_mhz: 60_000,
+            refresh_mhz: 0,
             is_preferred: index == 0,
             is_current: false,
         });
@@ -793,6 +810,121 @@ DP-2 "Dell Inc. DELL U2720Q H7MTP83 (DP-2)"
         assert_eq!(current.refresh_mhz, 59_997);
         assert_eq!(current.to_wayfire(), "1920x1080@59997");
         assert!(current.is_preferred);
+    }
+
+    /// Un panel de alta frecuencia como el del bug #147: cada modo tiene que
+    /// quedar con su Hz real —144, 120, 60— y no todos aplastados a 60.
+    const WLR_RANDR_HIGH_REFRESH: &str = r#"DP-1 "Acme Gaming 0x1234 (DP-1)"
+  Make: Acme
+  Model: Gaming
+  Enabled: yes
+  Modes:
+    2560x1440 px, 164.835999 Hz (preferred)
+    2560x1440 px, 143.998001 Hz
+    2560x1440 px, 59.950001 Hz (current)
+    1920x1080 px, 120.000000 Hz
+  Position: 0,0
+  Transform: normal
+  Scale: 1.000000
+  Adaptive Sync: enabled
+"#;
+
+    #[test]
+    fn parse_wlr_randr_mode_reads_the_rate_and_the_flags() {
+        let high =
+            parse_wlr_randr_mode("2560x1440 px, 143.998001 Hz (preferred, current)").unwrap();
+        assert_eq!((high.width, high.height), (2560, 1440));
+        assert_eq!(high.refresh_mhz, 143_998);
+        assert!(high.is_preferred);
+        assert!(high.is_current);
+
+        let plain = parse_wlr_randr_mode("1920x1080 px, 119.982002 Hz").unwrap();
+        assert_eq!(plain.refresh_mhz, 119_982);
+        assert!(!plain.is_preferred);
+        assert!(!plain.is_current);
+
+        let only_current = parse_wlr_randr_mode("3840x2160 px, 60.000000 Hz (current)").unwrap();
+        assert_eq!(only_current.refresh_mhz, 60_000);
+        assert!(!only_current.is_preferred);
+        assert!(only_current.is_current);
+    }
+
+    /// Las líneas que no son un modo —entre ellas `Adaptive Sync`, que agrega
+    /// wlr-randr 0.5— no pueden colarse como un modo inventado.
+    #[test]
+    fn parse_wlr_randr_mode_ignores_lines_that_are_not_modes() {
+        assert!(parse_wlr_randr_mode("Adaptive Sync: disabled").is_none());
+        assert!(parse_wlr_randr_mode("Modes:").is_none());
+        assert!(parse_wlr_randr_mode("Position: 0,0").is_none());
+        assert!(parse_wlr_randr_mode("Make: Acme").is_none());
+    }
+
+    #[test]
+    fn offers_every_refresh_rate_a_high_refresh_panel_reports() {
+        let monitors = parse_wlr_randr(WLR_RANDR_HIGH_REFRESH);
+        assert_eq!(monitors.len(), 1);
+
+        // Los tres modos de 1440p conservan su frecuencia; ninguno quedó en 60.
+        let rates: Vec<u32> = monitors[0]
+            .modes
+            .iter()
+            .filter(|m| m.width == 2560 && m.height == 1440)
+            .map(|m| m.refresh_mhz)
+            .collect();
+        assert_eq!(rates, vec![164_836, 143_998, 59_950]);
+
+        let preferred = monitors[0].modes.iter().find(|m| m.is_preferred).unwrap();
+        assert_eq!(preferred.refresh_mhz, 164_836);
+        let current = monitors[0].modes.iter().find(|m| m.is_current).unwrap();
+        assert_eq!(current.refresh_mhz, 59_950);
+
+        // La línea `Adaptive Sync` no se contó como un modo de más.
+        assert_eq!(monitors[0].modes.len(), 4);
+    }
+
+    /// El síntoma del bug: cuando no hay wlr-randr se cae al respaldo del kernel,
+    /// que leía sólo la resolución y le ponía 60 Hz a todo. Ahora la frecuencia
+    /// queda desconocida (0), no inventada.
+    #[test]
+    fn kernel_modes_do_not_invent_a_refresh_rate() {
+        let content = "2560x1440\n1920x1080\n1920x1080\n1280x720\n";
+        let modes = parse_kernel_modes(content);
+
+        assert_eq!(modes.len(), 3, "el 1920x1080 repetido se descarta");
+        assert!(
+            modes.iter().all(|mode| mode.refresh_mhz == 0),
+            "ninguna frecuencia de 60 inventada"
+        );
+        assert_eq!(modes[0].width, 2560);
+        assert!(
+            modes[0].is_preferred,
+            "la primera línea es el modo preferido"
+        );
+        assert!(!modes[1].is_preferred);
+    }
+
+    /// Un modo sin frecuencia conocida nombra la resolución sola, para que
+    /// wayfire elija una que el monitor tenga de verdad en vez de que le pidamos
+    /// un 60 Hz que puede no existir.
+    #[test]
+    fn an_unknown_refresh_names_the_resolution_alone() {
+        let unknown = MonitorMode {
+            width: 1920,
+            height: 1080,
+            refresh_mhz: 0,
+            is_preferred: true,
+            is_current: false,
+        };
+        assert_eq!(unknown.to_wayfire(), "1920x1080");
+
+        let known = MonitorMode {
+            width: 2560,
+            height: 1440,
+            refresh_mhz: 143_998,
+            is_preferred: false,
+            is_current: true,
+        };
+        assert_eq!(known.to_wayfire(), "2560x1440@143998");
     }
 
     #[test]

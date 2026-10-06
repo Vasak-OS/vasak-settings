@@ -98,5 +98,9 @@ export function logicalSize(mode: MonitorMode, scale: number, transform: string)
 }
 
 export function formatRefresh(mode: MonitorMode): string {
+	// 0 significa frecuencia desconocida: el respaldo del kernel no la trae. Antes
+	// se inventaba 60 Hz y era el síntoma del bug; mostramos un guion y el aviso
+	// de instalar wlr-randr ya explica por qué.
+	if (mode.refresh_mhz <= 0) return '—';
 	return `${(mode.refresh_mhz / 1000).toFixed(3).replace(/\.?0+$/, '')} Hz`;
 }
