@@ -1,6 +1,6 @@
 [package]
 name = "vasak-settings"
-version = "0.38.1"
+version = "0.39.0"
 description = "A Vasak Application (template)"
 authors = ["Vasak Group", "Joaquin (Pato) Decima"]
 edition = "2021"
@@ -58,6 +58,10 @@ zbus = { version = "4", default-features = false, features = ["tokio"] }
 tauri-plugin-bluetooth-manager = "2.2"
 #tauri-plugin-bluetooth-manager = { path = "../../tauri-plugin-bluetooth-manager" }
 tauri-plugin-network-manager = "2"
+# El perfil de energía y el brillo por monitor viven en plugins compartidos
+# con el centro de control del escritorio (vasak-desktop#174, decisión 4).
+tauri-plugin-power-profiles = "2"
+tauri-plugin-display-manager = "2"
 tauri-plugin-vsk-contextual-menu = "2"
 tauri-plugin-vsk-journal = "2"
 # Para leer las respuestas PROPFIND del autodescubrimiento de CalDAV/CardDAV.

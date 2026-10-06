@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { setBrightness } from '@vasakgroup/plugin-display-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import {
 	AlertMessage,
@@ -11,17 +12,15 @@ import {
 } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
 import MonitorCanvas, { type CanvasMonitor } from '@/components/monitors/MonitorCanvas.vue';
+import { useBrightness } from '@/composables/useBrightness';
 import {
 	applyMonitorLayout,
-	type BrightnessKind,
 	type DetectedMonitor,
 	formatRefresh,
 	getDetectedMonitors,
-	getMonitorBrightness,
 	logicalSize,
 	type MonitorMode,
 	type MonitorSetting,
-	setMonitorBrightness,
 } from '@/services/monitors.service';
 
 interface EditableMonitor extends MonitorSetting {
@@ -30,18 +29,26 @@ interface EditableMonitor extends MonitorSetting {
 	modes: MonitorMode[];
 }
 
-interface Brightness {
-	kind: BrightnessKind;
-	handle: string;
-	percent: number;
-}
-
 const { t } = useI18n();
+const {
+	report: brightnessReport,
+	error: brightnessError,
+	ddcMessages,
+	load: loadBrightness,
+} = useBrightness(t);
+
+/** El brillo de cada salida; los objetos son los del informe, así que el
+ * deslizador los cambia en el lugar. */
+const brightness = computed(() =>
+	Object.fromEntries(
+		(brightnessReport.value?.monitors ?? [])
+			.filter((entry) => entry.output !== null)
+			.map((entry) => [entry.output as string, entry])
+	)
+);
 
 const monitors = ref<EditableMonitor[]>([]);
 const original = ref('');
-const brightness = ref<Record<string, Brightness>>({});
-const ddcHint = ref('');
 const usingKernelFallback = ref(false);
 const loading = ref(true);
 const saving = ref(false);
@@ -145,21 +152,6 @@ async function load() {
 	}
 }
 
-async function loadBrightness() {
-	try {
-		const report = await getMonitorBrightness(connected.value.map((m) => m.name));
-		ddcHint.value = report.ddc_hint ?? '';
-		brightness.value = Object.fromEntries(
-			report.monitors.map((entry) => [
-				entry.output,
-				{ kind: entry.kind, handle: entry.handle, percent: entry.percent },
-			])
-		);
-	} catch (e) {
-		ddcHint.value = String(e);
-	}
-}
-
 function resolutionOptions(monitor: EditableMonitor) {
 	const seen = new Set<string>();
 	return monitor.modes
@@ -235,7 +227,7 @@ async function onBrightnessChange(name: string, percent: number) {
 	if (!entry) return;
 	entry.percent = percent;
 	try {
-		await setMonitorBrightness(entry.kind, entry.handle, percent);
+		await setBrightness(entry.kind, entry.handle, percent);
 	} catch (e) {
 		error.value = t('views.monitors.brightnessError')
 			.replace('{0}', name)
@@ -421,7 +413,10 @@ onMounted(load);
 				</p>
 			</Panel>
 
-			<AlertMessage v-if="ddcHint" tone="info">{{ ddcHint }}</AlertMessage>
+			<AlertMessage v-for="message in ddcMessages" :key="message" tone="info">{{
+				message
+			}}</AlertMessage>
+			<AlertMessage v-if="brightnessError" tone="error">{{ brightnessError }}</AlertMessage>
 
 			<div v-if="connected.length > 0" class="flex justify-end">
 				<button

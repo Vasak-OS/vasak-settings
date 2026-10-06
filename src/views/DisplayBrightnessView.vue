@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
+import {
+	getNightLight,
+	type MonitorBrightness,
+	type NightLight,
+	setBrightness,
+	setNightLight,
+} from '@vasakgroup/plugin-display-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import {
 	AlertMessage,
@@ -12,30 +19,17 @@ import {
 	TextInput,
 } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
-
-interface BacklightDevice {
-	name: string;
-	brightness: number;
-	max_brightness: number;
-	percent: number;
-}
-
-interface NightLight {
-	enabled: boolean;
-	available: boolean;
-	mode: string;
-	day_temp: number;
-	night_temp: number;
-	start: string;
-	stop: string;
-	latitude: string;
-	longitude: string;
-}
+import { useBrightness } from '@/composables/useBrightness';
+import { formatCoordinate, parseCoordinate } from '@/utils/night-light-form';
 
 const { t } = useI18n();
+const { report, error: brightnessError, ddcMessages, load: loadBrightness } = useBrightness(t);
+const screens = computed(() => report.value?.monitors ?? []);
 
-const backlights = ref<BacklightDevice[]>([]);
 const nightLight = ref<NightLight | null>(null);
+const nightLightEnabled = ref(false);
+const latitude = ref('');
+const longitude = ref('');
 const error = ref('');
 const success = ref('');
 const savingNight = ref(false);
@@ -45,9 +39,8 @@ const modes = computed(() => [
 	{ label: t('views.brightness.modeLocation'), value: 'location' },
 ]);
 
-const hasBacklight = computed(() => backlights.value.length > 0);
-const isLocationMode = computed(() => nightLight.value?.mode === 'location');
-
+const hasScreens = computed(() => screens.value.length > 0);
+const isLocationMode = computed(() => nightLight.value?.config.mode === 'location');
 function flash(message: string) {
 	success.value = message;
 	setTimeout(() => {
@@ -55,11 +48,19 @@ function flash(message: string) {
 	}, 3000);
 }
 
+function applyNightLight(next: NightLight) {
+	nightLight.value = next;
+	latitude.value = formatCoordinate(next.config.latitude);
+	longitude.value = formatCoordinate(next.config.longitude);
+}
+
 async function loadAll() {
 	try {
-		backlights.value = await invoke<BacklightDevice[]>('get_backlights');
-		nightLight.value = await invoke<NightLight>('get_night_light');
-		error.value = '';
+		await loadBrightness();
+		if (brightnessError.value) error.value = brightnessError.value;
+		applyNightLight(await getNightLight());
+		nightLightEnabled.value = await invoke<boolean>('get_night_light_enabled');
+		if (!brightnessError.value) error.value = '';
 	} catch (err) {
 		error.value = String(err);
 	}
@@ -68,30 +69,44 @@ async function loadAll() {
 onMounted(loadAll);
 
 /**
- * The slider updates the local value immediately and pushes to logind on every
- * change; logind is cheap and this keeps the backlight following the drag.
+ * El deslizador cambia el valor local en el acto y lo manda en cada paso:
+ * logind es barato, y a un monitor externo el plugin le escribe sólo el último
+ * valor pedido, así que arrastrar no encola escrituras por DDC/CI.
  */
-async function applyBrightness(device: BacklightDevice, percent: number) {
-	device.percent = percent;
+async function applyBrightness(screen: MonitorBrightness, percent: number) {
+	screen.percent = percent;
 
 	try {
-		await invoke('set_backlight_percent', { device: device.name, percent });
+		await setBrightness(screen.kind, screen.handle, percent);
 		error.value = '';
 	} catch (err) {
 		error.value = String(err);
 	}
 }
 
-async function saveNightLight() {
+/** Guarda la configuración en el plugin y, si está encendida, la aplica. */
+async function saveNightLight(enable = nightLightEnabled.value) {
 	if (!nightLight.value) return;
+
+	const lat = parseCoordinate(latitude.value);
+	const lon = parseCoordinate(longitude.value);
+	if (lat === undefined || lon === undefined) {
+		error.value = t('views.brightness.invalidCoordinates');
+		return;
+	}
 
 	savingNight.value = true;
 	error.value = '';
 
 	try {
-		nightLight.value = await invoke<NightLight>('set_night_light', {
-			config: nightLight.value,
-		});
+		applyNightLight(
+			await setNightLight({ ...nightLight.value.config, latitude: lat, longitude: lon })
+		);
+		if (enable || nightLightEnabled.value) {
+			nightLightEnabled.value = await invoke<boolean>('set_night_light_enabled', {
+				enabled: enable,
+			});
+		}
 		flash(t('views.brightness.nightLightUpdated'));
 	} catch (err) {
 		error.value = String(err);
@@ -101,10 +116,14 @@ async function saveNightLight() {
 	}
 }
 
+function setMode(value: string) {
+	if (nightLight.value && (value === 'manual' || value === 'location')) {
+		nightLight.value.config.mode = value;
+	}
+}
+
 function toggleNightLight(value: boolean) {
-	if (!nightLight.value) return;
-	nightLight.value.enabled = value;
-	void saveNightLight();
+	void saveNightLight(value);
 }
 </script>
 
@@ -123,21 +142,21 @@ function toggleNightLight(value: boolean) {
 		<Panel as="article">
 			<h3 class="text-base font-medium">{{ t('views.brightness.brightness') }}</h3>
 
-			<template v-if="hasBacklight">
-				<div v-for="device in backlights" :key="device.name" class="mt-3">
-					<FormGroup :label="device.name">
+			<template v-if="hasScreens">
+				<div v-for="screen in screens" :key="screen.handle" class="mt-3">
+					<FormGroup :label="screen.output ?? screen.handle">
 						<div class="flex items-center gap-3">
 							<Slider
-								:label="device.name"
+								:label="screen.output ?? screen.handle"
 								class="flex-1"
-								:model-value="device.percent"
+								:model-value="screen.percent"
 								:min="1"
 								:max="100"
 								:step="1"
-								@update:model-value="applyBrightness(device, $event)"
+								@update:model-value="applyBrightness(screen, $event)"
 							/>
 							<span class="w-10 shrink-0 text-right text-sm tabular-nums text-tx-muted">
-								{{ device.percent }}%
+								{{ screen.percent }}%
 							</span>
 						</div>
 					</FormGroup>
@@ -146,6 +165,9 @@ function toggleNightLight(value: boolean) {
 			<p v-else class="mt-1 text-sm text-tx-muted">
 				{{ t('views.brightness.noBacklight') }}
 			</p>
+			<AlertMessage v-for="message in ddcMessages" :key="message" tone="info" class="mt-3">{{
+				message
+			}}</AlertMessage>
 		</Panel>
 
 		<Panel as="article" v-if="nightLight">
@@ -157,7 +179,7 @@ function toggleNightLight(value: boolean) {
 					</p>
 				</div>
 				<SwitchToggle :label="t('views.brightness.nightLight')"
-					:model-value="nightLight.enabled"
+					:model-value="nightLightEnabled"
 					:disabled="savingNight || !nightLight.available"
 					@update:model-value="toggleNightLight"
 				/>
@@ -175,44 +197,48 @@ function toggleNightLight(value: boolean) {
 						<Slider
 							:label="t('views.brightness.nightTemp')"
 							class="flex-1"
-							v-model="nightLight.night_temp"
+							v-model="nightLight.config.nightTemperature"
 							:min="1000"
 							:max="6500"
 							:step="100"
 						/>
 						<span class="w-16 shrink-0 text-right text-sm tabular-nums text-tx-muted">
-							{{ nightLight.night_temp }}K
+							{{ nightLight.config.nightTemperature }}K
 						</span>
 					</div>
 				</FormGroup>
 				<FormGroup :label="t('views.brightness.dayTemp')">
 					<div class="flex items-center gap-3">
-						<Slider :label="t('views.brightness.dayTemp')" class="flex-1" v-model="nightLight.day_temp" :min="1000" :max="10000" :step="100" />
+						<Slider :label="t('views.brightness.dayTemp')" class="flex-1" v-model="nightLight.config.dayTemperature" :min="1000" :max="10000" :step="100" />
 						<span class="w-16 shrink-0 text-right text-sm tabular-nums text-tx-muted">
-							{{ nightLight.day_temp }}K
+							{{ nightLight.config.dayTemperature }}K
 						</span>
 					</div>
 				</FormGroup>
 			</div>
 
 			<FormGroup :label="t('views.brightness.schedule')" class="mt-4">
-				<SelectField v-model="nightLight.mode" :options="modes" />
+				<SelectField
+					:model-value="nightLight.config.mode"
+					:options="modes"
+					@update:model-value="setMode"
+				/>
 			</FormGroup>
 
 			<div v-if="isLocationMode" class="mt-4 grid gap-4 sm:grid-cols-2">
 				<FormGroup :label="t('views.brightness.latitude')">
-					<TextInput v-model="nightLight.latitude" placeholder="-34.60" />
+					<TextInput v-model="latitude" placeholder="-34.60" />
 				</FormGroup>
 				<FormGroup :label="t('views.brightness.longitude')">
-					<TextInput v-model="nightLight.longitude" placeholder="-58.38" />
+					<TextInput v-model="longitude" placeholder="-58.38" />
 				</FormGroup>
 			</div>
 			<div v-else class="mt-4 grid gap-4 sm:grid-cols-2">
 				<FormGroup :label="t('views.brightness.dayStarts')">
-					<TextInput v-model="nightLight.start" type="time" />
+					<TextInput v-model="nightLight.config.sunrise" type="time" />
 				</FormGroup>
 				<FormGroup :label="t('views.brightness.nightStarts')">
-					<TextInput v-model="nightLight.stop" type="time" />
+					<TextInput v-model="nightLight.config.sunset" type="time" />
 				</FormGroup>
 			</div>
 
@@ -221,7 +247,7 @@ function toggleNightLight(value: boolean) {
 					type="button"
 					:disabled="savingNight || !nightLight.available"
 					class="rounded-corner-m bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90 disabled:opacity-50"
-					@click="saveNightLight"
+					@click="saveNightLight()"
 				>
 					{{ savingNight ? t('common.saving') : t('common.save') }}
 				</button>

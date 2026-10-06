@@ -17,15 +17,3 @@ export interface BatteryInfo {
 export const getBatteryInfo = (): Promise<BatteryInfo> => {
 	return invoke<BatteryInfo>('get_battery_info');
 };
-
-export const getPowerProfiles = (): Promise<string[]> => {
-	return invoke<string[]>('get_power_profiles');
-};
-
-export const setPowerProfile = (profile: string): Promise<void> => {
-	return invoke<void>('set_power_profile', { profile });
-};
-
-export const getActivePowerProfile = (): Promise<string> => {
-	return invoke<string>('get_active_power_profile');
-};
