@@ -11,7 +11,8 @@ use std::process::Command;
 
 use tauri_plugin_display_manager::night_light::UNIT_NAME;
 
-use crate::logger::{log_debug, log_error};
+use crate::commands::idle::systemctl;
+use crate::logger::log_debug;
 
 /// Los `systemctl --user` que hay que correr, en orden.
 ///
@@ -28,23 +29,6 @@ pub fn steps(enabled: bool) -> Vec<Vec<&'static str>> {
     } else {
         vec![vec!["disable", "--now", UNIT_NAME]]
     }
-}
-
-fn systemctl(args: &[&str]) -> Result<(), String> {
-    let output = Command::new("systemctl")
-        .arg("--user")
-        .args(args)
-        .output()
-        .map_err(|e| format!("No se pudo ejecutar systemctl: {}", e))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let msg = format!("systemctl {:?} falló: {}", args, stderr.trim());
-        log_error(&msg);
-        return Err(msg);
-    }
-
-    Ok(())
 }
 
 #[tauri::command]

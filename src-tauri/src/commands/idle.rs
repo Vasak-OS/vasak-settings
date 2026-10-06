@@ -76,7 +76,9 @@ fn unit_path() -> Result<PathBuf, String> {
     Ok(home.join(".config/systemd/user").join(UNIT))
 }
 
-fn systemctl(args: &[&str]) -> Result<(), String> {
+/// `systemctl --user` con los argumentos dados; también lo usa
+/// `night_light_service`.
+pub(crate) fn systemctl(args: &[&str]) -> Result<(), String> {
     let output = Command::new("systemctl")
         .arg("--user")
         .args(args)
