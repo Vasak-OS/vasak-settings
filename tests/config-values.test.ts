@@ -7,6 +7,7 @@ import {
 	readBarPosition,
 	readPanelPosition,
 	readScreenTimeEnabled,
+	readWallpaperFolder,
 	writeBarPosition,
 	writePanelPosition,
 	writeScheme,
@@ -245,5 +246,25 @@ describe('writeScreenTimeEnabled', () => {
 		writeScreenTimeEnabled(config, true);
 
 		expect(config.screen_time).toEqual({ enabled: true, retention_days: 30 });
+	});
+});
+
+describe('readWallpaperFolder', () => {
+	test('sin carpeta elegida da cadena vacía', () => {
+		expect(readWallpaperFolder({})).toBe('');
+		expect(readWallpaperFolder(null)).toBe('');
+		expect(readWallpaperFolder({ desktop: {} })).toBe('');
+	});
+
+	test('devuelve la carpeta guardada, sin espacios a los costados', () => {
+		expect(readWallpaperFolder({ desktop: { wallpaperfolder: '/mnt/fotos' } })).toBe('/mnt/fotos');
+		expect(readWallpaperFolder({ desktop: { wallpaperfolder: '  /home/p/Fondos  ' } })).toBe(
+			'/home/p/Fondos'
+		);
+	});
+
+	test('una clave que no es una cadena vale por «sin carpeta»', () => {
+		expect(readWallpaperFolder({ desktop: { wallpaperfolder: 42 } })).toBe('');
+		expect(readWallpaperFolder({ desktop: { wallpaperfolder: ['/a'] } })).toBe('');
 	});
 });

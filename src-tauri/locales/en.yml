@@ -640,6 +640,14 @@ views:
     officialTitle: Official Wallpapers
     optionsCount: '{0} options'
     noWallpapers: No wallpapers were found in /usr/share/backgrounds/vasakos.
+    customFolderTitle: Custom folder
+    customFolderHint: >-
+      Pick a folder —inside or outside your home— and its images and videos are
+      added to the available wallpapers, here and in the desktop picker.
+    customFolderPick: Choose folder
+    customFolderClear: Remove folder
+    customFolderEmpty: You haven't picked a custom folder yet.
+    customFolderNoImages: No images or videos were found in that folder.
     customPathTitle: Custom Path
     customPathHint: Set an absolute path. The full path is always saved.
     fullPath: Full path

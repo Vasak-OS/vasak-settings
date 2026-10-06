@@ -20,6 +20,31 @@ export function configBoolean(value: unknown, fallback: boolean): boolean {
 	return typeof value === 'boolean' ? value : fallback;
 }
 
+/**
+ * La clave donde vive la carpeta propia de fondos (vasak-settings#148).
+ *
+ * Está en la sección `desktop`, que ya lleva las claves del fondo
+ * (`wallpaper`, `pausevideoonbattery`). El escritorio lee **esta misma** clave
+ * para listar las imágenes de la carpeta en su selector rápido: un solo
+ * contrato entre los dos repositorios.
+ */
+export const WALLPAPER_FOLDER_KEY = 'wallpaperfolder';
+
+/**
+ * La carpeta propia de fondos guardada, o cadena vacía si no hay ninguna.
+ *
+ * El archivo se puede editar a mano, así que se comprueba el tipo en lugar de
+ * afirmarlo: una clave que no es una cadena vale por «sin carpeta».
+ */
+export function readWallpaperFolder(config: unknown): string {
+	const section =
+		config && typeof config === 'object'
+			? ((config as Record<string, unknown>).desktop as Record<string, unknown> | undefined)
+			: undefined;
+	const stored = section?.[WALLPAPER_FOLDER_KEY];
+	return typeof stored === 'string' ? stored.trim() : '';
+}
+
 /** La clave del esquema de color, tal como se llama en el archivo. */
 export const SCHEME_KEY = 'color-scheme';
 
