@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
+import {
+	getNightLight,
+	type MonitorBrightness,
+	type NightLight,
+	setBrightness,
+	setNightLight,
+} from '@vasakgroup/plugin-display-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import {
 	AlertMessage,
@@ -13,13 +20,6 @@ import {
 } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
 import { useBrightness } from '@/composables/useBrightness';
-import {
-	getNightLight,
-	type MonitorBrightness,
-	type NightLight,
-	setBrightness,
-	setNightLight,
-} from '@/services/display-manager';
 import { formatCoordinate, parseCoordinate } from '@/utils/night-light-form';
 
 const { t } = useI18n();

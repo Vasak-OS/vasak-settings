@@ -45,7 +45,7 @@
     "bluetooth-manager:allow-connect-device",
     "bluetooth-manager:allow-get-device-info",
     "bluetooth-manager:allow-disconnect-device",
-    "power-manager:default",
+    "power-profiles:default",
     "display-manager:default",
     "i18n:allow-load-translations",
     "i18n:allow-get-available-locales",

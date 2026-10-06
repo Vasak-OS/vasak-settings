@@ -149,7 +149,7 @@ pub fn run() {
         .plugin(tauri_plugin_vicons::init())
         .plugin(tauri_plugin_bluetooth_manager::init())
         .plugin(tauri_plugin_network_manager::init())
-        .plugin(tauri_plugin_power_manager::init())
+        .plugin(tauri_plugin_power_profiles::init())
         .plugin(tauri_plugin_display_manager::init())
         // El diario del sistema, con el nombre de esta aplicación. Va **primero**
         // de todos los plugins: instala el gancho de pánico, y un pánico mientras

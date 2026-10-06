@@ -1,5 +1,5 @@
 /**
- * Copia del binding de `@vasakgroup/plugin-power-manager` mientras el plugin no está
+ * Copia del binding de `@vasakgroup/plugin-power-profiles` mientras el plugin no está
  * publicado en npm (el crate entra por git, ver `src-tauri/Cargo.toml`). Al
  * publicarse, este archivo se borra y los imports pasan al paquete: los
  * nombres son los mismos a propósito.
@@ -30,7 +30,7 @@ export const POWER_STATE_EVENT = 'power-profile-changed';
 
 /** El estado actual. Sin demonio no falla: devuelve `available: false`. */
 export async function getPowerState(): Promise<PowerState> {
-	return await invoke<PowerState>('plugin:power-manager|get_power_state');
+	return await invoke<PowerState>('plugin:power-profiles|get_power_state');
 }
 
 /**
@@ -38,7 +38,7 @@ export async function getPowerState(): Promise<PowerState> {
  * uno de los que ofrece el equipo o si no hay demonio.
  */
 export async function setPowerProfile(profile: PowerProfile): Promise<PowerState> {
-	return await invoke<PowerState>('plugin:power-manager|set_power_profile', { profile });
+	return await invoke<PowerState>('plugin:power-profiles|set_power_profile', { profile });
 }
 
 /**

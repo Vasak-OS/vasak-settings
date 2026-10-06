@@ -1,4 +1,4 @@
-import type { DdcStatus } from '@/services/display-manager';
+import type { DdcStatus } from '@vasakgroup/plugin-display-manager';
 
 /** Un aviso para mostrar: la clave de traducción y sus argumentos (`{0}`). */
 export interface DdcNotice {

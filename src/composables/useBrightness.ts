@@ -1,9 +1,9 @@
-import { computed, onUnmounted, ref } from 'vue';
 import {
 	type BrightnessReport,
 	getBrightness,
 	onBrightnessChanged,
-} from '@/services/display-manager';
+} from '@vasakgroup/plugin-display-manager';
+import { computed, onUnmounted, ref } from 'vue';
 import { ddcNotices } from '@/utils/ddc-status';
 
 /**

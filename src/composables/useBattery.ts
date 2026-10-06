@@ -5,7 +5,7 @@ import {
 	onPowerStateChanged,
 	type PowerState,
 	setPowerProfile,
-} from '@/services/power-manager';
+} from '@/services/power-profiles';
 
 const EMPTY: BatteryInfo = {
 	has_battery: false,
@@ -67,7 +67,7 @@ export function useBattery(pollIntervalMs = 5000) {
 }
 
 /**
- * Los perfiles de energía, del plugin `power-manager`.
+ * Los perfiles de energía, del plugin `power-profiles`.
  *
  * Una sola lectura al abrir —que no va al bus: el plugin guarda una copia— y
  * después el evento: si el perfil cambia desde el centro de control, desde

@@ -1,6 +1,6 @@
 /**
  * El brillo viene del plugin `display-manager`: una lectura y, después, el
- * evento. Se dobla el binding local (`@/services/display-manager`), que ningún
+ * evento. Se dobla el binding local (`@vasakgroup/plugin-display-manager`), que ningún
  * otro archivo de pruebas dobla.
  */
 
@@ -17,7 +17,7 @@ let listener: ((report: unknown) => void) | null = null;
 const unlisten = mock(() => {});
 const getBrightness = mock(() => Promise.resolve(structuredClone(detecting)));
 
-mock.module('@/services/display-manager', () => ({
+mock.module('@vasakgroup/plugin-display-manager', () => ({
 	getBrightness,
 	onBrightnessChanged: (handler: (report: unknown) => void) => {
 		listener = handler;

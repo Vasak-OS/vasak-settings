@@ -60,10 +60,10 @@ tauri-plugin-bluetooth-manager = "2.2"
 tauri-plugin-network-manager = "2"
 # El perfil de energía y el brillo por monitor viven en plugins compartidos
 # con el centro de control del escritorio (vasak-desktop#174, decisión 4).
-# Por git y clavados al commit hasta que se publiquen en crates.io: entonces
-# pasan a `"2"` como el resto.
-tauri-plugin-power-manager = { git = "https://github.com/Vasak-OS/tauri-plugin-power-manager", rev = "7fbc9086c825d47b5964d8cb09157d9e2e0e02ee" }
-tauri-plugin-display-manager = { git = "https://github.com/Vasak-OS/tauri-plugin-display-manager", rev = "93e7dd3c60a5282ce192b6056d7c63f5a47559cc" }
+# El de pantalla ya está publicado. El de energía entra por git, clavado al
+# commit, hasta que se publique: entonces pasa a `"2"` como el resto.
+tauri-plugin-power-profiles = { git = "https://github.com/Vasak-OS/tauri-plugin-power-profiles", rev = "3f3b20521cf1a51c5df1e8d354da39028cb8c629" }
+tauri-plugin-display-manager = "2"
 tauri-plugin-vsk-contextual-menu = "2"
 tauri-plugin-vsk-journal = "2"
 # Para leer las respuestas PROPFIND del autodescubrimiento de CalDAV/CardDAV.

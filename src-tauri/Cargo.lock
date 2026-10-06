@@ -4437,7 +4437,8 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-display-manager"
 version = "2.0.0"
-source = "git+https://github.com/Vasak-OS/tauri-plugin-display-manager?rev=93e7dd3c60a5282ce192b6056d7c63f5a47559cc#93e7dd3c60a5282ce192b6056d7c63f5a47559cc"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d68a7169740e9c8d5d0660812941c761ffe33b222fb8b83ff8f61a9e36cf403"
 dependencies = [
  "dirs 7.0.0",
  "log",
@@ -4508,9 +4509,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-plugin-power-manager"
+name = "tauri-plugin-power-profiles"
 version = "2.0.0"
-source = "git+https://github.com/Vasak-OS/tauri-plugin-power-manager?rev=7fbc9086c825d47b5964d8cb09157d9e2e0e02ee#7fbc9086c825d47b5964d8cb09157d9e2e0e02ee"
+source = "git+https://github.com/Vasak-OS/tauri-plugin-power-profiles?rev=3f3b20521cf1a51c5df1e8d354da39028cb8c629#3f3b20521cf1a51c5df1e8d354da39028cb8c629"
 dependencies = [
  "futures-util",
  "log",
@@ -5272,7 +5273,7 @@ dependencies = [
  "tauri-plugin-display-manager",
  "tauri-plugin-i18n-vsk",
  "tauri-plugin-network-manager",
- "tauri-plugin-power-manager",
+ "tauri-plugin-power-profiles",
  "tauri-plugin-shell",
  "tauri-plugin-single-instance",
  "tauri-plugin-system-fonts",

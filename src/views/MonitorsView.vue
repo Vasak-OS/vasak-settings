@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { setBrightness } from '@vasakgroup/plugin-display-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import {
 	AlertMessage,
@@ -12,7 +13,6 @@ import {
 import { computed, onMounted, ref } from 'vue';
 import MonitorCanvas, { type CanvasMonitor } from '@/components/monitors/MonitorCanvas.vue';
 import { useBrightness } from '@/composables/useBrightness';
-import { setBrightness } from '@/services/display-manager';
 import {
 	applyMonitorLayout,
 	type DetectedMonitor,
