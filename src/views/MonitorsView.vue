@@ -9,16 +9,10 @@ import {
 	SelectField,
 	SwitchToggle,
 } from '@vasakgroup/vue-libvasak';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import MonitorCanvas, { type CanvasMonitor } from '@/components/monitors/MonitorCanvas.vue';
-import {
-	type BrightnessKind,
-	type BrightnessReport,
-	type DdcStatus,
-	getBrightness,
-	onBrightnessChanged,
-	setBrightness,
-} from '@/services/display-manager';
+import { useBrightness } from '@/composables/useBrightness';
+import { setBrightness } from '@/services/display-manager';
 import {
 	applyMonitorLayout,
 	type DetectedMonitor,
@@ -28,7 +22,6 @@ import {
 	type MonitorMode,
 	type MonitorSetting,
 } from '@/services/monitors.service';
-import { ddcNotices } from '@/utils/ddc-status';
 
 interface EditableMonitor extends MonitorSetting {
 	connected: boolean;
@@ -36,21 +29,26 @@ interface EditableMonitor extends MonitorSetting {
 	modes: MonitorMode[];
 }
 
-interface Brightness {
-	kind: BrightnessKind;
-	handle: string;
-	percent: number;
-}
-
 const { t } = useI18n();
+const {
+	report: brightnessReport,
+	error: brightnessError,
+	ddcMessages,
+	load: loadBrightness,
+} = useBrightness(t);
+
+/** El brillo de cada salida; los objetos son los del informe, así que el
+ * deslizador los cambia en el lugar. */
+const brightness = computed(() =>
+	Object.fromEntries(
+		(brightnessReport.value?.monitors ?? [])
+			.filter((entry) => entry.output !== null)
+			.map((entry) => [entry.output as string, entry])
+	)
+);
 
 const monitors = ref<EditableMonitor[]>([]);
 const original = ref('');
-const brightness = ref<Record<string, Brightness>>({});
-const ddcStatus = ref<DdcStatus | null>(null);
-const brightnessError = ref('');
-let stopBrightness: (() => void) | null = null;
-let unmounted = false;
 const usingKernelFallback = ref(false);
 const loading = ref(true);
 const saving = ref(false);
@@ -151,45 +149,6 @@ async function load() {
 		error.value = t('views.monitors.detectError').replace('{0}', String(e));
 	} finally {
 		loading.value = false;
-	}
-}
-
-const ddcMessages = computed(() =>
-	ddcStatus.value
-		? ddcNotices(ddcStatus.value).map(({ key, args }) =>
-				args.reduce((text, arg, i) => text.replace(`{${i}}`, arg), t(key))
-			)
-		: []
-);
-
-function applyBrightness(report: BrightnessReport) {
-	ddcStatus.value = report.ddc;
-	brightness.value = Object.fromEntries(
-		report.monitors
-			.filter((entry) => entry.output !== null)
-			.map((entry) => [
-				entry.output as string,
-				{ kind: entry.kind, handle: entry.handle, percent: entry.percent },
-			])
-	);
-}
-
-/**
- * Una lectura que no espera a DDC/CI y, después, el evento del plugin: los
- * monitores externos llegan cuando terminan de buscarse, y un cambio hecho con
- * las teclas o desde el centro de control se ve sin volver a preguntar.
- */
-async function loadBrightness() {
-	try {
-		applyBrightness(await getBrightness());
-		brightnessError.value = '';
-		if (!stopBrightness) {
-			const stop = await onBrightnessChanged(applyBrightness);
-			if (unmounted) stop();
-			else stopBrightness = stop;
-		}
-	} catch (e) {
-		brightnessError.value = String(e);
 	}
 }
 
@@ -299,11 +258,6 @@ async function save() {
 }
 
 onMounted(load);
-onUnmounted(() => {
-	unmounted = true;
-	stopBrightness?.();
-	stopBrightness = null;
-});
 </script>
 
 <template>

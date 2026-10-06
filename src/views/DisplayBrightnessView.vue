@@ -11,24 +11,21 @@ import {
 	SwitchToggle,
 	TextInput,
 } from '@vasakgroup/vue-libvasak';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import { useBrightness } from '@/composables/useBrightness';
 import {
-	type BrightnessReport,
-	getBrightness,
 	getNightLight,
 	type MonitorBrightness,
 	type NightLight,
-	onBrightnessChanged,
 	setBrightness,
 	setNightLight,
 } from '@/services/display-manager';
-import { ddcNotices } from '@/utils/ddc-status';
 import { formatCoordinate, parseCoordinate } from '@/utils/night-light-form';
 
 const { t } = useI18n();
+const { report, error: brightnessError, ddcMessages, load: loadBrightness } = useBrightness(t);
+const screens = computed(() => report.value?.monitors ?? []);
 
-const screens = ref<MonitorBrightness[]>([]);
-const report = ref<BrightnessReport | null>(null);
 const nightLight = ref<NightLight | null>(null);
 const nightLightEnabled = ref(false);
 const latitude = ref('');
@@ -36,8 +33,6 @@ const longitude = ref('');
 const error = ref('');
 const success = ref('');
 const savingNight = ref(false);
-let stopBrightness: (() => void) | null = null;
-let unmounted = false;
 
 const modes = computed(() => [
 	{ label: t('views.brightness.modeManual'), value: 'manual' },
@@ -46,24 +41,11 @@ const modes = computed(() => [
 
 const hasScreens = computed(() => screens.value.length > 0);
 const isLocationMode = computed(() => nightLight.value?.config.mode === 'location');
-const ddcMessages = computed(() =>
-	report.value
-		? ddcNotices(report.value.ddc).map(({ key, args }) =>
-				args.reduce((text, arg, i) => text.replace(`{${i}}`, arg), t(key))
-			)
-		: []
-);
-
 function flash(message: string) {
 	success.value = message;
 	setTimeout(() => {
 		success.value = '';
 	}, 3000);
-}
-
-function applyReport(next: BrightnessReport) {
-	report.value = next;
-	screens.value = next.monitors;
 }
 
 function applyNightLight(next: NightLight) {
@@ -74,26 +56,17 @@ function applyNightLight(next: NightLight) {
 
 async function loadAll() {
 	try {
-		applyReport(await getBrightness());
+		await loadBrightness();
+		if (brightnessError.value) error.value = brightnessError.value;
 		applyNightLight(await getNightLight());
 		nightLightEnabled.value = await invoke<boolean>('get_night_light_enabled');
-		error.value = '';
-		if (!stopBrightness) {
-			const stop = await onBrightnessChanged(applyReport);
-			if (unmounted) stop();
-			else stopBrightness = stop;
-		}
+		if (!brightnessError.value) error.value = '';
 	} catch (err) {
 		error.value = String(err);
 	}
 }
 
 onMounted(loadAll);
-onUnmounted(() => {
-	unmounted = true;
-	stopBrightness?.();
-	stopBrightness = null;
-});
 
 /**
  * El deslizador cambia el valor local en el acto y lo manda en cada paso:
