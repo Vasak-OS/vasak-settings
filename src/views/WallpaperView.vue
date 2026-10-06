@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { convertFileSrc, invoke } from '@tauri-apps/api/core';
+import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import {
@@ -20,11 +20,12 @@ import {
 } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import {
-	allowWallpaperAsset,
 	getCustomWallpapers,
 	getOfficialWallpapers,
+	persistWallpaperFolder,
+	wallpaperThumbnailUrl,
 } from '@/services/style.service';
-import { configBoolean, readWallpaperFolder, WALLPAPER_FOLDER_KEY } from '@/utils/config-values';
+import { configBoolean, readWallpaperFolder } from '@/utils/config-values';
 
 const { t } = useI18n();
 
@@ -120,27 +121,9 @@ const thumbnails = ref<Record<string, string>>({});
 
 async function loadThumbnail(path: string) {
 	if (!path || thumbnails.value[path]) return;
-
-	// Se autoriza el original y se usa su ruta canónica: una imagen de cualquier
-	// carpeta del hogar o de una carpeta propia se puede mostrar sin depender de
-	// los globs del alcance (vasak-settings#163). Si no se pudo autorizar —una
-	// ruta que todavía no existe mientras se escribe— se sigue con la ruta tal
-	// cual, que es el comportamiento de antes.
-	let assetPath = path;
-	try {
-		assetPath = await allowWallpaperAsset(path);
-	} catch {
-		assetPath = path;
-	}
-
-	try {
-		const thumbnail = await invoke<string>('wallpaper_thumbnail', { path: assetPath });
-		thumbnails.value = { ...thumbnails.value, [path]: convertFileSrc(thumbnail) };
-	} catch {
-		// Sin miniatura se muestra el original: peor para la memoria, pero es
-		// mejor que un recuadro vacío.
-		thumbnails.value = { ...thumbnails.value, [path]: convertFileSrc(assetPath) };
-	}
+	// La resolución —autorizar el original, pedir la miniatura, caer al original
+	// si falla— vive en el servicio, probada aparte (vasak-settings#163).
+	thumbnails.value = { ...thumbnails.value, [path]: await wallpaperThumbnailUrl(path) };
 }
 
 const thumbnailFor = (path: string) => thumbnails.value[path] ?? '';
@@ -152,19 +135,6 @@ async function loadCustomWallpapers(folder: string) {
 	for (const wallpaperPath of customWallpapers.value) {
 		await loadThumbnail(wallpaperPath);
 	}
-}
-
-/**
- * Guarda la carpeta propia en `desktop.wallpaperfolder`, releyendo la
- * configuración justo antes de escribirla para no pisar otra cosa que haya
- * cambiado (el tema, un widget).
- */
-async function persistCustomFolder(folder: string) {
-	const config = await readConfig();
-	if (!config) throw new Error('no se pudo leer la configuración');
-	config.desktop = { ...config.desktop, [WALLPAPER_FOLDER_KEY]: folder };
-	await writeConfig(config);
-	vskConfig.value = config;
 }
 
 /** Abre el diálogo de carpetas y guarda la elegida. */
@@ -180,7 +150,8 @@ async function chooseCustomFolder() {
 		});
 		if (typeof picked !== 'string') return;
 		customFolder.value = picked;
-		await persistCustomFolder(picked);
+		// Releer y escribir la configuración vive en el servicio, probado aparte.
+		vskConfig.value = await persistWallpaperFolder(picked);
 		await loadCustomWallpapers(picked);
 	} catch (err) {
 		error.value = t('views.appearanceWallpaper.errorSaving').replace('{0}', String(err));
@@ -197,7 +168,7 @@ async function clearCustomFolder() {
 	try {
 		customFolder.value = '';
 		customWallpapers.value = [];
-		await persistCustomFolder('');
+		vskConfig.value = await persistWallpaperFolder('');
 	} catch (err) {
 		error.value = t('views.appearanceWallpaper.errorSaving').replace('{0}', String(err));
 	} finally {
