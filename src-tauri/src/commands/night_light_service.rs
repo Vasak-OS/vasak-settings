@@ -31,6 +31,13 @@ pub fn steps(enabled: bool) -> Vec<Vec<&'static str>> {
     }
 }
 
+/// Si el error de `systemctl` es que la unidad no existe: la luz nocturna
+/// nunca se guardó. `disable` sobre una unidad ya deshabilitada no falla, así
+/// que no hace falta reconocer ese caso.
+pub fn is_missing_unit(error: &str) -> bool {
+    error.contains("does not exist") || error.contains("not loaded") || error.contains("not found")
+}
+
 #[tauri::command]
 pub fn get_night_light_enabled() -> bool {
     Command::new("systemctl")
@@ -45,10 +52,13 @@ pub fn get_night_light_enabled() -> bool {
 #[tauri::command]
 pub fn set_night_light_enabled(enabled: bool) -> Result<bool, String> {
     for args in steps(enabled) {
-        let result = systemctl(&args);
-        // Apagar algo que ya estaba apagado no es un error.
-        if enabled {
-            result?;
+        match systemctl(&args) {
+            // Apagar una luz que nunca se configuró no es un error. Cualquier
+            // otro fallo sí: si `disable` no llegó a hacerse, la unidad sigue
+            // habilitada y vuelve a arrancar en el próximo inicio de sesión,
+            // aunque ahora esté detenida y el interruptor diga «apagada».
+            Err(error) if !enabled && is_missing_unit(&error) => {}
+            result => result?,
         }
     }
     log_debug(if enabled {
@@ -74,6 +84,20 @@ mod tests {
                 vec!["restart", "vasak-nightlight.service"],
             ]
         );
+    }
+
+    #[test]
+    fn solo_una_unidad_inexistente_se_ignora_al_apagar() {
+        assert!(is_missing_unit(
+            "systemctl [\"disable\"] falló: Failed to disable unit: Unit file vasak-nightlight.service does not exist."
+        ));
+        assert!(is_missing_unit("Unit vasak-nightlight.service not loaded."));
+        assert!(!is_missing_unit(
+            "Failed to connect to bus: No medium found"
+        ));
+        assert!(!is_missing_unit(
+            "No se pudo ejecutar systemctl: Permission denied"
+        ));
     }
 
     #[test]
