@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -257,12 +258,27 @@ pub fn overlapping_outputs(settings: &[MonitorSetting]) -> Vec<String> {
 
 // ── wlr-randr ────────────────────────────────────────────────────────────────
 
+/// Hay wlr-randr si existe un ejecutable `wlr-randr` en el PATH.
+///
+/// No se comprueba corriéndolo: wlr-randr 0.5 no reconoce `--version` —nunca fue
+/// un flag válido— y sale con código 1, así que `--version` daba siempre false
+/// aunque wlr-randr estuviera instalado y funcionara. El síntoma era la UI
+/// pidiendo instalar wlr-randr y mostrando la frecuencia como «—» —porque la
+/// detección se caía al respaldo del kernel— con wlr-randr presente. Alcanza con
+/// mirar el PATH; si está, `get_detected_monitors` lo corre a secas y parsea sus
+/// modos reales.
 fn wlr_randr_available() -> bool {
-    Command::new("wlr-randr")
-        .arg("--version")
-        .output()
-        .map(|output| output.status.success())
+    std::env::var_os("PATH")
+        .map(|path| binary_in_path("wlr-randr", &path))
         .unwrap_or(false)
+}
+
+/// ¿Hay un ejecutable `name` en alguna de las carpetas del `path` dado?
+///
+/// Recibe el valor de PATH como argumento, en vez de leerlo del entorno, para
+/// poder probarlo con un directorio temporal.
+fn binary_in_path(name: &str, path: &OsStr) -> bool {
+    std::env::split_paths(path).any(|dir| dir.join(name).is_file())
 }
 
 /// Parses `wlr-randr`'s report.
@@ -1078,5 +1094,104 @@ DP-2 "Dell Inc. DELL U2720Q H7MTP83 (DP-2)"
         assert_eq!(format_scale(1.0), "1");
         assert_eq!(format_scale(2.0), "2");
         assert_eq!(format_scale(1.25), "1.25");
+    }
+
+    // ── Detección de wlr-randr en el PATH ──────────────────────────────────
+
+    use std::env;
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    /// Un directorio temporal propio que se borra solo al salir del test, para no
+    /// sumar una dependencia (`tempfile`) sólo para estas pruebas.
+    struct TempDir(PathBuf);
+
+    impl TempDir {
+        fn new() -> Self {
+            static COUNTER: AtomicU32 = AtomicU32::new(0);
+            let unique = COUNTER.fetch_add(1, Ordering::Relaxed);
+            let mut path = env::temp_dir();
+            path.push(format!(
+                "vasak-settings-path-test-{}-{}",
+                std::process::id(),
+                unique
+            ));
+            fs::create_dir_all(&path).unwrap();
+            TempDir(path)
+        }
+
+        fn path(&self) -> &Path {
+            &self.0
+        }
+
+        /// Crea un archivo (vacío) con ese nombre dentro del directorio.
+        fn touch(&self, name: &str) -> PathBuf {
+            let file = self.0.join(name);
+            fs::write(&file, b"").unwrap();
+            file
+        }
+    }
+
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn binary_in_path_lo_encuentra_cuando_esta() {
+        let dir = TempDir::new();
+        dir.touch("wlr-randr");
+
+        let path = env::join_paths([dir.path()]).unwrap();
+        assert!(binary_in_path("wlr-randr", &path));
+    }
+
+    #[test]
+    fn binary_in_path_da_false_cuando_no_esta() {
+        // Un directorio que existe pero no tiene el binario.
+        let dir = TempDir::new();
+
+        let path = env::join_paths([dir.path()]).unwrap();
+        assert!(!binary_in_path("wlr-randr", &path));
+    }
+
+    #[test]
+    fn binary_in_path_recorre_todas_las_entradas_del_path() {
+        // El binario está en la segunda de varias carpetas: igual tiene que
+        // encontrarse, no sólo si está en la primera.
+        let empty = TempDir::new();
+        let with_binary = TempDir::new();
+        with_binary.touch("wlr-randr");
+        let other = TempDir::new();
+
+        let path = env::join_paths([empty.path(), with_binary.path(), other.path()]).unwrap();
+        assert!(binary_in_path("wlr-randr", &path));
+    }
+
+    #[test]
+    fn binary_in_path_ignora_un_directorio_con_ese_nombre() {
+        // `wlr-randr` como carpeta no es un ejecutable: `is_file()` lo descarta.
+        let dir = TempDir::new();
+        fs::create_dir(dir.path().join("wlr-randr")).unwrap();
+
+        let path = env::join_paths([dir.path()]).unwrap();
+        assert!(!binary_in_path("wlr-randr", &path));
+    }
+
+    #[test]
+    fn binary_in_path_con_un_path_vacio_da_false() {
+        assert!(!binary_in_path("wlr-randr", OsStr::new("")));
+    }
+
+    #[test]
+    fn binary_in_path_ignora_una_carpeta_inexistente() {
+        // Una entrada del PATH que no existe no puede traer el binario ni romper
+        // la búsqueda.
+        let dir = TempDir::new();
+        let missing = dir.path().join("no-existe");
+
+        let path = env::join_paths([missing.as_path()]).unwrap();
+        assert!(!binary_in_path("wlr-randr", &path));
     }
 }
