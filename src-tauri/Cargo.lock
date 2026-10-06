@@ -4437,7 +4437,7 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-display-manager"
 version = "2.0.0"
-source = "git+https://github.com/Vasak-OS/tauri-plugin-display-manager?rev=ce72faa7592d404beb1b64ec346577faf8a9ef73#ce72faa7592d404beb1b64ec346577faf8a9ef73"
+source = "git+https://github.com/Vasak-OS/tauri-plugin-display-manager?rev=93e7dd3c60a5282ce192b6056d7c63f5a47559cc#93e7dd3c60a5282ce192b6056d7c63f5a47559cc"
 dependencies = [
  "dirs 7.0.0",
  "log",
@@ -4510,7 +4510,7 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-power-manager"
 version = "2.0.0"
-source = "git+https://github.com/Vasak-OS/tauri-plugin-power-manager?rev=ad478f8ea6619551a85cd76d8d28e42d908d3cff#ad478f8ea6619551a85cd76d8d28e42d908d3cff"
+source = "git+https://github.com/Vasak-OS/tauri-plugin-power-manager?rev=7fbc9086c825d47b5964d8cb09157d9e2e0e02ee#7fbc9086c825d47b5964d8cb09157d9e2e0e02ee"
 dependencies = [
  "futures-util",
  "log",

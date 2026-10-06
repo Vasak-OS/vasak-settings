@@ -62,8 +62,8 @@ tauri-plugin-network-manager = "2"
 # con el centro de control del escritorio (vasak-desktop#174, decisión 4).
 # Por git y clavados al commit hasta que se publiquen en crates.io: entonces
 # pasan a `"2"` como el resto.
-tauri-plugin-power-manager = { git = "https://github.com/Vasak-OS/tauri-plugin-power-manager", rev = "ad478f8ea6619551a85cd76d8d28e42d908d3cff" }
-tauri-plugin-display-manager = { git = "https://github.com/Vasak-OS/tauri-plugin-display-manager", rev = "ce72faa7592d404beb1b64ec346577faf8a9ef73" }
+tauri-plugin-power-manager = { git = "https://github.com/Vasak-OS/tauri-plugin-power-manager", rev = "7fbc9086c825d47b5964d8cb09157d9e2e0e02ee" }
+tauri-plugin-display-manager = { git = "https://github.com/Vasak-OS/tauri-plugin-display-manager", rev = "93e7dd3c60a5282ce192b6056d7c63f5a47559cc" }
 tauri-plugin-vsk-contextual-menu = "2"
 tauri-plugin-vsk-journal = "2"
 # Para leer las respuestas PROPFIND del autodescubrimiento de CalDAV/CardDAV.
