@@ -9,20 +9,26 @@ import {
 	SelectField,
 	SwitchToggle,
 } from '@vasakgroup/vue-libvasak';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import MonitorCanvas, { type CanvasMonitor } from '@/components/monitors/MonitorCanvas.vue';
 import {
-	applyMonitorLayout,
 	type BrightnessKind,
+	type BrightnessReport,
+	type DdcStatus,
+	getBrightness,
+	onBrightnessChanged,
+	setBrightness,
+} from '@/services/display-manager';
+import {
+	applyMonitorLayout,
 	type DetectedMonitor,
 	formatRefresh,
 	getDetectedMonitors,
-	getMonitorBrightness,
 	logicalSize,
 	type MonitorMode,
 	type MonitorSetting,
-	setMonitorBrightness,
 } from '@/services/monitors.service';
+import { ddcNotices } from '@/utils/ddc-status';
 
 interface EditableMonitor extends MonitorSetting {
 	connected: boolean;
@@ -41,7 +47,10 @@ const { t } = useI18n();
 const monitors = ref<EditableMonitor[]>([]);
 const original = ref('');
 const brightness = ref<Record<string, Brightness>>({});
-const ddcHint = ref('');
+const ddcStatus = ref<DdcStatus | null>(null);
+const brightnessError = ref('');
+let stopBrightness: (() => void) | null = null;
+let unmounted = false;
 const usingKernelFallback = ref(false);
 const loading = ref(true);
 const saving = ref(false);
@@ -145,18 +154,42 @@ async function load() {
 	}
 }
 
-async function loadBrightness() {
-	try {
-		const report = await getMonitorBrightness(connected.value.map((m) => m.name));
-		ddcHint.value = report.ddc_hint ?? '';
-		brightness.value = Object.fromEntries(
-			report.monitors.map((entry) => [
-				entry.output,
+const ddcMessages = computed(() =>
+	ddcStatus.value
+		? ddcNotices(ddcStatus.value).map(({ key, args }) =>
+				args.reduce((text, arg, i) => text.replace(`{${i}}`, arg), t(key))
+			)
+		: []
+);
+
+function applyBrightness(report: BrightnessReport) {
+	ddcStatus.value = report.ddc;
+	brightness.value = Object.fromEntries(
+		report.monitors
+			.filter((entry) => entry.output !== null)
+			.map((entry) => [
+				entry.output as string,
 				{ kind: entry.kind, handle: entry.handle, percent: entry.percent },
 			])
-		);
+	);
+}
+
+/**
+ * Una lectura que no espera a DDC/CI y, después, el evento del plugin: los
+ * monitores externos llegan cuando terminan de buscarse, y un cambio hecho con
+ * las teclas o desde el centro de control se ve sin volver a preguntar.
+ */
+async function loadBrightness() {
+	try {
+		applyBrightness(await getBrightness());
+		brightnessError.value = '';
+		if (!stopBrightness) {
+			const stop = await onBrightnessChanged(applyBrightness);
+			if (unmounted) stop();
+			else stopBrightness = stop;
+		}
 	} catch (e) {
-		ddcHint.value = String(e);
+		brightnessError.value = String(e);
 	}
 }
 
@@ -235,7 +268,7 @@ async function onBrightnessChange(name: string, percent: number) {
 	if (!entry) return;
 	entry.percent = percent;
 	try {
-		await setMonitorBrightness(entry.kind, entry.handle, percent);
+		await setBrightness(entry.kind, entry.handle, percent);
 	} catch (e) {
 		error.value = t('views.monitors.brightnessError')
 			.replace('{0}', name)
@@ -266,6 +299,11 @@ async function save() {
 }
 
 onMounted(load);
+onUnmounted(() => {
+	unmounted = true;
+	stopBrightness?.();
+	stopBrightness = null;
+});
 </script>
 
 <template>
@@ -421,7 +459,10 @@ onMounted(load);
 				</p>
 			</Panel>
 
-			<AlertMessage v-if="ddcHint" tone="info">{{ ddcHint }}</AlertMessage>
+			<AlertMessage v-for="message in ddcMessages" :key="message" tone="info">{{
+				message
+			}}</AlertMessage>
+			<AlertMessage v-if="brightnessError" tone="error">{{ brightnessError }}</AlertMessage>
 
 			<div v-if="connected.length > 0" class="flex justify-end">
 				<button

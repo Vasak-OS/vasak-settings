@@ -990,6 +990,7 @@ views:
     longitude: Longitud
     dayStarts: Empieza el día
     nightStarts: Empieza la noche
+    invalidCoordinates: La latitud y la longitud tienen que ser números.
 
   power:
     status:
@@ -1063,6 +1064,11 @@ views:
     connectHint: Conecta el monitor para configurarlo.
     brightness: Brillo
     brightnessError: "No se pudo cambiar el brillo de {0}: {1}"
+    ddcDetecting: Buscando monitores externos para ajustar su brillo…
+    ddcNotInstalled: Instalá ddcutil para controlar el brillo de los monitores externos.
+    ddcNoI2cDev: "Falta el módulo i2c-dev: sin él no se puede ajustar el brillo por DDC/CI."
+    ddcNoPermission: No se pudo acceder a los monitores por DDC/CI. Revisá que tu usuario esté en el grupo i2c.
+    ddcUnsupported: "{0} no permite ajustar el brillo desde el equipo (DDC/CI apagado o no soportado)."
     installWlrRandr: >-
       wlr-randr no está instalado, así que los modos disponibles y la disposición
       actual son solo una estimación. Instalalo para que la detección sea exacta.

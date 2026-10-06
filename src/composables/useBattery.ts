@@ -1,11 +1,11 @@
 import { onUnmounted, type Ref, ref } from 'vue';
+import { type BatteryInfo, getBatteryInfo } from '@/services/battery.service';
 import {
-	type BatteryInfo,
-	getActivePowerProfile,
-	getBatteryInfo,
-	getPowerProfiles,
+	getPowerState,
+	onPowerStateChanged,
+	type PowerState,
 	setPowerProfile,
-} from '@/services/battery.service';
+} from '@/services/power-manager';
 
 const EMPTY: BatteryInfo = {
 	has_battery: false,
@@ -66,18 +66,39 @@ export function useBattery(pollIntervalMs = 5000) {
 	return { info, loading, error, start, stop };
 }
 
+/**
+ * Los perfiles de energía, del plugin `power-manager`.
+ *
+ * Una sola lectura al abrir —que no va al bus: el plugin guarda una copia— y
+ * después el evento: si el perfil cambia desde el centro de control, desde
+ * otra aplicación o porque el demonio limitó el rendimiento, la vista se
+ * entera sin volver a preguntar.
+ */
 export function usePowerProfiles() {
 	const profiles: Ref<string[]> = ref([]);
 	const active: Ref<string | null> = ref(null);
+	const available = ref(false);
 	const loading = ref(true);
 	const error = ref('');
+	let unlisten: (() => void) | null = null;
+	let disposed = false;
+
+	function apply(state: PowerState) {
+		available.value = state.available;
+		profiles.value = state.profiles;
+		active.value = state.activeProfile;
+	}
 
 	async function load() {
 		try {
-			const [p, a] = await Promise.all([getPowerProfiles(), getActivePowerProfile()]);
-			profiles.value = p;
-			active.value = a;
+			apply(await getPowerState());
 			error.value = '';
+			if (!unlisten) {
+				const stop = await onPowerStateChanged(apply);
+				// Si la vista se cerró mientras se registraba, se suelta enseguida.
+				if (disposed) stop();
+				else unlisten = stop;
+			}
 		} catch (e) {
 			error.value = `Error cargando perfiles: ${e}`;
 		} finally {
@@ -88,13 +109,18 @@ export function usePowerProfiles() {
 	async function setActive(profile: string) {
 		error.value = '';
 		try {
-			await setPowerProfile(profile);
-			active.value = profile;
+			apply(await setPowerProfile(profile));
 		} catch (e) {
 			error.value = `Error aplicando perfil: ${e}`;
 			throw e;
 		}
 	}
 
-	return { profiles, active, loading, error, load, setActive };
+	onUnmounted(() => {
+		disposed = true;
+		unlisten?.();
+		unlisten = null;
+	});
+
+	return { profiles, active, available, loading, error, load, setActive };
 }

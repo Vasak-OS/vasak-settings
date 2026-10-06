@@ -149,6 +149,8 @@ pub fn run() {
         .plugin(tauri_plugin_vicons::init())
         .plugin(tauri_plugin_bluetooth_manager::init())
         .plugin(tauri_plugin_network_manager::init())
+        .plugin(tauri_plugin_power_manager::init())
+        .plugin(tauri_plugin_display_manager::init())
         // El diario del sistema, con el nombre de esta aplicación. Va **primero**
         // de todos los plugins: instala el gancho de pánico, y un pánico mientras
         // arranca otro plugin es de los más probables y de los que menos rastro
@@ -194,10 +196,8 @@ pub fn run() {
             commands::datetime::set_ntp,
             commands::datetime::set_system_time,
             commands::datetime::set_local_rtc,
-            commands::display_power::get_backlights,
-            commands::display_power::set_backlight_percent,
-            commands::display_power::get_night_light,
-            commands::display_power::set_night_light,
+            commands::night_light_service::get_night_light_enabled,
+            commands::night_light_service::set_night_light_enabled,
             commands::nitidez::nitidez_activa,
             commands::nitidez::fijar_nitidez,
             commands::idle::get_idle_config,
@@ -211,9 +211,6 @@ pub fn run() {
             commands::users::set_user_locked,
             commands::users::set_user_icon,
             commands::battery::get_battery_info,
-            commands::power_profiles::get_power_profiles,
-            commands::power_profiles::get_active_power_profile,
-            commands::power_profiles::set_power_profile,
             commands::audio::get_audio_volume,
             commands::audio::set_audio_volume,
             commands::audio::toggle_audio_mute,
@@ -229,8 +226,6 @@ pub fn run() {
             commands::wallpaper_video::wallpaper_thumbnail,
             commands::wallpaper_colors::wallpaper_pixels,
             commands::monitors::apply_monitor_layout,
-            commands::brightness::get_monitor_brightness,
-            commands::brightness::set_monitor_brightness,
             commands::language::get_available_locales,
             commands::language::get_current_locale,
             commands::language::set_system_locale,

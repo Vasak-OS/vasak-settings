@@ -986,6 +986,7 @@ views:
     longitude: Longitude
     dayStarts: Day starts
     nightStarts: Night starts
+    invalidCoordinates: Latitude and longitude must be numbers.
 
   power:
     status:
@@ -1059,6 +1060,11 @@ views:
     connectHint: Connect the monitor to configure it.
     brightness: Brightness
     brightnessError: "Could not change the brightness of {0}: {1}"
+    ddcDetecting: Looking for external monitors to adjust their brightness…
+    ddcNotInstalled: Install ddcutil to control the brightness of external monitors.
+    ddcNoI2cDev: "The i2c-dev module is missing: without it brightness cannot be adjusted over DDC/CI."
+    ddcNoPermission: Could not reach the monitors over DDC/CI. Check that your user is in the i2c group.
+    ddcUnsupported: "{0} does not allow adjusting its brightness from the computer (DDC/CI off or unsupported)."
     installWlrRandr: >-
       wlr-randr is not installed, so the available modes and the current layout
       can only be guessed. Install it for accurate detection.

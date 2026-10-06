@@ -45,20 +45,6 @@ export interface MonitorSetting {
 	transform: string;
 }
 
-export type BrightnessKind = 'backlight' | 'ddc';
-
-export interface MonitorBrightness {
-	output: string;
-	kind: BrightnessKind;
-	handle: string;
-	percent: number;
-}
-
-export interface BrightnessReport {
-	monitors: MonitorBrightness[];
-	ddc_hint: string | null;
-}
-
 export function getDetectedMonitors(): Promise<MonitorReport> {
 	return invoke<MonitorReport>('get_detected_monitors');
 }
@@ -70,18 +56,6 @@ export function getDetectedMonitors(): Promise<MonitorReport> {
  */
 export function applyMonitorLayout(monitors: MonitorSetting[]): Promise<MonitorSetting[]> {
 	return invoke<MonitorSetting[]>('apply_monitor_layout', { monitors });
-}
-
-export function getMonitorBrightness(outputs: string[]): Promise<BrightnessReport> {
-	return invoke<BrightnessReport>('get_monitor_brightness', { outputs });
-}
-
-export function setMonitorBrightness(
-	kind: BrightnessKind,
-	handle: string,
-	percent: number
-): Promise<void> {
-	return invoke('set_monitor_brightness', { kind, handle, percent });
 }
 
 /** The size a screen occupies in the layout, mirroring the backend's rule. */
