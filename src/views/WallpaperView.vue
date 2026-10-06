@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import {
 	readConfig,
 	useConfigStore,
@@ -18,8 +19,12 @@ import {
 	WallpaperThumbnail,
 } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
-import { getOfficialWallpapers } from '@/services/style.service';
-import { configBoolean } from '@/utils/config-values';
+import {
+	allowWallpaperAsset,
+	getCustomWallpapers,
+	getOfficialWallpapers,
+} from '@/services/style.service';
+import { configBoolean, readWallpaperFolder, WALLPAPER_FOLDER_KEY } from '@/utils/config-values';
 
 const { t } = useI18n();
 
@@ -30,6 +35,17 @@ const successMessage = ref('');
 
 const officialWallpapers = ref<string[]>([]);
 const selectedWallpaperPath = ref('');
+
+/**
+ * La carpeta propia de fondos (vasak-settings#148) y sus imágenes.
+ *
+ * La carpeta se guarda en `vasak.conf`, en `desktop.wallpaperfolder`: el
+ * escritorio lee la misma clave para mostrar esas imágenes en su selector
+ * rápido. Puede estar dentro o fuera del hogar.
+ */
+const customFolder = ref('');
+const customWallpapers = ref<string[]>([]);
+const customFolderBusy = ref(false);
 
 const vskConfig: Ref<VSKConfig | null> = ref(null);
 const configStore = ref<any>(null);
@@ -105,17 +121,89 @@ const thumbnails = ref<Record<string, string>>({});
 async function loadThumbnail(path: string) {
 	if (!path || thumbnails.value[path]) return;
 
+	// Se autoriza el original y se usa su ruta canónica: una imagen de cualquier
+	// carpeta del hogar o de una carpeta propia se puede mostrar sin depender de
+	// los globs del alcance (vasak-settings#163). Si no se pudo autorizar —una
+	// ruta que todavía no existe mientras se escribe— se sigue con la ruta tal
+	// cual, que es el comportamiento de antes.
+	let assetPath = path;
 	try {
-		const thumbnail = await invoke<string>('wallpaper_thumbnail', { path });
+		assetPath = await allowWallpaperAsset(path);
+	} catch {
+		assetPath = path;
+	}
+
+	try {
+		const thumbnail = await invoke<string>('wallpaper_thumbnail', { path: assetPath });
 		thumbnails.value = { ...thumbnails.value, [path]: convertFileSrc(thumbnail) };
 	} catch {
 		// Sin miniatura se muestra el original: peor para la memoria, pero es
 		// mejor que un recuadro vacío.
-		thumbnails.value = { ...thumbnails.value, [path]: convertFileSrc(path) };
+		thumbnails.value = { ...thumbnails.value, [path]: convertFileSrc(assetPath) };
 	}
 }
 
 const thumbnailFor = (path: string) => thumbnails.value[path] ?? '';
+
+/** Lista la carpeta propia y pide las miniaturas de sus imágenes. */
+async function loadCustomWallpapers(folder: string) {
+	customWallpapers.value = folder ? await getCustomWallpapers(folder) : [];
+	// De a una y en orden, igual que con las oficiales.
+	for (const wallpaperPath of customWallpapers.value) {
+		await loadThumbnail(wallpaperPath);
+	}
+}
+
+/**
+ * Guarda la carpeta propia en `desktop.wallpaperfolder`, releyendo la
+ * configuración justo antes de escribirla para no pisar otra cosa que haya
+ * cambiado (el tema, un widget).
+ */
+async function persistCustomFolder(folder: string) {
+	const config = await readConfig();
+	if (!config) throw new Error('no se pudo leer la configuración');
+	config.desktop = { ...config.desktop, [WALLPAPER_FOLDER_KEY]: folder };
+	await writeConfig(config);
+	vskConfig.value = config;
+}
+
+/** Abre el diálogo de carpetas y guarda la elegida. */
+async function chooseCustomFolder() {
+	if (customFolderBusy.value) return;
+	customFolderBusy.value = true;
+	error.value = '';
+	try {
+		const picked = await openDialog({
+			directory: true,
+			multiple: false,
+			title: t('views.appearanceWallpaper.customFolderPick'),
+		});
+		if (typeof picked !== 'string') return;
+		customFolder.value = picked;
+		await persistCustomFolder(picked);
+		await loadCustomWallpapers(picked);
+	} catch (err) {
+		error.value = t('views.appearanceWallpaper.errorSaving').replace('{0}', String(err));
+	} finally {
+		customFolderBusy.value = false;
+	}
+}
+
+/** Olvida la carpeta propia: vuelve a quedar sólo el catálogo oficial. */
+async function clearCustomFolder() {
+	if (customFolderBusy.value) return;
+	customFolderBusy.value = true;
+	error.value = '';
+	try {
+		customFolder.value = '';
+		customWallpapers.value = [];
+		await persistCustomFolder('');
+	} catch (err) {
+		error.value = t('views.appearanceWallpaper.errorSaving').replace('{0}', String(err));
+	} finally {
+		customFolderBusy.value = false;
+	}
+}
 
 const optimizing = ref(false);
 const optimizeProgress = ref(0);
@@ -193,6 +281,11 @@ onMounted(async () => {
 		}
 
 		await loadThumbnail(selectedWallpaperPath.value);
+
+		// La carpeta propia (vasak-settings#148): la misma clave que lee el
+		// escritorio. Sus imágenes se suman a las oficiales.
+		customFolder.value = readWallpaperFolder(vskConfig.value);
+		await loadCustomWallpapers(customFolder.value);
 
 		unlistenProgress = await listen<number>('wallpaper-video-progress', (event) => {
 			optimizeProgress.value = event.payload ?? 0;
@@ -361,6 +454,64 @@ onUnmounted(() => {
 					</div>
 				</Panel>
 			</div>
+
+			<Panel as="article">
+				<div class="flex flex-wrap items-start justify-between gap-3">
+					<div class="min-w-0">
+						<h2 class="text-lg font-semibold">{{ t('views.appearanceWallpaper.customFolderTitle') }}</h2>
+						<p class="mt-1 text-sm text-tx-muted">{{ t('views.appearanceWallpaper.customFolderHint') }}</p>
+					</div>
+					<div class="flex shrink-0 flex-wrap gap-2">
+						<button
+							type="button"
+							class="w-fit rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
+							:disabled="customFolderBusy"
+							@click="chooseCustomFolder"
+						>
+							{{ t('views.appearanceWallpaper.customFolderPick') }}
+						</button>
+						<button
+							v-if="customFolder"
+							type="button"
+							class="w-fit rounded-corner-m border border-ui-border bg-ui-surface/30 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
+							:disabled="customFolderBusy"
+							@click="clearCustomFolder"
+						>
+							{{ t('views.appearanceWallpaper.customFolderClear') }}
+						</button>
+					</div>
+				</div>
+
+				<p v-if="customFolder" class="mt-2 break-all text-xs text-tx-muted">{{ customFolder }}</p>
+
+				<div v-if="!customFolder" class="mt-4">
+					<EmptyState icon="" size="sm" bordered :title="t('views.appearanceWallpaper.customFolderEmpty')" />
+				</div>
+
+				<div v-else-if="customWallpapers.length === 0" class="mt-4">
+					<EmptyState icon="" size="sm" bordered :title="t('views.appearanceWallpaper.customFolderNoImages')" />
+				</div>
+
+				<div v-else class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+					<button
+						v-for="wallpaperPath in customWallpapers"
+						:key="wallpaperPath"
+						type="button"
+						class="group overflow-hidden rounded-corner-m border text-left transition-all duration-200"
+						:class="isSelected(wallpaperPath) ? 'border-primary bg-primary/10' : 'border-ui-border bg-ui-surface/30 hover:border-primary/50'"
+						@click="applyWallpaperPath(wallpaperPath)"
+					>
+						<div class="aspect-video w-full overflow-hidden bg-ui-surface/70">
+							<WallpaperThumbnail v-if="thumbnailFor(wallpaperPath)" fill :src="thumbnailFor(wallpaperPath)" :alt="getWallpaperLabel(wallpaperPath)" :video="isVideoPath(wallpaperPath)" />
+							<div v-else class="h-full w-full animate-pulse bg-ui-surface/60"></div>
+						</div>
+						<div class="p-3">
+							<p class="truncate text-sm font-medium">{{ getWallpaperLabel(wallpaperPath) }}</p>
+							<p class="mt-1 truncate text-xs text-tx-muted">{{ wallpaperPath }}</p>
+						</div>
+					</button>
+				</div>
+			</Panel>
 		</template>
 	</div>
 </template>

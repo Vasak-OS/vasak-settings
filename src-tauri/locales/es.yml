@@ -644,6 +644,14 @@ views:
     officialTitle: Wallpapers Oficiales
     optionsCount: '{0} opciones'
     noWallpapers: No se encontraron wallpapers en /usr/share/backgrounds/vasakos.
+    customFolderTitle: Carpeta propia
+    customFolderHint: >-
+      Elegí una carpeta —dentro o fuera del hogar— y sus imágenes y videos se
+      suman a los fondos disponibles, acá y en el selector del escritorio.
+    customFolderPick: Elegir carpeta
+    customFolderClear: Quitar carpeta
+    customFolderEmpty: Todavía no elegiste una carpeta propia.
+    customFolderNoImages: No se encontraron imágenes ni videos en esa carpeta.
     customPathTitle: Ruta Personalizada
     customPathHint: Define un path absoluto. Siempre se guarda el path completo.
     fullPath: Path completo

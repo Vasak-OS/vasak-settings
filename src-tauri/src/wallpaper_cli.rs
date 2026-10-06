@@ -2,6 +2,7 @@
 //!
 //! ```text
 //! vasak-settings --wallpaper list                 # los fondos oficiales
+//! vasak-settings --wallpaper folder CARPETA       # los fondos de una carpeta propia
 //! vasak-settings --wallpaper thumbnails RUTA…     # una miniatura por ruta
 //! vasak-settings --wallpaper prepare RUTA         # un video, listo para fondo
 //! vasak-settings --wallpaper pixels RUTA          # la muestra para sacar colores
@@ -50,6 +51,7 @@ pub const FLAG: &str = "--wallpaper";
 #[derive(Debug, PartialEq)]
 pub enum Request {
     List,
+    Folder(String),
     Thumbnails(Vec<String>),
     Prepare(String),
     Pixels(String),
@@ -71,11 +73,12 @@ where
 
     Some(match action.as_deref() {
         Some("list") if rest.is_empty() => Ok(Request::List),
+        Some("folder") if rest.len() == 1 => Ok(Request::Folder(rest[0].clone())),
         Some("thumbnails") if !rest.is_empty() => Ok(Request::Thumbnails(rest)),
         Some("prepare") if rest.len() == 1 => Ok(Request::Prepare(rest[0].clone())),
         Some("pixels") if rest.len() == 1 => Ok(Request::Pixels(rest[0].clone())),
         _ => Err(format!(
-            "uso: vasak-settings {FLAG} list | thumbnails RUTA… | prepare RUTA | pixels RUTA"
+            "uso: vasak-settings {FLAG} list | folder CARPETA | thumbnails RUTA… | prepare RUTA | pixels RUTA"
         )),
     })
 }
@@ -84,6 +87,7 @@ where
 async fn answer(request: Request) -> Result<Value, String> {
     match request {
         Request::List => Ok(json!(system_config::get_official_wallpapers().await?)),
+        Request::Folder(folder) => Ok(json!(system_config::get_custom_wallpapers(folder).await?)),
         Request::Thumbnails(paths) => {
             // De a una y en orden, como la pantalla de fondos: diez ffmpeg a la
             // vez sobre originales de 5K se comen la máquina. Una que falla
@@ -157,10 +161,14 @@ mod tests {
     }
 
     #[test]
-    fn lee_los_cuatro_pedidos() {
+    fn lee_los_cinco_pedidos() {
         assert_eq!(
             parse_request(args(&["--wallpaper", "list"])),
             Some(Ok(Request::List))
+        );
+        assert_eq!(
+            parse_request(args(&["--wallpaper", "folder", "/home/p/Fondos"])),
+            Some(Ok(Request::Folder("/home/p/Fondos".into())))
         );
         assert_eq!(
             parse_request(args(&["--wallpaper", "thumbnails", "/a.jpg", "/b.mp4"])),
@@ -188,6 +196,8 @@ mod tests {
             &["--wallpaper", "prepare"],
             &["--wallpaper", "prepare", "/a.mp4", "/b.mp4"],
             &["--wallpaper", "list", "/sobra"],
+            &["--wallpaper", "folder"],
+            &["--wallpaper", "folder", "/a", "/b"],
             &["--wallpaper", "pixels"],
             &["--wallpaper", "pixels", "/a.jpg", "/b.jpg"],
         ] {

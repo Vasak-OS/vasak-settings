@@ -49,3 +49,18 @@ export const setSystemConfig = <T = any>(args: any): Promise<T> => {
 export const getOfficialWallpapers = <T = string[]>(args?: any): Promise<T> => {
 	return invoke<T>('get_official_wallpapers', args);
 };
+
+/** Los fondos de una carpeta propia (vasak-settings#148): imágenes y videos. */
+export const getCustomWallpapers = (folder: string): Promise<string[]> => {
+	return invoke<string[]>('get_custom_wallpapers', { folder });
+};
+
+/**
+ * Da acceso del protocolo de assets a un archivo de fondo y devuelve su ruta
+ * canónica, la que hay que usar con `convertFileSrc`. El mismo contrato que el
+ * escritorio: una imagen de cualquier carpeta del hogar o de una carpeta propia
+ * se puede mostrar, sin depender de los globs del alcance (vasak-settings#163).
+ */
+export const allowWallpaperAsset = (path: string): Promise<string> => {
+	return invoke<string>('allow_wallpaper_asset', { path });
+};
