@@ -1,7 +1,7 @@
 /**
  * Los perfiles de energía vienen del plugin `power-profiles`: una lectura al
- * abrir y, después, el evento. Se dobla el binding local
- * (`@/services/power-profiles`), que ningún otro archivo de pruebas dobla.
+ * abrir y, después, el evento. Se dobla el paquete
+ * (`@vasakgroup/plugin-power-profiles`), que ningún otro archivo de pruebas dobla.
  */
 
 import { describe, expect, mock, test } from 'bun:test';
@@ -29,7 +29,7 @@ const setPowerProfile = mock((profile: string) =>
 	Promise.resolve({ ...initial, activeProfile: profile })
 );
 
-mock.module('@/services/power-profiles', () => ({
+mock.module('@vasakgroup/plugin-power-profiles', () => ({
 	getPowerState,
 	setPowerProfile,
 	onPowerStateChanged: (handler: (state: State) => void) => {

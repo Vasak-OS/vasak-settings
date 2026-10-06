@@ -60,9 +60,7 @@ tauri-plugin-bluetooth-manager = "2.2"
 tauri-plugin-network-manager = "2"
 # El perfil de energía y el brillo por monitor viven en plugins compartidos
 # con el centro de control del escritorio (vasak-desktop#174, decisión 4).
-# El de pantalla ya está publicado. El de energía entra por git, clavado al
-# commit, hasta que se publique: entonces pasa a `"2"` como el resto.
-tauri-plugin-power-profiles = { git = "https://github.com/Vasak-OS/tauri-plugin-power-profiles", rev = "3f3b20521cf1a51c5df1e8d354da39028cb8c629" }
+tauri-plugin-power-profiles = "2"
 tauri-plugin-display-manager = "2"
 tauri-plugin-vsk-contextual-menu = "2"
 tauri-plugin-vsk-journal = "2"

@@ -1,11 +1,11 @@
-import { onUnmounted, type Ref, ref } from 'vue';
-import { type BatteryInfo, getBatteryInfo } from '@/services/battery.service';
 import {
 	getPowerState,
 	onPowerStateChanged,
 	type PowerState,
 	setPowerProfile,
-} from '@/services/power-profiles';
+} from '@vasakgroup/plugin-power-profiles';
+import { onUnmounted, type Ref, ref } from 'vue';
+import { type BatteryInfo, getBatteryInfo } from '@/services/battery.service';
 
 const EMPTY: BatteryInfo = {
 	has_battery: false,

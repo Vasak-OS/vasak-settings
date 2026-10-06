@@ -4511,7 +4511,8 @@ dependencies = [
 [[package]]
 name = "tauri-plugin-power-profiles"
 version = "2.0.0"
-source = "git+https://github.com/Vasak-OS/tauri-plugin-power-profiles?rev=3f3b20521cf1a51c5df1e8d354da39028cb8c629#3f3b20521cf1a51c5df1e8d354da39028cb8c629"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4819805f6b8cf391d44b73e83ee12c6f29f677d391d99b7671fd32bc0868eee6"
 dependencies = [
  "futures-util",
  "log",
