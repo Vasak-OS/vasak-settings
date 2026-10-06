@@ -277,8 +277,27 @@ fn wlr_randr_available() -> bool {
 ///
 /// Recibe el valor de PATH como argumento, en vez de leerlo del entorno, para
 /// poder probarlo con un directorio temporal.
+///
+/// Pide, además de que sea un archivo, el bit de ejecución: un `wlr-randr` sin
+/// permiso de ejecución daría `true` acá pero fallaría al correrlo en
+/// `get_detected_monitors`, y perderíamos el respaldo del kernel —peor que caer
+/// a él directamente—.
 fn binary_in_path(name: &str, path: &OsStr) -> bool {
-    std::env::split_paths(path).any(|dir| dir.join(name).is_file())
+    std::env::split_paths(path).any(|dir| is_executable_file(&dir.join(name)))
+}
+
+#[cfg(unix)]
+fn is_executable_file(path: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+
+    fs::metadata(path)
+        .map(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false)
+}
+
+#[cfg(not(unix))]
+fn is_executable_file(path: &Path) -> bool {
+    path.is_file()
 }
 
 /// Parses `wlr-randr`'s report.
@@ -1124,13 +1143,33 @@ DP-2 "Dell Inc. DELL U2720Q H7MTP83 (DP-2)"
             &self.0
         }
 
-        /// Crea un archivo (vacío) con ese nombre dentro del directorio.
+        /// Crea un archivo (vacío) con ese nombre dentro del directorio, con el
+        /// bit de ejecución puesto en Unix —como lo tendría un binario real—.
         fn touch(&self, name: &str) -> PathBuf {
+            let file = self.0.join(name);
+            fs::write(&file, b"").unwrap();
+            make_executable(&file);
+            file
+        }
+
+        /// Un archivo con ese nombre pero sin permiso de ejecución.
+        fn touch_non_executable(&self, name: &str) -> PathBuf {
             let file = self.0.join(name);
             fs::write(&file, b"").unwrap();
             file
         }
     }
+
+    #[cfg(unix)]
+    fn make_executable(path: &Path) {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(path).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(path, perms).unwrap();
+    }
+
+    #[cfg(not(unix))]
+    fn make_executable(_path: &Path) {}
 
     impl Drop for TempDir {
         fn drop(&mut self) {
@@ -1182,6 +1221,18 @@ DP-2 "Dell Inc. DELL U2720Q H7MTP83 (DP-2)"
     #[test]
     fn binary_in_path_con_un_path_vacio_da_false() {
         assert!(!binary_in_path("wlr-randr", OsStr::new("")));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn binary_in_path_ignora_un_archivo_sin_permiso_de_ejecucion() {
+        // Un `wlr-randr` sin bit de ejecución no se puede correr: tiene que dar
+        // false para no perder el respaldo del kernel al intentar ejecutarlo.
+        let dir = TempDir::new();
+        dir.touch_non_executable("wlr-randr");
+
+        let path = env::join_paths([dir.path()]).unwrap();
+        assert!(!binary_in_path("wlr-randr", &path));
     }
 
     #[test]
