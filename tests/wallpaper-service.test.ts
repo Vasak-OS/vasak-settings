@@ -10,10 +10,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import type { VSKConfig } from '@vasakgroup/plugin-config-manager';
-import {
-	persistWallpaperFolder,
-	wallpaperThumbnailUrl,
-} from '../src/services/style.service';
+import { persistWallpaperFolder, wallpaperThumbnailUrl } from '../src/services/style.service';
 
 const CONFIG: VSKConfig = {
 	style: { darkmode: true, 'color-scheme': 'vasak-default', radius: 12 },
