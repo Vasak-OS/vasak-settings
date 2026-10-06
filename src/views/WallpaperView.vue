@@ -128,13 +128,24 @@ async function loadThumbnail(path: string) {
 
 const thumbnailFor = (path: string) => thumbnails.value[path] ?? '';
 
-/** Lista la carpeta propia y pide las miniaturas de sus imágenes. */
+/**
+ * La cola de miniaturas: se generan **de a una** —no diez ffmpeg a la vez— pero
+ * en segundo plano. La grilla aparece con sus marcos en el acto y cada miniatura
+ * entra cuando está lista, sin que mostrar la carpeta espere a todas.
+ */
+let thumbnailChain: Promise<void> = Promise.resolve();
+function enqueueThumbnails(paths: readonly string[]): void {
+	for (const path of paths) {
+		// Una que falle no corta la cola: la siguiente igual se pide.
+		thumbnailChain = thumbnailChain.then(() => loadThumbnail(path)).catch(() => {});
+	}
+}
+
+/** Lista la carpeta propia y encola las miniaturas de sus imágenes. */
 async function loadCustomWallpapers(folder: string) {
 	customWallpapers.value = folder ? await getCustomWallpapers(folder) : [];
-	// De a una y en orden, igual que con las oficiales.
-	for (const wallpaperPath of customWallpapers.value) {
-		await loadThumbnail(wallpaperPath);
-	}
+	// La grilla ya está disponible; las miniaturas entran en segundo plano.
+	enqueueThumbnails(customWallpapers.value);
 }
 
 /** Abre el diálogo de carpetas y guarda la elegida. */
@@ -149,9 +160,10 @@ async function chooseCustomFolder() {
 			title: t('views.appearanceWallpaper.customFolderPick'),
 		});
 		if (typeof picked !== 'string') return;
-		customFolder.value = picked;
 		// Releer y escribir la configuración vive en el servicio, probado aparte.
+		// La carpeta se muestra como puesta sólo si se pudo guardar.
 		vskConfig.value = await persistWallpaperFolder(picked);
+		customFolder.value = picked;
 		await loadCustomWallpapers(picked);
 	} catch (err) {
 		error.value = t('views.appearanceWallpaper.errorSaving').replace('{0}', String(err));
@@ -166,9 +178,10 @@ async function clearCustomFolder() {
 	customFolderBusy.value = true;
 	error.value = '';
 	try {
+		// La carpeta se olvida sólo si se pudo guardar el cambio.
+		vskConfig.value = await persistWallpaperFolder('');
 		customFolder.value = '';
 		customWallpapers.value = [];
-		vskConfig.value = await persistWallpaperFolder('');
 	} catch (err) {
 		error.value = t('views.appearanceWallpaper.errorSaving').replace('{0}', String(err));
 	} finally {
