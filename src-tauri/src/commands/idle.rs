@@ -299,8 +299,8 @@ fn render_unit(config: &IdleConfig) -> String {
 }
 
 /// La línea de `ExecStart=`, con las continuaciones (`\` al final de la
-/// línea) unidas como las une systemd: la unidad del paquete parte la línea
-/// de swayidle en varias.
+/// línea) unidas como las une systemd, salteando los comentarios que haya en
+/// el medio: la unidad del paquete parte la línea de swayidle en varias.
 fn exec_start_of(unit: &str) -> Option<String> {
     let mut lines = unit.lines().map(str::trim);
     let first = lines.find(|line| line.starts_with("ExecStart="))?;
@@ -312,7 +312,11 @@ fn exec_start_of(unit: &str) -> Option<String> {
             Some(continued) => {
                 command.push_str(continued.trim_end());
                 command.push(' ');
-                current = lines.next().unwrap_or_default();
+                // systemd ignora los comentarios intercalados en una línea
+                // continuada y sigue con la próxima.
+                current = lines
+                    .find(|line| !line.starts_with('#') && !line.starts_with(';'))
+                    .unwrap_or_default();
             }
             None => {
                 command.push_str(current);
@@ -776,5 +780,22 @@ Restart=on-failure";
     fn joins_continued_exec_start_lines() {
         let unit = "[Service]\nExecStart=/usr/bin/a \\\n    b 'c d' \\\n  e\nRestart=no\n";
         assert_eq!(exec_start_of(unit).as_deref(), Some("/usr/bin/a b 'c d' e"));
+    }
+
+    /// Un comentario entre dos pedazos no corta la línea: sin saltearlo, el
+    /// bloqueo de la línea siguiente se perdía al leer y al guardar.
+    #[test]
+    fn skips_comments_inside_a_continued_exec_start() {
+        let unit = "[Service]\nExecStart=/usr/bin/swayidle -w \\\n\
+                    # el bloqueo\n\
+                    ; otro comentario\n    timeout 120 'vasak-lock-screen'\n";
+        let command = exec_start_of(unit).expect("ExecStart");
+        assert_eq!(
+            command,
+            "/usr/bin/swayidle -w timeout 120 'vasak-lock-screen'"
+        );
+        let parsed = parse_swayidle(&command);
+        assert!(parsed.lock_enabled);
+        assert_eq!(parsed.lock_minutes, 2);
     }
 }
