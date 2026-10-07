@@ -11,8 +11,9 @@
  * del texto cuando la columna es angosta.
  *
  * Una acción que necesita algo que no está instalado **no se esconde ni se
- * rompe**: se ve con su interruptor deshabilitado, la marca «no disponible» y
- * cómo instalarlo. La fila no se atenúa entera —sólo el interruptor— para que
+ * rompe**: se ve con su interruptor deshabilitado y, debajo de toda la fila, la
+ * marca «no disponible» y cómo instalarlo —debajo y no al lado del interruptor,
+ * para no robarle ancho a la explicación en una columna angosta—. La fila no se atenúa entera —sólo el interruptor— para que
  * la indicación de cómo instalarlo se lea con todo su contraste.
  */
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
@@ -77,12 +78,6 @@ function isOn(action: GameModeAction): boolean {
 					<ThemeIcon :name="action.icon" :size="24" />
 				</template>
 
-				<Badge
-					v-if="!available(action)"
-					tone="neutral"
-					size="sm"
-					:label="t('views.gameMode.unavailable')"
-				/>
 				<SwitchToggle
 					:label="t(action.titleKey)"
 					:model-value="isOn(action)"
@@ -91,10 +86,15 @@ function isOn(action: GameModeAction): boolean {
 				/>
 
 				<template v-if="!available(action) && action.requires" #footer>
-					<p class="break-words text-body-xs text-tx-muted" data-install-hint>
-						{{ t('views.gameMode.installHint') }}
-						<span class="break-all font-mono text-tx-main">{{ INSTALL_COMMANDS[action.requires] }}</span>
-					</p>
+					<div class="flex min-w-0 flex-col items-start gap-1" data-install-hint>
+						<Badge tone="neutral" size="sm" :label="t('views.gameMode.unavailable')" />
+						<p class="min-w-0 break-words text-body-xs text-tx-muted">
+							{{ t('views.gameMode.installHint') }}
+							<code class="block break-words font-mono text-tx-main">{{
+								INSTALL_COMMANDS[action.requires]
+							}}</code>
+						</p>
+					</div>
 				</template>
 			</SettingRow>
 		</li>
