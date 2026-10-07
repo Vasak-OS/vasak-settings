@@ -31,9 +31,15 @@ interface Props {
 	installed: Record<GameModeRequirement, boolean>;
 	/** La acción que se está guardando, para no aceptar otro clic encima. */
 	saving: GameModeActionKey | null;
+	/**
+	 * Si ya se leyó el archivo. Antes, los interruptores muestran los valores
+	 * por omisión pero no se pueden tocar: un clic ahí escribiría sobre algo
+	 * que todavía no se vio.
+	 */
+	loaded?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), { loaded: true });
 
 const emit = defineEmits<{ toggle: [key: GameModeActionKey, enabled: boolean] }>();
 
@@ -55,7 +61,7 @@ function isOn(action: GameModeAction): boolean {
 </script>
 
 <template>
-	<ul class="flex min-w-0 flex-col divide-y divide-ui-line">
+	<ul class="flex min-w-0 flex-col divide-y divide-ui-line" :aria-busy="!loaded">
 		<li
 			v-for="action in actions"
 			:key="action.key"
@@ -66,7 +72,6 @@ function isOn(action: GameModeAction): boolean {
 			<SettingRow
 				:label="t(action.titleKey)"
 				:description="t(action.descriptionKey)"
-				:control-id="`game-mode-${action.key}`"
 			>
 				<template #leading>
 					<ThemeIcon :name="action.icon" :size="24" />
@@ -79,10 +84,9 @@ function isOn(action: GameModeAction): boolean {
 					:label="t('views.gameMode.unavailable')"
 				/>
 				<SwitchToggle
-					:id="`game-mode-${action.key}`"
 					:label="t(action.titleKey)"
 					:model-value="isOn(action)"
-					:disabled="!available(action) || saving !== null"
+					:disabled="!loaded || !available(action) || saving !== null"
 					@update:model-value="emit('toggle', action.key as GameModeActionKey, $event)"
 				/>
 

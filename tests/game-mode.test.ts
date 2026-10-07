@@ -208,7 +208,9 @@ describe('GameModeActionList', () => {
 
 	test('tocar un interruptor avisa con la clave de esa fila', async () => {
 		const wrapper = mountList();
-		await wrapper.find('[data-game-mode-action="disable_animations"] [role="switch"]').trigger('click');
+		await wrapper
+			.find('[data-game-mode-action="disable_animations"] [role="switch"]')
+			.trigger('click');
 		expect(wrapper.emitted('toggle')).toEqual([['disable_animations', false]]);
 	});
 
@@ -226,6 +228,23 @@ describe('GameModeActionList', () => {
 		const other = wrapper.find('[data-game-mode-action="do_not_disturb"]');
 		expect(other.attributes('data-available')).toBe('true');
 		expect(other.find('[data-install-hint]').exists()).toBe(false);
+	});
+
+	test('antes de leer el archivo no se puede tocar ningún interruptor', () => {
+		const wrapper = mount(GameModeActionList, {
+			props: {
+				actions: GAME_MODE_ACTIONS,
+				settings: ALL_ON,
+				installed: { gamemode: true },
+				saving: null,
+				loaded: false,
+			},
+			global: { stubs: { ThemeIcon: true } },
+		});
+		expect(wrapper.find('ul').attributes('aria-busy')).toBe('true');
+		for (const toggle of wrapper.findAll('[role="switch"]')) {
+			expect(toggle.attributes('disabled')).toBeDefined();
+		}
 	});
 
 	test('con gamemoded la fila no muestra la indicación', () => {

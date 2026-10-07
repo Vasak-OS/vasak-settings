@@ -89,5 +89,14 @@ export function useGameModeSettings(deps: Partial<GameModeDeps> = {}) {
 		}
 	}
 
-	return { actions: GAME_MODE_ACTIONS, settings, installed, loaded, saving, error, load, setAction };
+	return {
+		actions: GAME_MODE_ACTIONS,
+		settings,
+		installed,
+		loaded,
+		saving,
+		error,
+		load,
+		setAction,
+	};
 }

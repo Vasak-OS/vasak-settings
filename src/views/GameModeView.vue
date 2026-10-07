@@ -31,12 +31,13 @@ onMounted(load);
 
 		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 
-		<Panel as="section" :aria-busy="!loaded">
+		<Panel as="section">
 			<GameModeActionList
 				:actions="actions"
 				:settings="settings"
 				:installed="installed"
 				:saving="saving"
+				:loaded="loaded"
 				@toggle="setAction"
 			/>
 		</Panel>
