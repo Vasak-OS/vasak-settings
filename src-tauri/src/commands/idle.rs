@@ -205,9 +205,27 @@ fn render_command(config: &IdleConfig) -> String {
 
     if config.lock_before_sleep {
         command.push_str(&format!(" before-sleep '{}'", SLEEP_LOCKER));
+    } else if let Some(seconds) = first_timeout(config) {
+        // swayidle sólo respeta los inhibidores de logind (`systemd-inhibit
+        // --what=idle`, «Mantener despierto» del escritorio, un reproductor)
+        // si está conectado a logind, y se conecta sólo cuando la línea lleva
+        // `before-sleep`, `after-resume`, `lock`, `unlock` o `idlehint`. Sin el
+        // bloqueo antes de suspender no quedaba ninguno: los temporizadores
+        // corrían igual con un inhibidor tomado. `idlehint` es el que no agrega
+        // nada más que avisarle a logind que la sesión está inactiva.
+        command.push_str(&format!(" idlehint {seconds}"));
     }
 
     command
+}
+
+/// El primer temporizador que va a la línea, en segundos, si hay alguno.
+fn first_timeout(config: &IdleConfig) -> Option<u32> {
+    let lock = config.lock_enabled.then(|| config.lock_minutes.max(1) * 60);
+    let screen_off = config
+        .screen_off_enabled
+        .then(|| config.screen_off_minutes.max(1) * 60);
+    lock.into_iter().chain(screen_off).min()
 }
 
 fn render_unit(config: &IdleConfig) -> String {
@@ -377,6 +395,67 @@ mod tests {
         let command = render_command(&config);
         assert!(command.contains("before-sleep '"));
         assert!(command.contains("/usr/bin/vasak-lock-screen -d'"));
+    }
+
+    /// swayidle sólo ve los inhibidores de logind si está conectado a logind:
+    /// sin `before-sleep`, la línea tiene que llevar `idlehint` o «Mantener
+    /// despierto» no frena el bloqueo (vasak-desktop#179).
+    #[test]
+    fn without_before_sleep_it_still_connects_to_logind() {
+        let config = IdleConfig {
+            lock_enabled: true,
+            lock_minutes: 5,
+            screen_off_enabled: true,
+            screen_off_minutes: 10,
+            lock_before_sleep: false,
+            ..IdleConfig::default()
+        };
+
+        let command = render_command(&config);
+        assert!(!command.contains("before-sleep"));
+        assert!(
+            command.ends_with(" idlehint 300"),
+            "idlehint con el primer temporizador: {command}"
+        );
+    }
+
+    /// Con `before-sleep` ya está conectado, y sin temporizadores no hay nada
+    /// que inhibir: en los dos casos la línea no cambia.
+    #[test]
+    fn idlehint_only_when_nothing_else_connects_to_logind() {
+        let with_sleep_lock = render_command(&IdleConfig {
+            lock_before_sleep: true,
+            ..IdleConfig::default()
+        });
+        assert!(!with_sleep_lock.contains("idlehint"));
+
+        let nothing = render_command(&IdleConfig {
+            lock_enabled: false,
+            screen_off_enabled: false,
+            lock_before_sleep: false,
+            ..IdleConfig::default()
+        });
+        assert_eq!(nothing, "/usr/bin/swayidle -w");
+    }
+
+    /// Leer la unidad generada con `idlehint` no confunde los valores.
+    #[test]
+    fn round_trips_with_idlehint() {
+        let config = IdleConfig {
+            lock_enabled: true,
+            lock_minutes: 7,
+            screen_off_enabled: true,
+            screen_off_minutes: 15,
+            lock_before_sleep: false,
+            ..IdleConfig::default()
+        };
+
+        let parsed = parse_swayidle(&render_command(&config));
+        assert!(parsed.lock_enabled);
+        assert_eq!(parsed.lock_minutes, 7);
+        assert!(parsed.screen_off_enabled);
+        assert_eq!(parsed.screen_off_minutes, 15);
+        assert!(!parsed.lock_before_sleep);
     }
 
     #[test]
