@@ -678,6 +678,37 @@ views:
       bottom: Bottom
       left: Left
       right: Right
+    appearance: Panel shape
+    style: Type
+    styleHint: >-
+      How the bar is drawn. Separate pills over the desktop, a rounded floating
+      bar, an edge-to-edge bar, or a dock stuck to the edge and rounded on the
+      inner side.
+    styles:
+      pills: Pills
+      floating: Floating
+      bar: Bar
+      dock: Dock
+    layout: Density
+    layoutHint: >-
+      Distributed spreads the groups along the bar, as always. Compact gathers
+      and centres them, and the bar shrinks to its content.
+    layouts:
+      distributed: Distributed
+      compact: Compact
+    animation: Animation
+    animationHint: >-
+      The motion of the pills. It respects the system's reduced-motion
+      preference.
+    animations:
+      off: None
+      stream: Stream
+      wave: Wave
+      sweep: Sweep
+      reactor: Reactor
+      beat: Beat
+    size: Size
+    sizeHint: The scale of the bar, between 80 and 120%.
     indicators: Indicators
     weather: Weather
     weatherHint: The icon and the temperature for your city, next to the player.

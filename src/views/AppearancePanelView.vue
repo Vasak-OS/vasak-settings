@@ -16,10 +16,24 @@ import {
 } from '@vasakgroup/vue-libvasak';
 import { onMounted, type Ref, ref } from 'vue';
 import {
+	DEFAULT_PANEL_SIZE,
+	MAX_PANEL_SIZE,
+	MIN_PANEL_SIZE,
+	PANEL_ANIMATIONS,
+	PANEL_LAYOUTS,
 	PANEL_POSITIONS,
+	PANEL_STYLES,
+	type PanelAnimation,
+	type PanelLayout,
 	type PanelPosition,
+	type PanelStyle,
+	readPanelAnimation,
 	readPanelIndicators,
+	readPanelLayout,
 	readPanelPosition,
+	readPanelSize,
+	readPanelStyle,
+	writePanelAppearance,
 	writePanelIndicators,
 	writePanelPosition,
 } from '@/utils/config-values';
@@ -57,6 +71,20 @@ const privacy = ref(true);
  */
 const position = ref<PanelPosition>('top');
 
+/**
+ * El aspecto de la barra: su tipo, su densidad, su animación y su tamaño. Son
+ * las claves que el escritorio lee en `panel-appearance.ts`; acá se leen y se
+ * escriben con los mismos valores y los mismos de fábrica. Al guardar, el panel
+ * se reacomoda solo con `config-changed`, sin reiniciar la sesión.
+ */
+const style = ref<PanelStyle>('pills');
+const layout = ref<PanelLayout>('distributed');
+const animation = ref<PanelAnimation>('off');
+const size = ref<number>(DEFAULT_PANEL_SIZE);
+
+/** Los pasos del tamaño que ofrece el desplegable, dentro del rango permitido. */
+const SIZE_STEPS = [MIN_PANEL_SIZE, 90, DEFAULT_PANEL_SIZE, 110, MAX_PANEL_SIZE] as const;
+
 onMounted(async () => {
 	try {
 		configStore.value = useConfigStore();
@@ -71,6 +99,10 @@ onMounted(async () => {
 		tray.value = panel.tray;
 		privacy.value = panel.privacy;
 		position.value = readPanelPosition(vskConfig.value);
+		style.value = readPanelStyle(vskConfig.value);
+		layout.value = readPanelLayout(vskConfig.value);
+		animation.value = readPanelAnimation(vskConfig.value);
+		size.value = readPanelSize(vskConfig.value);
 	} catch (err) {
 		error.value = t('views.appearancePanel.errorLoading').replace('{0}', String(err));
 	} finally {
@@ -95,6 +127,13 @@ const saveConfig = async () => {
 		});
 
 		writePanelPosition(vskConfig.value as unknown as Record<string, unknown>, position.value);
+
+		writePanelAppearance(vskConfig.value as unknown as Record<string, unknown>, {
+			style: style.value,
+			layout: layout.value,
+			animation: animation.value,
+			size: size.value,
+		});
 
 		await writeConfig(vskConfig.value);
 
@@ -161,6 +200,74 @@ const saveConfig = async () => {
 							{{ t(`views.appearancePanel.lados.${side}`) }}
 						</option>
 					</SelectField>
+				</div>
+			</ConfigSection>
+
+			<ConfigSection :title="t('views.appearancePanel.appearance')">
+				<div class="flex flex-col gap-5">
+					<div class="flex items-start justify-between gap-4">
+						<p class="text-xs text-tx-muted">
+							{{ t('views.appearancePanel.styleHint') }}
+						</p>
+						<SelectField
+							v-model="style"
+							:label="t('views.appearancePanel.style')"
+							class="w-48 shrink-0"
+						>
+							<option v-for="name in PANEL_STYLES" :key="name" :value="name">
+								{{ t(`views.appearancePanel.styles.${name}`) }}
+							</option>
+						</SelectField>
+					</div>
+
+					<div class="flex items-start justify-between gap-4">
+						<p class="text-xs text-tx-muted">
+							{{ t('views.appearancePanel.layoutHint') }}
+						</p>
+						<SelectField
+							v-model="layout"
+							:label="t('views.appearancePanel.layout')"
+							class="w-48 shrink-0"
+						>
+							<option v-for="name in PANEL_LAYOUTS" :key="name" :value="name">
+								{{ t(`views.appearancePanel.layouts.${name}`) }}
+							</option>
+						</SelectField>
+					</div>
+
+					<div class="flex items-start justify-between gap-4">
+						<p class="text-xs text-tx-muted">
+							{{ t('views.appearancePanel.animationHint') }}
+						</p>
+						<SelectField
+							v-model="animation"
+							:label="t('views.appearancePanel.animation')"
+							class="w-48 shrink-0"
+						>
+							<option v-for="name in PANEL_ANIMATIONS" :key="name" :value="name">
+								{{ t(`views.appearancePanel.animations.${name}`) }}
+							</option>
+						</SelectField>
+					</div>
+
+					<div class="flex items-start justify-between gap-4">
+						<p class="text-xs text-tx-muted">
+							{{ t('views.appearancePanel.sizeHint') }}
+						</p>
+						<!-- Pasos discretos y no un deslizador libre: el tamaño ya va
+						     acotado a [80, 120] %, y unos pocos valores son más claros
+						     que arrastrar hasta un número exacto. -->
+						<!-- `:value` numérico y `v-model` a secas: el valor que llega ya es
+						     número, sin el modificador `.number` (que `SelectField` no
+						     declara y el typecheck rechaza). -->
+						<SelectField
+							v-model="size"
+							:label="t('views.appearancePanel.size')"
+							class="w-48 shrink-0"
+						>
+							<option v-for="step in SIZE_STEPS" :key="step" :value="step">{{ step }} %</option>
+						</SelectField>
+					</div>
 				</div>
 			</ConfigSection>
 

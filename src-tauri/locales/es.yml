@@ -682,6 +682,37 @@ views:
       bottom: Abajo
       left: A la izquierda
       right: A la derecha
+    appearance: Forma del panel
+    style: Tipo
+    styleHint: >-
+      Cómo se dibuja la barra. Píldoras sueltas sobre el escritorio, una barra
+      flotante redondeada, una barra de borde a borde, o un dock pegado al borde
+      y redondeado del lado de adentro.
+    styles:
+      pills: Píldoras
+      floating: Flotante
+      bar: Barra
+      dock: Dock
+    layout: Densidad
+    layoutHint: >-
+      Distribuido reparte los grupos a lo largo de la barra, como siempre.
+      Compacto los junta y los centra, y la barra se encoge a su contenido.
+    layouts:
+      distributed: Distribuido
+      compact: Compacto
+    animation: Animación
+    animationHint: >-
+      El movimiento de las píldoras. Respeta la preferencia de menos movimiento
+      del sistema.
+    animations:
+      off: Ninguna
+      stream: Transmisión
+      wave: Oleada
+      sweep: Barrido
+      reactor: Reactor
+      beat: Latido
+    size: Tamaño
+    sizeHint: La escala de la barra, entre el 80 y el 120 %.
     indicators: Indicadores
     weather: Clima
     weatherHint: El icono y la temperatura de tu ciudad, al lado del reproductor.

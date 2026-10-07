@@ -3,12 +3,26 @@ import {
 	BAR_POSITIONS,
 	clearStyle,
 	configBoolean,
+	DEFAULT_PANEL_ANIMATION,
+	DEFAULT_PANEL_LAYOUT,
+	DEFAULT_PANEL_SIZE,
+	DEFAULT_PANEL_STYLE,
+	MAX_PANEL_SIZE,
+	MIN_PANEL_SIZE,
+	PANEL_ANIMATIONS,
+	PANEL_LAYOUTS,
 	PANEL_POSITIONS,
+	PANEL_STYLES,
 	readBarPosition,
+	readPanelAnimation,
+	readPanelLayout,
 	readPanelPosition,
+	readPanelSize,
+	readPanelStyle,
 	readScreenTimeEnabled,
 	readWallpaperFolder,
 	writeBarPosition,
+	writePanelAppearance,
 	writePanelPosition,
 	writeScheme,
 	writeScreenTimeEnabled,
@@ -203,6 +217,79 @@ describe('writePanelPosition', () => {
 		writePanelPosition(config, 'left');
 
 		expect(config.panel).toEqual({ weather: false, tray: false, position: 'left' });
+	});
+});
+
+describe('el aspecto del panel: tipo, densidad, animación y tamaño', () => {
+	test('sin nada puesto, los valores de fábrica', () => {
+		// El contrato coincide con el que lee el escritorio (`panel-appearance.ts`):
+		// mismos valores de fábrica. Una instalación vieja tiene la sección `panel`
+		// con los indicadores y ninguna de estas claves.
+		for (const config of [{}, null, { panel: {} }, { panel: { weather: false } }]) {
+			expect(readPanelStyle(config)).toBe(DEFAULT_PANEL_STYLE);
+			expect(readPanelLayout(config)).toBe(DEFAULT_PANEL_LAYOUT);
+			expect(readPanelAnimation(config)).toBe(DEFAULT_PANEL_ANIMATION);
+			expect(readPanelSize(config)).toBe(DEFAULT_PANEL_SIZE);
+		}
+	});
+
+	test('cada valor conocido se lee', () => {
+		for (const style of PANEL_STYLES) expect(readPanelStyle({ panel: { style } })).toBe(style);
+		for (const layout of PANEL_LAYOUTS) expect(readPanelLayout({ panel: { layout } })).toBe(layout);
+		for (const animation of PANEL_ANIMATIONS)
+			expect(readPanelAnimation({ panel: { animation } })).toBe(animation);
+	});
+
+	test('cualquier otra cosa cae al valor de fábrica', () => {
+		expect(readPanelStyle({ panel: { style: 'isla' } })).toBe(DEFAULT_PANEL_STYLE);
+		expect(readPanelLayout({ panel: { layout: 3 } })).toBe(DEFAULT_PANEL_LAYOUT);
+		expect(readPanelAnimation({ panel: { animation: 'rayo' } })).toBe(DEFAULT_PANEL_ANIMATION);
+		expect(readPanelStyle({ panel: 'bar' })).toBe(DEFAULT_PANEL_STYLE);
+	});
+
+	test('el tamaño se acota a [80, 120]; lo que no es número vale 100', () => {
+		expect(readPanelSize({ panel: { size: 90 } })).toBe(90);
+		expect(readPanelSize({ panel: { size: 500 } })).toBe(MAX_PANEL_SIZE);
+		expect(readPanelSize({ panel: { size: 10 } })).toBe(MIN_PANEL_SIZE);
+		expect(readPanelSize({ panel: { size: Number.NaN } })).toBe(DEFAULT_PANEL_SIZE);
+		expect(readPanelSize({ panel: { size: '120' } })).toBe(DEFAULT_PANEL_SIZE);
+	});
+
+	test('escribir el aspecto conserva la posición y los indicadores', () => {
+		// Todo vive en la misma sección `panel`: reemplazarla entera apagaría los
+		// indicadores y movería el panel cada vez que alguien cambia el tipo.
+		const config: Record<string, unknown> = {
+			panel: { weather: false, position: 'bottom' },
+		};
+
+		writePanelAppearance(config, {
+			style: 'dock',
+			layout: 'compact',
+			animation: 'reactor',
+			size: 110,
+		});
+
+		expect(config.panel).toEqual({
+			weather: false,
+			position: 'bottom',
+			style: 'dock',
+			layout: 'compact',
+			animation: 'reactor',
+			size: 110,
+		});
+	});
+
+	test('al escribir, el tamaño también se acota', () => {
+		const config: Record<string, unknown> = {};
+
+		writePanelAppearance(config, {
+			style: 'bar',
+			layout: 'distributed',
+			animation: 'off',
+			size: 999,
+		});
+
+		expect((config.panel as { size: number }).size).toBe(MAX_PANEL_SIZE);
 	});
 });
 
