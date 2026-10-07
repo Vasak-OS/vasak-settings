@@ -177,6 +177,10 @@ export const PALABRAS: Record<string, Record<(typeof IDIOMAS)[number], string[]>
 		es: ['batería', 'suspender', 'ahorro de energía'],
 		en: ['battery', 'suspend', 'power saving'],
 	},
+	'game-mode': {
+		es: ['juegos', 'gamemode', 'rendimiento'],
+		en: ['gaming', 'gamemode', 'performance'],
+	},
 	monitors: {
 		es: ['resolución', 'monitor', 'escala', 'hdmi'],
 		en: ['resolution', 'scaling', 'hdmi'],

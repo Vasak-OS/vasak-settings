@@ -60,6 +60,7 @@ sidebar:
     datetime: Date and time
     brightness: Brightness and night light
     power: Power
+    gameMode: Game mode
     monitors: Displays
     actualizaciones: Updates
     privacySecurity: Privacy and security
@@ -1030,6 +1031,22 @@ views:
     lockBeforeSleep: Lock on suspend
     lockBeforeSleepDescription: Asks for the password when resuming from suspend.
 
+  gameMode:
+    title: Game mode
+    description: What the control center's game mode does while it is on.
+    unavailable: Unavailable
+    installHint: "GameMode is not installed. To use this action, install it with"
+    nextActivation: Changes apply the next time game mode is turned on, not to a game in progress.
+    actions:
+      doNotDisturb:
+        title: Do not disturb
+        description: Silences notifications while it lasts and restores them on exit.
+      disableAnimations:
+        title: Turn off animations
+        description: Disables window animations while it lasts and restores them on exit.
+      gamemode:
+        title: GameMode
+        description: Asks GameMode to tune the system for gaming (CPU governor, game priority) while it lasts.
   monitors:
     title: Displays
     description: Manage the settings of your monitors and displays.

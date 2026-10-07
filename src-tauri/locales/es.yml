@@ -60,6 +60,7 @@ sidebar:
     datetime: Fecha y hora
     brightness: Brillo y luz nocturna
     power: Energía
+    gameMode: Modo juego
     monitors: Pantallas
     actualizaciones: Actualizaciones
     privacySecurity: Privacidad y seguridad
@@ -1034,6 +1035,22 @@ views:
     lockBeforeSleep: Bloquear al suspender
     lockBeforeSleepDescription: Pide la contraseña al volver de la suspensión.
 
+  gameMode:
+    title: Modo juego
+    description: Qué hace el modo juego del centro de control mientras está activo.
+    unavailable: No disponible
+    installHint: "GameMode no está instalado. Para usar esta acción, instalalo con"
+    nextActivation: Los cambios valen para la próxima vez que se active el modo juego, no para una partida en curso.
+    actions:
+      doNotDisturb:
+        title: No molestar
+        description: Silencia las notificaciones mientras dura y al salir las deja como estaban.
+      disableAnimations:
+        title: Apagar las animaciones
+        description: Desactiva las animaciones de las ventanas mientras dura y las restaura al salir.
+      gamemode:
+        title: GameMode
+        description: Le pide a GameMode que ajuste el sistema para jugar (procesador, prioridad del juego) mientras dura.
   monitors:
     title: Pantallas
     description: Administra la configuración de tus monitores y pantallas.

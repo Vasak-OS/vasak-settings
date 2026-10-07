@@ -414,6 +414,26 @@
 		}
 	},
 	{
+		"id": "game-mode",
+		"icono": "applications-games",
+		"nombres": {
+			"es": "Modo juego",
+			"en": "Game mode"
+		},
+		"palabras": {
+			"es": [
+				"juegos",
+				"gamemode",
+				"rendimiento"
+			],
+			"en": [
+				"gaming",
+				"gamemode",
+				"performance"
+			]
+		}
+	},
+	{
 		"id": "monitors",
 		"icono": "video-display",
 		"nombres": {
