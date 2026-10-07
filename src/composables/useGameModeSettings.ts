@@ -18,7 +18,7 @@ import { ref } from 'vue';
 import {
 	GAME_MODE_ACTIONS,
 	type GameModeActionKey,
-	type GameModeRequirement,
+	type GameModeRequirements,
 	type GameModeSettings,
 	readGameModeSettings,
 	withGameModeAction,
@@ -27,14 +27,17 @@ import {
 export interface GameModeDeps {
 	read: () => Promise<VSKConfig | null>;
 	write: (config: VSKConfig) => Promise<void>;
-	/** Una sola consulta, sin procesos: ver `src-tauri/src/commands/game_mode.rs`. */
-	isGamemodeAvailable: () => Promise<boolean>;
+	/**
+	 * Una sola consulta, sin procesos: ver `src-tauri/src/commands/game_mode.rs`.
+	 * `null` es «no se sabe».
+	 */
+	isGamemodeAvailable: () => Promise<boolean | null>;
 }
 
 const defaultDeps: GameModeDeps = {
 	read: readConfig,
 	write: writeConfig,
-	isGamemodeAvailable: () => invoke<boolean>('is_gamemode_available'),
+	isGamemodeAvailable: () => invoke<boolean | null>('is_gamemode_available'),
 };
 
 export function useGameModeSettings(deps: Partial<GameModeDeps> = {}) {
@@ -42,8 +45,8 @@ export function useGameModeSettings(deps: Partial<GameModeDeps> = {}) {
 
 	/** Antes de leer, los valores por omisión: nunca una fila sin estado. */
 	const settings = ref<GameModeSettings>(readGameModeSettings(null));
-	/** Hasta saberlo, nada se da por instalado. */
-	const installed = ref<Record<GameModeRequirement, boolean>>({ gamemode: false });
+	/** Hasta saberlo, nada se da por instalado (ni por ausente). */
+	const installed = ref<GameModeRequirements>({ gamemode: null });
 	const loaded = ref(false);
 	const saving = ref<GameModeActionKey | null>(null);
 	const error = ref('');
@@ -57,9 +60,14 @@ export function useGameModeSettings(deps: Partial<GameModeDeps> = {}) {
 		} else {
 			error.value = String(config.reason);
 		}
-		// Si la consulta falla, GameMode queda «no disponible»: es la forma
-		// prudente de equivocarse, y la fila lo explica en vez de romperse.
-		installed.value = { gamemode: gamemode.status === 'fulfilled' && gamemode.value === true };
+		// Si la consulta falla o el bus contesta a medias, no se sabe: la fila
+		// queda no disponible, pero sin mandar a instalar algo que quizás ya está.
+		installed.value = {
+			gamemode:
+				gamemode.status === 'fulfilled' && typeof gamemode.value === 'boolean'
+					? gamemode.value
+					: null,
+		};
 		loaded.value = true;
 	}
 

@@ -18,6 +18,7 @@ import {
 	GAME_MODE_ACTIONS,
 	GAME_MODE_SECTION,
 	isActionAvailable,
+	needsInstall,
 	readGameModeSettings,
 	withGameModeAction,
 } from '../src/utils/game-mode';
@@ -112,10 +113,19 @@ describe('la sección game_mode de vasak.conf', () => {
 		expect(isActionAvailable(gamemode, { gamemode: true })).toBe(true);
 		expect(isActionAvailable(GAME_MODE_ACTIONS[0], { gamemode: false })).toBe(true);
 	});
+
+	test('sin saber si está instalado, no se ofrece ni se manda a instalar', () => {
+		const gamemode = GAME_MODE_ACTIONS[2];
+		expect(isActionAvailable(gamemode, { gamemode: null })).toBe(false);
+		expect(needsInstall(gamemode, { gamemode: null })).toBe(false);
+		expect(needsInstall(gamemode, { gamemode: false })).toBe(true);
+		expect(needsInstall(gamemode, { gamemode: true })).toBe(false);
+		expect(needsInstall(GAME_MODE_ACTIONS[0], { gamemode: false })).toBe(false);
+	});
 });
 
 describe('useGameModeSettings', () => {
-	function deps(stored: VSKConfig | null, gamemode: boolean | Error = true) {
+	function deps(stored: VSKConfig | null, gamemode: boolean | null | Error = true) {
 		return {
 			read: mock(() => Promise.resolve(stored)),
 			write: mock((_value: VSKConfig) => Promise.resolve()),
@@ -143,11 +153,19 @@ describe('useGameModeSettings', () => {
 		expect(api.settings.value).toEqual(ALL_ON);
 	});
 
-	test('si la consulta por GameMode falla, queda no disponible', async () => {
-		const api = useGameModeSettings(deps(config(), new Error('sin bus')));
+	test('sin gamemoded en el bus, queda como no instalado', async () => {
+		const api = useGameModeSettings(deps(config(), false));
 		await api.load();
 		expect(api.installed.value).toEqual({ gamemode: false });
-		expect(api.error.value).toBe('');
+	});
+
+	test('si la consulta falla o el bus contesta a medias, no se sabe', async () => {
+		for (const answer of [new Error('sin bus'), null]) {
+			const api = useGameModeSettings(deps(config(), answer));
+			await api.load();
+			expect(api.installed.value).toEqual({ gamemode: null });
+			expect(api.error.value).toBe('');
+		}
 	});
 
 	test('cambiar un interruptor escribe la clave correcta sobre lo releído', async () => {
@@ -190,7 +208,10 @@ describe('useGameModeSettings', () => {
 });
 
 describe('GameModeActionList', () => {
-	function mountList(installed = { gamemode: true }, settings = ALL_ON) {
+	function mountList(
+		installed: { gamemode: boolean | null } = { gamemode: true },
+		settings = ALL_ON
+	) {
 		return mount(GameModeActionList, {
 			props: { actions: GAME_MODE_ACTIONS, settings, installed, saving: null },
 			global: { stubs: { ThemeIcon: true } },
@@ -247,8 +268,18 @@ describe('GameModeActionList', () => {
 		}
 	});
 
+	test('sin saber si está, la fila queda no disponible pero sin mandar a instalar', () => {
+		const wrapper = mountList({ gamemode: null });
+		const row = wrapper.find('[data-game-mode-action="gamemode"]');
+		expect(row.attributes('data-available')).toBe('false');
+		expect(row.find('[role="switch"]').attributes('disabled')).toBeDefined();
+		expect(row.find('[data-unavailable]').exists()).toBe(true);
+		expect(row.find('[data-install-hint]').exists()).toBe(false);
+	});
+
 	test('con gamemoded la fila no muestra la indicación', () => {
 		const wrapper = mountList({ gamemode: true });
 		expect(wrapper.find('[data-install-hint]').exists()).toBe(false);
+		expect(wrapper.find('[data-unavailable]').exists()).toBe(false);
 	});
 });

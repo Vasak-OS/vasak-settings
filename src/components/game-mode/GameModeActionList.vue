@@ -22,14 +22,16 @@ import {
 	type GameModeAction,
 	type GameModeActionKey,
 	type GameModeRequirement,
+	type GameModeRequirements,
 	type GameModeSettings,
 	isActionAvailable,
+	needsInstall,
 } from '@/utils/game-mode';
 
 interface Props {
 	actions: readonly GameModeAction[];
 	settings: GameModeSettings;
-	installed: Record<GameModeRequirement, boolean>;
+	installed: GameModeRequirements;
 	/** La acción que se está guardando, para no aceptar otro clic encima. */
 	saving: GameModeActionKey | null;
 	/**
@@ -85,10 +87,14 @@ function isOn(action: GameModeAction): boolean {
 					@update:model-value="emit('toggle', action.key as GameModeActionKey, $event)"
 				/>
 
-				<template v-if="!available(action) && action.requires" #footer>
-					<div class="flex min-w-0 flex-col items-start gap-1" data-install-hint>
+				<template v-if="!available(action)" #footer>
+					<div class="flex min-w-0 flex-col items-start gap-1" data-unavailable>
 						<Badge tone="neutral" size="sm" :label="t('views.gameMode.unavailable')" />
-						<p class="min-w-0 break-words text-body-xs text-tx-muted">
+						<p
+							v-if="action.requires && needsInstall(action, installed)"
+							data-install-hint
+							class="min-w-0 break-words text-body-xs text-tx-muted"
+						>
 							{{ t('views.gameMode.installHint') }}
 							<code class="block break-words font-mono text-tx-main">{{
 								INSTALL_COMMANDS[action.requires]

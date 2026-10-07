@@ -26,6 +26,12 @@ export const GAME_MODE_SECTION = 'game_mode';
 /** Algo que la acción necesita instalado para poder ofrecerse. */
 export type GameModeRequirement = 'gamemode';
 
+/**
+ * Si cada requisito está instalado: `true`, `false`, o `null` si no se pudo
+ * saber (el bus contestó a medias o la consulta falló).
+ */
+export type GameModeRequirements = Record<GameModeRequirement, boolean | null>;
+
 export interface GameModeAction {
 	/** La clave en la sección `game_mode`, la misma que lee el escritorio. */
 	readonly key: string;
@@ -114,10 +120,19 @@ export function withGameModeAction<T extends object>(
 	return { ...config, [GAME_MODE_SECTION]: { ...section, [key]: enabled } };
 }
 
-/** Si una acción se puede ofrecer con lo que hay instalado. */
+/** Si una acción se puede ofrecer con lo que hay instalado: sólo si se sabe que sí. */
 export function isActionAvailable(
 	action: GameModeAction,
-	installed: Record<GameModeRequirement, boolean>
+	installed: GameModeRequirements
 ): boolean {
-	return action.requires ? installed[action.requires] : true;
+	return action.requires ? installed[action.requires] === true : true;
+}
+
+/**
+ * Si corresponde decir cómo instalar lo que la acción necesita: sólo cuando se
+ * sabe que **no** está. Sin saberlo, la fila queda no disponible pero sin
+ * mandar a instalar algo que quizás ya está.
+ */
+export function needsInstall(action: GameModeAction, installed: GameModeRequirements): boolean {
+	return action.requires ? installed[action.requires] === false : false;
 }

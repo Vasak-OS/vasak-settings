@@ -50,40 +50,59 @@ pub fn binary_in_path(path_var: &OsStr, name: &str) -> bool {
         .any(|dir| is_executable(&dir.join(name)))
 }
 
-/// Los nombres del bus de sesión, en uso y activables, o `None` si no hay bus.
-async fn session_bus_names() -> Option<Vec<String>> {
-    let connection = zbus::Connection::session().await.ok()?;
-    let proxy = zbus::fdo::DBusProxy::new(&connection).await.ok()?;
+/// Lo que dice el bus, con las dos listas por separado.
+///
+/// - en los nombres en uso → instalado (y corriendo);
+/// - si no, manda la lista de activables: instalado y sin correr está sólo ahí;
+/// - si esa lista no se pudo leer, **no se sabe**: un servicio parado puede
+///   faltar de los nombres en uso, y decir «no instalado» mostraría la
+///   indicación de instalar algo que quizás ya está.
+pub fn bus_availability<S: AsRef<str>>(names: &[S], activatable: Option<&[S]>) -> Option<bool> {
+    if bus_offers_gamemode(names) {
+        return Some(true);
+    }
+    activatable.map(bus_offers_gamemode)
+}
 
-    let mut names: Vec<String> = proxy
+/// Qué dice el bus de sesión, o `Err(())` si no hay bus al que preguntar.
+async fn ask_session_bus() -> Result<Option<bool>, ()> {
+    let connection = zbus::Connection::session().await.map_err(|_| ())?;
+    let proxy = zbus::fdo::DBusProxy::new(&connection)
+        .await
+        .map_err(|_| ())?;
+
+    let names: Vec<String> = proxy
         .list_names()
         .await
-        .ok()?
+        .map_err(|_| ())?
         .into_iter()
         .map(|name| name.to_string())
         .collect();
-    // Si sólo falla la lista de activables, con los nombres en uso alcanza
-    // para un demonio que ya está corriendo.
-    if let Ok(activatable) = proxy.list_activatable_names().await {
-        names.extend(activatable.into_iter().map(|name| name.to_string()));
-    }
-    Some(names)
+    let activatable: Option<Vec<String>> = proxy
+        .list_activatable_names()
+        .await
+        .ok()
+        .map(|list| list.into_iter().map(|name| name.to_string()).collect());
+    Ok(bus_availability(&names, activatable.as_deref()))
 }
 
-/// Si GameMode está instalado.
+/// Si GameMode está instalado: `true`, `false`, o `None` si no se pudo saber.
 ///
 /// Cuando el bus contesta, manda el bus: es lo que va a usar el escritorio, así
-/// que un binario suelto sin su servicio de D-Bus no sirve para el modo juego.
-/// Sin bus, el `PATH` es la mejor aproximación.
+/// que un binario suelto sin su servicio de D-Bus no sirve para el modo juego, y
+/// una respuesta a medias del bus queda en «no se sabe» en vez de completarse
+/// con el `PATH`. Sin bus, el `PATH` es la mejor aproximación.
 #[tauri::command]
-pub async fn is_gamemode_available() -> bool {
-    if let Some(names) = session_bus_names().await {
-        return bus_offers_gamemode(&names);
+pub async fn is_gamemode_available() -> Option<bool> {
+    if let Ok(answer) = ask_session_bus().await {
+        return answer;
     }
     log_debug("modo juego: sin bus de sesión, se busca gamemoded en el PATH");
-    std::env::var_os("PATH")
-        .map(|path| binary_in_path(&path, GAMEMODE_BINARY))
-        .unwrap_or(false)
+    Some(
+        std::env::var_os("PATH")
+            .map(|path| binary_in_path(&path, GAMEMODE_BINARY))
+            .unwrap_or(false),
+    )
 }
 
 #[cfg(test)]
@@ -119,6 +138,26 @@ mod tests {
         let names = ["org.freedesktop.DBus", "com.feralinteractive.GameModeX"];
         assert!(!bus_offers_gamemode(&names));
         assert!(!bus_offers_gamemode::<&str>(&[]));
+    }
+
+    #[test]
+    fn corriendo_cuenta_aunque_no_se_lean_los_activables() {
+        let names = ["com.feralinteractive.GameMode"];
+        assert_eq!(bus_availability(&names, None), Some(true));
+    }
+
+    #[test]
+    fn instalado_y_parado_esta_solo_entre_los_activables() {
+        let names = ["org.freedesktop.DBus"];
+        let activatable = ["com.feralinteractive.GameMode"];
+        assert_eq!(bus_availability(&names, Some(&activatable[..])), Some(true));
+        assert_eq!(bus_availability(&names, Some(&names[..])), Some(false));
+    }
+
+    #[test]
+    fn sin_la_lista_de_activables_no_se_sabe() {
+        let names = ["org.freedesktop.DBus"];
+        assert_eq!(bus_availability(&names, None), None);
     }
 
     #[test]
