@@ -194,7 +194,7 @@ const saveConfig = async () => {
 					<SelectField
 						v-model="position"
 						:label="t('views.appearancePanel.position')"
-						class="w-48 shrink-0"
+						class="w-60 shrink-0"
 					>
 						<option v-for="side in PANEL_POSITIONS" :key="side" :value="side">
 							{{ t(`views.appearancePanel.lados.${side}`) }}
@@ -212,7 +212,7 @@ const saveConfig = async () => {
 						<SelectField
 							v-model="style"
 							:label="t('views.appearancePanel.style')"
-							class="w-48 shrink-0"
+							class="w-60 shrink-0"
 						>
 							<option v-for="name in PANEL_STYLES" :key="name" :value="name">
 								{{ t(`views.appearancePanel.styles.${name}`) }}
@@ -227,7 +227,7 @@ const saveConfig = async () => {
 						<SelectField
 							v-model="layout"
 							:label="t('views.appearancePanel.layout')"
-							class="w-48 shrink-0"
+							class="w-60 shrink-0"
 						>
 							<option v-for="name in PANEL_LAYOUTS" :key="name" :value="name">
 								{{ t(`views.appearancePanel.layouts.${name}`) }}
@@ -242,7 +242,7 @@ const saveConfig = async () => {
 						<SelectField
 							v-model="animation"
 							:label="t('views.appearancePanel.animation')"
-							class="w-48 shrink-0"
+							class="w-60 shrink-0"
 						>
 							<option v-for="name in PANEL_ANIMATIONS" :key="name" :value="name">
 								{{ t(`views.appearancePanel.animations.${name}`) }}
@@ -263,7 +263,7 @@ const saveConfig = async () => {
 						<SelectField
 							v-model="size"
 							:label="t('views.appearancePanel.size')"
-							class="w-48 shrink-0"
+							class="w-60 shrink-0"
 						>
 							<option v-for="step in SIZE_STEPS" :key="step" :value="step">{{ step }} %</option>
 						</SelectField>

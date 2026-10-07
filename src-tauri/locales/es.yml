@@ -673,10 +673,7 @@ views:
     saved: Configuración del panel guardada
     bar: Barra del escritorio
     position: Posición
-    positionHint: >-
-      Arriba, abajo o de costado. El panel mide lo mismo de los cuatro lados: a
-      los costados se pone de pie y los iconos se apilan. Se mueve en el acto,
-      en la pantalla principal, y las ventanas maximizadas le dejan el lugar.
+    positionHint: Arriba, abajo o de costado. Se mueve en el acto.
     lados:
       top: Arriba
       bottom: Abajo

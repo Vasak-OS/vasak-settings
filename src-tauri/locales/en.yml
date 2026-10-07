@@ -669,10 +669,7 @@ views:
     saved: Panel configuration saved
     bar: Desktop bar
     position: Position
-    positionHint: >-
-      Top, bottom or on a side. The panel is the same size on all four: on the
-      sides it stands up and the icons stack. It moves right away, on the main
-      screen, and maximised windows make room for it.
+    positionHint: Top, bottom or on a side. It moves right away.
     lados:
       top: Top
       bottom: Bottom
