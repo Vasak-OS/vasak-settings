@@ -148,6 +148,7 @@ export function categoriasDelMenu(t: Traductor): SidebarCategory[] {
 				{ id: 'datetime', label: t('sidebar.items.datetime'), icon: 'preferences-system-time' },
 				{ id: 'brightness', label: t('sidebar.items.brightness'), icon: 'display-brightness' },
 				{ id: 'power', label: t('sidebar.items.power'), icon: 'battery' },
+				{ id: 'game-mode', label: t('sidebar.items.gameMode'), icon: 'applications-games' },
 				{ id: 'monitors', label: t('sidebar.items.monitors'), icon: 'video-display' },
 				{
 					id: 'actualizaciones',

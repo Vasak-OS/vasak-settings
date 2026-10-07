@@ -135,6 +135,11 @@ const routes = [
 		component: () => import('@/views/PowerView.vue'),
 	},
 	{
+		path: '/game-mode',
+		name: 'game-mode',
+		component: () => import('@/views/GameModeView.vue'),
+	},
+	{
 		path: '/monitors',
 		name: 'monitors',
 		component: () => import('@/views/MonitorsView.vue'),

@@ -200,6 +200,7 @@ pub fn run() {
             commands::night_light_service::set_night_light_enabled,
             commands::nitidez::nitidez_activa,
             commands::nitidez::fijar_nitidez,
+            commands::game_mode::is_gamemode_available,
             commands::idle::get_idle_config,
             commands::idle::set_idle_config,
             commands::users::list_users,
