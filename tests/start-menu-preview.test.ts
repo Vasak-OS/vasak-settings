@@ -119,3 +119,20 @@ describe('las opciones encienden y apagan sus pedazos', () => {
 		).toBe(false);
 	});
 });
+
+describe('el tamaño del menú se refleja en el marco', () => {
+	test('por omisión es «normal»', () => {
+		const root = render({}).get('[data-testid="start-menu-preview"]');
+		expect(root.attributes('data-display-mode')).toBe('normal');
+	});
+
+	test('cada modo marca la raíz y ajusta el ancho del marco', () => {
+		for (const mode of ['normal', 'full', 'compact'] as const) {
+			const root = render({ displayMode: mode }).get('[data-testid="start-menu-preview"]');
+			expect(root.attributes('data-display-mode')).toBe(mode);
+		}
+		// Completo va de borde a borde; compacto se encoge y se centra.
+		expect(render({ displayMode: 'full' }).html()).toContain('w-full');
+		expect(render({ displayMode: 'compact' }).html()).toContain('mx-auto');
+	});
+});

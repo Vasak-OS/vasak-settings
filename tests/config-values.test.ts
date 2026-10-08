@@ -4,6 +4,7 @@ import {
 	clearStyle,
 	configBoolean,
 	DEFAULT_HEADER_STRENGTH,
+	DEFAULT_MENU_DISPLAY_MODE,
 	DEFAULT_MENU_SEARCH_POSITION,
 	DEFAULT_MENU_VARIANT,
 	DEFAULT_MENU_WIDGET,
@@ -382,6 +383,7 @@ describe('readMenuSettings', () => {
 		const leido = readMenuSettings({});
 		expect(leido).toEqual({
 			variant: DEFAULT_MENU_VARIANT,
+			displayMode: DEFAULT_MENU_DISPLAY_MODE,
 			widget: DEFAULT_MENU_WIDGET,
 			showUser: true,
 			showSessionActions: true,
@@ -401,9 +403,16 @@ describe('readMenuSettings', () => {
 
 	test('un valor que no es de los conocidos cae al de fábrica', () => {
 		const leido = readMenuSettings({
-			menu: { variant: 'espiral', widget: 'cohete', header: 'banner', searchPosition: 'middle' },
+			menu: {
+				variant: 'espiral',
+				displayMode: 'gigante',
+				widget: 'cohete',
+				header: 'banner',
+				searchPosition: 'middle',
+			},
 		});
 		expect(leido.variant).toBe(DEFAULT_MENU_VARIANT);
+		expect(leido.displayMode).toBe(DEFAULT_MENU_DISPLAY_MODE);
 		expect(leido.widget).toBe(DEFAULT_MENU_WIDGET);
 		expect(leido.header).toBe('none');
 		expect(leido.searchPosition).toBe(DEFAULT_MENU_SEARCH_POSITION);
@@ -413,6 +422,7 @@ describe('readMenuSettings', () => {
 		const leido = readMenuSettings({
 			menu: {
 				variant: 'grid',
+				displayMode: 'full',
 				widget: 'none',
 				showUser: false,
 				searchPosition: 'bottom',
@@ -421,6 +431,7 @@ describe('readMenuSettings', () => {
 			},
 		});
 		expect(leido.variant).toBe('grid');
+		expect(leido.displayMode).toBe('full');
 		expect(leido.widget).toBe('none');
 		expect(leido.showUser).toBe(false);
 		expect(leido.searchPosition).toBe('bottom');
@@ -462,6 +473,7 @@ describe('readMenuSettings', () => {
 describe('writeMenuSettings', () => {
 	const base: MenuSettings = {
 		variant: 'tiles',
+		displayMode: 'full',
 		widget: 'clock',
 		showUser: false,
 		showSessionActions: false,

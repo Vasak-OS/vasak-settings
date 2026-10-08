@@ -13,26 +13,48 @@
  * decorativo lleva `aria-hidden`; el nombre de la variante lo anuncia el
  * `role="img"` de la raíz.
  */
-import type { MenuSearchPosition, MenuVariant, MenuWidget } from '@/utils/config-values';
+import { computed } from 'vue';
+import type {
+	MenuDisplayMode,
+	MenuSearchPosition,
+	MenuVariant,
+	MenuWidget,
+} from '@/utils/config-values';
 
-const props = defineProps<{
-	/** El esqueleto a dibujar. */
-	variant: MenuVariant;
-	/** El widget del hueco, para dibujarlo (o no, si es `none`). */
-	widget: MenuWidget;
-	showUser: boolean;
-	showSessionActions: boolean;
-	searchPosition: MenuSearchPosition;
-	showPlaces: boolean;
-	showFavorites: boolean;
-	/** `hero` dibuja la banda de encabezado. */
-	hero: boolean;
-	/** El nombre de la variante, ya traducido: es el nombre accesible del dibujo. */
-	label: string;
-}>();
+const props = withDefaults(
+	defineProps<{
+		/** El esqueleto a dibujar. */
+		variant: MenuVariant;
+		/** El widget del hueco, para dibujarlo (o no, si es `none`). */
+		widget: MenuWidget;
+		showUser: boolean;
+		showSessionActions: boolean;
+		searchPosition: MenuSearchPosition;
+		showPlaces: boolean;
+		showFavorites: boolean;
+		/** `hero` dibuja la banda de encabezado. */
+		hero: boolean;
+		/** El nombre de la variante, ya traducido: es el nombre accesible del dibujo. */
+		label: string;
+		/** El tamaño con que abre el menú: cambia el ancho del marco del dibujo. */
+		displayMode?: MenuDisplayMode;
+	}>(),
+	{ displayMode: 'normal' }
+);
 
 /** Un rango corto, para repetir filas o celdas en el dibujo. */
 const range = (count: number): number[] => Array.from({ length: count }, (_, index) => index);
+
+/**
+ * El ancho del marco según el modo: `compact` lo encoge y lo centra, `full` lo
+ * lleva de borde a borde (el overlay a pantalla completa), `normal` deja el de
+ * hoy. Es sólo una pista visual: el tamaño real lo fija el backend del applet.
+ */
+const frameClass = computed(() => {
+	if (props.displayMode === 'compact') return 'mx-auto w-[62%] min-w-[9rem]';
+	if (props.displayMode === 'full') return 'w-full';
+	return 'mx-auto w-[88%]';
+});
 </script>
 
 <template>
@@ -42,9 +64,11 @@ const range = (count: number): number[] => Array.from({ length: count }, (_, ind
 		:aria-label="label"
 		data-testid="start-menu-preview"
 		:data-variant="props.variant"
+		:data-display-mode="props.displayMode"
 	>
 		<div
 			class="flex flex-col gap-2 rounded-corner-l border border-ui-line bg-ui-shell p-3"
+			:class="frameClass"
 			aria-hidden="true"
 		>
 			<!-- Encabezado hero: una banda con el acento, el saludo y el clima. -->

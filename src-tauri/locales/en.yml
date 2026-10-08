@@ -739,6 +739,14 @@ views:
       grid: Grid
       favorites: Favorites
       tiles: Tiles
+    displayMode: Menu size
+    displayModeHint: >-
+      How big the menu opens. Normal is today's; full screen opens it as an
+      overlay; compact makes it small.
+    displayModes:
+      normal: Normal
+      full: Full screen
+      compact: Compact
     content: Content
     widget: Menu widget
     widgetHint: What goes in the menu slot, next to the list.

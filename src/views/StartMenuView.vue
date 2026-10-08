@@ -40,13 +40,16 @@ import { computed, onMounted, type Ref, ref } from 'vue';
 import StartMenuPreview from '@/components/startmenu/StartMenuPreview.vue';
 import {
 	DEFAULT_HEADER_STRENGTH,
+	DEFAULT_MENU_DISPLAY_MODE,
 	DEFAULT_MENU_SEARCH_POSITION,
 	DEFAULT_MENU_VARIANT,
 	DEFAULT_MENU_WIDGET,
 	MAX_HEADER_STRENGTH,
+	MENU_DISPLAY_MODES,
 	MENU_SEARCH_POSITIONS,
 	MENU_VARIANTS,
 	MENU_WIDGETS,
+	type MenuDisplayMode,
 	type MenuSearchPosition,
 	type MenuSettings,
 	type MenuVariant,
@@ -72,6 +75,7 @@ const vskConfig: Ref<VSKConfig | null> = ref(null);
  */
 const settings = ref<MenuSettings>({
 	variant: DEFAULT_MENU_VARIANT,
+	displayMode: DEFAULT_MENU_DISPLAY_MODE,
 	widget: DEFAULT_MENU_WIDGET,
 	showUser: true,
 	showSessionActions: true,
@@ -102,6 +106,13 @@ const headerImageName = computed(() => {
 
 const variantOptions = computed<SegmentedOption<MenuVariant>[]>(() =>
 	MENU_VARIANTS.map((value) => ({ value, label: t(`views.startMenu.variants.${value}`) }))
+);
+
+const displayModeOptions = computed<SegmentedOption<MenuDisplayMode>[]>(() =>
+	MENU_DISPLAY_MODES.map((value) => ({
+		value,
+		label: t(`views.startMenu.displayModes.${value}`),
+	}))
 );
 
 const searchPositionOptions = computed<SegmentedOption<MenuSearchPosition>[]>(() =>
@@ -234,6 +245,15 @@ const saveConfig = async () => {
 						/>
 					</ConfigSection>
 
+					<ConfigSection :title="t('views.startMenu.displayMode')" :description="t('views.startMenu.displayModeHint')">
+						<SegmentedControl
+							:model-value="settings.displayMode"
+							:label="t('views.startMenu.displayMode')"
+							:options="displayModeOptions"
+							@update:model-value="(value) => { if (value) settings.displayMode = value; }"
+						/>
+					</ConfigSection>
+
 					<ConfigSection :title="t('views.startMenu.content')">
 						<div class="flex flex-col gap-4">
 							<SettingRow
@@ -349,6 +369,7 @@ const saveConfig = async () => {
 					<ConfigSection :title="t('views.startMenu.preview')">
 						<StartMenuPreview
 							:variant="settings.variant"
+							:display-mode="settings.displayMode"
 							:widget="settings.widget"
 							:show-user="settings.showUser"
 							:show-session-actions="settings.showSessionActions"
