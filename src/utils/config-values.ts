@@ -354,3 +354,163 @@ export function writePanelAppearance(
 		autohide: appearance.autohide,
 	};
 }
+
+/**
+ * El menú de inicio: su esqueleto y sus opciones.
+ *
+ * Son las claves que el escritorio lee para armar el menú (`vasak-desktop`): el
+ * **contrato tiene que coincidir** —mismos valores, mismos nombres, mismos
+ * valores de fábrica—, porque acá se escriben y allá se dibujan. Está escrito en
+ * `menu-variants-spec.md`, que es la fuente de verdad de las dos puntas.
+ *
+ * Se lee tolerante, como el panel: un valor que no es de los conocidos cae al de
+ * fábrica, y la escritura conserva el resto de la sección `menu` —entre otras,
+ * `favorites`, que no se edita desde esta pantalla sino desde el menú contextual
+ * de cada aplicación—. El archivo se puede editar a mano, así que el tipo se
+ * comprueba en lugar de afirmarlo.
+ */
+export const MENU_VARIANTS = ['compact', 'classic', 'grid', 'favorites', 'tiles'] as const;
+
+export type MenuVariant = (typeof MENU_VARIANTS)[number];
+
+/** Compacto: es el menú que el escritorio trae y el que la gente ya conoce. */
+export const DEFAULT_MENU_VARIANT: MenuVariant = 'compact';
+
+export const MENU_WIDGETS = ['clock', 'music', 'weather', 'files', 'none'] as const;
+
+export type MenuWidget = (typeof MENU_WIDGETS)[number];
+
+/** El clima, que es lo que el hueco del menú mostró siempre. */
+export const DEFAULT_MENU_WIDGET: MenuWidget = 'weather';
+
+export const MENU_HEADERS = ['none', 'hero'] as const;
+
+export type MenuHeader = (typeof MENU_HEADERS)[number];
+
+/** Sin encabezado: el menú arranca por el buscador, como hasta ahora. */
+export const DEFAULT_MENU_HEADER: MenuHeader = 'none';
+
+export const MENU_SEARCH_POSITIONS = ['top', 'bottom'] as const;
+
+export type MenuSearchPosition = (typeof MENU_SEARCH_POSITIONS)[number];
+
+/** Arriba, que es donde el buscador estuvo siempre. */
+export const DEFAULT_MENU_SEARCH_POSITION: MenuSearchPosition = 'top';
+
+/** La imagen del hero se ve entre el 0 y el 100 %. Sesenta por omisión: se nota sin tapar el texto. */
+export const MIN_HEADER_STRENGTH = 0;
+export const MAX_HEADER_STRENGTH = 100;
+export const DEFAULT_HEADER_STRENGTH = 60;
+
+/** Todo lo que esta pantalla lee y escribe del menú, de una vez. */
+export interface MenuSettings {
+	variant: MenuVariant;
+	widget: MenuWidget;
+	showUser: boolean;
+	showSessionActions: boolean;
+	searchPosition: MenuSearchPosition;
+	showPlaces: boolean;
+	showFavorites: boolean;
+	header: MenuHeader;
+	headerImage: string;
+	headerStrength: number;
+	showGreeting: boolean;
+	showWeather: boolean;
+	/**
+	 * Las rutas `.desktop` fijadas como favoritas. No se editan desde esta
+	 * pantalla —se fijan y desfijan desde el menú contextual de cada aplicación—,
+	 * pero se leen y se devuelven tal cual para no borrarlas al guardar el resto.
+	 */
+	favorites: string[];
+}
+
+function menuSection(config: unknown): Record<string, unknown> | undefined {
+	return config && typeof config === 'object'
+		? ((config as Record<string, unknown>).menu as Record<string, unknown> | undefined)
+		: undefined;
+}
+
+/** La lista de favoritos del archivo, quedándose sólo con las cadenas. */
+function readMenuFavorites(section: Record<string, unknown> | undefined): string[] {
+	const stored = section?.favorites;
+	return Array.isArray(stored)
+		? stored.filter((item): item is string => typeof item === 'string')
+		: [];
+}
+
+/** El porcentaje del hero acotado a [0, 100]; lo que no es número vale el de fábrica. */
+function readHeaderStrength(section: Record<string, unknown> | undefined): number {
+	const stored = section?.headerStrength;
+	if (typeof stored !== 'number' || !Number.isFinite(stored)) return DEFAULT_HEADER_STRENGTH;
+	return Math.min(MAX_HEADER_STRENGTH, Math.max(MIN_HEADER_STRENGTH, Math.round(stored)));
+}
+
+/**
+ * Todo el aspecto del menú, leído tolerante.
+ *
+ * El escritorio lee cada clave con este mismo criterio. Leerlas distinto acá
+ * haría que esta pantalla diga una cosa y el menú muestre otra.
+ */
+export function readMenuSettings(config: unknown): MenuSettings {
+	const section = menuSection(config);
+	const variant = section?.variant;
+	const widget = section?.widget;
+	const header = section?.header;
+	const searchPosition = section?.searchPosition;
+	const headerImage = section?.headerImage;
+
+	return {
+		variant: MENU_VARIANTS.includes(variant as MenuVariant)
+			? (variant as MenuVariant)
+			: DEFAULT_MENU_VARIANT,
+		widget: MENU_WIDGETS.includes(widget as MenuWidget)
+			? (widget as MenuWidget)
+			: DEFAULT_MENU_WIDGET,
+		showUser: configBoolean(section?.showUser, true),
+		showSessionActions: configBoolean(section?.showSessionActions, true),
+		searchPosition: MENU_SEARCH_POSITIONS.includes(searchPosition as MenuSearchPosition)
+			? (searchPosition as MenuSearchPosition)
+			: DEFAULT_MENU_SEARCH_POSITION,
+		showPlaces: configBoolean(section?.showPlaces, false),
+		showFavorites: configBoolean(section?.showFavorites, false),
+		header: MENU_HEADERS.includes(header as MenuHeader)
+			? (header as MenuHeader)
+			: DEFAULT_MENU_HEADER,
+		headerImage: typeof headerImage === 'string' ? headerImage : '',
+		headerStrength: readHeaderStrength(section),
+		showGreeting: configBoolean(section?.showGreeting, true),
+		showWeather: configBoolean(section?.showWeather, true),
+		favorites: readMenuFavorites(section),
+	};
+}
+
+/**
+ * Deja la sección `menu` con el aspecto elegido.
+ *
+ * Conserva lo que ya hubiera en la sección —y en particular `favorites`, que se
+ * edita en otro lado—, igual que `writePanelAppearance`. La intensidad del hero
+ * se vuelve a acotar al guardar: ni el control ni una escritura a mano pueden
+ * dejar un valor fuera de rango en el archivo.
+ */
+export function writeMenuSettings(config: Record<string, unknown>, settings: MenuSettings): void {
+	const previous = (config.menu as Record<string, unknown> | undefined) ?? {};
+	config.menu = {
+		...previous,
+		variant: settings.variant,
+		widget: settings.widget,
+		showUser: settings.showUser,
+		showSessionActions: settings.showSessionActions,
+		searchPosition: settings.searchPosition,
+		showPlaces: settings.showPlaces,
+		showFavorites: settings.showFavorites,
+		header: settings.header,
+		headerImage: settings.headerImage,
+		headerStrength: Math.min(
+			MAX_HEADER_STRENGTH,
+			Math.max(MIN_HEADER_STRENGTH, Math.round(settings.headerStrength))
+		),
+		showGreeting: settings.showGreeting,
+		showWeather: settings.showWeather,
+		favorites: settings.favorites,
+	};
+}

@@ -35,6 +35,11 @@ const routes = [
 		component: () => import('@/views/AppearancePanelView.vue'),
 	},
 	{
+		path: '/appearance-start-menu',
+		name: 'appearance-start-menu',
+		component: () => import('@/views/StartMenuView.vue'),
+	},
+	{
 		path: '/appearance-windows',
 		name: 'appearance-windows',
 		component: () => import('@/views/AppearanceWindowsView.vue'),

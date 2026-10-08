@@ -141,6 +141,14 @@
 		}
 	},
 	{
+		"id": "appearance-start-menu",
+		"icono": "start-here",
+		"nombres": {
+			"es": "Menú de inicio",
+			"en": "Start menu"
+		}
+	},
+	{
 		"id": "appearance-windows",
 		"icono": "preferences-system-windows",
 		"nombres": {

@@ -71,6 +71,11 @@ export function categoriasDelMenu(t: Traductor): SidebarCategory[] {
 					icon: 'preferences-system-windows',
 				},
 				{
+					id: 'appearance-start-menu',
+					label: t('sidebar.items.appearanceStartMenu'),
+					icon: 'start-here',
+				},
+				{
 					id: 'appearance-windows',
 					label: t('sidebar.items.appearanceWindows'),
 					icon: 'preferences-system-windows',

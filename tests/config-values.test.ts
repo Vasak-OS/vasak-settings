@@ -3,17 +3,24 @@ import {
 	BAR_POSITIONS,
 	clearStyle,
 	configBoolean,
+	DEFAULT_HEADER_STRENGTH,
+	DEFAULT_MENU_SEARCH_POSITION,
+	DEFAULT_MENU_VARIANT,
+	DEFAULT_MENU_WIDGET,
 	DEFAULT_PANEL_ANIMATION,
 	DEFAULT_PANEL_LAYOUT,
 	DEFAULT_PANEL_SIZE,
 	DEFAULT_PANEL_STYLE,
+	MAX_HEADER_STRENGTH,
 	MAX_PANEL_SIZE,
+	type MenuSettings,
 	MIN_PANEL_SIZE,
 	PANEL_ANIMATIONS,
 	PANEL_LAYOUTS,
 	PANEL_POSITIONS,
 	PANEL_STYLES,
 	readBarPosition,
+	readMenuSettings,
 	readPanelAnimation,
 	readPanelAutohide,
 	readPanelLayout,
@@ -23,6 +30,7 @@ import {
 	readScreenTimeEnabled,
 	readWallpaperFolder,
 	writeBarPosition,
+	writeMenuSettings,
 	writePanelAppearance,
 	writePanelPosition,
 	writeScheme,
@@ -366,5 +374,135 @@ describe('readWallpaperFolder', () => {
 	test('una clave que no es una cadena vale por «sin carpeta»', () => {
 		expect(readWallpaperFolder({ desktop: { wallpaperfolder: 42 } })).toBe('');
 		expect(readWallpaperFolder({ desktop: { wallpaperfolder: ['/a'] } })).toBe('');
+	});
+});
+
+describe('readMenuSettings', () => {
+	test('sin sección `menu` devuelve los valores de fábrica', () => {
+		const leido = readMenuSettings({});
+		expect(leido).toEqual({
+			variant: DEFAULT_MENU_VARIANT,
+			widget: DEFAULT_MENU_WIDGET,
+			showUser: true,
+			showSessionActions: true,
+			searchPosition: DEFAULT_MENU_SEARCH_POSITION,
+			showPlaces: false,
+			showFavorites: false,
+			header: 'none',
+			headerImage: '',
+			headerStrength: DEFAULT_HEADER_STRENGTH,
+			showGreeting: true,
+			showWeather: true,
+			favorites: [],
+		});
+		// Y tolera que no haya ni configuración.
+		expect(readMenuSettings(null).variant).toBe(DEFAULT_MENU_VARIANT);
+	});
+
+	test('un valor que no es de los conocidos cae al de fábrica', () => {
+		const leido = readMenuSettings({
+			menu: { variant: 'espiral', widget: 'cohete', header: 'banner', searchPosition: 'middle' },
+		});
+		expect(leido.variant).toBe(DEFAULT_MENU_VARIANT);
+		expect(leido.widget).toBe(DEFAULT_MENU_WIDGET);
+		expect(leido.header).toBe('none');
+		expect(leido.searchPosition).toBe(DEFAULT_MENU_SEARCH_POSITION);
+	});
+
+	test('respeta lo que sí es válido, incluso cuando no es el de fábrica', () => {
+		const leido = readMenuSettings({
+			menu: {
+				variant: 'grid',
+				widget: 'none',
+				showUser: false,
+				searchPosition: 'bottom',
+				showPlaces: true,
+				header: 'hero',
+			},
+		});
+		expect(leido.variant).toBe('grid');
+		expect(leido.widget).toBe('none');
+		expect(leido.showUser).toBe(false);
+		expect(leido.searchPosition).toBe('bottom');
+		expect(leido.showPlaces).toBe(true);
+		expect(leido.header).toBe('hero');
+	});
+
+	test('un interruptor que no es booleano vale por su valor de fábrica', () => {
+		// El archivo se edita a mano: un `"si"` no es `true`.
+		const leido = readMenuSettings({ menu: { showUser: 'si', showPlaces: 1 } });
+		expect(leido.showUser).toBe(true);
+		expect(leido.showPlaces).toBe(false);
+	});
+
+	test('la intensidad del hero se acota a [0, 100] y lo que no es número vale el de fábrica', () => {
+		expect(readMenuSettings({ menu: { headerStrength: 150 } }).headerStrength).toBe(
+			MAX_HEADER_STRENGTH
+		);
+		expect(readMenuSettings({ menu: { headerStrength: -5 } }).headerStrength).toBe(0);
+		expect(readMenuSettings({ menu: { headerStrength: 42.6 } }).headerStrength).toBe(43);
+		expect(readMenuSettings({ menu: { headerStrength: 'mucho' } }).headerStrength).toBe(
+			DEFAULT_HEADER_STRENGTH
+		);
+	});
+
+	test('la imagen del hero sólo vale si es una cadena', () => {
+		expect(readMenuSettings({ menu: { headerImage: '/a/b.png' } }).headerImage).toBe('/a/b.png');
+		expect(readMenuSettings({ menu: { headerImage: 7 } }).headerImage).toBe('');
+	});
+
+	test('los favoritos se leen quedándose sólo con las cadenas', () => {
+		expect(
+			readMenuSettings({ menu: { favorites: ['/a.desktop', 3, '/b.desktop'] } }).favorites
+		).toEqual(['/a.desktop', '/b.desktop']);
+		expect(readMenuSettings({ menu: { favorites: 'no-lista' } }).favorites).toEqual([]);
+	});
+});
+
+describe('writeMenuSettings', () => {
+	const base: MenuSettings = {
+		variant: 'tiles',
+		widget: 'clock',
+		showUser: false,
+		showSessionActions: false,
+		searchPosition: 'bottom',
+		showPlaces: true,
+		showFavorites: true,
+		header: 'hero',
+		headerImage: '/fondos/hero.jpg',
+		headerStrength: 80,
+		showGreeting: false,
+		showWeather: false,
+		favorites: ['/x.desktop'],
+	};
+
+	test('escribe todas las claves del contrato', () => {
+		const config: Record<string, unknown> = {};
+		writeMenuSettings(config, base);
+		expect(config.menu).toEqual({ ...base });
+	});
+
+	test('conserva las claves ajenas de la sección `menu`', () => {
+		// En `menu` pueden vivir claves de otras partes (o de versiones futuras):
+		// reemplazar la sección entera las borraría.
+		const config: Record<string, unknown> = {
+			menu: { favorites: ['/viejo.desktop'], claveAjena: 'no-tocar' },
+		};
+		writeMenuSettings(config, base);
+		expect((config.menu as Record<string, unknown>).claveAjena).toBe('no-tocar');
+		// Y los favoritos que trae el estado ganan, que es el ida y vuelta de la vista.
+		expect((config.menu as Record<string, unknown>).favorites).toEqual(['/x.desktop']);
+	});
+
+	test('la intensidad se vuelve a acotar al guardar', () => {
+		const config: Record<string, unknown> = {};
+		writeMenuSettings(config, { ...base, headerStrength: 999 });
+		expect((config.menu as Record<string, unknown>).headerStrength).toBe(MAX_HEADER_STRENGTH);
+	});
+
+	test('lo escrito se vuelve a leer igual (ida y vuelta)', () => {
+		const config: Record<string, unknown> = {};
+		writeMenuSettings(config, base);
+		expect(readMenuSettings(config)).toEqual(base);
 	});
 });
