@@ -131,8 +131,13 @@ describe('el tamaño del menú se refleja en el marco', () => {
 			const root = render({ displayMode: mode }).get('[data-testid="start-menu-preview"]');
 			expect(root.attributes('data-display-mode')).toBe(mode);
 		}
+		// Se mira el marco, no la raíz: la raíz lleva `w-full` en todos los modos,
+		// así que afirmarlo ahí pasaría aunque el marco dejara de ensancharse.
+		const frameClasses = (mode: 'normal' | 'full' | 'compact') =>
+			render({ displayMode: mode }).get('[data-testid="preview-frame"]').classes();
 		// Completo va de borde a borde; compacto se encoge y se centra.
-		expect(render({ displayMode: 'full' }).html()).toContain('w-full');
-		expect(render({ displayMode: 'compact' }).html()).toContain('mx-auto');
+		expect(frameClasses('full')).toContain('w-full');
+		expect(frameClasses('compact')).toContain('mx-auto');
+		expect(frameClasses('full')).not.toContain('mx-auto');
 	});
 });

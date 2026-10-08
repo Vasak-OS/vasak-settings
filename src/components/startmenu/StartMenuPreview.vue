@@ -69,6 +69,7 @@ const frameClass = computed(() => {
 		<div
 			class="flex flex-col gap-2 rounded-corner-l border border-ui-line bg-ui-shell p-3"
 			:class="frameClass"
+			data-testid="preview-frame"
 			aria-hidden="true"
 		>
 			<!-- Encabezado hero: una banda con el acento, el saludo y el clima. -->
