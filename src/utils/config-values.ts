@@ -487,10 +487,16 @@ export function readMenuSettings(config: unknown): MenuSettings {
 /**
  * Deja la sección `menu` con el aspecto elegido.
  *
- * Conserva lo que ya hubiera en la sección —y en particular `favorites`, que se
- * edita en otro lado—, igual que `writePanelAppearance`. La intensidad del hero
- * se vuelve a acotar al guardar: ni el control ni una escritura a mano pueden
- * dejar un valor fuera de rango en el archivo.
+ * Escribe **sólo las claves que esta pantalla edita** y conserva el resto de la
+ * sección con `...previous`. En particular **no toca `favorites`**: se fija y
+ * desfija desde el menú contextual de cada aplicación, no desde acá, así que
+ * escribirlo desde el estado que esta pantalla leyó al abrir pisaría lo que se
+ * haya fijado mientras tanto. Quien guarda debe pasar una configuración **recién
+ * leída** (no la de la carga), porque `writeConfig` escribe el objeto tal cual,
+ * sin releer ni fusionar el archivo.
+ *
+ * La intensidad del hero se vuelve a acotar al guardar: ni el control ni una
+ * escritura a mano pueden dejar un valor fuera de rango en el archivo.
  */
 export function writeMenuSettings(config: Record<string, unknown>, settings: MenuSettings): void {
 	const previous = (config.menu as Record<string, unknown> | undefined) ?? {};
@@ -511,6 +517,5 @@ export function writeMenuSettings(config: Record<string, unknown>, settings: Men
 		),
 		showGreeting: settings.showGreeting,
 		showWeather: settings.showWeather,
-		favorites: settings.favorites,
 	};
 }

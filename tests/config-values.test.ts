@@ -476,22 +476,27 @@ describe('writeMenuSettings', () => {
 		favorites: ['/x.desktop'],
 	};
 
-	test('escribe todas las claves del contrato', () => {
+	test('escribe las claves que edita la pantalla y no toca `favorites`', () => {
 		const config: Record<string, unknown> = {};
 		writeMenuSettings(config, base);
-		expect(config.menu).toEqual({ ...base });
+		// `favorites` no se escribe desde acá: se fija en otro lado. Lo demás, sí.
+		const owned: Partial<MenuSettings> = { ...base };
+		delete owned.favorites;
+		expect(config.menu).toEqual(owned);
+		expect((config.menu as Record<string, unknown>).favorites).toBeUndefined();
 	});
 
-	test('conserva las claves ajenas de la sección `menu`', () => {
-		// En `menu` pueden vivir claves de otras partes (o de versiones futuras):
-		// reemplazar la sección entera las borraría.
+	test('no pisa los favoritos que ya están en el archivo', () => {
+		// El caso que importa: entre abrir la pantalla y guardar, alguien fijó un
+		// favorito desde el menú contextual de una aplicación. Guardar el aspecto
+		// del menú no puede borrarlo, aunque el estado de la pantalla traiga otra
+		// lista de cuando se abrió.
 		const config: Record<string, unknown> = {
 			menu: { favorites: ['/viejo.desktop'], claveAjena: 'no-tocar' },
 		};
 		writeMenuSettings(config, base);
 		expect((config.menu as Record<string, unknown>).claveAjena).toBe('no-tocar');
-		// Y los favoritos que trae el estado ganan, que es el ida y vuelta de la vista.
-		expect((config.menu as Record<string, unknown>).favorites).toEqual(['/x.desktop']);
+		expect((config.menu as Record<string, unknown>).favorites).toEqual(['/viejo.desktop']);
 	});
 
 	test('la intensidad se vuelve a acotar al guardar', () => {
@@ -501,7 +506,9 @@ describe('writeMenuSettings', () => {
 	});
 
 	test('lo escrito se vuelve a leer igual (ida y vuelta)', () => {
-		const config: Record<string, unknown> = {};
+		// Los favoritos se conservan desde el archivo, no se escriben: se parte de
+		// una sección que ya los tiene para que el ida y vuelta los incluya.
+		const config: Record<string, unknown> = { menu: { favorites: base.favorites } };
 		writeMenuSettings(config, base);
 		expect(readMenuSettings(config)).toEqual(base);
 	});

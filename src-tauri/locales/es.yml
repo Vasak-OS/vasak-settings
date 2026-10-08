@@ -776,6 +776,7 @@ views:
     headerImageNone: Sin imagen
     headerImageChoose: Elegir imagen
     headerImagePick: Elegí la imagen del encabezado
+    headerImageError: 'Error al elegir la imagen: {0}'
     imageFilter: Imágenes
     headerStrength: Visibilidad de la imagen
     showGreeting: Saludo del día

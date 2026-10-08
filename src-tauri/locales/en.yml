@@ -772,6 +772,7 @@ views:
     headerImageNone: No image
     headerImageChoose: Choose image
     headerImagePick: Choose the header image
+    headerImageError: 'Error choosing the image: {0}'
     imageFilter: Images
     headerStrength: Image visibility
     showGreeting: Daily greeting

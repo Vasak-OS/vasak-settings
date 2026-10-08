@@ -148,7 +148,8 @@ const pickHeaderImage = async () => {
 		});
 		if (typeof picked === 'string') settings.value.headerImage = picked;
 	} catch (err) {
-		error.value = t('views.startMenu.errorSaving').replace('{0}', String(err));
+		// No se guardó nada: el error es del selector, no del guardado.
+		error.value = t('views.startMenu.headerImageError').replace('{0}', String(err));
 	}
 };
 
@@ -162,10 +163,18 @@ const saveConfig = async () => {
 	successMessage.value = '';
 
 	try {
-		if (!vskConfig.value) return;
+		// Se relee la configuración justo antes de escribir, en vez de guardar la
+		// que se cargó al abrir. Entre medio pudieron cambiar claves que esta
+		// pantalla no edita —sobre todo `menu.favorites`, que se fija y desfija
+		// desde el menú contextual de cada aplicación—, y `writeConfig` escribe el
+		// objeto tal cual, sin releer ni fusionar el archivo: guardar la copia vieja
+		// las pisaría. `writeMenuSettings` conserva esas claves sobre la copia fresca.
+		const latest = await readConfig();
+		if (!latest) throw new Error('configuración no disponible');
 
-		writeMenuSettings(vskConfig.value as unknown as Record<string, unknown>, settings.value);
-		await writeConfig(vskConfig.value);
+		writeMenuSettings(latest as unknown as Record<string, unknown>, settings.value);
+		await writeConfig(latest);
+		vskConfig.value = latest;
 
 		// El escritorio recarga la configuración al recibir `config-changed`, que
 		// emite el propio plugin: el menú se arma de nuevo sin reiniciar la sesión.
