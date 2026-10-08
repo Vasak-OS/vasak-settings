@@ -1,7 +1,7 @@
 {
 	"name": "vasak-settings",
 	"private": true,
-	"version": "0.41.0",
+	"version": "0.42.0",
 	"type": "module",
 	"scripts": {
 		"dev": "bunx --bun vite",
@@ -18,7 +18,7 @@
 		"@tailwindcss/vite": "^4.3.3",
 		"@tauri-apps/api": "^2.12.1",
 		"@tauri-apps/plugin-dialog": "^2.8.1",
-		"@tauri-apps/plugin-shell": "^2.4.0",
+		"@tauri-apps/plugin-shell": "^2.4.1",
 		"@vasakgroup/plugin-bluetooth-manager": "^2.2.0",
 		"@vasakgroup/plugin-config-manager": "^2.10.0",
 		"@vasakgroup/plugin-display-manager": "^2.0.0",

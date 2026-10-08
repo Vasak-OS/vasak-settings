@@ -28,6 +28,7 @@ import {
 	type PanelPosition,
 	type PanelStyle,
 	readPanelAnimation,
+	readPanelAutohide,
 	readPanelIndicators,
 	readPanelLayout,
 	readPanelPosition,
@@ -82,6 +83,13 @@ const layout = ref<PanelLayout>('distributed');
 const animation = ref<PanelAnimation>('off');
 const size = ref<number>(DEFAULT_PANEL_SIZE);
 
+/**
+ * Si el panel se esconde solo y se revela al rozar el borde. Apagado por
+ * omisión. El escritorio deja de reservar su franja —las ventanas la ocupan— y
+ * lo esconde; es sólo apariencia/conducta, no pide reiniciar.
+ */
+const autohide = ref(false);
+
 /** Los pasos del tamaño que ofrece el desplegable, dentro del rango permitido. */
 const SIZE_STEPS = [MIN_PANEL_SIZE, 90, DEFAULT_PANEL_SIZE, 110, MAX_PANEL_SIZE] as const;
 
@@ -103,6 +111,7 @@ onMounted(async () => {
 		layout.value = readPanelLayout(vskConfig.value);
 		animation.value = readPanelAnimation(vskConfig.value);
 		size.value = readPanelSize(vskConfig.value);
+		autohide.value = readPanelAutohide(vskConfig.value);
 	} catch (err) {
 		error.value = t('views.appearancePanel.errorLoading').replace('{0}', String(err));
 	} finally {
@@ -133,6 +142,7 @@ const saveConfig = async () => {
 			layout: layout.value,
 			animation: animation.value,
 			size: size.value,
+			autohide: autohide.value,
 		});
 
 		await writeConfig(vskConfig.value);
@@ -268,6 +278,22 @@ const saveConfig = async () => {
 							<option v-for="step in SIZE_STEPS" :key="step" :value="step">{{ step }} %</option>
 						</SelectField>
 					</div>
+
+					<div class="flex items-start justify-between gap-4">
+						<div class="flex flex-col">
+							<span class="text-sm font-medium text-tx-main">
+								{{ t('views.appearancePanel.autohide') }}
+							</span>
+							<span class="text-xs text-tx-muted">
+								{{ t('views.appearancePanel.autohideHint') }}
+							</span>
+						</div>
+						<SwitchToggle
+							:label="t('views.appearancePanel.autohide')"
+							:model-value="autohide"
+							@update:model-value="(val) => (autohide = val)"
+						/>
+					</div>
 				</div>
 			</ConfigSection>
 
@@ -276,9 +302,9 @@ const saveConfig = async () => {
 				<div class="flex flex-col gap-5">
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
-							<label class="text-sm font-medium text-tx-main">
+							<span class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.weather') }}
-							</label>
+							</span>
 							<span class="text-xs text-tx-muted">
 								{{ t('views.appearancePanel.weatherHint') }}
 							</span>
@@ -288,9 +314,9 @@ const saveConfig = async () => {
 
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
-							<label class="text-sm font-medium text-tx-main">
+							<span class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.music') }}
-							</label>
+							</span>
 							<span class="text-xs text-tx-muted">
 								{{ t('views.appearancePanel.musicHint') }}
 							</span>
@@ -300,9 +326,9 @@ const saveConfig = async () => {
 
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
-							<label class="text-sm font-medium text-tx-main">
+							<span class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.transfer') }}
-							</label>
+							</span>
 							<span class="text-xs text-tx-muted">
 								{{ t('views.appearancePanel.transferHint') }}
 							</span>
@@ -312,9 +338,9 @@ const saveConfig = async () => {
 
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
-							<label class="text-sm font-medium text-tx-main">
+							<span class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.tray') }}
-							</label>
+							</span>
 							<span class="text-xs text-tx-muted">
 								{{ t('views.appearancePanel.trayHint') }}
 							</span>
@@ -324,9 +350,9 @@ const saveConfig = async () => {
 
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
-							<label class="text-sm font-medium text-tx-main">
+							<span class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.privacy') }}
-							</label>
+							</span>
 							<span class="text-xs text-tx-muted">
 								{{ t('views.appearancePanel.privacyHint') }}
 							</span>
