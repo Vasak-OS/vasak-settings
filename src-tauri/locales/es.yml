@@ -743,6 +743,14 @@ views:
       grid: Grilla
       favorites: Favoritos
       tiles: Mosaicos
+    displayMode: Tamaño del menú
+    displayModeHint: >-
+      Con qué tamaño abre el menú. Normal es el de hoy; completo lo abre a
+      pantalla completa; compacto lo hace chico.
+    displayModes:
+      normal: Normal
+      full: Pantalla completa
+      compact: Compacto
     content: Contenido
     widget: Widget del menú
     widgetHint: Qué va en el hueco del menú, al lado de la lista.

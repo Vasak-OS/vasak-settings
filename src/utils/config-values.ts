@@ -397,6 +397,20 @@ export type MenuSearchPosition = (typeof MENU_SEARCH_POSITIONS)[number];
 /** Arriba, que es donde el buscador estuvo siempre. */
 export const DEFAULT_MENU_SEARCH_POSITION: MenuSearchPosition = 'top';
 
+/**
+ * El tamaño con que abre el menú: `normal` es el de hoy, `full` lo abre a
+ * pantalla completa (overlay, estilo ChromeOS/Unity) y `compact` lo hace chico.
+ * El tamaño real de la superficie lo fija el backend del applet (layer-shell);
+ * acá sólo se guarda la elección. El contenido ya se adapta al tamaño recibido
+ * con consultas de contenedor.
+ */
+export const MENU_DISPLAY_MODES = ['normal', 'full', 'compact'] as const;
+
+export type MenuDisplayMode = (typeof MENU_DISPLAY_MODES)[number];
+
+/** Normal: el tamaño con que el menú abrió siempre. */
+export const DEFAULT_MENU_DISPLAY_MODE: MenuDisplayMode = 'normal';
+
 /** La imagen del hero se ve entre el 0 y el 100 %. Sesenta por omisión: se nota sin tapar el texto. */
 export const MIN_HEADER_STRENGTH = 0;
 export const MAX_HEADER_STRENGTH = 100;
@@ -405,6 +419,7 @@ export const DEFAULT_HEADER_STRENGTH = 60;
 /** Todo lo que esta pantalla lee y escribe del menú, de una vez. */
 export interface MenuSettings {
 	variant: MenuVariant;
+	displayMode: MenuDisplayMode;
 	widget: MenuWidget;
 	showUser: boolean;
 	showSessionActions: boolean;
@@ -454,6 +469,7 @@ function readHeaderStrength(section: Record<string, unknown> | undefined): numbe
 export function readMenuSettings(config: unknown): MenuSettings {
 	const section = menuSection(config);
 	const variant = section?.variant;
+	const displayMode = section?.displayMode;
 	const widget = section?.widget;
 	const header = section?.header;
 	const searchPosition = section?.searchPosition;
@@ -463,6 +479,9 @@ export function readMenuSettings(config: unknown): MenuSettings {
 		variant: MENU_VARIANTS.includes(variant as MenuVariant)
 			? (variant as MenuVariant)
 			: DEFAULT_MENU_VARIANT,
+		displayMode: MENU_DISPLAY_MODES.includes(displayMode as MenuDisplayMode)
+			? (displayMode as MenuDisplayMode)
+			: DEFAULT_MENU_DISPLAY_MODE,
 		widget: MENU_WIDGETS.includes(widget as MenuWidget)
 			? (widget as MenuWidget)
 			: DEFAULT_MENU_WIDGET,
@@ -503,6 +522,7 @@ export function writeMenuSettings(config: Record<string, unknown>, settings: Men
 	config.menu = {
 		...previous,
 		variant: settings.variant,
+		displayMode: settings.displayMode,
 		widget: settings.widget,
 		showUser: settings.showUser,
 		showSessionActions: settings.showSessionActions,

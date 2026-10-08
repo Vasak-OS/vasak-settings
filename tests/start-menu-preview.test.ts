@@ -119,3 +119,25 @@ describe('las opciones encienden y apagan sus pedazos', () => {
 		).toBe(false);
 	});
 });
+
+describe('el tamaño del menú se refleja en el marco', () => {
+	test('por omisión es «normal»', () => {
+		const root = render({}).get('[data-testid="start-menu-preview"]');
+		expect(root.attributes('data-display-mode')).toBe('normal');
+	});
+
+	test('cada modo marca la raíz y ajusta el ancho del marco', () => {
+		for (const mode of ['normal', 'full', 'compact'] as const) {
+			const root = render({ displayMode: mode }).get('[data-testid="start-menu-preview"]');
+			expect(root.attributes('data-display-mode')).toBe(mode);
+		}
+		// Se mira el marco, no la raíz: la raíz lleva `w-full` en todos los modos,
+		// así que afirmarlo ahí pasaría aunque el marco dejara de ensancharse.
+		const frameClasses = (mode: 'normal' | 'full' | 'compact') =>
+			render({ displayMode: mode }).get('[data-testid="preview-frame"]').classes();
+		// Completo va de borde a borde; compacto se encoge y se centra.
+		expect(frameClasses('full')).toContain('w-full');
+		expect(frameClasses('compact')).toContain('mx-auto');
+		expect(frameClasses('full')).not.toContain('mx-auto');
+	});
+});
