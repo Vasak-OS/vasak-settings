@@ -312,12 +312,24 @@ export function readPanelSize(config: unknown): number {
 	return Math.min(MAX_PANEL_SIZE, Math.max(MIN_PANEL_SIZE, Math.round(stored)));
 }
 
+/**
+ * Si el panel se esconde solo y se revela al rozar el borde.
+ *
+ * La clave ausente vale por apagado: el panel no se esconde solo hasta que se
+ * pide. El escritorio lee `panel.autohide` con este mismo criterio (sólo `true`
+ * lo prende) para dejar la zona exclusiva en cero.
+ */
+export function readPanelAutohide(config: unknown): boolean {
+	return panelSection(config)?.autohide === true;
+}
+
 /** El aspecto que esta pantalla guarda de una vez, conservando el resto de `panel`. */
 export interface PanelAppearance {
 	style: PanelStyle;
 	layout: PanelLayout;
 	animation: PanelAnimation;
 	size: number;
+	autohide: boolean;
 }
 
 /**
@@ -339,5 +351,6 @@ export function writePanelAppearance(
 		layout: appearance.layout,
 		animation: appearance.animation,
 		size: Math.min(MAX_PANEL_SIZE, Math.max(MIN_PANEL_SIZE, Math.round(appearance.size))),
+		autohide: appearance.autohide,
 	};
 }

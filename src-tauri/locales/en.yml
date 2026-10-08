@@ -706,6 +706,10 @@ views:
       beat: Beat
     size: Size
     sizeHint: The scale of the bar, between 80 and 120%.
+    autohide: Auto-hide
+    autohideHint: >-
+      The panel hides on its own and comes back when you move the cursor to the
+      edge of the screen. It stops reserving its spot: maximised windows use it.
     indicators: Indicators
     weather: Weather
     weatherHint: The icon and the temperature for your city, next to the player.

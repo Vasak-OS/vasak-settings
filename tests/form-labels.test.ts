@@ -46,7 +46,6 @@ function orphanLabels(html: string): number {
 /** Los que ya estaban; se arreglan cuando se toque cada archivo. */
 const PENDING: Record<string, number> = {
 	'src/views/AppearanceDesktopView.vue': 1,
-	'src/views/AppearancePanelView.vue': 4,
 	'src/views/AppearanceThemeView.vue': 1,
 	'src/views/LoginScreenView.vue': 1,
 };

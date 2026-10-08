@@ -15,6 +15,7 @@ import {
 	PANEL_STYLES,
 	readBarPosition,
 	readPanelAnimation,
+	readPanelAutohide,
 	readPanelLayout,
 	readPanelPosition,
 	readPanelSize,
@@ -230,7 +231,16 @@ describe('el aspecto del panel: tipo, densidad, animación y tamaño', () => {
 			expect(readPanelLayout(config)).toBe(DEFAULT_PANEL_LAYOUT);
 			expect(readPanelAnimation(config)).toBe(DEFAULT_PANEL_ANIMATION);
 			expect(readPanelSize(config)).toBe(DEFAULT_PANEL_SIZE);
+			expect(readPanelAutohide(config)).toBe(false);
 		}
+	});
+
+	test('el auto-ocultar: sólo true lo prende', () => {
+		// Mismo criterio que el escritorio: la clave ausente o cualquier cosa que
+		// no sea `true` vale por apagado.
+		expect(readPanelAutohide({ panel: { autohide: true } })).toBe(true);
+		expect(readPanelAutohide({ panel: { autohide: false } })).toBe(false);
+		expect(readPanelAutohide({ panel: { autohide: 'si' } })).toBe(false);
 	});
 
 	test('cada valor conocido se lee', () => {
@@ -267,6 +277,7 @@ describe('el aspecto del panel: tipo, densidad, animación y tamaño', () => {
 			layout: 'compact',
 			animation: 'reactor',
 			size: 110,
+			autohide: true,
 		});
 
 		expect(config.panel).toEqual({
@@ -276,6 +287,7 @@ describe('el aspecto del panel: tipo, densidad, animación y tamaño', () => {
 			layout: 'compact',
 			animation: 'reactor',
 			size: 110,
+			autohide: true,
 		});
 	});
 
@@ -287,6 +299,7 @@ describe('el aspecto del panel: tipo, densidad, animación y tamaño', () => {
 			layout: 'distributed',
 			animation: 'off',
 			size: 999,
+			autohide: false,
 		});
 
 		expect((config.panel as { size: number }).size).toBe(MAX_PANEL_SIZE);
