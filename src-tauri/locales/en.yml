@@ -44,6 +44,7 @@ sidebar:
     appearanceWallpaper: Wallpapers
     appearanceDesktop: Desktop
     appearancePanel: Panel
+    appearanceStartMenu: Start menu
     appearanceWindows: Windows
     multimediaAudio: Audio output
     multimediaAudioInput: Audio input
@@ -721,6 +722,63 @@ views:
     trayHint: The icons applications put in the system tray.
     privacy: Camera and microphone
     privacyHint: Warns while an application is using the camera or the microphone.
+  startMenu:
+    title: Start menu
+    description: What shape the desktop menu has and what it shows.
+    applyChanges: Apply Changes
+    loading: Loading configuration...
+    errorLoading: 'Error loading the menu configuration: {0}'
+    errorSaving: 'Error saving the menu configuration: {0}'
+    saved: Menu configuration saved
+    preview: Preview
+    variant: Layout
+    variantHint: The menu skeleton. The preview shows how each one looks.
+    variants:
+      compact: Compact
+      classic: Classic
+      grid: Grid
+      favorites: Favorites
+      tiles: Tiles
+    content: Content
+    widget: Menu widget
+    widgetHint: What goes in the menu slot, next to the list.
+    widgets:
+      clock: Clock
+      music: Music player
+      weather: Weather
+      files: Recent files
+      none: None
+    showUser: User card
+    showUserHint: The picture and name of whoever is signed in.
+    showSessionActions: Session actions
+    showSessionActionsHint: The buttons to lock, sign out, suspend and power off.
+    showPlaces: Places
+    showPlacesHint: Shortcuts to Home, Documents, Downloads and the Trash.
+    showFavorites: Favorites
+    showFavoritesHint: >-
+      A block with the applications you pinned from each one's context menu. The
+      «Favorites» layout always has it.
+    searchPosition: Search position
+    searchPositionHint: At the very top or at the foot of the menu.
+    searchPositions:
+      top: Top
+      bottom: Bottom
+    header: Header
+    headerHint: A band above the menu, with a greeting and, if you want, an image.
+    hero: Featured header
+    heroHint: Shows a band with a greeting and weather above the menu.
+    headerImage: Background image
+    headerImageHint: The image shown behind the header. Optional.
+    headerImageNone: No image
+    headerImageChoose: Choose image
+    headerImagePick: Choose the header image
+    headerImageError: 'Error choosing the image: {0}'
+    imageFilter: Images
+    headerStrength: Image visibility
+    showGreeting: Daily greeting
+    showGreetingHint: A «Good morning» depending on the time.
+    showWeather: Weather in the header
+    showWeatherHint: The temperature and weather of your city.
   appearanceWindows:
     title: Windows
     description: Where the application bar goes, the one with the icon and the buttons.

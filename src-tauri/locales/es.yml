@@ -44,6 +44,7 @@ sidebar:
     appearanceWallpaper: Fondos
     appearanceDesktop: Escritorio
     appearancePanel: Panel
+    appearanceStartMenu: Menú de inicio
     appearanceWindows: Ventanas
     multimediaAudio: Audio salida
     multimediaAudioInput: Audio entrada
@@ -725,6 +726,63 @@ views:
     trayHint: Los iconos que las aplicaciones ponen en la bandeja del sistema.
     privacy: Cámara y micrófono
     privacyHint: Avisa mientras una aplicación está usando la cámara o el micrófono.
+  startMenu:
+    title: Menú de inicio
+    description: Qué forma tiene el menú del escritorio y qué muestra.
+    applyChanges: Aplicar Cambios
+    loading: Cargando configuración...
+    errorLoading: 'Error cargando la configuración del menú: {0}'
+    errorSaving: 'Error guardando la configuración del menú: {0}'
+    saved: Configuración del menú guardada
+    preview: Vista previa
+    variant: Diseño
+    variantHint: El esqueleto del menú. La vista previa muestra cómo queda cada uno.
+    variants:
+      compact: Compacto
+      classic: Clásico
+      grid: Grilla
+      favorites: Favoritos
+      tiles: Mosaicos
+    content: Contenido
+    widget: Widget del menú
+    widgetHint: Qué va en el hueco del menú, al lado de la lista.
+    widgets:
+      clock: Reloj
+      music: Reproductor
+      weather: Clima
+      files: Archivos recientes
+      none: Ninguno
+    showUser: Tarjeta de usuario
+    showUserHint: La foto y el nombre de quien tiene la sesión abierta.
+    showSessionActions: Acciones de sesión
+    showSessionActionsHint: Los botones para bloquear, cerrar sesión, suspender y apagar.
+    showPlaces: Lugares
+    showPlacesHint: Accesos a Inicio, Documentos, Descargas y la Papelera.
+    showFavorites: Favoritos
+    showFavoritesHint: >-
+      Un bloque con las aplicaciones que fijaste desde el menú contextual de cada
+      una. En el diseño «Favoritos» siempre está.
+    searchPosition: Posición del buscador
+    searchPositionHint: Arriba de todo o al pie del menú.
+    searchPositions:
+      top: Arriba
+      bottom: Abajo
+    header: Encabezado
+    headerHint: Una banda arriba del menú, con un saludo y, si querés, una imagen.
+    hero: Encabezado destacado
+    heroHint: Muestra una banda con saludo y clima arriba del menú.
+    headerImage: Imagen de fondo
+    headerImageHint: La imagen que se ve detrás del encabezado. Opcional.
+    headerImageNone: Sin imagen
+    headerImageChoose: Elegir imagen
+    headerImagePick: Elegí la imagen del encabezado
+    headerImageError: 'Error al elegir la imagen: {0}'
+    imageFilter: Imágenes
+    headerStrength: Visibilidad de la imagen
+    showGreeting: Saludo del día
+    showGreetingHint: Un «Buenos días» según la hora.
+    showWeather: Clima en el encabezado
+    showWeatherHint: La temperatura y el estado del tiempo de tu ciudad.
   appearanceWindows:
     title: Ventanas
     description: Dónde va la barra de las aplicaciones, la que lleva el icono y los botones.
