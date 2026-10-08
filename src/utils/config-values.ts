@@ -240,3 +240,104 @@ export function writePanelPosition(config: Record<string, unknown>, position: Pa
 	const previous = (config.panel as Record<string, unknown> | undefined) ?? {};
 	config.panel = { ...previous, position };
 }
+
+/**
+ * El aspecto del panel: su tipo, su densidad, su animación y su tamaño.
+ *
+ * Son las claves que el escritorio lee en `panel-appearance.ts` (vasak-desktop):
+ * el **contrato tiene que coincidir** —mismos valores, mismos nombres, mismos
+ * valores de fábrica—, porque uno escribe y el otro dibuja. Se leen tolerante,
+ * como la posición: un valor que no es de los conocidos cae al de fábrica, y la
+ * escritura conserva el resto de la sección `panel` (posición e indicadores).
+ */
+export const PANEL_STYLES = ['pills', 'floating', 'bar', 'dock'] as const;
+
+export type PanelStyle = (typeof PANEL_STYLES)[number];
+
+/** Píldoras: es lo que el panel trae y lo que la gente ya conoce. */
+export const DEFAULT_PANEL_STYLE: PanelStyle = 'pills';
+
+export const PANEL_LAYOUTS = ['distributed', 'compact'] as const;
+
+export type PanelLayout = (typeof PANEL_LAYOUTS)[number];
+
+/** Distribuido, que es como estuvo la barra siempre. */
+export const DEFAULT_PANEL_LAYOUT: PanelLayout = 'distributed';
+
+export const PANEL_ANIMATIONS = ['off', 'stream', 'wave', 'sweep', 'reactor', 'beat'] as const;
+
+export type PanelAnimation = (typeof PANEL_ANIMATIONS)[number];
+
+/** Apagada: el panel no se mueve hasta que la persona lo pide. */
+export const DEFAULT_PANEL_ANIMATION: PanelAnimation = 'off';
+
+/** El tamaño va entre el 80 y el 120 %: más abajo no se lee, más arriba no entra en la franja. */
+export const MIN_PANEL_SIZE = 80;
+export const MAX_PANEL_SIZE = 120;
+export const DEFAULT_PANEL_SIZE = 100;
+
+function panelSection(config: unknown): Record<string, unknown> | undefined {
+	return config && typeof config === 'object'
+		? ((config as Record<string, unknown>).panel as Record<string, unknown> | undefined)
+		: undefined;
+}
+
+export function readPanelStyle(config: unknown): PanelStyle {
+	const stored = panelSection(config)?.style;
+	return PANEL_STYLES.includes(stored as PanelStyle) ? (stored as PanelStyle) : DEFAULT_PANEL_STYLE;
+}
+
+export function readPanelLayout(config: unknown): PanelLayout {
+	const stored = panelSection(config)?.layout;
+	return PANEL_LAYOUTS.includes(stored as PanelLayout)
+		? (stored as PanelLayout)
+		: DEFAULT_PANEL_LAYOUT;
+}
+
+export function readPanelAnimation(config: unknown): PanelAnimation {
+	const stored = panelSection(config)?.animation;
+	return PANEL_ANIMATIONS.includes(stored as PanelAnimation)
+		? (stored as PanelAnimation)
+		: DEFAULT_PANEL_ANIMATION;
+}
+
+/**
+ * El tamaño en porciento, acotado al rango que entra en la franja. El archivo
+ * se edita a mano: un `150` o un `"grande"` no pueden estirar la barra fuera de
+ * su lugar, así que todo se recorta a [80, 120] y lo que no es un número vale 100.
+ */
+export function readPanelSize(config: unknown): number {
+	const stored = panelSection(config)?.size;
+	if (typeof stored !== 'number' || !Number.isFinite(stored)) return DEFAULT_PANEL_SIZE;
+	return Math.min(MAX_PANEL_SIZE, Math.max(MIN_PANEL_SIZE, Math.round(stored)));
+}
+
+/** El aspecto que esta pantalla guarda de una vez, conservando el resto de `panel`. */
+export interface PanelAppearance {
+	style: PanelStyle;
+	layout: PanelLayout;
+	animation: PanelAnimation;
+	size: number;
+}
+
+/**
+ * Deja la sección `panel` con el aspecto elegido.
+ *
+ * Conserva lo que ya hubiera —la posición y los interruptores de los
+ * indicadores viven en la misma sección—, igual que `writePanelPosition`. El
+ * tamaño se vuelve a acotar al guardar: ni el control ni una escritura a mano
+ * pueden dejar un valor fuera de rango en el archivo.
+ */
+export function writePanelAppearance(
+	config: Record<string, unknown>,
+	appearance: PanelAppearance
+): void {
+	const previous = (config.panel as Record<string, unknown> | undefined) ?? {};
+	config.panel = {
+		...previous,
+		style: appearance.style,
+		layout: appearance.layout,
+		animation: appearance.animation,
+		size: Math.min(MAX_PANEL_SIZE, Math.max(MIN_PANEL_SIZE, Math.round(appearance.size))),
+	};
+}
