@@ -75,12 +75,41 @@ app.use(router);
 // Antes esto era un `i18n.load()` suelto, sin esperar. Y hasta la 2.3.0 del
 // plugin esperarlo tampoco habría servido: la clase y el composable guardaban el
 // catálogo por separado, y el `t()` de los componentes lee el del composable.
-await Promise.race([
-	i18n.load().catch((error) => {
-		console.error('No se pudieron cargar las traducciones', error);
-	}),
-	new Promise((resolve) => setTimeout(resolve, TRANSLATIONS_TIMEOUT_MS)),
-]);
+//
+// Un intento que falla se reintenta —el backend puede tardar o no escuchar a la
+// primera—, pero la espera total sigue acotada por `TRANSLATIONS_TIMEOUT_MS`: un
+// backend colgado tiene que dar una ventana con las claves a la vista, no una
+// ventana en blanco para siempre. Ese tope era la garantía del `Promise.race`
+// anterior, y el reintento no la toca.
+async function loadTranslations(): Promise<void> {
+	const MAX_ATTEMPTS = 3;
+	const BASE_DELAY_MS = 500;
+	const MAX_DELAY_MS = 2000;
+
+	const attemptLoad = async () => {
+		for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+			try {
+				await i18n.load();
+				return;
+			} catch (error) {
+				console.error(
+					`No se pudieron cargar las traducciones (intento ${attempt + 1}/${MAX_ATTEMPTS}):`,
+					error
+				);
+				if (attempt === MAX_ATTEMPTS - 1) return;
+				const delay = Math.min(BASE_DELAY_MS * 2 ** attempt, MAX_DELAY_MS);
+				await new Promise((resolve) => setTimeout(resolve, delay));
+			}
+		}
+	};
+
+	await Promise.race([
+		attemptLoad(),
+		new Promise((resolve) => setTimeout(resolve, TRANSLATIONS_TIMEOUT_MS)),
+	]);
+}
+
+await loadTranslations();
 
 app.mount('#app');
 
