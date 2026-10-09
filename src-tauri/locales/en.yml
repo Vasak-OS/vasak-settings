@@ -815,7 +815,7 @@ views:
     showWeatherHint: The temperature and weather of your city.
   appearanceWindows:
     title: Windows
-    description: Where the application bar goes, the one with the icon and the buttons.
+    description: The application bar, its buttons and the window border.
     applyChanges: Apply Changes
     loading: Loading configuration...
     errorLoading: 'Error loading the window configuration: {0}'
@@ -832,6 +832,35 @@ views:
       bottom: Bottom
       left: Left
       right: Right
+    controls: Window buttons
+    controlsStyle: Style
+    controlsStyleHint: >-
+      The usual flat buttons, or three circles like on macOS, in the scheme's
+      red, yellow and green.
+    controlsStyles:
+      default: Flat
+      macos: macOS style
+    controlsOrder: Order
+    controlsOrderHint: >-
+      At the end of the bar, or reversed at the start like on macOS: close,
+      minimize and maximize.
+    controlsOrders:
+      default: At the end
+      reversed: Reversed, at the start
+    border: Window border
+    borderWidth: Thickness
+    borderHint: >-
+      The outer border of windows, the panel, the control center and desktop
+      popups. Borders inside each application don't change.
+    borderWidths:
+      normal: Thin
+      thick: Thick
+      heavy: Extra thick
+    borderColor: Color
+    borderColorHint: The color scheme's, or the accent color.
+    borderColors:
+      scheme: From the scheme
+      accent: Accent
   appearanceDesktop:
     title: Desktop Files
     description: Adjust the visibility and size of the icons on the desktop background.

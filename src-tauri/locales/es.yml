@@ -819,7 +819,7 @@ views:
     showWeatherHint: La temperatura y el estado del tiempo de tu ciudad.
   appearanceWindows:
     title: Ventanas
-    description: Dónde va la barra de las aplicaciones, la que lleva el icono y los botones.
+    description: La barra de las aplicaciones, sus botones y el borde de las ventanas.
     applyChanges: Aplicar Cambios
     loading: Cargando configuración...
     errorLoading: 'Error cargando la configuración de las ventanas: {0}'
@@ -836,6 +836,36 @@ views:
       bottom: Abajo
       left: A la izquierda
       right: A la derecha
+    controls: Botones de la ventana
+    controlsStyle: Estilo
+    controlsStyleHint: >-
+      Los planos de siempre, o tres círculos como en macOS, en el rojo, el
+      amarillo y el verde del esquema.
+    controlsStyles:
+      default: Planos
+      macos: Estilo macOS
+    controlsOrder: Orden
+    controlsOrderHint: >-
+      Al final de la barra, o invertidos al principio como en macOS: cerrar,
+      minimizar y maximizar.
+    controlsOrders:
+      default: Al final
+      reversed: Invertido, al principio
+    border: Borde de las ventanas
+    borderWidth: Grosor
+    borderHint: >-
+      El borde de afuera de las ventanas, el panel, el centro de control y los
+      emergentes del escritorio. Los bordes de adentro de cada aplicación no
+      cambian.
+    borderWidths:
+      normal: Fino
+      thick: Grueso
+      heavy: Muy grueso
+    borderColor: Color
+    borderColorHint: El del esquema de colores, o el color de acento.
+    borderColors:
+      scheme: Del esquema
+      accent: De acento
   appearanceDesktop:
     title: Archivos del Escritorio
     description: Ajusta la visibilidad y el tamaño de los iconos en el fondo de escritorio.
