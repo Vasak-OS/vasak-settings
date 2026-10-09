@@ -709,8 +709,6 @@ views:
       sweep: Barrido
       reactor: Reactor
       beat: Latido
-    size: Tamaño
-    sizeHint: La escala de la barra, entre el 80 y el 120 %.
     autohide: Auto-ocultar
     autohideHint: >-
       El panel se esconde solo y vuelve al llevar el cursor al borde de la

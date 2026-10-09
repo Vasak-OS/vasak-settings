@@ -242,7 +242,7 @@ export function writePanelPosition(config: Record<string, unknown>, position: Pa
 }
 
 /**
- * El aspecto del panel: su tipo, su densidad, su animación y su tamaño.
+ * El aspecto del panel: su tipo, su densidad y su animación.
  *
  * Son las claves que el escritorio lee en `panel-appearance.ts` (vasak-desktop):
  * el **contrato tiene que coincidir** —mismos valores, mismos nombres, mismos
@@ -271,11 +271,6 @@ export type PanelAnimation = (typeof PANEL_ANIMATIONS)[number];
 /** Apagada: el panel no se mueve hasta que la persona lo pide. */
 export const DEFAULT_PANEL_ANIMATION: PanelAnimation = 'off';
 
-/** El tamaño va entre el 80 y el 120 %: más abajo no se lee, más arriba no entra en la franja. */
-export const MIN_PANEL_SIZE = 80;
-export const MAX_PANEL_SIZE = 120;
-export const DEFAULT_PANEL_SIZE = 100;
-
 function panelSection(config: unknown): Record<string, unknown> | undefined {
 	return config && typeof config === 'object'
 		? ((config as Record<string, unknown>).panel as Record<string, unknown> | undefined)
@@ -302,17 +297,6 @@ export function readPanelAnimation(config: unknown): PanelAnimation {
 }
 
 /**
- * El tamaño en porciento, acotado al rango que entra en la franja. El archivo
- * se edita a mano: un `150` o un `"grande"` no pueden estirar la barra fuera de
- * su lugar, así que todo se recorta a [80, 120] y lo que no es un número vale 100.
- */
-export function readPanelSize(config: unknown): number {
-	const stored = panelSection(config)?.size;
-	if (typeof stored !== 'number' || !Number.isFinite(stored)) return DEFAULT_PANEL_SIZE;
-	return Math.min(MAX_PANEL_SIZE, Math.max(MIN_PANEL_SIZE, Math.round(stored)));
-}
-
-/**
  * Si el panel se esconde solo y se revela al rozar el borde.
  *
  * La clave ausente vale por apagado: el panel no se esconde solo hasta que se
@@ -328,17 +312,16 @@ export interface PanelAppearance {
 	style: PanelStyle;
 	layout: PanelLayout;
 	animation: PanelAnimation;
-	size: number;
 	autohide: boolean;
 }
 
 /**
  * Deja la sección `panel` con el aspecto elegido.
  *
- * Conserva lo que ya hubiera —la posición y los interruptores de los
- * indicadores viven en la misma sección—, igual que `writePanelPosition`. El
- * tamaño se vuelve a acotar al guardar: ni el control ni una escritura a mano
- * pueden dejar un valor fuera de rango en el archivo.
+ * Conserva lo que ya hubiera —la posición, los interruptores de los indicadores
+ * y cualquier otra clave viven en la misma sección—, igual que
+ * `writePanelPosition`. Un `size` viejo que haya quedado de una versión anterior
+ * se preserva tal cual: el escritorio lo ignora y esta pantalla ya no lo toca.
  */
 export function writePanelAppearance(
 	config: Record<string, unknown>,
@@ -350,7 +333,6 @@ export function writePanelAppearance(
 		style: appearance.style,
 		layout: appearance.layout,
 		animation: appearance.animation,
-		size: Math.min(MAX_PANEL_SIZE, Math.max(MIN_PANEL_SIZE, Math.round(appearance.size))),
 		autohide: appearance.autohide,
 	};
 }
