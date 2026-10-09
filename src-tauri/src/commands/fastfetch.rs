@@ -26,8 +26,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const SYSTEM_CONFIG: &str = "/etc/fastfetch/config.jsonc";
-const SCHEMA: &str =
-    "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json";
+const SCHEMA: &str = "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json";
 
 /// El emblema, en los términos que entiende la pantalla.
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
@@ -102,7 +101,8 @@ fn strip_jsonc(input: &str) -> String {
             }
             if next == '*' {
                 i += 2;
-                while i + 1 < bytes.len() && !(bytes[i] as char == '*' && bytes[i + 1] as char == '/')
+                while i + 1 < bytes.len()
+                    && !(bytes[i] as char == '*' && bytes[i + 1] as char == '/')
                 {
                     i += 1;
                 }
@@ -314,7 +314,11 @@ fn read_state() -> FastfetchState {
     let available = fastfetch_available();
     let user_config_exists = path.as_deref().map(Path::exists).unwrap_or(false);
     let logo = logo_from_value(&effective_config(path.as_deref()));
-    let preview = if available { run_preview() } else { String::new() };
+    let preview = if available {
+        run_preview()
+    } else {
+        String::new()
+    };
     FastfetchState {
         available,
         user_config_exists,
@@ -430,7 +434,10 @@ mod tests {
             ..Default::default()
         };
         let merged = merge_logo(base, &logo);
-        assert_eq!(merged["modules"], serde_json::json!(["title", "os", "kernel"]));
+        assert_eq!(
+            merged["modules"],
+            serde_json::json!(["title", "os", "kernel"])
+        );
         assert_eq!(merged["logo"]["type"], "file");
         assert_eq!(merged["$schema"], SCHEMA);
     }
