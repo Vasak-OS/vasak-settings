@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, TextInput } from '@vasakgroup/vue-libvasak';
+import { AlertMessage, PageHeader, Panel, TextInput } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted } from 'vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 
 // The section is owned entirely by this view, so saving must also delete what
@@ -60,7 +58,8 @@ function renameApp(oldKey: string, rawKey: string) {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.windows')"
+			size="lg"
+			:eyebrow="t('sidebar.windows')"
 			:title="t('views.wayfireAutostart.title')"
 			:description="t('views.wayfireAutostart.description')"
 		/>
@@ -69,7 +68,7 @@ function renameApp(oldKey: string, rawKey: string) {
 		<AlertMessage v-if="autostart.success.value" tone="success">{{ autostart.success.value }}</AlertMessage>
 
 		<form @submit.prevent="autostart.save()" class="flex flex-col gap-4">
-			<SectionCard>
+			<Panel as="article">
 				<h3 class="text-base font-medium">{{ t('views.wayfireAutostart.sectionTitle') }}</h3>
 				<p class="mb-4 mt-0.5 text-sm text-tx-muted">
 					{{ t('views.wayfireAutostart.hint') }}
@@ -106,7 +105,7 @@ function renameApp(oldKey: string, rawKey: string) {
 								v-else
 								type="button"
 								@click="removeApp(entry.key)"
-								class="shrink-0 rounded-corner border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs font-medium text-status-error hover:bg-status-error/20"
+								class="shrink-0 rounded-corner-m border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs font-medium text-status-error hover:bg-status-error/20"
 							>
 								{{ t('common.delete') }}
 							</button>
@@ -119,7 +118,7 @@ function renameApp(oldKey: string, rawKey: string) {
 
 					<div
 						v-if="entries.length === 0"
-						class="rounded-corner border border-dashed border-ui-border bg-ui-surface/30 p-4 text-center text-sm text-tx-muted"
+						class="rounded-corner-m border border-dashed border-ui-border bg-ui-surface/30 p-4 text-center text-sm text-tx-muted"
 					>
 						{{ t('views.wayfireAutostart.empty') }}
 					</div>
@@ -128,17 +127,17 @@ function renameApp(oldKey: string, rawKey: string) {
 				<button
 					type="button"
 					@click="addApp"
-					class="mt-3 rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface"
+					class="mt-3 rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface"
 				>
 					{{ t('views.wayfireAutostart.addCommand') }}
 				</button>
-			</SectionCard>
+			</Panel>
 
 			<div class="flex justify-end">
 				<button
 					type="submit"
 					:disabled="autostart.saving.value"
-					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+					class="rounded-corner-m bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90 disabled:opacity-50"
 				>
 					{{ autostart.saving.value ? t('common.saving') : t('common.save') }}
 				</button>

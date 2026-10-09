@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -25,8 +26,16 @@ impl MonitorMode {
     /// The `WIDTHxHEIGHT@REFRESH` wayfire expects. It reads the refresh as
     /// millihertz when it is four digits or more, which is the only way to name
     /// 59.997 Hz exactly.
+    ///
+    /// A refresh of 0 means "unknown" — the kernel fallback does not carry one.
+    /// There we name the resolution alone and let wayfire pick the rate, instead
+    /// of asking for a fabricated 60 Hz the panel may not actually have.
     pub fn to_wayfire(&self) -> String {
-        format!("{}x{}@{}", self.width, self.height, self.refresh_mhz)
+        if self.refresh_mhz == 0 {
+            format!("{}x{}", self.width, self.height)
+        } else {
+            format!("{}x{}@{}", self.width, self.height, self.refresh_mhz)
+        }
     }
 }
 
@@ -249,12 +258,46 @@ pub fn overlapping_outputs(settings: &[MonitorSetting]) -> Vec<String> {
 
 // ── wlr-randr ────────────────────────────────────────────────────────────────
 
+/// Hay wlr-randr si existe un ejecutable `wlr-randr` en el PATH.
+///
+/// No se comprueba corriéndolo: wlr-randr 0.5 no reconoce `--version` —nunca fue
+/// un flag válido— y sale con código 1, así que `--version` daba siempre false
+/// aunque wlr-randr estuviera instalado y funcionara. El síntoma era la UI
+/// pidiendo instalar wlr-randr y mostrando la frecuencia como «—» —porque la
+/// detección se caía al respaldo del kernel— con wlr-randr presente. Alcanza con
+/// mirar el PATH; si está, `get_detected_monitors` lo corre a secas y parsea sus
+/// modos reales.
 fn wlr_randr_available() -> bool {
-    Command::new("wlr-randr")
-        .arg("--version")
-        .output()
-        .map(|output| output.status.success())
+    std::env::var_os("PATH")
+        .map(|path| binary_in_path("wlr-randr", &path))
         .unwrap_or(false)
+}
+
+/// ¿Hay un ejecutable `name` en alguna de las carpetas del `path` dado?
+///
+/// Recibe el valor de PATH como argumento, en vez de leerlo del entorno, para
+/// poder probarlo con un directorio temporal.
+///
+/// Pide, además de que sea un archivo, el bit de ejecución: un `wlr-randr` sin
+/// permiso de ejecución daría `true` acá pero fallaría al correrlo en
+/// `get_detected_monitors`, y perderíamos el respaldo del kernel —peor que caer
+/// a él directamente—.
+fn binary_in_path(name: &str, path: &OsStr) -> bool {
+    std::env::split_paths(path).any(|dir| is_executable_file(&dir.join(name)))
+}
+
+#[cfg(unix)]
+fn is_executable_file(path: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+
+    fs::metadata(path)
+        .map(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false)
+}
+
+#[cfg(not(unix))]
+fn is_executable_file(path: &Path) -> bool {
+    path.is_file()
 }
 
 /// Parses `wlr-randr`'s report.
@@ -433,6 +476,18 @@ fn kernel_modes(connector: &str) -> Vec<MonitorMode> {
         return Vec::new();
     };
 
+    parse_kernel_modes(&content)
+}
+
+/// Parses `/sys/class/drm/*/modes`: one `WIDTHxHEIGHT` per line, in the driver's
+/// preference order, with the first line the preferred mode.
+///
+/// sysfs does not carry the refresh, so each mode is left with an unknown rate
+/// (0) rather than a fabricated 60 Hz: inventing 60 was exactly what made every
+/// panel read as 60 Hz when wlr-randr was missing. `to_wayfire` then names the
+/// resolution alone so wayfire picks a rate the output actually has, and the UI
+/// shows "—" and asks the user to install wlr-randr.
+fn parse_kernel_modes(content: &str) -> Vec<MonitorMode> {
     let mut modes: Vec<MonitorMode> = Vec::new();
 
     for (index, line) in content.lines().enumerate() {
@@ -449,10 +504,7 @@ fn kernel_modes(connector: &str) -> Vec<MonitorMode> {
         modes.push(MonitorMode {
             width,
             height,
-            // sysfs does not carry the refresh; the first entry is the
-            // preferred mode, and wayfire picks the highest rate the output has
-            // for a resolution when the one asked for is not exact.
-            refresh_mhz: 60_000,
+            refresh_mhz: 0,
             is_preferred: index == 0,
             is_current: false,
         });
@@ -795,6 +847,121 @@ DP-2 "Dell Inc. DELL U2720Q H7MTP83 (DP-2)"
         assert!(current.is_preferred);
     }
 
+    /// Un panel de alta frecuencia como el del bug #147: cada modo tiene que
+    /// quedar con su Hz real —144, 120, 60— y no todos aplastados a 60.
+    const WLR_RANDR_HIGH_REFRESH: &str = r#"DP-1 "Acme Gaming 0x1234 (DP-1)"
+  Make: Acme
+  Model: Gaming
+  Enabled: yes
+  Modes:
+    2560x1440 px, 164.835999 Hz (preferred)
+    2560x1440 px, 143.998001 Hz
+    2560x1440 px, 59.950001 Hz (current)
+    1920x1080 px, 120.000000 Hz
+  Position: 0,0
+  Transform: normal
+  Scale: 1.000000
+  Adaptive Sync: enabled
+"#;
+
+    #[test]
+    fn parse_wlr_randr_mode_reads_the_rate_and_the_flags() {
+        let high =
+            parse_wlr_randr_mode("2560x1440 px, 143.998001 Hz (preferred, current)").unwrap();
+        assert_eq!((high.width, high.height), (2560, 1440));
+        assert_eq!(high.refresh_mhz, 143_998);
+        assert!(high.is_preferred);
+        assert!(high.is_current);
+
+        let plain = parse_wlr_randr_mode("1920x1080 px, 119.982002 Hz").unwrap();
+        assert_eq!(plain.refresh_mhz, 119_982);
+        assert!(!plain.is_preferred);
+        assert!(!plain.is_current);
+
+        let only_current = parse_wlr_randr_mode("3840x2160 px, 60.000000 Hz (current)").unwrap();
+        assert_eq!(only_current.refresh_mhz, 60_000);
+        assert!(!only_current.is_preferred);
+        assert!(only_current.is_current);
+    }
+
+    /// Las líneas que no son un modo —entre ellas `Adaptive Sync`, que agrega
+    /// wlr-randr 0.5— no pueden colarse como un modo inventado.
+    #[test]
+    fn parse_wlr_randr_mode_ignores_lines_that_are_not_modes() {
+        assert!(parse_wlr_randr_mode("Adaptive Sync: disabled").is_none());
+        assert!(parse_wlr_randr_mode("Modes:").is_none());
+        assert!(parse_wlr_randr_mode("Position: 0,0").is_none());
+        assert!(parse_wlr_randr_mode("Make: Acme").is_none());
+    }
+
+    #[test]
+    fn offers_every_refresh_rate_a_high_refresh_panel_reports() {
+        let monitors = parse_wlr_randr(WLR_RANDR_HIGH_REFRESH);
+        assert_eq!(monitors.len(), 1);
+
+        // Los tres modos de 1440p conservan su frecuencia; ninguno quedó en 60.
+        let rates: Vec<u32> = monitors[0]
+            .modes
+            .iter()
+            .filter(|m| m.width == 2560 && m.height == 1440)
+            .map(|m| m.refresh_mhz)
+            .collect();
+        assert_eq!(rates, vec![164_836, 143_998, 59_950]);
+
+        let preferred = monitors[0].modes.iter().find(|m| m.is_preferred).unwrap();
+        assert_eq!(preferred.refresh_mhz, 164_836);
+        let current = monitors[0].modes.iter().find(|m| m.is_current).unwrap();
+        assert_eq!(current.refresh_mhz, 59_950);
+
+        // La línea `Adaptive Sync` no se contó como un modo de más.
+        assert_eq!(monitors[0].modes.len(), 4);
+    }
+
+    /// El síntoma del bug: cuando no hay wlr-randr se cae al respaldo del kernel,
+    /// que leía sólo la resolución y le ponía 60 Hz a todo. Ahora la frecuencia
+    /// queda desconocida (0), no inventada.
+    #[test]
+    fn kernel_modes_do_not_invent_a_refresh_rate() {
+        let content = "2560x1440\n1920x1080\n1920x1080\n1280x720\n";
+        let modes = parse_kernel_modes(content);
+
+        assert_eq!(modes.len(), 3, "el 1920x1080 repetido se descarta");
+        assert!(
+            modes.iter().all(|mode| mode.refresh_mhz == 0),
+            "ninguna frecuencia de 60 inventada"
+        );
+        assert_eq!(modes[0].width, 2560);
+        assert!(
+            modes[0].is_preferred,
+            "la primera línea es el modo preferido"
+        );
+        assert!(!modes[1].is_preferred);
+    }
+
+    /// Un modo sin frecuencia conocida nombra la resolución sola, para que
+    /// wayfire elija una que el monitor tenga de verdad en vez de que le pidamos
+    /// un 60 Hz que puede no existir.
+    #[test]
+    fn an_unknown_refresh_names_the_resolution_alone() {
+        let unknown = MonitorMode {
+            width: 1920,
+            height: 1080,
+            refresh_mhz: 0,
+            is_preferred: true,
+            is_current: false,
+        };
+        assert_eq!(unknown.to_wayfire(), "1920x1080");
+
+        let known = MonitorMode {
+            width: 2560,
+            height: 1440,
+            refresh_mhz: 143_998,
+            is_preferred: false,
+            is_current: true,
+        };
+        assert_eq!(known.to_wayfire(), "2560x1440@143998");
+    }
+
     #[test]
     fn a_scaled_screen_takes_up_what_it_takes_up() {
         // The 4K at scale 2 is 1920x1080 of layout, not 3840x2160.
@@ -946,5 +1113,136 @@ DP-2 "Dell Inc. DELL U2720Q H7MTP83 (DP-2)"
         assert_eq!(format_scale(1.0), "1");
         assert_eq!(format_scale(2.0), "2");
         assert_eq!(format_scale(1.25), "1.25");
+    }
+
+    // ── Detección de wlr-randr en el PATH ──────────────────────────────────
+
+    use std::env;
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    /// Un directorio temporal propio que se borra solo al salir del test, para no
+    /// sumar una dependencia (`tempfile`) sólo para estas pruebas.
+    struct TempDir(PathBuf);
+
+    impl TempDir {
+        fn new() -> Self {
+            static COUNTER: AtomicU32 = AtomicU32::new(0);
+            let unique = COUNTER.fetch_add(1, Ordering::Relaxed);
+            let mut path = env::temp_dir();
+            path.push(format!(
+                "vasak-settings-path-test-{}-{}",
+                std::process::id(),
+                unique
+            ));
+            fs::create_dir_all(&path).unwrap();
+            TempDir(path)
+        }
+
+        fn path(&self) -> &Path {
+            &self.0
+        }
+
+        /// Crea un archivo (vacío) con ese nombre dentro del directorio, con el
+        /// bit de ejecución puesto en Unix —como lo tendría un binario real—.
+        fn touch(&self, name: &str) -> PathBuf {
+            let file = self.0.join(name);
+            fs::write(&file, b"").unwrap();
+            make_executable(&file);
+            file
+        }
+
+        /// Un archivo con ese nombre pero sin permiso de ejecución.
+        fn touch_non_executable(&self, name: &str) -> PathBuf {
+            let file = self.0.join(name);
+            fs::write(&file, b"").unwrap();
+            file
+        }
+    }
+
+    #[cfg(unix)]
+    fn make_executable(path: &Path) {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(path).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(path, perms).unwrap();
+    }
+
+    #[cfg(not(unix))]
+    fn make_executable(_path: &Path) {}
+
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn binary_in_path_lo_encuentra_cuando_esta() {
+        let dir = TempDir::new();
+        dir.touch("wlr-randr");
+
+        let path = env::join_paths([dir.path()]).unwrap();
+        assert!(binary_in_path("wlr-randr", &path));
+    }
+
+    #[test]
+    fn binary_in_path_da_false_cuando_no_esta() {
+        // Un directorio que existe pero no tiene el binario.
+        let dir = TempDir::new();
+
+        let path = env::join_paths([dir.path()]).unwrap();
+        assert!(!binary_in_path("wlr-randr", &path));
+    }
+
+    #[test]
+    fn binary_in_path_recorre_todas_las_entradas_del_path() {
+        // El binario está en la segunda de varias carpetas: igual tiene que
+        // encontrarse, no sólo si está en la primera.
+        let empty = TempDir::new();
+        let with_binary = TempDir::new();
+        with_binary.touch("wlr-randr");
+        let other = TempDir::new();
+
+        let path = env::join_paths([empty.path(), with_binary.path(), other.path()]).unwrap();
+        assert!(binary_in_path("wlr-randr", &path));
+    }
+
+    #[test]
+    fn binary_in_path_ignora_un_directorio_con_ese_nombre() {
+        // `wlr-randr` como carpeta no es un ejecutable: `is_file()` lo descarta.
+        let dir = TempDir::new();
+        fs::create_dir(dir.path().join("wlr-randr")).unwrap();
+
+        let path = env::join_paths([dir.path()]).unwrap();
+        assert!(!binary_in_path("wlr-randr", &path));
+    }
+
+    #[test]
+    fn binary_in_path_con_un_path_vacio_da_false() {
+        assert!(!binary_in_path("wlr-randr", OsStr::new("")));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn binary_in_path_ignora_un_archivo_sin_permiso_de_ejecucion() {
+        // Un `wlr-randr` sin bit de ejecución no se puede correr: tiene que dar
+        // false para no perder el respaldo del kernel al intentar ejecutarlo.
+        let dir = TempDir::new();
+        dir.touch_non_executable("wlr-randr");
+
+        let path = env::join_paths([dir.path()]).unwrap();
+        assert!(!binary_in_path("wlr-randr", &path));
+    }
+
+    #[test]
+    fn binary_in_path_ignora_una_carpeta_inexistente() {
+        // Una entrada del PATH que no existe no puede traer el binario ni romper
+        // la búsqueda.
+        let dir = TempDir::new();
+        let missing = dir.path().join("no-existe");
+
+        let path = env::join_paths([missing.as_path()]).unwrap();
+        assert!(!binary_in_path("wlr-randr", &path));
     }
 }

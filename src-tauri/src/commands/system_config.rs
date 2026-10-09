@@ -380,20 +380,26 @@ pub async fn get_icon_packs() -> Result<Vec<String>, String> {
     Ok(result)
 }
 
-#[tauri::command]
-pub async fn get_official_wallpapers() -> Result<Vec<String>, String> {
-    let wallpapers_path = PathBuf::from("/usr/share/backgrounds/vasakos");
+/// Las imágenes fijas que valen como fondo. Las mismas que acepta la pantalla
+/// de fondos al soltar un archivo.
+pub const WALLPAPER_IMAGE_EXTENSIONS: [&str; 7] =
+    ["jpg", "jpeg", "png", "webp", "bmp", "gif", "avif"];
 
-    if !wallpapers_path.exists() {
-        return Ok(vec![]);
-    }
+/// Los videos que el escritorio sabe reproducir de fondo: mp4, webm y ogv. Un
+/// mkv o un mov quedan afuera a propósito —WebKit no los abre—.
+pub const WALLPAPER_VIDEO_EXTENSIONS: [&str; 3] = ["mp4", "webm", "ogv"];
 
-    let entries = std::fs::read_dir(&wallpapers_path)
-        .map_err(|e| format!("Error leyendo wallpapers oficiales: {}", e))?;
+/// Lista los archivos de una carpeta cuya extensión esté en `allowed`,
+/// ordenados. No baja a las subcarpetas: una carpeta de fondos es una carpeta
+/// de fondos, no un árbol que recorrer. Una carpeta que no existe o que no se
+/// puede leer da una lista vacía, no un error: es el caso de la carpeta propia
+/// todavía sin elegir.
+pub fn list_wallpapers_in(dir: &std::path::Path, allowed: &[&str]) -> Vec<String> {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
 
-    let allowed_extensions = ["jpg", "jpeg", "png", "webp", "bmp", "gif", "avif"];
     let mut wallpapers = Vec::new();
-
     for entry in entries.flatten() {
         let path = entry.path();
         if !path.is_file() {
@@ -406,13 +412,44 @@ pub async fn get_official_wallpapers() -> Result<Vec<String>, String> {
             .map(|ext| ext.to_lowercase())
             .unwrap_or_default();
 
-        if allowed_extensions.contains(&extension.as_str()) {
+        if allowed.contains(&extension.as_str()) {
             wallpapers.push(path.to_string_lossy().to_string());
         }
     }
 
     wallpapers.sort();
-    Ok(wallpapers)
+    wallpapers
+}
+
+#[tauri::command]
+pub async fn get_official_wallpapers() -> Result<Vec<String>, String> {
+    let wallpapers_path = PathBuf::from("/usr/share/backgrounds/vasakos");
+    Ok(list_wallpapers_in(
+        &wallpapers_path,
+        &WALLPAPER_IMAGE_EXTENSIONS,
+    ))
+}
+
+/// Los fondos de una carpeta propia (vasak-settings#148): imágenes y videos.
+///
+/// Acepta también los formatos de video porque un fondo puede estar en
+/// movimiento, igual que al soltar un archivo. La carpeta puede estar dentro o
+/// fuera del hogar; el acceso del protocolo de assets a cada archivo lo da
+/// `allow_wallpaper_asset` cuando se va a mostrar.
+#[tauri::command]
+pub async fn get_custom_wallpapers(folder: String) -> Result<Vec<String>, String> {
+    let folder = folder.trim();
+    if folder.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let allowed: Vec<&str> = WALLPAPER_IMAGE_EXTENSIONS
+        .iter()
+        .chain(WALLPAPER_VIDEO_EXTENSIONS.iter())
+        .copied()
+        .collect();
+
+    Ok(list_wallpapers_in(std::path::Path::new(folder), &allowed))
 }
 
 #[tauri::command]
@@ -661,4 +698,77 @@ pub async fn get_icon_pack_icons(icon_pack: String) -> Result<IconPackPreview, S
         path: pack_path.to_string_lossy().to_string(),
         icons,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn seed_dir(name: &str, files: &[&str]) -> PathBuf {
+        let dir = std::env::temp_dir().join(name);
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        for file in files {
+            std::fs::write(dir.join(file), vec![0u8; 8]).unwrap();
+        }
+        dir
+    }
+
+    #[test]
+    fn lista_solo_las_extensiones_permitidas_y_ordenadas() {
+        let dir = seed_dir(
+            "vasak-wallpapers-permitidas",
+            &["b.png", "a.jpg", "notas.txt", "video.mp4"],
+        );
+        // Sólo imágenes: el video queda afuera y el txt también.
+        let imagenes = list_wallpapers_in(&dir, &WALLPAPER_IMAGE_EXTENSIONS);
+        assert_eq!(
+            imagenes,
+            vec![
+                dir.join("a.jpg").to_string_lossy().to_string(),
+                dir.join("b.png").to_string_lossy().to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn la_carpeta_propia_acepta_imagenes_y_videos() {
+        let dir = seed_dir(
+            "vasak-wallpapers-custom",
+            &["foto.jpg", "clip.webm", "cancion.mp3", "doc.pdf"],
+        );
+        let fondos = tauri::async_runtime::block_on(get_custom_wallpapers(
+            dir.to_string_lossy().to_string(),
+        ))
+        .unwrap();
+        assert_eq!(
+            fondos,
+            vec![
+                dir.join("clip.webm").to_string_lossy().to_string(),
+                dir.join("foto.jpg").to_string_lossy().to_string(),
+            ],
+            "entran imagen y video, no el audio ni el pdf"
+        );
+    }
+
+    #[test]
+    fn una_carpeta_vacia_o_inexistente_no_es_un_error() {
+        // Carpeta sin elegir: cadena vacía.
+        assert!(
+            tauri::async_runtime::block_on(get_custom_wallpapers(String::new()))
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            tauri::async_runtime::block_on(get_custom_wallpapers("   ".into()))
+                .unwrap()
+                .is_empty()
+        );
+        // Carpeta que no existe: lista vacía, no un error que corte la pantalla.
+        assert!(list_wallpapers_in(
+            std::path::Path::new("/no/existe/nunca"),
+            &WALLPAPER_IMAGE_EXTENSIONS
+        )
+        .is_empty());
+    }
 }

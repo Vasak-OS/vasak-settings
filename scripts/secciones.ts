@@ -177,6 +177,10 @@ export const PALABRAS: Record<string, Record<(typeof IDIOMAS)[number], string[]>
 		es: ['batería', 'suspender', 'ahorro de energía'],
 		en: ['battery', 'suspend', 'power saving'],
 	},
+	'game-mode': {
+		es: ['juegos', 'gamemode', 'rendimiento'],
+		en: ['gaming', 'gamemode', 'performance'],
+	},
 	monitors: {
 		es: ['resolución', 'monitor', 'escala', 'hdmi'],
 		en: ['resolution', 'scaling', 'hdmi'],
@@ -188,6 +192,10 @@ export const PALABRAS: Record<string, Record<(typeof IDIOMAS)[number], string[]>
 	'privacy-security': {
 		es: ['permisos', 'cortafuegos'],
 		en: ['permissions', 'firewall'],
+	},
+	'screen-time': {
+		es: ['uso', 'bienestar digital', 'hábitos', 'estadísticas'],
+		en: ['usage', 'digital wellbeing', 'habits', 'statistics'],
 	},
 	'login-screen': {
 		es: ['greeter', 'pantalla de bienvenida'],

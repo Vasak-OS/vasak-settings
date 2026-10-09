@@ -141,6 +141,14 @@
 		}
 	},
 	{
+		"id": "appearance-start-menu",
+		"icono": "start-here",
+		"nombres": {
+			"es": "Menú de inicio",
+			"en": "Start menu"
+		}
+	},
+	{
 		"id": "appearance-windows",
 		"icono": "preferences-system-windows",
 		"nombres": {
@@ -414,6 +422,26 @@
 		}
 	},
 	{
+		"id": "game-mode",
+		"icono": "applications-games",
+		"nombres": {
+			"es": "Modo juego",
+			"en": "Game mode"
+		},
+		"palabras": {
+			"es": [
+				"juegos",
+				"gamemode",
+				"rendimiento"
+			],
+			"en": [
+				"gaming",
+				"gamemode",
+				"performance"
+			]
+		}
+	},
+	{
 		"id": "monitors",
 		"icono": "video-display",
 		"nombres": {
@@ -473,6 +501,28 @@
 		}
 	},
 	{
+		"id": "screen-time",
+		"icono": "preferences-system-time",
+		"nombres": {
+			"es": "Tiempo de pantalla",
+			"en": "Screen time"
+		},
+		"palabras": {
+			"es": [
+				"uso",
+				"bienestar digital",
+				"hábitos",
+				"estadísticas"
+			],
+			"en": [
+				"usage",
+				"digital wellbeing",
+				"habits",
+				"statistics"
+			]
+		}
+	},
+	{
 		"id": "login-screen",
 		"icono": "preferences-system-login",
 		"nombres": {
@@ -488,6 +538,14 @@
 				"greeter",
 				"display manager"
 			]
+		}
+	},
+	{
+		"id": "fastfetch",
+		"icono": "utilities-terminal",
+		"nombres": {
+			"es": "Fastfetch",
+			"en": "Fastfetch"
 		}
 	},
 	{

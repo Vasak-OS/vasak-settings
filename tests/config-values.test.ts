@@ -1,0 +1,704 @@
+import { describe, expect, test } from 'bun:test';
+import {
+	BAR_POSITIONS,
+	clearStyle,
+	configBoolean,
+	DEFAULT_HEADER_STRENGTH,
+	DEFAULT_MENU_DISPLAY_MODE,
+	DEFAULT_MENU_SEARCH_POSITION,
+	DEFAULT_MENU_VARIANT,
+	DEFAULT_MENU_WIDGET,
+	DEFAULT_PANEL_ANIMATION,
+	DEFAULT_PANEL_LAYOUT,
+	DEFAULT_PANEL_STYLE,
+	MAX_HEADER_STRENGTH,
+	type MenuSettings,
+	PANEL_ANIMATIONS,
+	PANEL_LAYOUTS,
+	PANEL_POSITIONS,
+	PANEL_STYLES,
+	readBarPosition,
+	readMenuSettings,
+	readPanelAnimation,
+	readPanelAutohide,
+	readPanelLayout,
+	readPanelPosition,
+	readPanelStyle,
+	readScreenTimeEnabled,
+	readWallpaperFolder,
+	readWindowBorder,
+	readWindowControls,
+	WINDOW_BORDER_COLORS,
+	WINDOW_BORDER_WIDTHS,
+	WINDOW_CONTROLS_ORDERS,
+	WINDOW_CONTROLS_STYLES,
+	writeBarPosition,
+	writeMenuSettings,
+	writePanelAppearance,
+	writePanelPosition,
+	writeScheme,
+	writeScreenTimeEnabled,
+	writeWindowBorder,
+	writeWindowControls,
+} from '../src/utils/config-values';
+
+/**
+ * Las claves que el plugin de configuración transporta sin conocer llegan como
+ * `unknown`, y antes se las afirmaba con `as any`. Lo que se prueba acá es lo
+ * que esa aserción dejaba pasar: el valor no lo escribe nuestro código, sale de
+ * un archivo que se puede editar a mano, así que puede ser cualquier cosa.
+ */
+describe('configBoolean', () => {
+	test('un booleano de verdad se respeta, incluso el que no es el de fábrica', () => {
+		expect(configBoolean(false, true)).toBe(false);
+		expect(configBoolean(true, false)).toBe(true);
+	});
+
+	test('lo que no está usa el valor de fábrica', () => {
+		expect(configBoolean(undefined, true)).toBe(true);
+		expect(configBoolean(null, false)).toBe(false);
+	});
+
+	test('lo que no es booleano tampoco cuenta como uno', () => {
+		// Con `as any` una cadena llegaba al interruptor y lo dejaba prendido por
+		// ser una cadena no vacía, aunque dijera «no».
+		expect(configBoolean('no', false)).toBe(false);
+		expect(configBoolean('true', false)).toBe(false);
+		expect(configBoolean(0, true)).toBe(true);
+		expect(configBoolean(1, false)).toBe(false);
+	});
+});
+
+/**
+ * Elegir un esquema de color en Apariencia → Tema no cambiaba el esquema: la
+ * vista guardaba `color_scheme`, con guión bajo, y la clave que todo el mundo
+ * lee es `color-scheme`. O sea que se escribía una clave nueva que nadie mira y
+ * la de verdad se quedaba con el valor viejo.
+ */
+describe('writeScheme', () => {
+	test('deja el esquema en la clave que se lee', () => {
+		const style: Record<string, unknown> = {
+			darkmode: true,
+			'color-scheme': 'vasak-default',
+			radius: 10,
+		};
+
+		writeScheme(style, 'catppuccin');
+
+		expect(style['color-scheme']).toBe('catppuccin');
+	});
+
+	test('no toca nada más de la sección', () => {
+		const style: Record<string, unknown> = {
+			darkmode: true,
+			'color-scheme': 'vasak-default',
+			radius: 10,
+		};
+
+		writeScheme(style, 'catppuccin');
+
+		expect(style.darkmode).toBe(true);
+		expect(style.radius).toBe(10);
+	});
+});
+
+/**
+ * Hasta la versión 2.6.0 del plugin de configuración, lo que su modelo no
+ * conoce se borraba solo en cada lectura. Ahora se conserva —eso es lo que
+ * salvó la disposición de los widgets—, así que lo que la interfaz dejó de
+ * escribir hay que sacarlo a propósito o queda para siempre.
+ */
+describe('clearStyle', () => {
+	test('saca la clave del esquema mal escrita', () => {
+		const style: Record<string, unknown> = {
+			'color-scheme': 'catppuccin',
+			color_scheme: 'lo-que-alguien-eligió-y-no-se-aplicó',
+		};
+
+		clearStyle(style);
+
+		expect('color_scheme' in style).toBe(false);
+		expect(style['color-scheme']).toBe('catppuccin');
+	});
+
+	test('y el color primario del control que se sacó', () => {
+		// Nadie leía esa clave: el color primario lo define el esquema. El control
+		// existía y no hacía nada, así que su valor quedaba escrito para nada.
+		const style: Record<string, unknown> = { primarycolor: '#0084FF', radius: 10 };
+
+		clearStyle(style);
+
+		expect('primarycolor' in style).toBe(false);
+		expect(style.radius).toBe(10);
+	});
+
+	test('con una sección que no las tiene no hace nada', () => {
+		const style: Record<string, unknown> = { darkmode: true, 'color-scheme': 'x', radius: 8 };
+
+		clearStyle(style);
+
+		expect(style).toEqual({ darkmode: true, 'color-scheme': 'x', radius: 8 });
+	});
+});
+
+describe('readBarPosition', () => {
+	test('sin nada puesto, la barra va arriba', () => {
+		// Es donde estuvo siempre y donde la gente la busca.
+		expect(readBarPosition({})).toBe('top');
+		expect(readBarPosition(null)).toBe('top');
+		expect(readBarPosition({ window: {} })).toBe('top');
+	});
+
+	test('los cuatro lados se leen', () => {
+		for (const side of BAR_POSITIONS) {
+			expect(readBarPosition({ window: { barPosition: side } })).toBe(side);
+		}
+	});
+
+	test('cualquier otra cosa vale por arriba', () => {
+		// El archivo se edita a mano. Con una aserción de tipo, un `"izquierda"`
+		// llegaría hasta el marco y ahí no coincide con ninguna dirección: la
+		// ventana quedaría sin acomodo.
+		expect(readBarPosition({ window: { barPosition: 'izquierda' } })).toBe('top');
+		expect(readBarPosition({ window: { barPosition: 3 } })).toBe('top');
+		expect(readBarPosition({ window: 'left' })).toBe('top');
+	});
+});
+
+describe('writeBarPosition', () => {
+	test('deja la posición elegida', () => {
+		const config: Record<string, unknown> = {};
+
+		writeBarPosition(config, 'left');
+
+		expect(config.window).toEqual({ barPosition: 'left' });
+	});
+
+	test('y no se lleva puesto lo que ya hubiera en la sección', () => {
+		// `window` es una sección compartida con lo que venga después.
+		const config: Record<string, unknown> = { window: { otherKey: 1, barPosition: 'top' } };
+
+		writeBarPosition(config, 'bottom');
+
+		expect(config.window).toEqual({ otherKey: 1, barPosition: 'bottom' });
+	});
+});
+
+describe('readWindowControls', () => {
+	test('las opciones son las que entiende la librería', () => {
+		// `WindowControls` de vue-libvasak compara contra estas cadenas: una que
+		// se escriba distinto acá queda guardada y la ventana no le hace caso.
+		expect([...WINDOW_CONTROLS_STYLES]).toEqual(['default', 'macos']);
+		expect([...WINDOW_CONTROLS_ORDERS]).toEqual(['default', 'reversed']);
+	});
+
+	test('sin nada puesto, los botones planos y al final', () => {
+		const deFabrica = { style: 'default', order: 'default' };
+		expect(readWindowControls({})).toEqual(deFabrica);
+		expect(readWindowControls(null)).toEqual(deFabrica);
+		expect(readWindowControls(undefined)).toEqual(deFabrica);
+		expect(readWindowControls({ window: {} })).toEqual(deFabrica);
+	});
+
+	test('cada estilo y cada orden se leen', () => {
+		for (const style of WINDOW_CONTROLS_STYLES) {
+			for (const order of WINDOW_CONTROLS_ORDERS) {
+				expect(
+					readWindowControls({ window: { controlsStyle: style, controlsOrder: order } })
+				).toEqual({ style, order });
+			}
+		}
+	});
+
+	test('un valor desconocido cae al de siempre sin arrastrar al otro', () => {
+		// El archivo se edita a mano: un estilo mal escrito no tiene que
+		// llevarse puesto el orden, que sí es válido.
+		expect(
+			readWindowControls({ window: { controlsStyle: 'mac', controlsOrder: 'reversed' } })
+		).toEqual({ style: 'default', order: 'reversed' });
+		expect(
+			readWindowControls({ window: { controlsStyle: 'macos', controlsOrder: 'invertido' } })
+		).toEqual({ style: 'macos', order: 'default' });
+		expect(readWindowControls({ window: { controlsStyle: 1, controlsOrder: true } })).toEqual({
+			style: 'default',
+			order: 'default',
+		});
+		expect(readWindowControls({ window: 'macos' })).toEqual({
+			style: 'default',
+			order: 'default',
+		});
+	});
+});
+
+describe('writeWindowControls', () => {
+	test('deja el estilo y el orden elegidos', () => {
+		const config: Record<string, unknown> = {};
+
+		writeWindowControls(config, { style: 'macos', order: 'reversed' });
+
+		expect(config.window).toEqual({ controlsStyle: 'macos', controlsOrder: 'reversed' });
+	});
+
+	test('y conserva la posición de la barra y lo que no conoce', () => {
+		// `window` la comparten la barra y los botones: guardar unos no puede
+		// devolver la barra arriba.
+		const config: Record<string, unknown> = {
+			window: { barPosition: 'left', futureKey: { a: 1 }, controlsStyle: 'macos' },
+			style: { radius: 8 },
+		};
+
+		writeWindowControls(config, { style: 'default', order: 'reversed' });
+
+		expect(config.window).toEqual({
+			barPosition: 'left',
+			futureKey: { a: 1 },
+			controlsStyle: 'default',
+			controlsOrder: 'reversed',
+		});
+		expect(config.style).toEqual({ radius: 8 });
+	});
+});
+
+describe('readWindowBorder', () => {
+	test('las opciones son las que entiende el config-manager', () => {
+		expect([...WINDOW_BORDER_WIDTHS]).toEqual(['normal', 'thick', 'heavy']);
+		expect([...WINDOW_BORDER_COLORS]).toEqual(['scheme', 'accent']);
+	});
+
+	test('sin nada puesto, el borde fino y del color del esquema', () => {
+		const deFabrica = { width: 'normal', color: 'scheme' };
+		expect(readWindowBorder({})).toEqual(deFabrica);
+		expect(readWindowBorder(null)).toEqual(deFabrica);
+		expect(readWindowBorder({ style: {} })).toEqual(deFabrica);
+		expect(readWindowBorder({ style: { border: {} } })).toEqual(deFabrica);
+	});
+
+	test('cada grosor y cada color se leen', () => {
+		for (const width of WINDOW_BORDER_WIDTHS) {
+			for (const color of WINDOW_BORDER_COLORS) {
+				expect(readWindowBorder({ style: { border: { width, color } } })).toEqual({
+					width,
+					color,
+				});
+			}
+		}
+	});
+
+	test('el muy grueso guardado se lee como muy grueso y no como el de siempre', () => {
+		expect(readWindowBorder({ style: { border: { width: 'heavy', color: 'accent' } } })).toEqual({
+			width: 'heavy',
+			color: 'accent',
+		});
+	});
+
+	test('una clave heredada de Object no se toma por un grosor', () => {
+		for (const width of ['toString', 'constructor', '__proto__', 'length', 'HEAVY']) {
+			expect(readWindowBorder({ style: { border: { width } } }).width).toBe('normal');
+		}
+	});
+
+	test('un valor desconocido cae al de siempre sin arrastrar al otro', () => {
+		expect(readWindowBorder({ style: { border: { width: 2, color: 'accent' } } })).toEqual({
+			width: 'normal',
+			color: 'accent',
+		});
+		expect(readWindowBorder({ style: { border: { width: 'thick', color: '#ff0000' } } })).toEqual({
+			width: 'thick',
+			color: 'scheme',
+		});
+		expect(readWindowBorder({ style: { border: 'thick' } })).toEqual({
+			width: 'normal',
+			color: 'scheme',
+		});
+	});
+});
+
+describe('writeWindowBorder', () => {
+	test('deja el grosor y el color elegidos', () => {
+		const config: Record<string, unknown> = {};
+
+		writeWindowBorder(config, { width: 'thick', color: 'accent' });
+
+		expect(config.style).toEqual({ border: { width: 'thick', color: 'accent' } });
+	});
+
+	test('guarda el muy grueso tal cual lo entiende el config-manager', () => {
+		const config: Record<string, unknown> = {};
+
+		writeWindowBorder(config, { width: 'heavy', color: 'scheme' });
+
+		expect(config.style).toEqual({ border: { width: 'heavy', color: 'scheme' } });
+		expect(readWindowBorder(config).width).toBe('heavy');
+	});
+
+	test('y conserva el esquema, el radio y lo que no conoce dentro del borde', () => {
+		// `style` lleva el esquema elegido y el radio: perderlos al guardar el
+		// borde cambiaría los colores y las esquinas de todo el escritorio.
+		const config: Record<string, unknown> = {
+			style: {
+				darkmode: true,
+				'color-scheme': 'nord',
+				radius: 12,
+				border: { width: 'normal', color: 'scheme', glow: true },
+			},
+			window: { barPosition: 'bottom' },
+		};
+
+		writeWindowBorder(config, { width: 'thick', color: 'accent' });
+
+		expect(config.style).toEqual({
+			darkmode: true,
+			'color-scheme': 'nord',
+			radius: 12,
+			border: { width: 'thick', color: 'accent', glow: true },
+		});
+		expect(config.window).toEqual({ barPosition: 'bottom' });
+	});
+});
+
+describe('readPanelPosition', () => {
+	test('sin nada puesto, el panel va arriba', () => {
+		// La sección `panel` existe desde antes que esta clave —lleva los
+		// interruptores de los indicadores—, así que lo normal en una
+		// instalación que viene de antes es que la sección esté y la clave no.
+		expect(readPanelPosition({})).toBe('top');
+		expect(readPanelPosition(null)).toBe('top');
+		expect(readPanelPosition({ panel: {} })).toBe('top');
+		expect(readPanelPosition({ panel: { weather: false } })).toBe('top');
+	});
+
+	test('los cuatro lados se leen', () => {
+		for (const side of PANEL_POSITIONS) {
+			expect(readPanelPosition({ panel: { position: side } })).toBe(side);
+		}
+	});
+
+	test('cualquier otra cosa vale por arriba', () => {
+		// El escritorio lee esta clave con el mismo criterio. Si acá se afirmara
+		// el tipo, esta pantalla mostraría «izquierda» y el panel seguiría
+		// arriba, que es la contradicción que ya pasó con el esquema de color.
+		expect(readPanelPosition({ panel: { position: 'izquierda' } })).toBe('top');
+		expect(readPanelPosition({ panel: { position: 3 } })).toBe('top');
+		expect(readPanelPosition({ panel: 'left' })).toBe('top');
+	});
+});
+
+describe('writePanelPosition', () => {
+	test('deja la posición elegida', () => {
+		const config: Record<string, unknown> = {};
+
+		writePanelPosition(config, 'bottom');
+
+		expect(config.panel).toEqual({ position: 'bottom' });
+	});
+
+	test('y no apaga los indicadores que ya estaban', () => {
+		// Los interruptores viven en la misma sección: reemplazarla entera los
+		// dejaría todos en blanco, o sea todos encendidos, cada vez que alguien
+		// mueve el panel.
+		const config: Record<string, unknown> = {
+			panel: { weather: false, tray: false, position: 'top' },
+		};
+
+		writePanelPosition(config, 'left');
+
+		expect(config.panel).toEqual({ weather: false, tray: false, position: 'left' });
+	});
+});
+
+describe('el aspecto del panel: tipo, densidad y animación', () => {
+	test('sin nada puesto, los valores de fábrica', () => {
+		// El contrato coincide con el que lee el escritorio (`panel-appearance.ts`):
+		// mismos valores de fábrica. Una instalación vieja tiene la sección `panel`
+		// con los indicadores y ninguna de estas claves.
+		for (const config of [{}, null, { panel: {} }, { panel: { weather: false } }]) {
+			expect(readPanelStyle(config)).toBe(DEFAULT_PANEL_STYLE);
+			expect(readPanelLayout(config)).toBe(DEFAULT_PANEL_LAYOUT);
+			expect(readPanelAnimation(config)).toBe(DEFAULT_PANEL_ANIMATION);
+			expect(readPanelAutohide(config)).toBe(false);
+		}
+	});
+
+	test('el auto-ocultar: sólo true lo prende', () => {
+		// Mismo criterio que el escritorio: la clave ausente o cualquier cosa que
+		// no sea `true` vale por apagado.
+		expect(readPanelAutohide({ panel: { autohide: true } })).toBe(true);
+		expect(readPanelAutohide({ panel: { autohide: false } })).toBe(false);
+		expect(readPanelAutohide({ panel: { autohide: 'si' } })).toBe(false);
+	});
+
+	test('cada valor conocido se lee', () => {
+		for (const style of PANEL_STYLES) expect(readPanelStyle({ panel: { style } })).toBe(style);
+		for (const layout of PANEL_LAYOUTS) expect(readPanelLayout({ panel: { layout } })).toBe(layout);
+		for (const animation of PANEL_ANIMATIONS)
+			expect(readPanelAnimation({ panel: { animation } })).toBe(animation);
+	});
+
+	test('cualquier otra cosa cae al valor de fábrica', () => {
+		expect(readPanelStyle({ panel: { style: 'isla' } })).toBe(DEFAULT_PANEL_STYLE);
+		expect(readPanelLayout({ panel: { layout: 3 } })).toBe(DEFAULT_PANEL_LAYOUT);
+		expect(readPanelAnimation({ panel: { animation: 'rayo' } })).toBe(DEFAULT_PANEL_ANIMATION);
+		expect(readPanelStyle({ panel: 'bar' })).toBe(DEFAULT_PANEL_STYLE);
+	});
+
+	test('escribir el aspecto conserva la posición y los indicadores', () => {
+		// Todo vive en la misma sección `panel`: reemplazarla entera apagaría los
+		// indicadores y movería el panel cada vez que alguien cambia el tipo.
+		const config: Record<string, unknown> = {
+			panel: { weather: false, position: 'bottom' },
+		};
+
+		writePanelAppearance(config, {
+			style: 'dock',
+			layout: 'compact',
+			animation: 'reactor',
+			autohide: true,
+		});
+
+		expect(config.panel).toEqual({
+			weather: false,
+			position: 'bottom',
+			style: 'dock',
+			layout: 'compact',
+			animation: 'reactor',
+			autohide: true,
+		});
+	});
+
+	test('escribir no toca un size viejo que haya quedado en el archivo', () => {
+		// El control de tamaño se sacó porque el escritorio no consumía
+		// `--panel-scale`: la pantalla ya no escribe `panel.size`, pero una
+		// instalación vieja puede tenerlo guardado. Se conserva tal cual —es
+		// inofensivo, el escritorio lo ignora— en lugar de borrarlo.
+		const config: Record<string, unknown> = {
+			panel: { size: 110, position: 'bottom' },
+		};
+
+		writePanelAppearance(config, {
+			style: 'bar',
+			layout: 'distributed',
+			animation: 'off',
+			autohide: false,
+		});
+
+		expect(config.panel).toEqual({
+			size: 110,
+			position: 'bottom',
+			style: 'bar',
+			layout: 'distributed',
+			animation: 'off',
+			autohide: false,
+		});
+	});
+});
+
+describe('readScreenTimeEnabled', () => {
+	test('la clave ausente significa apagado', () => {
+		// El registro de uso no se enciende solo: se elige. El servicio de salud
+		// lee con este mismo criterio, así que leerlo al revés acá prendería la
+		// medición en cada instalación nueva sin que nadie la pidiera.
+		expect(readScreenTimeEnabled({})).toBe(false);
+		expect(readScreenTimeEnabled({ screen_time: {} })).toBe(false);
+	});
+
+	test('toma el booleano cuando está', () => {
+		expect(readScreenTimeEnabled({ screen_time: { enabled: true } })).toBe(true);
+		expect(readScreenTimeEnabled({ screen_time: { enabled: false } })).toBe(false);
+	});
+
+	test('un valor que no es booleano cae en apagado', () => {
+		// Sale de un archivo editable a mano: un `"si"` no es `true`.
+		expect(readScreenTimeEnabled({ screen_time: { enabled: 'yes' } })).toBe(false);
+		expect(readScreenTimeEnabled({ screen_time: 'on' })).toBe(false);
+	});
+});
+
+describe('writeScreenTimeEnabled', () => {
+	test('deja el interruptor puesto', () => {
+		const config: Record<string, unknown> = {};
+
+		writeScreenTimeEnabled(config, true);
+
+		expect(config.screen_time).toEqual({ enabled: true });
+	});
+
+	test('y conserva lo que el servicio haya guardado en la sección', () => {
+		// La sección es compartida con lo que el servicio escriba después;
+		// reemplazarla entera le borraría esas claves.
+		const config: Record<string, unknown> = {
+			screen_time: { enabled: false, retention_days: 30 },
+		};
+
+		writeScreenTimeEnabled(config, true);
+
+		expect(config.screen_time).toEqual({ enabled: true, retention_days: 30 });
+	});
+});
+
+describe('readWallpaperFolder', () => {
+	test('sin carpeta elegida da cadena vacía', () => {
+		expect(readWallpaperFolder({})).toBe('');
+		expect(readWallpaperFolder(null)).toBe('');
+		expect(readWallpaperFolder({ desktop: {} })).toBe('');
+	});
+
+	test('devuelve la carpeta guardada, sin espacios a los costados', () => {
+		expect(readWallpaperFolder({ desktop: { wallpaperfolder: '/mnt/fotos' } })).toBe('/mnt/fotos');
+		expect(readWallpaperFolder({ desktop: { wallpaperfolder: '  /home/p/Fondos  ' } })).toBe(
+			'/home/p/Fondos'
+		);
+	});
+
+	test('una clave que no es una cadena vale por «sin carpeta»', () => {
+		expect(readWallpaperFolder({ desktop: { wallpaperfolder: 42 } })).toBe('');
+		expect(readWallpaperFolder({ desktop: { wallpaperfolder: ['/a'] } })).toBe('');
+	});
+});
+
+describe('readMenuSettings', () => {
+	test('sin sección `menu` devuelve los valores de fábrica', () => {
+		const leido = readMenuSettings({});
+		expect(leido).toEqual({
+			variant: DEFAULT_MENU_VARIANT,
+			displayMode: DEFAULT_MENU_DISPLAY_MODE,
+			widget: DEFAULT_MENU_WIDGET,
+			showUser: true,
+			showSessionActions: true,
+			searchPosition: DEFAULT_MENU_SEARCH_POSITION,
+			showPlaces: false,
+			showFavorites: false,
+			header: 'none',
+			headerImage: '',
+			headerStrength: DEFAULT_HEADER_STRENGTH,
+			showGreeting: true,
+			showWeather: true,
+			favorites: [],
+		});
+		// Y tolera que no haya ni configuración.
+		expect(readMenuSettings(null).variant).toBe(DEFAULT_MENU_VARIANT);
+	});
+
+	test('un valor que no es de los conocidos cae al de fábrica', () => {
+		const leido = readMenuSettings({
+			menu: {
+				variant: 'espiral',
+				displayMode: 'gigante',
+				widget: 'cohete',
+				header: 'banner',
+				searchPosition: 'middle',
+			},
+		});
+		expect(leido.variant).toBe(DEFAULT_MENU_VARIANT);
+		expect(leido.displayMode).toBe(DEFAULT_MENU_DISPLAY_MODE);
+		expect(leido.widget).toBe(DEFAULT_MENU_WIDGET);
+		expect(leido.header).toBe('none');
+		expect(leido.searchPosition).toBe(DEFAULT_MENU_SEARCH_POSITION);
+	});
+
+	test('respeta lo que sí es válido, incluso cuando no es el de fábrica', () => {
+		const leido = readMenuSettings({
+			menu: {
+				variant: 'grid',
+				displayMode: 'full',
+				widget: 'none',
+				showUser: false,
+				searchPosition: 'bottom',
+				showPlaces: true,
+				header: 'hero',
+			},
+		});
+		expect(leido.variant).toBe('grid');
+		expect(leido.displayMode).toBe('full');
+		expect(leido.widget).toBe('none');
+		expect(leido.showUser).toBe(false);
+		expect(leido.searchPosition).toBe('bottom');
+		expect(leido.showPlaces).toBe(true);
+		expect(leido.header).toBe('hero');
+	});
+
+	test('un interruptor que no es booleano vale por su valor de fábrica', () => {
+		// El archivo se edita a mano: un `"si"` no es `true`.
+		const leido = readMenuSettings({ menu: { showUser: 'si', showPlaces: 1 } });
+		expect(leido.showUser).toBe(true);
+		expect(leido.showPlaces).toBe(false);
+	});
+
+	test('la intensidad del hero se acota a [0, 100] y lo que no es número vale el de fábrica', () => {
+		expect(readMenuSettings({ menu: { headerStrength: 150 } }).headerStrength).toBe(
+			MAX_HEADER_STRENGTH
+		);
+		expect(readMenuSettings({ menu: { headerStrength: -5 } }).headerStrength).toBe(0);
+		expect(readMenuSettings({ menu: { headerStrength: 42.6 } }).headerStrength).toBe(43);
+		expect(readMenuSettings({ menu: { headerStrength: 'mucho' } }).headerStrength).toBe(
+			DEFAULT_HEADER_STRENGTH
+		);
+	});
+
+	test('la imagen del hero sólo vale si es una cadena', () => {
+		expect(readMenuSettings({ menu: { headerImage: '/a/b.png' } }).headerImage).toBe('/a/b.png');
+		expect(readMenuSettings({ menu: { headerImage: 7 } }).headerImage).toBe('');
+	});
+
+	test('los favoritos se leen quedándose sólo con las cadenas', () => {
+		expect(
+			readMenuSettings({ menu: { favorites: ['/a.desktop', 3, '/b.desktop'] } }).favorites
+		).toEqual(['/a.desktop', '/b.desktop']);
+		expect(readMenuSettings({ menu: { favorites: 'no-lista' } }).favorites).toEqual([]);
+	});
+});
+
+describe('writeMenuSettings', () => {
+	const base: MenuSettings = {
+		variant: 'tiles',
+		displayMode: 'full',
+		widget: 'clock',
+		showUser: false,
+		showSessionActions: false,
+		searchPosition: 'bottom',
+		showPlaces: true,
+		showFavorites: true,
+		header: 'hero',
+		headerImage: '/fondos/hero.jpg',
+		headerStrength: 80,
+		showGreeting: false,
+		showWeather: false,
+		favorites: ['/x.desktop'],
+	};
+
+	test('escribe las claves que edita la pantalla y no toca `favorites`', () => {
+		const config: Record<string, unknown> = {};
+		writeMenuSettings(config, base);
+		// `favorites` no se escribe desde acá: se fija en otro lado. Lo demás, sí.
+		const owned: Partial<MenuSettings> = { ...base };
+		delete owned.favorites;
+		expect(config.menu).toEqual(owned);
+		expect((config.menu as Record<string, unknown>).favorites).toBeUndefined();
+	});
+
+	test('no pisa los favoritos que ya están en el archivo', () => {
+		// El caso que importa: entre abrir la pantalla y guardar, alguien fijó un
+		// favorito desde el menú contextual de una aplicación. Guardar el aspecto
+		// del menú no puede borrarlo, aunque el estado de la pantalla traiga otra
+		// lista de cuando se abrió.
+		const config: Record<string, unknown> = {
+			menu: { favorites: ['/viejo.desktop'], claveAjena: 'no-tocar' },
+		};
+		writeMenuSettings(config, base);
+		expect((config.menu as Record<string, unknown>).claveAjena).toBe('no-tocar');
+		expect((config.menu as Record<string, unknown>).favorites).toEqual(['/viejo.desktop']);
+	});
+
+	test('la intensidad se vuelve a acotar al guardar', () => {
+		const config: Record<string, unknown> = {};
+		writeMenuSettings(config, { ...base, headerStrength: 999 });
+		expect((config.menu as Record<string, unknown>).headerStrength).toBe(MAX_HEADER_STRENGTH);
+	});
+
+	test('lo escrito se vuelve a leer igual (ida y vuelta)', () => {
+		// Los favoritos se conservan desde el archivo, no se escriben: se parte de
+		// una sección que ya los tiene para que el ida y vuelta los incluya.
+		const config: Record<string, unknown> = { menu: { favorites: base.favorites } };
+		writeMenuSettings(config, base);
+		expect(readMenuSettings(config)).toEqual(base);
+	});
+});

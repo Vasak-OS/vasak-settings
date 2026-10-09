@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup, SwitchToggle, TextInput } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	FormGroup,
+	NumberField,
+	PageHeader,
+	Panel,
+	SelectField,
+	SwitchToggle,
+	TextInput,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted } from 'vue';
 import KeyBindingInput from '@/components/ui/KeyBindingInput.vue';
-import NumberInput from '@/components/ui/NumberInput.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import PluginSection from '@/components/ui/PluginSection.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import SelectInput from '@/components/ui/SelectInput.vue';
+import PluginSection from '@/components/wayfire/PluginSection.vue';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 
 // [core] keys that belong here and had no UI: closing a window and who draws
@@ -123,7 +128,8 @@ async function saveAll() {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.windows')"
+			size="lg"
+			:eyebrow="t('sidebar.windows')"
 			:title="t('views.wayfireWindows.title')"
 			:description="t('views.wayfireWindows.description')"
 		/>
@@ -136,7 +142,7 @@ async function saveAll() {
 			tone="success">{{ t('common.saved') }}</AlertMessage>
 
 		<form @submit.prevent="saveAll" class="flex flex-col gap-4">
-			<SectionCard>
+			<Panel as="article">
 				<h3 class="text-base font-medium">{{ t('views.wayfireWindows.general') }}</h3>
 				<div class="mt-3 grid gap-4 sm:grid-cols-2">
 					<FormGroup :label="t('views.wayfireWindows.closeWindow')">
@@ -146,14 +152,14 @@ async function saveAll() {
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireWindows.decorationOwner')">
-						<SelectInput
+						<SelectField
 							:modelValue="core.getVal('preferred_decoration_mode', 'client')"
 							:options="decorationModes"
 							@update:modelValue="core.setVal('preferred_decoration_mode', $event)"
 						/>
 					</FormGroup>
 				</div>
-			</SectionCard>
+			</Panel>
 
 			<PluginSection plugin-id="move" icon="preferences-system-windows">
 				<div class="grid gap-4 sm:grid-cols-2">
@@ -170,7 +176,7 @@ async function saveAll() {
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireWindows.snapThreshold')">
-						<NumberInput
+						<NumberField
 							:model-value="move.getInt('snap_threshold', 10)"
 							:min="0" :max="100"
 							@update:model-value="move.setVal('snap_threshold', $event)"
@@ -192,8 +198,9 @@ async function saveAll() {
 
 			<PluginSection plugin-id="grid" icon="view-grid">
 				<div class="mb-3">
-					<label class="text-sm font-medium">{{ t('views.wayfireWindows.gridDuration') }}</label>
-					<NumberInput
+					<label for="grid-duration" class="text-sm font-medium">{{ t('views.wayfireWindows.gridDuration') }}</label>
+					<NumberField
+						id="grid-duration"
 						class="mt-1"
 						:model-value="grid.getInt('duration', 300)"
 						:min="0" :max="2000" :step="50"
@@ -240,14 +247,14 @@ async function saveAll() {
 					<summary class="cursor-pointer text-xs font-medium text-tx-muted">{{ t('common.advancedOptions') }}</summary>
 					<div class="mt-3 grid gap-4 sm:grid-cols-2">
 						<FormGroup :label="t('views.wayfireWindows.switcherSpeed')">
-							<NumberInput
+							<NumberField
 								:model-value="switcher.getInt('speed', 500)"
 								:min="0" :max="3000" :step="50"
 								@update:model-value="switcher.setVal('speed', $event)"
 							/>
 						</FormGroup>
 						<FormGroup :label="t('views.wayfireWindows.thumbnailScale')">
-							<NumberInput
+							<NumberField
 								:model-value="switcher.getFloat('view_thumbnail_scale', 1)"
 								:min="0.1" :max="3" :step="0.1"
 								@update:model-value="switcher.setVal('view_thumbnail_scale', $event)"
@@ -272,7 +279,7 @@ async function saveAll() {
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireWindows.inactiveAlpha')">
-						<NumberInput
+						<NumberField
 							:model-value="fastSwitcher.getFloat('inactive_alpha', 0.7)"
 							:min="0" :max="1" :step="0.05"
 							@update:model-value="fastSwitcher.setVal('inactive_alpha', $event)"
@@ -283,7 +290,7 @@ async function saveAll() {
 
 			<PluginSection plugin-id="place" icon="preferences-system-windows">
 				<FormGroup :label="t('views.wayfireWindows.placeMode')">
-					<SelectInput
+					<SelectField
 						:modelValue="place.getVal('mode', 'center')"
 						:options="placeModes"
 						@update:modelValue="place.setVal('mode', $event)"
@@ -308,19 +315,19 @@ async function saveAll() {
 						<button
 							type="button"
 							@click="removeRule(key as string)"
-							class="shrink-0 rounded-corner border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs font-medium text-status-error hover:bg-status-error/20"
+							class="shrink-0 rounded-corner-m border border-status-error/30 bg-status-error/10 px-3 py-2 text-xs font-medium text-status-error hover:bg-status-error/20"
 						>
 							{{ t('common.delete') }}
 						</button>
 					</div>
-					<p v-if="Object.keys(windowRules.values.value).length === 0" class="rounded-corner border border-dashed border-ui-border bg-ui-surface/30 p-3 text-center text-sm text-tx-muted">
+					<p v-if="Object.keys(windowRules.values.value).length === 0" class="rounded-corner-m border border-dashed border-ui-border bg-ui-surface/30 p-3 text-center text-sm text-tx-muted">
 						{{ t('views.wayfireWindows.noRules') }}
 					</p>
 				</div>
 				<button
 					type="button"
 					@click="addRule"
-					class="mt-3 rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface"
+					class="mt-3 rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface"
 				>
 					{{ t('views.wayfireWindows.addRule') }}
 				</button>
@@ -329,7 +336,7 @@ async function saveAll() {
 			<div class="flex justify-end">
 				<button
 					type="submit"
-					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white hover:opacity-90"
+					class="rounded-corner-m bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90"
 				>
 					{{ t('common.save') }}
 				</button>

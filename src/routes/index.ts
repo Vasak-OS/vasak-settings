@@ -35,6 +35,11 @@ const routes = [
 		component: () => import('@/views/AppearancePanelView.vue'),
 	},
 	{
+		path: '/appearance-start-menu',
+		name: 'appearance-start-menu',
+		component: () => import('@/views/StartMenuView.vue'),
+	},
+	{
 		path: '/appearance-windows',
 		name: 'appearance-windows',
 		component: () => import('@/views/AppearanceWindowsView.vue'),
@@ -135,6 +140,11 @@ const routes = [
 		component: () => import('@/views/PowerView.vue'),
 	},
 	{
+		path: '/game-mode',
+		name: 'game-mode',
+		component: () => import('@/views/GameModeView.vue'),
+	},
+	{
 		path: '/monitors',
 		name: 'monitors',
 		component: () => import('@/views/MonitorsView.vue'),
@@ -155,6 +165,11 @@ const routes = [
 		component: () => import('@/views/PrivacySecurityView.vue'),
 	},
 	{
+		path: '/screen-time',
+		name: 'screen-time',
+		component: () => import('@/views/ScreenTimeView.vue'),
+	},
+	{
 		path: '/online-accounts',
 		name: 'online-accounts',
 		component: () => import('@/views/OnlineAccountsView.vue'),
@@ -163,6 +178,11 @@ const routes = [
 		path: '/login-screen',
 		name: 'login-screen',
 		component: () => import('@/views/LoginScreenView.vue'),
+	},
+	{
+		path: '/fastfetch',
+		name: 'fastfetch',
+		component: () => import('@/views/FastfetchView.vue'),
 	},
 ];
 export const router = createRouter({

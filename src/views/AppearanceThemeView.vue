@@ -1,19 +1,33 @@
 <script lang="ts" setup>
+import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import {
 	readConfig,
+	readWallpaperState,
 	setDarkMode,
+	type UiColorPath,
 	useConfigStore,
 	type VSKConfig,
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup, SwitchToggle } from '@vasakgroup/vue-libvasak';
-import { computed, onMounted, type Ref, ref } from 'vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import RangeSlider from '@/components/ui/RangeSlider.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import SelectInput from '@/components/ui/SelectInput.vue';
+import {
+	ActionButton,
+	AlertMessage,
+	ConfigSection,
+	EmptyState,
+	FormGroup,
+	PageHeader,
+	Panel,
+	SelectField,
+	Slider,
+	SwitchToggle,
+} from '@vasakgroup/vue-libvasak';
+import { computed, onBeforeUnmount, onMounted, type Ref, ref, watch } from 'vue';
+import SchemeCard from '@/components/scheme/SchemeCard.vue';
+import SchemeColorEditor from '@/components/scheme/SchemeColorEditor.vue';
+import SchemeResetControl from '@/components/scheme/SchemeResetControl.vue';
+import WallpaperColorsPanel from '@/components/scheme/WallpaperColorsPanel.vue';
+import { onCustomSchemeSaved, useWallpaperColors } from '@/composables/useWallpaperColors';
 import {
 	getCurrentSystemState,
 	getCursorThemes,
@@ -22,48 +36,19 @@ import {
 	getSchemes,
 	setSystemConfig,
 } from '@/services/style.service';
-import { CLAVE_DEL_ESQUEMA, escribirEsquema, limpiarEstilo } from '@/tools/valores-de-config';
+import { getCurrentUserName } from '@/services/users.service';
+import type {
+	SchemeEntry,
+	SchemeFile,
+	SchemeVariantColors,
+	SchemeVariantName,
+} from '@/types/scheme';
+import { clearStyle, SCHEME_KEY, writeScheme } from '@/utils/config-values';
+import { CUSTOM_SCHEME_ID } from '@/utils/custom-scheme';
 
 interface SchemePreviewValue {
 	label: string;
 	value: string;
-}
-
-interface SchemeVariant {
-	ui: {
-		color: {
-			primary: string;
-			secondary: string;
-		};
-		text: {
-			main: string;
-			muted: string;
-			'on-primary': string;
-		};
-		background: string;
-		border: string;
-		surface: string;
-	};
-	terminal: {
-		foreground: string;
-		background: string;
-		cursor: string;
-	};
-}
-
-interface SchemeItem {
-	path: string;
-	scheme: {
-		id: string;
-		name: string;
-		author: string;
-		description: string;
-		version: string;
-		colors: {
-			dark: SchemeVariant;
-			light: SchemeVariant;
-		};
-	};
 }
 
 const { t } = useI18n();
@@ -71,7 +56,7 @@ const { t } = useI18n();
 const configStore = ref<any>(null);
 const gtkThemes = ref<string[]>([]);
 const cursorThemes = ref<string[]>([]);
-const schemes = ref<SchemeItem[]>([]);
+const schemes = ref<SchemeEntry[]>([]);
 const loading = ref(true);
 const saving = ref(false);
 const error = ref('');
@@ -86,17 +71,230 @@ const selectedScheme = computed(() => {
 	return schemes.value.find((scheme) => scheme.scheme.id === selectedSchemeId.value) ?? null;
 });
 
-const schemeOptions = computed(() => {
-	return schemes.value
-		.slice()
+/** El esquema que dice el archivo de configuración: el que está en uso. */
+const activeSchemeId = ref('');
+
+/** Los esquemas que no son el «Personalizado», por nombre. */
+const baseSchemes = computed(() =>
+	schemes.value
+		.filter((entry) => entry.scheme.id !== CUSTOM_SCHEME_ID)
 		.sort((first, second) => first.scheme.name.localeCompare(second.scheme.name))
-		.map((scheme) => ({
-			label: `${scheme.scheme.name} · ${scheme.scheme.id}`,
-			value: scheme.scheme.id,
-		}));
+);
+
+const baseSchemeOptions = computed(() =>
+	baseSchemes.value.map((entry) => ({ label: entry.scheme.name, value: entry.scheme.id }))
+);
+
+const customEntry = computed(
+	() => schemes.value.find((entry) => entry.scheme.id === CUSTOM_SCHEME_ID) ?? null
+);
+
+const isCustomSelected = computed(
+	() => selectedSchemeId.value === CUSTOM_SCHEME_ID && customEntry.value !== null
+);
+
+const cardSwatches = (colors: SchemeVariantColors | undefined) =>
+	colors
+		? [
+				colors.ui.background,
+				colors.ui.surface,
+				colors.ui.color.primary,
+				colors.ui.color.secondary,
+				colors.ui.text.main,
+			]
+		: [];
+
+const customError = ref('');
+const creatingCustom = ref(false);
+
+/** Deja en la lista la versión recién guardada, en su lugar o primera. */
+const upsertScheme = (entry: SchemeEntry) => {
+	const index = schemes.value.findIndex((item) => item.scheme.id === entry.scheme.id);
+	if (index === -1) schemes.value.unshift(entry);
+	else schemes.value.splice(index, 1, entry);
+};
+
+// No se avisa ni se reaplica nada después de guardar: el vigilante del plugin
+// ve el archivo cambiar y emite `config-changed`, y `App.vue` reaplica el
+// esquema en esta ventana como en todas las demás. Reaplicarlo acá además
+// haría que esta ventana recargue dos veces cada cambio.
+//
+// El «Personalizado» en edición es el de toda la aplicación, el mismo que
+// recalcula «Seguir al fondo» desde `App.vue`: con uno propio, esta pantalla
+// guardaría encima de un recálculo con los colores de antes.
+const wallpaperColors = useWallpaperColors();
+const custom = wallpaperColors.custom;
+const stopListeningSaves = onCustomSchemeSaved(upsertScheme);
+
+watch(
+	customEntry,
+	(entry) => {
+		// Sólo la primera vez: después el editor es la fuente de verdad, y
+		// volver a cargar lo guardado pisaría un cambio todavía en el
+		// antirrebote.
+		if (entry && !custom.scheme.value) custom.load(entry.scheme);
+	},
+	{ immediate: true }
+);
+
+watch(custom.error, (err) => {
+	customError.value = err
+		? t('views.appearanceTheme.custom.saveError').replace('{0}', String(err))
+		: '';
 });
 
-const buildPreviewValues = (variant?: SchemeVariant): SchemePreviewValue[] => {
+/**
+ * Deja un esquema como el que está en uso, por el mismo camino que «Aplicar
+ * cambios»: la clave que se lee, sin las claves muertas, y el archivo entero.
+ *
+ * Se parte de una lectura nueva y no de lo que la pantalla tiene cargado, para
+ * no guardar de paso un radio o un modo oscuro que el usuario tocó y todavía no
+ * aplicó.
+ */
+const applyScheme = async (id: string) => {
+	const fresh = (await readConfig()) ?? vskConfig.value;
+	if (!fresh) return;
+	writeScheme(fresh.style, id);
+	clearStyle(fresh.style);
+	await writeConfig(fresh);
+	activeSchemeId.value = id;
+	if (vskConfig.value) writeScheme(vskConfig.value.style, id);
+	// Tampoco se reaplica acá: escribir `vasak.conf` ya dispara `config-changed`.
+};
+
+const customIdentity = (base: SchemeFile) => ({
+	name: t('views.appearanceTheme.custom.name'),
+	description: t('views.appearanceTheme.custom.basedOn').replace('{0}', base.name),
+});
+
+/** «Crear a partir del actual»: clona el esquema en uso, lo guarda y lo usa. */
+const createCustom = async () => {
+	creatingCustom.value = true;
+	customError.value = '';
+	try {
+		const { created } = await custom.ensureCustom(customEntry.value?.scheme ?? null, async () => {
+			const baseId = activeSchemeId.value || selectedSchemeId.value;
+			const found = await getSchemeById(baseId);
+			if (!found?.scheme) throw new Error(baseId);
+			const base = found.scheme as SchemeFile;
+			const author = await getCurrentUserName();
+			return { base, identity: { ...customIdentity(base), author } };
+		});
+		selectedSchemeId.value = CUSTOM_SCHEME_ID;
+		if (created) await applyScheme(CUSTOM_SCHEME_ID);
+	} catch (err) {
+		customError.value = t('views.appearanceTheme.custom.createError').replace('{0}', String(err));
+		console.error(err);
+	} finally {
+		creatingCustom.value = false;
+	}
+};
+
+/** «Empezar de nuevo desde…», ya confirmado por el diálogo. */
+const resetCustom = async (baseId: string) => {
+	const base = baseSchemes.value.find((entry) => entry.scheme.id === baseId);
+	if (!base) return;
+	customError.value = '';
+	try {
+		const author = custom.scheme.value?.author || (await getCurrentUserName());
+		await custom.createFrom(base.scheme, { ...customIdentity(base.scheme), author });
+	} catch (err) {
+		customError.value = t('views.appearanceTheme.custom.createError').replace('{0}', String(err));
+		console.error(err);
+	}
+};
+
+onBeforeUnmount(() => {
+	stopListeningSaves();
+	// Un color cambiado justo antes de salir de la pantalla no se pierde.
+	custom.flush().catch((err) => console.error(err));
+});
+
+/**
+ * El fondo actual. Del store y no de la lectura de esta pantalla: el store se
+ * recarga en cada `config-changed`, así que si el fondo cambia desde el
+ * escritorio con Apariencia abierta, la vista previa lo sigue.
+ */
+const wallpaperPath = computed<string>(
+	() =>
+		configStore.value?.config?.desktop?.wallpaper?.[0] ??
+		vskConfig.value?.desktop?.wallpaper?.[0] ??
+		''
+);
+
+const wallpaperThumbnail = ref('');
+watch(wallpaperPath, async (path) => {
+	wallpaperThumbnail.value = '';
+	if (!path) return;
+	try {
+		wallpaperThumbnail.value = convertFileSrc(
+			await invoke<string>('wallpaper_thumbnail', { path })
+		);
+	} catch (err) {
+		console.warn('No se pudo generar la miniatura del fondo:', err);
+	}
+});
+
+const wallpaperState = computed(() => readWallpaperState(custom.scheme.value));
+
+// La paleta de la vista previa se lee cuando hace falta mostrarla: con el
+// «Personalizado» elegido y un fondo que todavía no se leyó.
+watch(
+	() => [isCustomSelected.value, wallpaperPath.value] as const,
+	([selected, path]) => {
+		if (selected && path && wallpaperColors.palettePath.value !== path) {
+			wallpaperColors.preview(path).catch((err) => console.error(err));
+		}
+	}
+);
+
+/** Deja el «Personalizado» como el esquema en uso, si no lo es. */
+const useCustomNow = async () => {
+	selectedSchemeId.value = CUSTOM_SCHEME_ID;
+	if (activeSchemeId.value !== CUSTOM_SCHEME_ID) await applyScheme(CUSTOM_SCHEME_ID);
+};
+
+const setFollow = async (follow: boolean) => {
+	customError.value = '';
+	try {
+		await custom.updateWallpaperState((state) => ({ ...state, follow }), { immediate: true });
+		// Al prenderlo se sacan los colores ya, sin esperar al próximo cambio de
+		// fondo: es lo que se espera ver al tocar el interruptor.
+		if (follow && wallpaperPath.value) {
+			await useCustomNow();
+			await wallpaperColors.regenerate(wallpaperPath.value);
+		}
+	} catch (err) {
+		customError.value = t('views.appearanceTheme.custom.saveError').replace('{0}', String(err));
+		console.error(err);
+	}
+};
+
+const regenerateFromWallpaper = () => {
+	if (!wallpaperPath.value) return;
+	wallpaperColors.regenerate(wallpaperPath.value).catch((err) => console.error(err));
+};
+
+const unpinColor = (variant: SchemeVariantName, path: UiColorPath) => {
+	custom
+		.updateWallpaperState((state) => ({
+			...state,
+			pinned: { ...state.pinned, [variant]: state.pinned[variant].filter((item) => item !== path) },
+		}))
+		.catch((err) => console.error(err));
+};
+
+/**
+ * «Automático»: el «Personalizado» —clonado del esquema en uso si todavía no
+ * existe— con «Seguir al fondo» prendido y los colores sacados del fondo actual.
+ */
+const createAutomatic = async () => {
+	await createCustom();
+	if (!custom.scheme.value) return;
+	await setFollow(true);
+};
+
+const buildPreviewValues = (variant?: SchemeVariantColors): SchemePreviewValue[] => {
 	if (!variant) {
 		return [];
 	}
@@ -159,8 +357,9 @@ onMounted(async () => {
 		// estaba. Era caer a la clave mal escrita —la que hacía que elegir un
 		// esquema no cambiara nada—, así que el respaldo tapaba el error en la
 		// pantalla mientras el sistema seguía con el esquema viejo.
-		const storedSchemeId = vskConfig.value?.style?.[CLAVE_DEL_ESQUEMA] || '';
+		const storedSchemeId = vskConfig.value?.style?.[SCHEME_KEY] || '';
 		selectedSchemeId.value = storedSchemeId;
+		activeSchemeId.value = storedSchemeId;
 
 		if (selectedGtkTheme.value && !gtkThemes.value.includes(selectedGtkTheme.value)) {
 			gtkThemes.value.unshift(selectedGtkTheme.value);
@@ -238,8 +437,8 @@ const saveConfig = async () => {
 		}
 
 		if (vskConfig.value) {
-			escribirEsquema(vskConfig.value.style, selectedSchemeId.value);
-			limpiarEstilo(vskConfig.value.style);
+			writeScheme(vskConfig.value.style, selectedSchemeId.value);
+			clearStyle(vskConfig.value.style);
 		}
 
 		await writeConfig(vskConfig.value);
@@ -263,9 +462,10 @@ const isFormValid = computed(() => {
 </script>
 
 <template>
-	<div class="flex min-h-full flex-col gap-4">
+	<div class="@container flex min-h-full flex-col gap-4">
 		<PageHeader
-			:section="t('sidebar.appearance')"
+			size="lg"
+			:eyebrow="t('sidebar.appearance')"
 			:title="t('views.appearanceTheme.title')"
 			:description="t('views.appearanceTheme.description')"
 		>
@@ -273,7 +473,7 @@ const isFormValid = computed(() => {
 				<button
 					v-if="!loading"
 					type="button"
-					class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
+					class="w-fit rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
 					:disabled="!isFormValid || saving"
 					@click="saveConfig"
 				>
@@ -282,21 +482,20 @@ const isFormValid = computed(() => {
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" :message="t('views.appearanceTheme.loading')" padding="lg" />
+		<EmptyState icon="" size="sm" bordered v-if="loading" :title="t('views.appearanceTheme.loading')" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
 			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
-			<div class="grid gap-4 xl:grid-cols-2">
-				<SectionCard>
-					<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.appearanceTheme.baseStyles') }}</h3>
+			<div class="grid gap-4 @5xl:grid-cols-2">
+				<ConfigSection :title="t('views.appearanceTheme.baseStyles')">
 					<div class="flex flex-col gap-5">
 						<FormGroup :label="t('views.appearanceTheme.borderRadius')" html-for="border-radius" :label-class="'flex justify-between w-full'">
 							<template #default>
 								<div class="flex items-center gap-3">
 									<span class="w-6 text-xs text-tx-muted">1px</span>
-									<RangeSlider v-if="vskConfig" id="border-radius" v-model="vskConfig.style.radius" :min="1" :max="20" />
+									<Slider :label="t('views.appearanceTheme.borderRadius')" class="flex-1" v-if="vskConfig" id="border-radius" v-model="vskConfig.style.radius" :min="1" :max="20" />
 									<span class="w-8 text-right text-xs text-tx-muted">{{ vskConfig?.style.radius }}px</span>
 								</div>
 							</template>
@@ -310,23 +509,22 @@ const isFormValid = computed(() => {
 							</div>
 						</div>
 					</div>
-				</SectionCard>
+				</ConfigSection>
 
-				<SectionCard>
-					<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.appearanceTheme.systemThemes') }}</h3>
+				<ConfigSection :title="t('views.appearanceTheme.systemThemes')">
 					<div class="flex flex-col gap-5">
 						<FormGroup :label="t('views.appearanceTheme.gtkTheme')" html-for="gtk-theme">
-							<SelectInput id="gtk-theme" v-model="selectedGtkTheme" :options="gtkThemes" />
+							<SelectField v-bind="{ id: 'gtk-theme' }" v-model="selectedGtkTheme" :options="gtkThemes" />
 						</FormGroup>
 
 						<FormGroup :label="t('views.appearanceTheme.cursorTheme')" html-for="cursor-theme">
-							<SelectInput id="cursor-theme" v-model="selectedCursorTheme" :options="cursorThemes" />
+							<SelectField v-bind="{ id: 'cursor-theme' }" v-model="selectedCursorTheme" :options="cursorThemes" />
 						</FormGroup>
 					</div>
-				</SectionCard>
+				</ConfigSection>
 			</div>
 
-			<SectionCard>
+			<Panel as="article">
 				<div class="mb-4 flex flex-col gap-1">
 					<h3 class="text-lg font-medium text-tx-main">{{ t('views.appearanceTheme.schemeSection') }}</h3>
 					<p class="text-sm text-tx-muted">
@@ -335,29 +533,115 @@ const isFormValid = computed(() => {
 				</div>
 
 				<div class="flex flex-col gap-5">
-					<FormGroup :label="t('views.appearanceTheme.schemeIdLabel')" html-for="scheme-id">
-						<SelectInput
-							id="scheme-id"
-							v-model="selectedSchemeId"
-							:options="schemeOptions"
-							:disabled="schemeOptions.length === 0"
-						/>
-					</FormGroup>
+					<AlertMessage v-if="customError" tone="error">{{ customError }}</AlertMessage>
 
-					<div v-if="selectedScheme" class="grid gap-4 xl:grid-cols-[1.15fr_1fr]">
-						<div class="rounded-corner border border-ui-border bg-ui-surface/70 p-4">
+					<ul class="grid gap-3 @md:grid-cols-2 @5xl:grid-cols-4" :aria-label="t('views.appearanceTheme.schemeList')">
+						<!-- «Personalizado» va primero, exista o no. -->
+						<li>
+							<SchemeCard
+								v-if="customEntry"
+								:title="custom.scheme.value?.name ?? customEntry.scheme.name"
+								:subtitle="custom.scheme.value?.description ?? customEntry.scheme.description"
+								:swatches="cardSwatches(custom.scheme.value?.colors.dark ?? customEntry.scheme.colors.dark)"
+								:selected="selectedSchemeId === CUSTOM_SCHEME_ID"
+								@select="selectedSchemeId = CUSTOM_SCHEME_ID"
+							/>
+							<div
+								v-else
+								class="flex h-full flex-col justify-between gap-3 rounded-corner-m border border-dashed border-ui-border bg-ui-surface/70 p-3"
+							>
+								<div class="min-w-0">
+									<p class="text-sm font-medium text-tx-main">{{ t('views.appearanceTheme.custom.name') }}</p>
+									<p class="text-xs text-tx-muted">{{ t('views.appearanceTheme.custom.createHint') }}</p>
+								</div>
+								<div class="flex flex-wrap gap-2">
+									<ActionButton
+										v-bind="{ 'data-create-custom': '' }"
+										size="sm"
+										variant="secondary"
+										:label="creatingCustom ? t('common.saving') : t('views.appearanceTheme.custom.create')"
+										:disabled="creatingCustom || !(activeSchemeId || selectedSchemeId)"
+										@click="createCustom"
+									/>
+									<ActionButton
+										v-bind="{ 'data-create-automatic': '' }"
+										size="sm"
+										variant="primary"
+										icon="preferences-desktop-wallpaper"
+										icon-type="symbol"
+										:label="t('views.appearanceTheme.wallpaperColors.automatic')"
+										:title="t('views.appearanceTheme.wallpaperColors.automaticHint')"
+										:disabled="creatingCustom || !wallpaperPath || !(activeSchemeId || selectedSchemeId)"
+										@click="createAutomatic"
+									/>
+								</div>
+							</div>
+						</li>
+						<li v-for="entry in baseSchemes" :key="entry.scheme.id">
+							<SchemeCard
+								:title="entry.scheme.name"
+								:subtitle="entry.scheme.id"
+								:swatches="cardSwatches(entry.scheme.colors.dark)"
+								:selected="selectedSchemeId === entry.scheme.id"
+								@select="selectedSchemeId = entry.scheme.id"
+							/>
+						</li>
+					</ul>
+
+					<div v-if="isCustomSelected && custom.scheme.value" class="flex flex-col gap-4 rounded-corner-m border border-ui-border bg-ui-surface/70 p-4">
+						<div class="flex flex-wrap items-start justify-between gap-3">
+							<div class="min-w-0">
+								<h4 class="text-base font-medium text-tx-main">{{ custom.scheme.value.name }}</h4>
+								<p class="text-sm text-tx-muted">{{ custom.scheme.value.description }}</p>
+								<p class="mt-1 font-mono text-xs text-tx-muted">{{ customEntry?.path }}</p>
+							</div>
+							<span class="text-xs text-tx-muted" aria-live="polite">
+								{{ custom.saving.value ? t('common.saving') : '' }}
+							</span>
+						</div>
+
+						<AlertMessage v-if="activeSchemeId !== CUSTOM_SCHEME_ID" tone="info">
+							{{ t('views.appearanceTheme.custom.notActive') }}
+						</AlertMessage>
+
+						<WallpaperColorsPanel
+							class="rounded-corner-m border border-ui-border bg-ui-bg/80 p-3"
+							:follow="wallpaperState.follow"
+							:wallpaper-path="wallpaperPath"
+							:thumbnail="wallpaperThumbnail"
+							:palette="wallpaperColors.palette.value"
+							:accent-source="wallpaperColors.accentSource.value"
+							:busy="wallpaperColors.busy.value"
+							:error="wallpaperColors.error.value"
+							@update:follow="setFollow"
+							@regenerate="regenerateFromWallpaper"
+						/>
+
+						<SchemeColorEditor
+							:scheme="custom.scheme.value"
+							:initial-variant="vskConfig?.style.darkmode === false ? 'light' : 'dark'"
+							:pinned="wallpaperState.pinned"
+							@update="(variant, patch) => custom.updateColors(variant, patch)"
+							@unpin="unpinColor"
+						/>
+
+						<SchemeResetControl :options="baseSchemeOptions" @reset="resetCustom" />
+					</div>
+
+					<div v-else-if="selectedScheme && selectedScheme.scheme.id !== CUSTOM_SCHEME_ID" class="grid gap-4 @5xl:grid-cols-[1.15fr_1fr]">
+						<div class="rounded-corner-m border border-ui-border bg-ui-surface/70 p-4">
 							<div class="mb-4 flex flex-col gap-1">
 								<div class="flex items-center justify-between gap-3">
 									<h4 class="text-base font-medium text-tx-main">{{ selectedScheme.scheme.name }}</h4>
-									<span class="rounded-full border border-ui-border px-2 py-0.5 text-[11px] uppercase tracking-wider text-tx-muted">
+									<span class="rounded-corner-full border border-ui-border px-2 py-0.5 text-[11px] uppercase tracking-wider text-tx-muted">
 										{{ selectedScheme.scheme.version }}
 									</span>
 								</div>
 								<p class="text-sm text-tx-muted">{{ selectedScheme.scheme.description }}</p>
 							</div>
 
-							<div class="grid gap-3 sm:grid-cols-2">
-								<div class="rounded-corner border border-ui-border bg-ui-bg/80 p-3">
+							<div class="grid gap-3 @md:grid-cols-2">
+								<div class="rounded-corner-m border border-ui-border bg-ui-bg/80 p-3">
 									<div class="mb-3 flex items-center justify-between">
 										<span class="text-sm font-medium text-tx-main">{{ t('views.appearanceTheme.dark') }}</span>
 										<span class="text-xs text-tx-muted">{{ selectedScheme.scheme.colors.dark.ui.background }}</span>
@@ -366,9 +650,9 @@ const isFormValid = computed(() => {
 										<div
 											v-for="swatch in selectedDarkPreview"
 											:key="`dark-${swatch.label}`"
-											class="flex items-center gap-2 rounded-corner border border-ui-border/70 bg-ui-surface/70 p-2"
+											class="flex items-center gap-2 rounded-corner-m border border-ui-border/70 bg-ui-surface/70 p-2"
 										>
-											<div class="h-8 w-8 rounded-corner border border-ui-border/60" :style="{ backgroundColor: swatch.value }" />
+											<div class="h-8 w-8 rounded-corner-m border border-ui-border/60" :style="{ backgroundColor: swatch.value }" />
 											<div class="min-w-0 flex-1">
 												<p class="truncate text-xs font-medium text-tx-main">{{ swatch.label }}</p>
 												<p class="truncate text-[11px] text-tx-muted">{{ swatch.value }}</p>
@@ -377,7 +661,7 @@ const isFormValid = computed(() => {
 									</div>
 								</div>
 
-								<div class="rounded-corner border border-ui-border bg-ui-bg/80 p-3">
+								<div class="rounded-corner-m border border-ui-border bg-ui-bg/80 p-3">
 									<div class="mb-3 flex items-center justify-between">
 										<span class="text-sm font-medium text-tx-main">{{ t('views.appearanceTheme.light') }}</span>
 										<span class="text-xs text-tx-muted">{{ selectedScheme.scheme.colors.light.ui.background }}</span>
@@ -386,9 +670,9 @@ const isFormValid = computed(() => {
 										<div
 											v-for="swatch in selectedLightPreview"
 											:key="`light-${swatch.label}`"
-											class="flex items-center gap-2 rounded-corner border border-ui-border/70 bg-ui-surface/70 p-2"
+											class="flex items-center gap-2 rounded-corner-m border border-ui-border/70 bg-ui-surface/70 p-2"
 										>
-											<div class="h-8 w-8 rounded-corner border border-ui-border/60" :style="{ backgroundColor: swatch.value }" />
+											<div class="h-8 w-8 rounded-corner-m border border-ui-border/60" :style="{ backgroundColor: swatch.value }" />
 											<div class="min-w-0 flex-1">
 												<p class="truncate text-xs font-medium text-tx-main">{{ swatch.label }}</p>
 												<p class="truncate text-[11px] text-tx-muted">{{ swatch.value }}</p>
@@ -399,7 +683,7 @@ const isFormValid = computed(() => {
 							</div>
 						</div>
 
-						<div class="rounded-corner border border-ui-border bg-ui-surface/30 p-4">
+						<div class="rounded-corner-m border border-ui-border bg-ui-surface/30 p-4">
 							<h4 class="mb-3 text-sm font-medium text-tx-main">{{ t('views.appearanceTheme.schemeInfo') }}</h4>
 							<div class="space-y-3 text-sm text-tx-muted">
 								<p><span class="font-medium text-tx-main">ID:</span> {{ selectedScheme.scheme.id }}</p>
@@ -409,9 +693,9 @@ const isFormValid = computed(() => {
 						</div>
 					</div>
 
-					<EmptyStateBox v-else :message="t('views.appearanceTheme.noSchemes')" padding="md" />
+					<EmptyState icon="" size="sm" bordered v-else :title="t('views.appearanceTheme.noSchemes')" />
 				</div>
-			</SectionCard>
+			</Panel>
 		</div>
 	</div>
 </template>

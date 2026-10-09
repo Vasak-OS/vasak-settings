@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { getSymbolSource, hasSymbol } from '@vasakgroup/plugin-vicons';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, ThemeIcon, usarLaVersionDelTema } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	ConfigSection,
+	PageHeader,
+	Panel,
+	ThemeIcon,
+	usarLaVersionDelTema,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
 import {
 	type AccountInfo,
 	clearProviderCredentials,
@@ -21,7 +26,8 @@ import {
 	setProviderCredentials,
 	testMailConnection,
 } from '@/services/accounts.service';
-import { ICONO_DE_CAPACIDAD, resolverIconosDeProveedores } from '@/tools/icono-de-proveedor';
+import { canManageCredentials, clearOutcome } from '@/utils/provider-credentials';
+import { CAPABILITY_ICONS, resolveProviderIcons } from '@/utils/provider-icon';
 import {
 	type CapabilityOwner,
 	connectionBlocker,
@@ -36,7 +42,7 @@ import {
  * el camino de IMAP/SMTP con contraseña de aplicación, que no habla OAuth con
  * nadie, así que se dibuja al lado pero no sale de la misma lista.
  */
-const PERSONALIZADO = 'custom';
+const CUSTOM_PROVIDER = 'custom';
 
 const { t } = useI18n();
 
@@ -69,17 +75,6 @@ const unavailableReason = (provider: ProviderInfo): string | undefined => {
 	}
 };
 
-/**
- * Si a este proveedor se le pueden cambiar o quitar las credenciales.
- *
- * Son los OAuth2 que ya están listos. Hace falta preguntarlo aparte porque el
- * clic en la tarjeta de uno configurado **conecta la cuenta**, que es lo que
- * corresponde: sin esto, el botón de quitar credenciales quedaba escrito y sin
- * forma de llegar a él.
- */
-const tieneCredenciales = (provider: ProviderInfo) =>
-	provider.kind === 'oauth2' && provider.configured;
-
 const errors = ref('');
 const success = ref('');
 /**
@@ -91,7 +86,7 @@ const success = ref('');
  * antes de recargar la lista se borraba **antes de dibujarse**, y lo único que
  * este aviso venía a agregar no se veía nunca.
  */
-const aviso = ref('');
+const notice = ref('');
 const loading = ref(false);
 const accounts = ref<AccountInfo[]>([]);
 
@@ -131,7 +126,7 @@ const isCustomValid = computed(() => {
 });
 
 /** El nombre del icono de una capacidad, de la tabla compartida. */
-const capabilityIcon = (capability: string) => ICONO_DE_CAPACIDAD[capability] ?? '';
+const capabilityIcon = (capability: string) => CAPABILITY_ICONS[capability] ?? '';
 
 /**
  * El nombre de una capacidad tal como se lee en pantalla.
@@ -156,7 +151,7 @@ const capabilityLabel = (
  * Se resuelven cuando llega el catálogo y no antes: la lista de proveedores la
  * decide el servicio, así que acá no se puede saber de antemano cuáles hay.
  */
-const iconos = ref<Record<string, string>>({});
+const icons = ref<Record<string, string>>({});
 
 /**
  * Se piden derecho al plugin, y no con el componente compartido.
@@ -170,8 +165,8 @@ const iconos = ref<Record<string, string>>({});
  * —si el tema lo tiene, y traerlo— y pedir no contesta la primera: un nombre que
  * no está vuelve como el cuadrito de imagen rota, con forma de icono válido.
  */
-const resolverIconos = async () => {
-	iconos.value = await resolverIconosDeProveedores(
+const refreshProviderIcons = async () => {
+	icons.value = await resolveProviderIcons(
 		providers.value.map((provider) => provider.id),
 		getSymbolSource,
 		hasSymbol
@@ -261,7 +256,7 @@ const connectProvider = async (provider: ProviderInfo) => {
 	if (blocker === 'nothingAvailable') {
 		errors.value = '';
 		success.value = '';
-		aviso.value = unavailableReason(provider) ?? '';
+		notice.value = unavailableReason(provider) ?? '';
 		return;
 	}
 
@@ -269,21 +264,21 @@ const connectProvider = async (provider: ProviderInfo) => {
 	// se abre el formulario para pegarlas. Antes el botón estaba apagado y lo
 	// único que se podía hacer era editar un archivo como administrador.
 	if (blocker === 'credentialsNeeded') {
-		abrirCredenciales(provider);
+		openCredentials(provider);
 		return;
 	}
 
 	// Nextcloud no puede empezar sin la dirección: no hay un servidor conocido al
 	// que mandar el navegador, porque el servidor es el de la propia persona.
 	if (provider.kind === 'nextcloud') {
-		abrirFormularioNextcloud(provider);
+		openNextcloudForm(provider);
 		return;
 	}
 
 	loading.value = true;
 	errors.value = '';
 	success.value = '';
-	aviso.value = '';
+	notice.value = '';
 
 	try {
 		await connectOauthAccount(provider.id, requestedCapabilities(provider), provider.display_name);
@@ -311,9 +306,9 @@ const nextcloudError = ref('');
  * VasakOS no incluye un `client_id` para Google ni Microsoft, así que el de cada
  * quien se pega acá en vez de editar un archivo del sistema como administrador.
  */
-const credencialesDe = ref<ProviderInfo | null>(null);
-const credencialesForm = reactive({ clientId: '', clientSecret: '' });
-const guardandoCredenciales = ref(false);
+const credentialsFor = ref<ProviderInfo | null>(null);
+const credentialsForm = reactive({ clientId: '', clientSecret: '' });
+const savingCredentials = ref(false);
 /**
  * El error va **dentro** del formulario y no en el aviso de arriba.
  *
@@ -321,36 +316,50 @@ const guardandoCredenciales = ref(false);
  * queda abajo: quien apreta guardar y falla se queda mirando el formulario sin
  * ver por qué no pasó nada.
  */
-const credencialesError = ref('');
+const credentialsError = ref('');
+/**
+ * Si se está preguntando «¿quitar?». Quitar las credenciales no se deshace: hay
+ * que volver a la consola del proveedor a sacar otras.
+ */
+const confirmingClear = ref(false);
+const clearingCredentials = ref(false);
+/**
+ * Si hay un guardado o un borrado de credenciales en curso. Mientras dura, no se
+ * abre el formulario de otro proveedor: al terminar, el de éste se cierra, y se
+ * llevaría puesto el otro con lo que la persona ya había escrito.
+ */
+const credentialsBusy = computed(() => savingCredentials.value || clearingCredentials.value);
 
-const abrirCredenciales = (provider: ProviderInfo) => {
+const openCredentials = (provider: ProviderInfo) => {
 	errors.value = '';
 	success.value = '';
-	aviso.value = '';
-	credencialesForm.clientId = '';
-	credencialesForm.clientSecret = '';
-	credencialesError.value = '';
-	credencialesDe.value = provider;
+	notice.value = '';
+	credentialsForm.clientId = '';
+	credentialsForm.clientSecret = '';
+	credentialsError.value = '';
+	confirmingClear.value = false;
+	credentialsFor.value = provider;
 };
 
-const cerrarCredenciales = () => {
-	credencialesDe.value = null;
-	credencialesError.value = '';
+const closeCredentials = () => {
+	credentialsFor.value = null;
+	credentialsError.value = '';
+	confirmingClear.value = false;
 };
 
-const guardarCredenciales = async () => {
-	const provider = credencialesDe.value;
-	if (!provider || !credencialesForm.clientId.trim()) return;
+const saveCredentials = async () => {
+	const provider = credentialsFor.value;
+	if (!provider || !credentialsForm.clientId.trim()) return;
 
-	guardandoCredenciales.value = true;
-	credencialesError.value = '';
+	savingCredentials.value = true;
+	credentialsError.value = '';
 	try {
 		await setProviderCredentials(
 			provider.id,
-			credencialesForm.clientId,
-			credencialesForm.clientSecret
+			credentialsForm.clientId,
+			credentialsForm.clientSecret
 		);
-		credencialesDe.value = null;
+		if (credentialsFor.value?.id === provider.id) credentialsFor.value = null;
 		// El catálogo cambió: ese proveedor pasa a estar listo, y el botón se
 		// tiene que encender sin que haya que volver a entrar a la pantalla.
 		await fetchProviders();
@@ -359,39 +368,50 @@ const guardarCredenciales = async () => {
 			provider.display_name
 		);
 	} catch (err) {
-		credencialesError.value = String(err);
+		credentialsError.value = String(err);
 	} finally {
-		guardandoCredenciales.value = false;
+		savingCredentials.value = false;
 	}
 };
 
-const quitarCredenciales = async (provider: ProviderInfo) => {
-	credencialesError.value = '';
+const clearCredentials = async (provider: ProviderInfo) => {
+	credentialsError.value = '';
 	success.value = '';
+	clearingCredentials.value = true;
 	try {
 		await clearProviderCredentials(provider.id);
-		credencialesDe.value = null;
-		await fetchProviders();
-		success.value = t('views.onlineAccounts.credentials.cleared').replace(
-			'{0}',
-			provider.display_name
-		);
+		if (credentialsFor.value?.id === provider.id) {
+			credentialsFor.value = null;
+			confirmingClear.value = false;
+		}
+		const refreshed = await fetchProviders();
+		// Las que se borran son las propias: si el proveedor sigue listo, tiene
+		// unas del sistema, y «quitadas» a secas haría creer que ya no se puede
+		// conectar nada nuevo con él.
+		const after = providers.value.find((p) => p.id === provider.id);
+		const key =
+			clearOutcome(after, refreshed) === 'systemRemains'
+				? 'views.onlineAccounts.credentials.clearedSystemRemains'
+				: 'views.onlineAccounts.credentials.cleared';
+		success.value = t(key).replace('{0}', provider.display_name);
 	} catch (err) {
-		credencialesError.value = String(err);
+		credentialsError.value = String(err);
+	} finally {
+		clearingCredentials.value = false;
 	}
 };
 
-const abrirFormularioNextcloud = (provider: ProviderInfo) => {
+const openNextcloudForm = (provider: ProviderInfo) => {
 	errors.value = '';
 	success.value = '';
-	aviso.value = '';
+	notice.value = '';
 	nextcloudError.value = '';
 	nextcloudForm.server = '';
 	nextcloudForm.displayName = '';
 	nextcloudProvider.value = provider;
 };
 
-const cancelarNextcloud = () => {
+const cancelNextcloud = () => {
 	nextcloudProvider.value = null;
 	nextcloudError.value = '';
 };
@@ -404,9 +424,9 @@ const cancelarNextcloud = () => {
  * que decirle que se fue al navegador — con el `loading` general parecería que
  * la pantalla se colgó.
  */
-const esperandoNextcloud = ref(false);
+const connectingNextcloud = ref(false);
 
-const conectarNextcloud = async () => {
+const connectNextcloud = async () => {
 	const provider = nextcloudProvider.value;
 	if (!provider) return;
 
@@ -415,7 +435,7 @@ const conectarNextcloud = async () => {
 		return;
 	}
 
-	esperandoNextcloud.value = true;
+	connectingNextcloud.value = true;
 	nextcloudError.value = '';
 
 	try {
@@ -431,14 +451,14 @@ const conectarNextcloud = async () => {
 		// escrita, y cerrarlo obligaría a tipearla de nuevo.
 		nextcloudError.value = String(err);
 	} finally {
-		esperandoNextcloud.value = false;
+		connectingNextcloud.value = false;
 	}
 };
 
-const abrirFormularioPersonalizado = () => {
+const openCustomForm = () => {
 	errors.value = '';
 	success.value = '';
-	aviso.value = '';
+	notice.value = '';
 	showCustomForm.value = true;
 };
 
@@ -449,7 +469,7 @@ const abrirFormularioPersonalizado = () => {
  * vio un fallo — porque después de verlo puede decidir guardar igual.
  */
 const probe = ref<MailProbe | null>(null);
-const probando = ref(false);
+const probing = ref(false);
 
 const probeOk = computed(() => probe.value?.imap.ok === true && probe.value?.smtp.ok === true);
 
@@ -459,7 +479,7 @@ const probeOk = computed(() => probe.value?.imap.ok === true && probe.value?.smt
  * Sin esto, alguien podría probar, corregir el servidor, y guardar apoyándose en
  * un resultado que ya no corresponde a lo que hay en el formulario.
  */
-const olvidarPrueba = () => {
+const forgetProbe = () => {
 	probe.value = null;
 	// Lo encontrado también deja de valer: si cambió el usuario o el servidor,
 	// esas direcciones son de otra cuenta.
@@ -474,38 +494,40 @@ const olvidarPrueba = () => {
  * autodescubrimiento y aun así funcionan perfecto para el correo.
  */
 const dav = ref<DavDiscovery | null>(null);
-const buscandoDav = ref(false);
+const discoveringDav = ref(false);
 
-const buscarDav = async () => {
+const lookUpDav = async () => {
 	if (!customForm.username.trim() || !customForm.password) {
 		errors.value = t('views.onlineAccounts.errors.usernameRequired');
 		return;
 	}
 
-	buscandoDav.value = true;
+	discoveringDav.value = true;
 	errors.value = '';
 	success.value = '';
-	aviso.value = '';
+	notice.value = '';
 
 	try {
 		// El usuario suele ser el correo, y de ahí sale el dominio contra el que
 		// buscar. Si no lo fuera, el servidor IMAP es la mejor pista que hay.
-		const donde = customForm.username.includes('@') ? customForm.username : customForm.imapServer;
-		dav.value = await discoverDav(donde, customForm.username, customForm.password);
+		const lookupTarget = customForm.username.includes('@')
+			? customForm.username
+			: customForm.imapServer;
+		dav.value = await discoverDav(lookupTarget, customForm.username, customForm.password);
 	} catch (err) {
 		errors.value = t('views.onlineAccounts.errors.discoverFailed').replace('{0}', String(err));
 	} finally {
-		buscandoDav.value = false;
+		discoveringDav.value = false;
 	}
 };
 
-const probarConexion = async (): Promise<boolean> => {
+const testConnection = async (): Promise<boolean> => {
 	if (!validateCustomForm()) return false;
 
-	probando.value = true;
+	probing.value = true;
 	errors.value = '';
 	success.value = '';
-	aviso.value = '';
+	notice.value = '';
 
 	try {
 		probe.value = await testMailConnection(
@@ -521,7 +543,7 @@ const probarConexion = async (): Promise<boolean> => {
 		errors.value = t('views.onlineAccounts.errors.probeFailed').replace('{0}', String(err));
 		return false;
 	} finally {
-		probando.value = false;
+		probing.value = false;
 	}
 };
 
@@ -539,14 +561,14 @@ const submitCustomProvider = async () => {
 
 	// La primera vez se prueba; si ya se probó y falló, el segundo clic guarda.
 	if (probe.value === null) {
-		const anduvo = await probarConexion();
-		if (!anduvo) return;
+		const connectionWorks = await testConnection();
+		if (!connectionWorks) return;
 	}
 
 	loading.value = true;
 	errors.value = '';
 	success.value = '';
-	aviso.value = '';
+	notice.value = '';
 
 	try {
 		// El correo siempre; el calendario y los contactos sólo si se los
@@ -577,7 +599,7 @@ const submitCustomProvider = async () => {
 		}
 
 		await registerPasswordAccount(
-			PERSONALIZADO,
+			CUSTOM_PROVIDER,
 			customForm.displayName,
 			capabilities,
 			customForm.password
@@ -620,37 +642,44 @@ const cancelCustomForm = () => {
 const deleteAccount = async (account: AccountInfo) => {
 	try {
 		errors.value = '';
-		aviso.value = '';
-		const resultado = await removeAccount(account.id);
-		const nombre = account.display_name || account.provider_type;
+		notice.value = '';
+		const result = await removeAccount(account.id);
+		const accountName = account.display_name || account.provider_type;
 
 		// Recargar primero: `fetchAccounts()` limpia `errors`, y el aviso se
 		// escribe después para que sobreviva a esa limpieza.
 		await fetchAccounts();
 
-		success.value = t('views.onlineAccounts.accountRemoved').replace('{0}', nombre);
+		success.value = t('views.onlineAccounts.accountRemoved').replace('{0}', accountName);
 
 		// La cuenta se borró igual, pero del otro lado quedó algo que la persona
 		// puede terminar. Va como aviso y no como error: no falló lo que pidió.
-		if (!resultado.revoked) {
-			aviso.value = t('views.onlineAccounts.errors.notRevoked')
-				.replace('{0}', nombre)
-				.replace('{1}', resultado.detail);
+		if (!result.revoked) {
+			notice.value = t('views.onlineAccounts.errors.notRevoked')
+				.replace('{0}', accountName)
+				.replace('{1}', result.detail);
 		}
 	} catch (err) {
 		errors.value = t('views.onlineAccounts.errors.deleteAccount').replace('{0}', String(err));
 	}
 };
 
-const fetchProviders = async () => {
+/**
+ * Relee el catálogo. Devuelve si lo pudo releer: quien acaba de cambiar algo
+ * necesita saber si lo que ve después es el catálogo nuevo o el de antes.
+ */
+const fetchProviders = async (): Promise<boolean> => {
+	let refreshed = false;
 	try {
 		providers.value = await listProviders();
-		await resolverIconos();
+		refreshed = true;
+		await refreshProviderIcons();
 	} catch (err) {
 		// El catálogo no es imprescindible para ver las cuentas que ya están, así
 		// que el fallo se cuenta y la pantalla sigue sirviendo.
 		errors.value = t('views.onlineAccounts.errors.loadProviders').replace('{0}', String(err));
 	}
+	return refreshed;
 };
 
 /**
@@ -664,8 +693,8 @@ const fetchProviders = async () => {
  * Los del catálogo necesitan esto y los demás no, porque los demás son
  * `ThemeIcon` y se encargan solos.
  */
-const versionDelTema = usarLaVersionDelTema();
-watch(versionDelTema, resolverIconos);
+const themeVersion = usarLaVersionDelTema();
+watch(themeVersion, refreshProviderIcons);
 
 onMounted(async () => {
 	await Promise.all([fetchAccounts(), fetchProviders()]);
@@ -675,23 +704,23 @@ onMounted(async () => {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.system')"
+			size="lg"
+			:eyebrow="t('sidebar.system')"
 			:title="t('views.onlineAccounts.title')"
 			:description="t('views.onlineAccounts.description')"
 		/>
 
 		<AlertMessage v-if="errors" tone="error">{{ errors }}</AlertMessage>
-		<AlertMessage v-if="aviso" tone="warning">{{ aviso }}</AlertMessage>
+		<AlertMessage v-if="notice" tone="warning">{{ notice }}</AlertMessage>
 		<AlertMessage v-if="success" tone="success">{{ success }}</AlertMessage>
 
-		<SectionCard v-if="accounts.length > 0">
-			<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.onlineAccounts.linkedAccounts') }}</h3>
+		<ConfigSection v-if="accounts.length > 0" :title="t('views.onlineAccounts.linkedAccounts')">
 
 			<ul class="flex flex-col gap-2">
 				<li
 					v-for="account in accounts"
 					:key="account.id"
-					class="flex items-center justify-between rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-3"
+					class="flex items-center justify-between rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-3"
 				>
 					<div class="flex min-w-0 flex-col">
 						<span class="truncate text-sm font-medium text-tx-main">
@@ -706,7 +735,7 @@ onMounted(async () => {
 							<li
 								v-for="c in account.capabilities"
 								:key="c"
-								class="flex items-center gap-1 rounded-corner-sm bg-ui-surface/70 px-1.5 py-0.5 text-xs text-tx-muted"
+								class="flex items-center gap-1 rounded-corner-xs bg-ui-surface/70 px-1.5 py-0.5 text-xs text-tx-muted"
 								:class="{ 'opacity-60': !isCapabilityAvailable(account, c) }"
 							>
 								<ThemeIcon :name="capabilityIcon(c)" type="symbol" :size="14" />
@@ -722,27 +751,27 @@ onMounted(async () => {
 					</div>
 
 					<button
-						class="rounded-corner border border-ui-border px-3 py-1.5 text-xs text-tx-muted transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
+						class="rounded-corner-m border border-ui-border px-3 py-1.5 text-xs text-tx-muted transition-colors hover:border-status-error/40 hover:bg-status-error/10 hover:text-status-error"
 						@click="deleteAccount(account)"
 					>
 						{{ t('common.delete') }}
 					</button>
 				</li>
 			</ul>
-		</SectionCard>
+		</ConfigSection>
 
-		<SectionCard v-if="credencialesDe">
+		<Panel as="article" v-if="credentialsFor">
 			<h3 class="mb-1 text-lg font-medium text-tx-main">
-				{{ t('views.onlineAccounts.credentials.title').replace('{0}', credencialesDe.display_name) }}
+				{{ t('views.onlineAccounts.credentials.title').replace('{0}', credentialsFor.display_name) }}
 			</h3>
 			<p class="mb-2 text-sm text-tx-muted">
-				{{ t('views.onlineAccounts.credentials.why').replace('{0}', credencialesDe.display_name) }}
+				{{ t('views.onlineAccounts.credentials.why').replace('{0}', credentialsFor.display_name) }}
 			</p>
 			<p class="mb-4 text-xs text-tx-muted">
 				{{ t('views.onlineAccounts.credentials.how') }}
 			</p>
 
-			<AlertMessage v-if="credencialesError" tone="error">{{ credencialesError }}</AlertMessage>
+			<AlertMessage v-if="credentialsError" tone="error">{{ credentialsError }}</AlertMessage>
 
 			<div class="flex flex-col gap-3">
 				<label class="flex flex-col gap-1">
@@ -750,11 +779,11 @@ onMounted(async () => {
 						{{ t('views.onlineAccounts.credentials.clientId') }}
 					</span>
 					<input
-						v-model="credencialesForm.clientId"
+						v-model="credentialsForm.clientId"
 						type="text"
-						:disabled="guardandoCredenciales"
-						class="rounded-corner border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
-						@keyup.enter="guardarCredenciales"
+						:disabled="savingCredentials"
+						class="rounded-corner-m border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
+						@keyup.enter="saveCredentials"
 					/>
 				</label>
 
@@ -763,12 +792,12 @@ onMounted(async () => {
 						{{ t('views.onlineAccounts.credentials.clientSecret') }}
 					</span>
 					<input
-						v-model="credencialesForm.clientSecret"
+						v-model="credentialsForm.clientSecret"
 						type="password"
-						:disabled="guardandoCredenciales"
+						:disabled="savingCredentials"
 						:placeholder="t('views.onlineAccounts.credentials.clientSecretPlaceholder')"
-						class="rounded-corner border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
-						@keyup.enter="guardarCredenciales"
+						class="rounded-corner-m border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
+						@keyup.enter="saveCredentials"
 					/>
 					<!-- Google lo llama secreto y no lo es: viaja dentro de cualquier
 					     programa que lo use. Decirlo evita que alguien no lo pegue
@@ -780,32 +809,56 @@ onMounted(async () => {
 
 				<div class="flex gap-2">
 					<button
-						:disabled="guardandoCredenciales || !credencialesForm.clientId.trim()"
-						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-						@click="guardarCredenciales"
+						:disabled="savingCredentials || !credentialsForm.clientId.trim()"
+						class="rounded-corner-m bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary disabled:opacity-50"
+						@click="saveCredentials"
 					>
-						{{ guardandoCredenciales ? t('common.saving') : t('common.save') }}
+						{{ savingCredentials ? t('common.saving') : t('common.save') }}
 					</button>
 					<button
-						:disabled="guardandoCredenciales"
-						class="rounded-corner border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
-						@click="cerrarCredenciales"
+						:disabled="savingCredentials"
+						class="rounded-corner-m border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
+						@click="closeCredentials"
 					>
 						{{ t('common.cancel') }}
 					</button>
 					<button
-						v-if="tieneCredenciales(credencialesDe)"
-						:disabled="guardandoCredenciales"
-						class="rounded-corner border border-ui-border px-4 py-2 text-sm text-tx-muted transition-colors hover:border-status-error/40 hover:text-status-error disabled:opacity-50"
-						@click="quitarCredenciales(credencialesDe)"
+						v-if="canManageCredentials(credentialsFor) && !confirmingClear"
+						:disabled="savingCredentials"
+						class="rounded-corner-m border border-ui-border px-4 py-2 text-sm text-tx-muted transition-colors hover:border-status-error/40 hover:text-status-error disabled:opacity-50"
+						@click="confirmingClear = true"
 					>
 						{{ t('views.onlineAccounts.credentials.clear') }}
 					</button>
 				</div>
+				<div
+					v-if="confirmingClear"
+					class="mt-3 rounded-corner-m border border-status-error/40 bg-status-error/10 p-3"
+				>
+					<p class="text-sm text-tx-main">
+						{{ t('views.onlineAccounts.credentials.clearConfirm').replace('{0}', credentialsFor.display_name) }}
+					</p>
+					<div class="mt-2 flex gap-2">
+						<button
+							:disabled="clearingCredentials"
+							class="rounded-corner-m bg-status-error px-4 py-2 text-sm font-medium text-tx-on-error disabled:opacity-50"
+							@click="clearCredentials(credentialsFor)"
+						>
+							{{ t('views.onlineAccounts.credentials.clearConfirmAction') }}
+						</button>
+						<button
+							:disabled="clearingCredentials"
+							class="rounded-corner-m border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
+							@click="confirmingClear = false"
+						>
+							{{ t('common.cancel') }}
+						</button>
+					</div>
+				</div>
 			</div>
-		</SectionCard>
+		</Panel>
 
-		<SectionCard v-if="nextcloudProvider">
+		<Panel as="article" v-if="nextcloudProvider">
 			<h3 class="mb-1 text-lg font-medium text-tx-main">
 				{{ t('views.onlineAccounts.nextcloud.title').replace('{0}', nextcloudProvider.display_name) }}
 			</h3>
@@ -821,10 +874,10 @@ onMounted(async () => {
 					<input
 						v-model="nextcloudForm.server"
 						type="text"
-						:disabled="esperandoNextcloud"
+						:disabled="connectingNextcloud"
 						:placeholder="t('views.onlineAccounts.nextcloud.serverPlaceholder')"
-						class="rounded-corner border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
-						@keyup.enter="conectarNextcloud"
+						class="rounded-corner-m border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
+						@keyup.enter="connectNextcloud"
 					/>
 					<!-- Se dice antes y no después de fallar: quien tiene un servidor
 					     casero sin certificado tiene que enterarse acá, no cuando ya
@@ -841,95 +894,106 @@ onMounted(async () => {
 					<input
 						v-model="nextcloudForm.displayName"
 						type="text"
-						:disabled="esperandoNextcloud"
+						:disabled="connectingNextcloud"
 						:placeholder="t('views.onlineAccounts.nextcloud.namePlaceholder')"
-						class="rounded-corner border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
-						@keyup.enter="conectarNextcloud"
+						class="rounded-corner-m border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
+						@keyup.enter="connectNextcloud"
 					/>
 				</label>
 
 				<!-- Mientras espera, se dice dónde está la pelota. Sin esto la
 				     ventana parece colgada durante todo el tiempo que la persona
 				     tarda en autenticarse en su servidor. -->
-				<p v-if="esperandoNextcloud" class="text-sm text-tx-muted">
+				<p v-if="connectingNextcloud" class="text-sm text-tx-muted">
 					{{ t('views.onlineAccounts.nextcloud.waiting') }}
 				</p>
 
 				<div class="flex gap-2">
 					<button
-						:disabled="esperandoNextcloud"
-						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-						@click="conectarNextcloud"
+						:disabled="connectingNextcloud"
+						class="rounded-corner-m bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary disabled:opacity-50"
+						@click="connectNextcloud"
 					>
 						{{ t('views.onlineAccounts.nextcloud.connect') }}
 					</button>
 					<button
-						:disabled="esperandoNextcloud"
-						class="rounded-corner border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
-						@click="cancelarNextcloud"
+						:disabled="connectingNextcloud"
+						class="rounded-corner-m border border-ui-border px-4 py-2 text-sm text-tx-main disabled:opacity-50"
+						@click="cancelNextcloud"
 					>
 						{{ t('common.cancel') }}
 					</button>
 				</div>
 			</div>
-		</SectionCard>
+		</Panel>
 
-		<SectionCard>
-			<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.onlineAccounts.providers') }}</h3>
+		<ConfigSection :title="t('views.onlineAccounts.providers')">
 
 			<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-				<button
-					v-for="provider in providers"
-					:key="provider.id"
-					:disabled="loading"
-					:title="unavailableReason(provider)"
-					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-5 text-center transition-colors"
-					:class="
-						loading
-							? 'opacity-60 cursor-not-allowed'
-							: 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'
-					"
-					@click="connectProvider(provider)"
-				>
-					<img
-						v-if="iconos[provider.id]"
-						:src="iconos[provider.id]"
-						:alt="provider.display_name"
-						class="h-10 w-10"
-					/>
-					<span class="text-sm font-medium text-tx-main">{{ provider.display_name }}</span>
-					<ul class="flex flex-wrap justify-center gap-1.5">
-						<!-- Las que todavía no existen en VasakOS siguen acá, atenuadas
-						     y con el texto que lo dice: una casilla que desaparece
-						     parece una que el proveedor no tiene. -->
-						<li
-							v-for="c in provider.capabilities"
-							:key="c"
-							class="flex items-center gap-1 text-xs text-tx-muted"
-							:class="{ 'opacity-60': !isCapabilityAvailable(provider, c) }"
-						>
-							<ThemeIcon :name="capabilityIcon(c)" type="symbol" :size="14" />
-							{{ capabilityLabel(provider, c) }}
-						</li>
-					</ul>
-					<!-- Ya no está apagado: falta un paso y el botón lleva a darlo.
-					     Antes esto decía «no se puede» y lo único que se podía hacer
-					     era editar un archivo del sistema como administrador. Y sólo
-					     si pegarlas sirve: con nada disponible, las casillas ya dicen
-					     por qué, y el clic lo explica sin pedir nada. -->
-					<span
-						v-if="connectionBlocker(provider) === 'credentialsNeeded'"
-						class="text-xs text-status-warning"
+				<div v-for="provider in providers" :key="provider.id" class="flex flex-col gap-1">
+					<button
+						:disabled="loading"
+						:title="unavailableReason(provider)"
+						class="flex w-full flex-1 flex-col items-center gap-3 rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-5 text-center transition-colors"
+						:class="
+							loading
+								? 'opacity-60 cursor-not-allowed'
+								: 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'
+						"
+						@click="connectProvider(provider)"
 					>
-						{{ t('views.onlineAccounts.credentials.needed') }}
-					</span>
-				</button>
+						<img
+							v-if="icons[provider.id]"
+							:src="icons[provider.id]"
+							:alt="provider.display_name"
+							class="h-10 w-10"
+						/>
+						<span class="text-sm font-medium text-tx-main">{{ provider.display_name }}</span>
+						<ul class="flex flex-wrap justify-center gap-1.5">
+							<!-- Las que todavía no existen en VasakOS siguen acá, atenuadas
+							     y con el texto que lo dice: una casilla que desaparece
+							     parece una que el proveedor no tiene. -->
+							<li
+								v-for="c in provider.capabilities"
+								:key="c"
+								class="flex items-center gap-1 text-xs text-tx-muted"
+								:class="{ 'opacity-60': !isCapabilityAvailable(provider, c) }"
+							>
+								<ThemeIcon :name="capabilityIcon(c)" type="symbol" :size="14" />
+								{{ capabilityLabel(provider, c) }}
+							</li>
+						</ul>
+						<!-- Ya no está apagado: falta un paso y el botón lleva a darlo.
+						     Antes esto decía «no se puede» y lo único que se podía hacer
+						     era editar un archivo del sistema como administrador. Y sólo
+						     si pegarlas sirve: con nada disponible, las casillas ya dicen
+						     por qué, y el clic lo explica sin pedir nada. -->
+						<span
+							v-if="connectionBlocker(provider) === 'credentialsNeeded'"
+							class="text-xs text-status-warning"
+						>
+							{{ t('views.onlineAccounts.credentials.needed') }}
+						</span>
+					</button>
+					<!-- Aparte de la tarjeta y no adentro: la tarjeta es un botón que
+					     conecta, y un botón no puede ir dentro de otro. Sin esto, las
+					     credenciales ya guardadas no se podían cambiar ni quitar
+					     (Vasak-OS/vasak-settings#132). -->
+					<button
+						v-if="canManageCredentials(provider)"
+						:disabled="loading || credentialsBusy"
+						class="self-center rounded-corner-m px-2 py-1 text-xs text-tx-muted transition-colors hover:text-tx-main disabled:opacity-50"
+						@click="openCredentials(provider)"
+					>
+						{{ t('views.onlineAccounts.credentials.manage') }}
+					</button>
+				</div>
 
 				<button
 					:disabled="loading"
-					class="flex flex-col items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-5 text-center transition-colors"
+					class="flex flex-col items-center gap-3 rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-5 text-center transition-colors"
 					:class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'"
-					@click="abrirFormularioPersonalizado"
+					@click="openCustomForm"
 				>
 					<ThemeIcon
 						name="computer-symbolic"
@@ -943,13 +1007,13 @@ onMounted(async () => {
 				</button>
 			</div>
 
-		</SectionCard>
+		</ConfigSection>
 
 		<div
 			v-if="showCustomForm"
 			class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
 		>
-			<div class="w-full max-w-lg rounded-corner border border-ui-border bg-ui-bg p-5 shadow-xl">
+			<div class="w-full max-w-lg rounded-corner-m border border-ui-border bg-ui-bg p-5 shadow-xl">
 				<h2 class="text-lg font-semibold text-tx-main">{{ t('views.onlineAccounts.customProvider') }}</h2>
 				<p class="mt-1 text-sm text-tx-muted">
 					{{ t('views.onlineAccounts.customDialogDescription') }}
@@ -957,13 +1021,14 @@ onMounted(async () => {
 
 				<div class="mt-4 space-y-3">
 					<div>
-						<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.displayName') }}</label>
+						<label for="custom-display-name" class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.displayName') }}</label>
 						<input
+							id="custom-display-name"
 							v-model="customForm.displayName"
-							@input="olvidarPrueba"
+							@input="forgetProbe"
 							type="text"
 							:placeholder="t('views.onlineAccounts.displayNamePlaceholder')"
-							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
+							class="mt-1 w-full rounded-corner-m border bg-ui-surface/50 px-3 py-2 text-sm"
 							:class="customFormErrors.displayName ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 						/>
 						<span v-if="customFormErrors.displayName" class="mt-0.5 block text-xs text-status-error">
@@ -973,13 +1038,14 @@ onMounted(async () => {
 
 					<div class="grid grid-cols-3 gap-2">
 						<div class="col-span-2">
-							<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.imapServer') }}</label>
+							<label for="custom-imap-server" class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.imapServer') }}</label>
 							<input
+								id="custom-imap-server"
 								v-model="customForm.imapServer"
-							@input="olvidarPrueba"
+								@input="forgetProbe"
 								type="text"
 								placeholder="imap.example.com"
-								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
+								class="mt-1 w-full rounded-corner-m border bg-ui-surface/50 px-3 py-2 text-sm"
 								:class="customFormErrors.imapServer ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 							/>
 							<span v-if="customFormErrors.imapServer" class="mt-0.5 block text-xs text-status-error">
@@ -987,13 +1053,14 @@ onMounted(async () => {
 							</span>
 						</div>
 						<div>
-							<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.port') }}</label>
+							<label for="custom-imap-port" class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.port') }}</label>
 							<input
+								id="custom-imap-port"
 								v-model.number="customForm.imapPort"
-								@input="olvidarPrueba"
+								@input="forgetProbe"
 								type="number"
 								placeholder="993"
-								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
+								class="mt-1 w-full rounded-corner-m border bg-ui-surface/50 px-3 py-2 text-sm"
 								:class="customFormErrors.imapPort ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 							/>
 							<span v-if="customFormErrors.imapPort" class="mt-0.5 block text-xs text-status-error">
@@ -1004,13 +1071,14 @@ onMounted(async () => {
 
 					<div class="grid grid-cols-3 gap-2">
 						<div class="col-span-2">
-							<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.smtpServer') }}</label>
+							<label for="custom-smtp-server" class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.smtpServer') }}</label>
 							<input
+								id="custom-smtp-server"
 								v-model="customForm.smtpServer"
-							@input="olvidarPrueba"
+								@input="forgetProbe"
 								type="text"
 								placeholder="smtp.example.com"
-								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
+								class="mt-1 w-full rounded-corner-m border bg-ui-surface/50 px-3 py-2 text-sm"
 								:class="customFormErrors.smtpServer ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 							/>
 							<span v-if="customFormErrors.smtpServer" class="mt-0.5 block text-xs text-status-error">
@@ -1018,13 +1086,14 @@ onMounted(async () => {
 							</span>
 						</div>
 						<div>
-							<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.port') }}</label>
+							<label for="custom-smtp-port" class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.port') }}</label>
 							<input
+								id="custom-smtp-port"
 								v-model.number="customForm.smtpPort"
-								@input="olvidarPrueba"
+								@input="forgetProbe"
 								type="number"
 								placeholder="587"
-								class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
+								class="mt-1 w-full rounded-corner-m border bg-ui-surface/50 px-3 py-2 text-sm"
 								:class="customFormErrors.smtpPort ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 							/>
 							<span v-if="customFormErrors.smtpPort" class="mt-0.5 block text-xs text-status-error">
@@ -1034,13 +1103,14 @@ onMounted(async () => {
 					</div>
 
 					<div>
-						<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.username') }}</label>
+						<label for="custom-username" class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.username') }}</label>
 						<input
+							id="custom-username"
 							v-model="customForm.username"
-							@input="olvidarPrueba"
+							@input="forgetProbe"
 							type="text"
 							:placeholder="t('views.onlineAccounts.usernamePlaceholder')"
-							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
+							class="mt-1 w-full rounded-corner-m border bg-ui-surface/50 px-3 py-2 text-sm"
 							:class="customFormErrors.username ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 						/>
 						<span v-if="customFormErrors.username" class="mt-0.5 block text-xs text-status-error">
@@ -1049,13 +1119,14 @@ onMounted(async () => {
 					</div>
 
 					<div>
-						<label class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.password') }}</label>
+						<label for="custom-password" class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.password') }}</label>
 						<input
+							id="custom-password"
 							v-model="customForm.password"
-							@input="olvidarPrueba"
+							@input="forgetProbe"
 							type="password"
 							:placeholder="t('views.onlineAccounts.passwordPlaceholder')"
-							class="mt-1 w-full rounded-corner border bg-ui-surface/50 px-3 py-2 text-sm"
+							class="mt-1 w-full rounded-corner-m border bg-ui-surface/50 px-3 py-2 text-sm"
 							:class="customFormErrors.password ? 'border-status-error' : 'border-ui-border focus:border-primary'"
 						/>
 						<span v-if="customFormErrors.password" class="mt-0.5 block text-xs text-status-error">
@@ -1070,23 +1141,23 @@ onMounted(async () => {
 				     campos en vez de los tres que corresponden. -->
 				<div v-if="probe" class="mt-4 flex flex-col gap-2">
 					<div
-						v-for="punta in [
-							{ clave: 'imap', resultado: probe.imap },
-							{ clave: 'smtp', resultado: probe.smtp },
+						v-for="endpoint in [
+							{ key: 'imap', result: probe.imap },
+							{ key: 'smtp', result: probe.smtp },
 						]"
-						:key="punta.clave"
-						class="rounded-corner border px-3 py-2 text-xs"
+						:key="endpoint.key"
+						class="rounded-corner-m border px-3 py-2 text-xs"
 						:class="
-							punta.resultado.ok
+							endpoint.result.ok
 								? 'border-status-success/30 bg-status-success/10 text-status-success'
 								: 'border-status-error/30 bg-status-error/10 text-status-error'
 						"
 					>
 						<span class="font-medium">
-							{{ punta.resultado.ok ? '✓' : '✕' }}
-							{{ t(`views.onlineAccounts.probe.${punta.clave}`) }}
+							{{ endpoint.result.ok ? '✓' : '✕' }}
+							{{ t(`views.onlineAccounts.probe.${endpoint.key}`) }}
 						</span>
-						<span v-if="punta.resultado.detail"> — {{ punta.resultado.detail }}</span>
+						<span v-if="endpoint.result.detail"> — {{ endpoint.result.detail }}</span>
 					</div>
 
 					<!-- Una prueba puede dar un falso negativo, así que el fallo no
@@ -1101,26 +1172,26 @@ onMounted(async () => {
 				     servidor tenga uno y no el otro. -->
 				<div v-if="dav" class="mt-4 flex flex-col gap-2">
 					<div
-						v-for="hallazgo in [
-							{ clave: 'calendar', resultado: dav.calendar },
-							{ clave: 'contacts', resultado: dav.contacts },
+						v-for="finding in [
+							{ key: 'calendar', result: dav.calendar },
+							{ key: 'contacts', result: dav.contacts },
 						]"
-						:key="hallazgo.clave"
-						class="rounded-corner border px-3 py-2 text-xs"
+						:key="finding.key"
+						class="rounded-corner-m border px-3 py-2 text-xs"
 						:class="
-							hallazgo.resultado.url
+							finding.result.url
 								? 'border-status-success/30 bg-status-success/10 text-status-success'
 								: 'border-ui-border bg-ui-surface/70 text-tx-muted'
 						"
 					>
 						<span class="font-medium">
-							{{ hallazgo.resultado.url ? '✓' : '—' }}
-							{{ t(`views.onlineAccounts.capabilities.${hallazgo.clave}`) }}
+							{{ finding.result.url ? '✓' : '—' }}
+							{{ t(`views.onlineAccounts.capabilities.${finding.key}`) }}
 						</span>
-						<span v-if="hallazgo.resultado.url" class="break-all">
-							— {{ hallazgo.resultado.url }}
+						<span v-if="finding.result.url" class="break-all">
+							— {{ finding.result.url }}
 						</span>
-						<span v-else-if="hallazgo.resultado.detail"> — {{ hallazgo.resultado.detail }}</span>
+						<span v-else-if="finding.result.detail"> — {{ finding.result.detail }}</span>
 					</div>
 
 					<!-- No encontrar no impide nada: hay servidores que no hacen
@@ -1135,30 +1206,30 @@ onMounted(async () => {
 
 				<div class="mt-5 flex justify-end gap-2">
 					<button
-						class="rounded-corner border border-ui-border px-4 py-1.5 text-sm text-tx-muted transition-colors hover:bg-ui-surface"
-						:disabled="loading || probando"
+						class="rounded-corner-m border border-ui-border px-4 py-1.5 text-sm text-tx-muted transition-colors hover:bg-ui-surface"
+						:disabled="loading || probing"
 						@click="cancelCustomForm"
 					>
 						{{ t('common.cancel') }}
 					</button>
 					<button
-						class="rounded-corner border border-ui-border px-4 py-1.5 text-sm text-tx-main transition-colors hover:bg-ui-surface"
-						:disabled="loading || probando || buscandoDav || !isCustomValid"
-						@click="probarConexion"
+						class="rounded-corner-m border border-ui-border px-4 py-1.5 text-sm text-tx-main transition-colors hover:bg-ui-surface"
+						:disabled="loading || probing || discoveringDav || !isCustomValid"
+						@click="testConnection"
 					>
-						{{ probando ? t('views.onlineAccounts.probe.testing') : t('views.onlineAccounts.probe.test') }}
+						{{ probing ? t('views.onlineAccounts.probe.testing') : t('views.onlineAccounts.probe.test') }}
 					</button>
 					<button
-						class="rounded-corner border border-ui-border px-4 py-1.5 text-sm text-tx-main transition-colors hover:bg-ui-surface"
-						:disabled="loading || probando || buscandoDav || !isCustomValid"
+						class="rounded-corner-m border border-ui-border px-4 py-1.5 text-sm text-tx-main transition-colors hover:bg-ui-surface"
+						:disabled="loading || probing || discoveringDav || !isCustomValid"
 						:title="t('views.onlineAccounts.dav.hint')"
-						@click="buscarDav"
+						@click="lookUpDav"
 					>
-						{{ buscandoDav ? t('views.onlineAccounts.dav.searching') : t('views.onlineAccounts.dav.search') }}
+						{{ discoveringDav ? t('views.onlineAccounts.dav.searching') : t('views.onlineAccounts.dav.search') }}
 					</button>
 					<button
-						class="rounded-corner border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/15"
-						:disabled="loading || probando || buscandoDav || !isCustomValid"
+						class="rounded-corner-m border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/15"
+						:disabled="loading || probing || discoveringDav || !isCustomValid"
 						@click="submitCustomProvider"
 					>
 						{{

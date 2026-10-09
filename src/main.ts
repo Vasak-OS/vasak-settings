@@ -7,7 +7,7 @@ import { createPinia } from 'pinia';
 import { createApp } from 'vue';
 import App from '@/App.vue';
 import { router } from '@/routes';
-import { sanearUrl } from '@/tools/csp';
+import { sanitizeUrl } from '@/utils/csp';
 import '@/assets/main.css';
 import { captureFailures } from '@vasakgroup/plugin-vsk-journal';
 
@@ -18,12 +18,12 @@ import { captureFailures } from '@vasakgroup/plugin-vsk-journal';
  * un plazo: si el backend no contesta, es mejor una interfaz con las claves a la
  * vista que una ventana en blanco para siempre.
  */
-const PLAZO_TRADUCCIONES_MS = 3000;
+const TRANSLATIONS_TIMEOUT_MS = 3000;
 
 // Una violación de CSP no se ve: el recurso no carga y la interfaz queda a
 // medias sin decir nada. Se sanean **las dos** URLs, porque `sourceFile` también
 // puede llevar query con datos sensibles.
-document.addEventListener('securitypolicyviolation', (evento) => {
+document.addEventListener('securitypolicyviolation', (event) => {
 	// El respaldo va **después** de sanear, no antes.
 	//
 	// Mirando el valor crudo, una entrada como `?token=X` es verdadera y
@@ -31,11 +31,11 @@ document.addEventListener('securitypolicyviolation', (evento) => {
 	// nada, así que el registro salía con el campo en blanco. Sanear
 	// primero y decidir después es lo que hace que un aviso incompleto no
 	// exista.
-	const recurso = sanearUrl(evento.blockedURI) || '(en línea)';
-	const origen = sanearUrl(evento.sourceFile) || 'documento';
+	const resource = sanitizeUrl(event.blockedURI) || '(en línea)';
+	const source = sanitizeUrl(event.sourceFile) || 'documento';
 	console.error(
-		`[CSP] bloqueado ${recurso} por la directiva ` +
-			`«${evento.violatedDirective}» en ${origen}:${evento.lineNumber}`
+		`[CSP] bloqueado ${resource} por la directiva ` +
+			`«${event.violatedDirective}» en ${source}:${event.lineNumber}`
 	);
 });
 
@@ -46,8 +46,8 @@ const i18n = I18n.getInstance();
 // mostrarlo dentro de la página, y ahí la memoria se va sin techo hasta que el
 // kernel mata el proceso. La página nunca necesita el archivo en sí: le alcanza
 // la ruta.
-for (const evento of ['dragover', 'drop'] as const) {
-	window.addEventListener(evento, (e) => e.preventDefault());
+for (const eventName of ['dragover', 'drop'] as const) {
+	window.addEventListener(eventName, (e) => e.preventDefault());
 }
 
 // El menú del clic derecho del escritorio, una sola vez para toda la
@@ -77,39 +77,39 @@ app.use(router);
 // catálogo por separado, y el `t()` de los componentes lee el del composable.
 //
 // Un intento que falla se reintenta —el backend puede tardar o no escuchar a la
-// primera—, pero la espera total sigue acotada por `PLAZO_TRADUCCIONES_MS`: un
+// primera—, pero la espera total sigue acotada por `TRANSLATIONS_TIMEOUT_MS`: un
 // backend colgado tiene que dar una ventana con las claves a la vista, no una
 // ventana en blanco para siempre. Ese tope era la garantía del `Promise.race`
 // anterior, y el reintento no la toca.
-async function cargarTraducciones(): Promise<void> {
-	const MAX_INTENTOS = 3;
-	const ESPERA_BASE_MS = 500;
-	const ESPERA_MAX_MS = 2000;
+async function loadTranslations(): Promise<void> {
+	const MAX_ATTEMPTS = 3;
+	const BASE_DELAY_MS = 500;
+	const MAX_DELAY_MS = 2000;
 
-	const intentar = async () => {
-		for (let intento = 0; intento < MAX_INTENTOS; intento++) {
+	const attemptLoad = async () => {
+		for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
 			try {
 				await i18n.load();
 				return;
 			} catch (error) {
 				console.error(
-					`No se pudieron cargar las traducciones (intento ${intento + 1}/${MAX_INTENTOS}):`,
+					`No se pudieron cargar las traducciones (intento ${attempt + 1}/${MAX_ATTEMPTS}):`,
 					error
 				);
-				if (intento === MAX_INTENTOS - 1) return;
-				const espera = Math.min(ESPERA_BASE_MS * 2 ** intento, ESPERA_MAX_MS);
-				await new Promise((resolve) => setTimeout(resolve, espera));
+				if (attempt === MAX_ATTEMPTS - 1) return;
+				const delay = Math.min(BASE_DELAY_MS * 2 ** attempt, MAX_DELAY_MS);
+				await new Promise((resolve) => setTimeout(resolve, delay));
 			}
 		}
 	};
 
 	await Promise.race([
-		intentar(),
-		new Promise((resolve) => setTimeout(resolve, PLAZO_TRADUCCIONES_MS)),
+		attemptLoad(),
+		new Promise((resolve) => setTimeout(resolve, TRANSLATIONS_TIMEOUT_MS)),
 	]);
 }
 
-await cargarTraducciones();
+await loadTranslations();
 
 app.mount('#app');
 
@@ -120,8 +120,8 @@ app.mount('#app');
  * descarta cualquier cosa que no exista, así que agregar una pantalla no obliga
  * a tocar además una lista aparte.
  */
-function irASeccion(seccion: string | null) {
-	if (seccion && router.hasRoute(seccion)) router.push({ name: seccion });
+function goToSection(section: string | null) {
+	if (section && router.hasRoute(section)) router.push({ name: section });
 }
 
 /**
@@ -131,7 +131,7 @@ function irASeccion(seccion: string | null) {
  * sirve la aplicación abre donde siempre.
  */
 invoke<string | null>('initial_section')
-	.then(irASeccion)
+	.then(goToSection)
 	.catch(() => {
 		// Sin el puente con Rust no hay argumento que leer; la portada sirve.
 	});
@@ -145,6 +145,8 @@ invoke<string | null>('initial_section')
  * hacía nada visible: la ventana se traía al frente en la portada o donde
  * hubiera quedado.
  */
-listen<string>('vasak-settings:ir-a-seccion', (aviso) => irASeccion(aviso.payload)).catch(() => {
-	// Sin el puente, la ventana igual se trae al frente desde Rust.
-});
+listen<string>('vasak-settings:ir-a-seccion', (message) => goToSection(message.payload)).catch(
+	() => {
+		// Sin el puente, la ventana igual se trae al frente desde Rust.
+	}
+);

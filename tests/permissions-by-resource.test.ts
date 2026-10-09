@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { PermissionEntry } from '../src/services/permissions.service';
-import { decisionOf, groupByResource, initialTab } from '../src/tools/permissions-by-resource';
+import { decisionOf, groupByResource, initialTab } from '../src/utils/permissions-by-resource';
 
 /**
  * Lo que se prueba acá es lo que se rompe callado: una aplicación que aparece

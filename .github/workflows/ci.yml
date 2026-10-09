@@ -34,3 +34,21 @@ jobs:
       # verde. Ahora que la comprobación existe (Vasak-OS/.github#7), se
       # enciende acá.
       candado_corta: true
+      # Las pruebas de Rust corren en `revisar` y de esa misma corrida sale la
+      # cobertura que se le pasa a Sonar. Sin esto Sonar no ve el Rust como
+      # código a cubrir, y un PR que sólo toca Rust pasa la puerta con
+      # `new_lines_to_cover = 0` sin que se mida nada (#160).
+      pruebas_rust: -p vasak-settings
+      # Lo que pide el grafo en Linux, mirado con `cargo tree -i`, no la lista
+      # de Tauri:
+      #
+      #   libwebkit2gtk-4.1-dev  webkit2gtk, gtk3, soup3 y los `.pc` de la pila
+      #                          de GTK; trae también `dbus-1`, que pide
+      #                          `libdbus-sys` por `tao`
+      #   lld                    `src-tauri/.cargo/config.toml` enlaza con
+      #                          `-fuse-ld=lld`, y la imagen del runner no lo trae
+      #   build-essential        el compilador de C de los `-sys`
+      paquetes_rust: >-
+        libwebkit2gtk-4.1-dev
+        lld
+        build-essential

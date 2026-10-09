@@ -2,12 +2,17 @@
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup, SwitchToggle, TextInput } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	EmptyState,
+	FormGroup,
+	PageHeader,
+	Panel,
+	SelectField,
+	SwitchToggle,
+	TextInput,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import SelectInput from '@/components/ui/SelectInput.vue';
 import { type GreeterConfig, getGreeterConfig, setGreeterConfig } from '@/services/greeter.service';
 import { getOfficialWallpapers, getSchemes } from '@/services/style.service';
 
@@ -193,7 +198,8 @@ const save = async () => {
 <template>
 	<div class="flex min-h-full flex-col gap-4">
 		<PageHeader
-			:section="t('sidebar.system')"
+			size="lg"
+			:eyebrow="t('sidebar.system')"
 			:title="t('views.loginScreen.title')"
 			:description="t('views.loginScreen.description')"
 		>
@@ -201,7 +207,7 @@ const save = async () => {
 				<button
 					v-if="!loading"
 					type="button"
-					class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
+					class="w-fit rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
 					:disabled="saving"
 					@click="save"
 				>
@@ -210,7 +216,7 @@ const save = async () => {
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" :message="t('views.loginScreen.loading')" padding="lg" />
+		<EmptyState icon="" size="sm" bordered v-if="loading" :title="t('views.loginScreen.loading')" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
 			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
@@ -218,7 +224,7 @@ const save = async () => {
 			<AlertMessage tone="info">{{ t('views.loginScreen.needsAdmin') }}</AlertMessage>
 
 			<div class="grid gap-4 xl:grid-cols-2">
-				<SectionCard>
+				<Panel as="article">
 					<h3 class="mb-1 text-lg font-medium">{{ t('views.loginScreen.appearanceSection') }}</h3>
 					<p class="mb-4 text-sm text-tx-muted">{{ t('views.loginScreen.appearanceHint') }}</p>
 
@@ -234,8 +240,8 @@ const save = async () => {
 						</div>
 
 						<FormGroup :label="t('views.loginScreen.scheme')" html-for="greeter-scheme">
-							<SelectInput
-								id="greeter-scheme"
+							<SelectField
+								v-bind="{ id: 'greeter-scheme' }"
 								v-model="selectedSchemeId"
 								:options="schemeOptions"
 							/>
@@ -243,14 +249,14 @@ const save = async () => {
 
 						<p class="text-sm text-tx-muted">{{ t('views.loginScreen.schemeHint') }}</p>
 					</div>
-				</SectionCard>
+				</Panel>
 
-				<SectionCard>
+				<Panel as="article">
 					<h3 class="mb-1 text-lg font-medium">{{ t('views.loginScreen.currentSection') }}</h3>
 					<p class="mb-4 text-sm text-tx-muted">{{ t('views.loginScreen.currentHint') }}</p>
 
 					<div class="flex flex-col gap-3 text-sm">
-						<div class="rounded-corner border border-ui-border bg-ui-surface/30 p-3">
+						<div class="rounded-corner-m border border-ui-border bg-ui-surface/30 p-3">
 							<p class="text-xs uppercase tracking-wider text-tx-muted">
 								{{ t('views.loginScreen.currentImage') }}
 							</p>
@@ -259,7 +265,7 @@ const save = async () => {
 							</p>
 						</div>
 
-						<div class="rounded-corner border border-ui-border bg-ui-surface/30 p-3">
+						<div class="rounded-corner-m border border-ui-border bg-ui-surface/30 p-3">
 							<p class="text-xs uppercase tracking-wider text-tx-muted">
 								{{ t('views.loginScreen.currentVideo') }}
 							</p>
@@ -272,21 +278,21 @@ const save = async () => {
 							{{ t('views.loginScreen.usingSystemBackground') }}
 						</p>
 					</div>
-				</SectionCard>
+				</Panel>
 			</div>
 
-			<SectionCard v-if="selectedIsVideo">
+			<Panel as="article" v-if="selectedIsVideo">
 				<h3 class="text-lg font-medium">{{ t('views.loginScreen.videoTitle') }}</h3>
 				<p class="mt-1 text-sm text-tx-muted">{{ t('views.loginScreen.videoNote') }}</p>
-			</SectionCard>
+			</Panel>
 
 			<div class="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
-				<SectionCard>
+				<Panel as="article">
 					<div class="flex items-center justify-between">
 						<h3 class="text-lg font-medium">{{ t('views.loginScreen.officialTitle') }}</h3>
 						<button
 							type="button"
-							class="rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-1.5 text-xs font-medium hover:bg-ui-surface disabled:opacity-50"
+							class="rounded-corner-m border border-ui-border bg-ui-surface/70 px-3 py-1.5 text-xs font-medium hover:bg-ui-surface disabled:opacity-50"
 							:disabled="usingSystemBackground"
 							@click="useSystemBackground"
 						>
@@ -295,7 +301,7 @@ const save = async () => {
 					</div>
 
 					<div v-if="officialWallpapers.length === 0" class="mt-4">
-						<EmptyStateBox :message="t('views.loginScreen.noWallpapers')" />
+						<EmptyState icon="" size="sm" bordered :title="t('views.loginScreen.noWallpapers')" />
 					</div>
 
 					<div v-else class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -303,7 +309,7 @@ const save = async () => {
 							v-for="wallpaperPath in officialWallpapers"
 							:key="wallpaperPath"
 							type="button"
-							class="group overflow-hidden rounded-corner border text-left transition-all duration-200"
+							class="group overflow-hidden rounded-corner-m border text-left transition-all duration-200"
 							:class="
 								isSelected(wallpaperPath)
 									? 'border-primary bg-primary/10'
@@ -327,9 +333,9 @@ const save = async () => {
 							</div>
 						</button>
 					</div>
-				</SectionCard>
+				</Panel>
 
-				<SectionCard>
+				<Panel as="article">
 					<h3 class="text-lg font-medium">{{ t('views.loginScreen.customPathTitle') }}</h3>
 					<p class="mt-1 text-sm text-tx-muted">{{ t('views.loginScreen.customPathHint') }}</p>
 
@@ -346,7 +352,7 @@ const save = async () => {
 						<p class="text-xs text-tx-muted">{{ t('views.loginScreen.dragHint') }}</p>
 						<p class="text-xs text-tx-muted">{{ t('views.loginScreen.copyNote') }}</p>
 					</div>
-				</SectionCard>
+				</Panel>
 			</div>
 		</div>
 	</div>

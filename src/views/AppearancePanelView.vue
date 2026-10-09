@@ -6,19 +6,34 @@ import {
 	writeConfig,
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, SelectField, SwitchToggle } from '@vasakgroup/vue-libvasak';
-import { onMounted, type Ref, ref } from 'vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
 import {
-	escribirIndicadoresDelPanel,
-	escribirPosicionDelPanel,
-	indicadoresDelPanel,
-	POSICIONES_DEL_PANEL,
-	type PosicionDelPanel,
-	posicionDelPanel,
-} from '@/tools/valores-de-config';
+	AlertMessage,
+	ConfigSection,
+	EmptyState,
+	PageHeader,
+	SelectField,
+	SwitchToggle,
+} from '@vasakgroup/vue-libvasak';
+import { onMounted, type Ref, ref } from 'vue';
+import {
+	PANEL_ANIMATIONS,
+	PANEL_LAYOUTS,
+	PANEL_POSITIONS,
+	PANEL_STYLES,
+	type PanelAnimation,
+	type PanelLayout,
+	type PanelPosition,
+	type PanelStyle,
+	readPanelAnimation,
+	readPanelAutohide,
+	readPanelIndicators,
+	readPanelLayout,
+	readPanelPosition,
+	readPanelStyle,
+	writePanelAppearance,
+	writePanelIndicators,
+	writePanelPosition,
+} from '@/utils/config-values';
 
 const { t } = useI18n();
 
@@ -51,7 +66,24 @@ const privacy = ref(true);
  * reacomoda lo de adentro al recibir `config-changed`, así que moverla no pide
  * reiniciar la sesión.
  */
-const posicion = ref<PosicionDelPanel>('top');
+const position = ref<PanelPosition>('top');
+
+/**
+ * El aspecto de la barra: su tipo, su densidad y su animación. Son las claves
+ * que el escritorio lee en `panel-appearance.ts`; acá se leen y se escriben con
+ * los mismos valores y los mismos de fábrica. Al guardar, el panel se reacomoda
+ * solo con `config-changed`, sin reiniciar la sesión.
+ */
+const style = ref<PanelStyle>('pills');
+const layout = ref<PanelLayout>('distributed');
+const animation = ref<PanelAnimation>('off');
+
+/**
+ * Si el panel se esconde solo y se revela al rozar el borde. Apagado por
+ * omisión. El escritorio deja de reservar su franja —las ventanas la ocupan— y
+ * lo esconde; es sólo apariencia/conducta, no pide reiniciar.
+ */
+const autohide = ref(false);
 
 onMounted(async () => {
 	try {
@@ -60,13 +92,17 @@ onMounted(async () => {
 		await configStore.value.loadConfig();
 		vskConfig.value = await readConfig();
 
-		const panel = indicadoresDelPanel(vskConfig.value);
+		const panel = readPanelIndicators(vskConfig.value);
 		weather.value = panel.weather;
 		music.value = panel.music;
 		transfer.value = panel.transfer;
 		tray.value = panel.tray;
 		privacy.value = panel.privacy;
-		posicion.value = posicionDelPanel(vskConfig.value);
+		position.value = readPanelPosition(vskConfig.value);
+		style.value = readPanelStyle(vskConfig.value);
+		layout.value = readPanelLayout(vskConfig.value);
+		animation.value = readPanelAnimation(vskConfig.value);
+		autohide.value = readPanelAutohide(vskConfig.value);
 	} catch (err) {
 		error.value = t('views.appearancePanel.errorLoading').replace('{0}', String(err));
 	} finally {
@@ -82,7 +118,7 @@ const saveConfig = async () => {
 	try {
 		if (!vskConfig.value) return;
 
-		escribirIndicadoresDelPanel(vskConfig.value as any, {
+		writePanelIndicators(vskConfig.value as any, {
 			weather: weather.value,
 			music: music.value,
 			transfer: transfer.value,
@@ -90,7 +126,14 @@ const saveConfig = async () => {
 			privacy: privacy.value,
 		});
 
-		escribirPosicionDelPanel(vskConfig.value as unknown as Record<string, unknown>, posicion.value);
+		writePanelPosition(vskConfig.value as unknown as Record<string, unknown>, position.value);
+
+		writePanelAppearance(vskConfig.value as unknown as Record<string, unknown>, {
+			style: style.value,
+			layout: layout.value,
+			animation: animation.value,
+			autohide: autohide.value,
+		});
 
 		await writeConfig(vskConfig.value);
 
@@ -111,7 +154,8 @@ const saveConfig = async () => {
 <template>
 	<div class="flex min-h-full flex-col gap-4">
 		<PageHeader
-			:section="t('sidebar.appearance')"
+			size="lg"
+			:eyebrow="t('sidebar.appearance')"
 			:title="t('views.appearancePanel.title')"
 			:description="t('views.appearancePanel.description')"
 		>
@@ -119,7 +163,7 @@ const saveConfig = async () => {
 				<button
 					v-if="!loading"
 					type="button"
-					class="w-fit rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
+					class="w-fit rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface disabled:opacity-50"
 					:disabled="saving"
 					@click="saveConfig"
 				>
@@ -128,17 +172,14 @@ const saveConfig = async () => {
 			</template>
 		</PageHeader>
 
-		<EmptyStateBox v-if="loading" :message="t('views.appearancePanel.loading')" padding="lg" />
+		<EmptyState icon="" size="sm" bordered v-if="loading" :title="t('views.appearancePanel.loading')" />
 
 		<div v-else class="flex flex-col gap-4 pb-4">
 			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 
 			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
-			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-main">
-					{{ t('views.appearancePanel.bar') }}
-				</h3>
+			<ConfigSection :title="t('views.appearancePanel.bar')">
 
 				<div class="flex items-start justify-between gap-4">
 					<!-- Sólo la explicación: el nombre del control lo dice el `label`
@@ -151,28 +192,90 @@ const saveConfig = async () => {
 					     al lado no está asociado a nada, y un lector de pantalla
 					     anuncia un desplegable sin nombre. -->
 					<SelectField
-						v-model="posicion"
+						v-model="position"
 						:label="t('views.appearancePanel.position')"
-						class="w-48 shrink-0"
+						class="w-60 shrink-0"
 					>
-						<option v-for="lado in POSICIONES_DEL_PANEL" :key="lado" :value="lado">
-							{{ t(`views.appearancePanel.lados.${lado}`) }}
+						<option v-for="side in PANEL_POSITIONS" :key="side" :value="side">
+							{{ t(`views.appearancePanel.lados.${side}`) }}
 						</option>
 					</SelectField>
 				</div>
-			</SectionCard>
+			</ConfigSection>
 
-			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-main">
-					{{ t('views.appearancePanel.indicators') }}
-				</h3>
+			<ConfigSection :title="t('views.appearancePanel.appearance')">
+				<div class="flex flex-col gap-5">
+					<div class="flex items-start justify-between gap-4">
+						<p class="text-xs text-tx-muted">
+							{{ t('views.appearancePanel.styleHint') }}
+						</p>
+						<SelectField
+							v-model="style"
+							:label="t('views.appearancePanel.style')"
+							class="w-60 shrink-0"
+						>
+							<option v-for="name in PANEL_STYLES" :key="name" :value="name">
+								{{ t(`views.appearancePanel.styles.${name}`) }}
+							</option>
+						</SelectField>
+					</div>
+
+					<div class="flex items-start justify-between gap-4">
+						<p class="text-xs text-tx-muted">
+							{{ t('views.appearancePanel.layoutHint') }}
+						</p>
+						<SelectField
+							v-model="layout"
+							:label="t('views.appearancePanel.layout')"
+							class="w-60 shrink-0"
+						>
+							<option v-for="name in PANEL_LAYOUTS" :key="name" :value="name">
+								{{ t(`views.appearancePanel.layouts.${name}`) }}
+							</option>
+						</SelectField>
+					</div>
+
+					<div class="flex items-start justify-between gap-4">
+						<p class="text-xs text-tx-muted">
+							{{ t('views.appearancePanel.animationHint') }}
+						</p>
+						<SelectField
+							v-model="animation"
+							:label="t('views.appearancePanel.animation')"
+							class="w-60 shrink-0"
+						>
+							<option v-for="name in PANEL_ANIMATIONS" :key="name" :value="name">
+								{{ t(`views.appearancePanel.animations.${name}`) }}
+							</option>
+						</SelectField>
+					</div>
+
+					<div class="flex items-start justify-between gap-4">
+						<div class="flex flex-col">
+							<span class="text-sm font-medium text-tx-main">
+								{{ t('views.appearancePanel.autohide') }}
+							</span>
+							<span class="text-xs text-tx-muted">
+								{{ t('views.appearancePanel.autohideHint') }}
+							</span>
+						</div>
+						<SwitchToggle
+							:label="t('views.appearancePanel.autohide')"
+							:model-value="autohide"
+							@update:model-value="(val) => (autohide = val)"
+						/>
+					</div>
+				</div>
+			</ConfigSection>
+
+			<ConfigSection :title="t('views.appearancePanel.indicators')">
 
 				<div class="flex flex-col gap-5">
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
-							<label class="text-sm font-medium text-tx-main">
+							<span class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.weather') }}
-							</label>
+							</span>
 							<span class="text-xs text-tx-muted">
 								{{ t('views.appearancePanel.weatherHint') }}
 							</span>
@@ -182,9 +285,9 @@ const saveConfig = async () => {
 
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
-							<label class="text-sm font-medium text-tx-main">
+							<span class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.music') }}
-							</label>
+							</span>
 							<span class="text-xs text-tx-muted">
 								{{ t('views.appearancePanel.musicHint') }}
 							</span>
@@ -194,9 +297,9 @@ const saveConfig = async () => {
 
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
-							<label class="text-sm font-medium text-tx-main">
+							<span class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.transfer') }}
-							</label>
+							</span>
 							<span class="text-xs text-tx-muted">
 								{{ t('views.appearancePanel.transferHint') }}
 							</span>
@@ -206,9 +309,9 @@ const saveConfig = async () => {
 
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
-							<label class="text-sm font-medium text-tx-main">
+							<span class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.tray') }}
-							</label>
+							</span>
 							<span class="text-xs text-tx-muted">
 								{{ t('views.appearancePanel.trayHint') }}
 							</span>
@@ -218,9 +321,9 @@ const saveConfig = async () => {
 
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
-							<label class="text-sm font-medium text-tx-main">
+							<span class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.privacy') }}
-							</label>
+							</span>
 							<span class="text-xs text-tx-muted">
 								{{ t('views.appearancePanel.privacyHint') }}
 							</span>
@@ -228,7 +331,7 @@ const saveConfig = async () => {
 						<SwitchToggle :label="t('views.appearancePanel.privacy')" :model-value="privacy" @update:model-value="(val) => (privacy = val)" />
 					</div>
 				</div>
-			</SectionCard>
+			</ConfigSection>
 		</div>
 	</div>
 </template>

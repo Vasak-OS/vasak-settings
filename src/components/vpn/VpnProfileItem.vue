@@ -25,7 +25,7 @@ defineEmits<Emits>();
 </script>
 
 <template>
-	<li class="rounded-corner border border-ui-border bg-ui-surface/35 p-3">
+	<li class="rounded-corner-m border border-ui-border bg-ui-surface/35 p-3">
 		<div class="flex flex-wrap items-center justify-between gap-3">
 			<div>
 				<p class="text-sm font-medium text-tx-main">{{ profile.id }}</p>
@@ -37,7 +37,7 @@ defineEmits<Emits>();
 			<div class="flex flex-wrap gap-2">
 				<button
 					v-if="isActive && isConnected"
-					class="rounded-corner border border-ui-border px-2 py-1 text-xs text-tx-muted hover:bg-ui-surface disabled:cursor-not-allowed disabled:opacity-50"
+					class="rounded-corner-m border border-ui-border px-2 py-1 text-xs text-tx-muted hover:bg-ui-surface disabled:cursor-not-allowed disabled:opacity-50"
 					@click="$emit('disconnect')"
 					:disabled="actionProfileUuid === profile.uuid"
 				>
@@ -45,20 +45,20 @@ defineEmits<Emits>();
 				</button>
 				<button
 					v-else
-					class="rounded-corner border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+					class="rounded-corner-m border border-primary/20 bg-primary/10 px-2 py-1 text-xs font-medium text-primary hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
 					@click="$emit('connect')"
 					:disabled="actionProfileUuid === profile.uuid"
 				>
 					{{ actionProfileUuid === profile.uuid ? 'Conectando...' : 'Conectar' }}
 				</button>
 				<button
-					class="rounded-corner border border-ui-border px-2 py-1 text-xs text-tx-muted hover:bg-ui-surface"
+					class="rounded-corner-m border border-ui-border px-2 py-1 text-xs text-tx-muted hover:bg-ui-surface"
 					@click="$emit('edit')"
 				>
 					{{ t('common.edit') }}
 				</button>
 				<button
-					class="rounded-corner border border-status-error/20 bg-status-error/10 px-2 py-1 text-xs text-status-error hover:bg-status-error/20 disabled:cursor-not-allowed disabled:opacity-50"
+					class="rounded-corner-m border border-status-error/20 bg-status-error/10 px-2 py-1 text-xs text-status-error hover:bg-status-error/20 disabled:cursor-not-allowed disabled:opacity-50"
 					@click="$emit('delete')"
 					:disabled="actionProfileUuid === profile.uuid"
 				>

@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup, SwitchToggle } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	FormGroup,
+	NumberField,
+	PageHeader,
+	Panel,
+	SwitchToggle,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted } from 'vue';
 import KeyBindingInput from '@/components/ui/KeyBindingInput.vue';
-import NumberInput from '@/components/ui/NumberInput.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import PluginSection from '@/components/ui/PluginSection.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
+import PluginSection from '@/components/wayfire/PluginSection.vue';
 import { useWayfireSection } from '@/composables/useWayfireSection';
 
 const { t } = useI18n();
@@ -73,7 +77,8 @@ async function saveAll() {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.windows')"
+			size="lg"
+			:eyebrow="t('sidebar.windows')"
 			:title="t('views.wayfireWorkspaces.title')"
 			:description="t('views.wayfireWorkspaces.description')"
 		/>
@@ -82,34 +87,34 @@ async function saveAll() {
 		<AlertMessage v-if="vswitch.success.value || expo.success.value" tone="success">{{ t('common.saved') }}</AlertMessage>
 
 		<form @submit.prevent="saveAll" class="flex flex-col gap-4">
-			<SectionCard>
+			<Panel as="article">
 				<h3 class="text-base font-medium">{{ t('views.wayfireWorkspaces.gridTitle') }}</h3>
 				<p class="mt-0.5 mb-3 text-sm text-tx-muted">
 					{{ t('views.wayfireWorkspaces.gridHint') }} {{ gridSummary }}
 				</p>
 				<div class="grid gap-4 sm:grid-cols-2">
 					<FormGroup :label="t('views.wayfireWorkspaces.columns')">
-						<NumberInput
+						<NumberField
 							:model-value="core.getInt('vwidth', 3)"
 							:min="1" :max="9"
 							@update:model-value="core.setVal('vwidth', $event)"
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireWorkspaces.rows')">
-						<NumberInput
+						<NumberField
 							:model-value="core.getInt('vheight', 2)"
 							:min="1" :max="9"
 							@update:model-value="core.setVal('vheight', $event)"
 						/>
 					</FormGroup>
 				</div>
-			</SectionCard>
+			</Panel>
 
 			<PluginSection plugin-id="vswitch" icon="video-display">
 				<div class="mb-3">
 					<div class="grid gap-4 sm:grid-cols-2">
 						<FormGroup :label="t('views.wayfireWorkspaces.duration')">
-							<NumberInput
+							<NumberField
 								:model-value="vswitch.getInt('duration', 300)"
 								:min="0" :max="2000" :step="50"
 								@update:model-value="vswitch.setVal('duration', $event)"
@@ -154,7 +159,7 @@ async function saveAll() {
 						/>
 					</FormGroup>
 					<FormGroup :label="t('views.wayfireWorkspaces.duration')">
-						<NumberInput
+						<NumberField
 							:model-value="expo.getInt('duration', 300)"
 							:min="0" :max="2000" :step="50"
 							@update:model-value="expo.setVal('duration', $event)"
@@ -194,7 +199,7 @@ async function saveAll() {
 		<button
 				type="submit"
 				:disabled="isSaving"
-				class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50 hover:enabled:opacity-90"
+				class="rounded-corner-m bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary transition-opacity disabled:cursor-not-allowed disabled:opacity-50 hover:enabled:opacity-90"
 			>
 				{{ isSaving ? t('common.saving') : t('common.save') }}
 			</button>

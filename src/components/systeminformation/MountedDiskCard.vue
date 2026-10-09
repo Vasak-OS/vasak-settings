@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import ProgressBar from '@/components/ui/ProgressBar.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
+import { Panel, ProgressBar } from '@vasakgroup/vue-libvasak';
 import type { DiskInfo } from '@/types/system';
 
 const { t, locale } = useI18n();
@@ -20,8 +19,8 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 </script>
 
 <template>
-	<SectionCard class="p-0">
-		<div class="rounded-corner border border-ui-border bg-ui-surface/70 p-4">
+	<Panel as="article" padding="none">
+		<div class="rounded-corner-m border border-ui-border bg-ui-surface/70 p-4">
 			<div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
 				<div class="min-w-0">
 					<p class="truncate font-medium">{{ disk.mountpoint }}</p>
@@ -30,13 +29,13 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 						<span
 							v-for="mountTag in disk.mountpoints"
 							:key="mountTag"
-							class="rounded-corner border border-ui-border bg-ui-bg px-2 py-0.5 text-xs text-tx-muted"
+							class="rounded-corner-m border border-ui-border bg-ui-bg px-2 py-0.5 text-xs text-tx-muted"
 						>
 							{{ mountTag }}
 						</span>
 					</div>
 				</div>
-				<span class="rounded-corner bg-ui-bg px-2 py-1 text-sm font-medium">{{ formatNumber(disk.usage_percent, 1) }}%</span>
+				<span class="rounded-corner-m bg-ui-bg px-2 py-1 text-sm font-medium">{{ formatNumber(disk.usage_percent, 1) }}%</span>
 			</div>
 
 			<div class="mt-3 grid gap-2 text-sm text-tx-muted sm:grid-cols-3">
@@ -46,8 +45,8 @@ const formatGb = (value: number) => `${formatNumber(value, 1)} GB`;
 			</div>
 
 			<div class="mt-3">
-				<ProgressBar :label="t('views.home.cards.diskUsage')" :value="disk.usage_percent" />
+				<ProgressBar show-value :decimals="1" :label="t('views.home.cards.diskUsage')" :value="disk.usage_percent" />
 			</div>
 		</div>
-	</SectionCard>
+	</Panel>
 </template>

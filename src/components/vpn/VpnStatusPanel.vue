@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
+import { StatTile } from '@vasakgroup/vue-libvasak';
 import { computed } from 'vue';
-import StatTile from '@/components/ui/StatTile.vue';
 import type { VpnConnectionState, VpnProfile, VpnStatus } from '@/services/network.service';
 
 interface Props {

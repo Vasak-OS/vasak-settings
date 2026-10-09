@@ -2,10 +2,15 @@
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { open as abrirDialogo } from '@tauri-apps/plugin-dialog';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup, SwitchToggle, TextInput } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	FormGroup,
+	PageHeader,
+	Panel,
+	SwitchToggle,
+	TextInput,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
 
 interface UserAccount {
 	uid: number;
@@ -221,14 +226,15 @@ function canDemote(user: UserAccount): boolean {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.system')"
+			size="lg"
+			:eyebrow="t('sidebar.system')"
 			:title="t('views.users.title')"
 			:description="t('views.users.description')"
 		>
 			<template #actions>
 				<button
 					type="button"
-					class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+					class="rounded-corner-m bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90"
 					@click="showCreate = !showCreate"
 				>
 					{{ showCreate ? t('common.cancel') : t('views.users.addUser') }}
@@ -239,7 +245,7 @@ function canDemote(user: UserAccount): boolean {
 		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 		<AlertMessage v-if="success" tone="success">{{ success }}</AlertMessage>
 
-		<SectionCard v-if="showCreate">
+		<Panel as="article" v-if="showCreate">
 			<h3 class="text-base font-medium">{{ t('views.users.newAccount') }}</h3>
 			<div class="mt-3 grid gap-4 sm:grid-cols-2">
 				<FormGroup :label="t('views.users.username')">
@@ -281,15 +287,15 @@ function canDemote(user: UserAccount): boolean {
 				<button
 					type="button"
 					:disabled="!createValid || busy"
-					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+					class="rounded-corner-m bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90 disabled:opacity-50"
 					@click="createUser"
 				>
 					{{ t('views.users.createAccount') }}
 				</button>
 			</div>
-		</SectionCard>
+		</Panel>
 
-		<SectionCard v-for="user in users" :key="user.uid">
+		<Panel as="article" v-for="user in users" :key="user.uid">
 			<div class="flex items-center gap-3">
 				<!-- La foto abre el selector con un clic. Es el objetivo obvio: quien
 				     quiere cambiarla la busca acá antes que en ningún menú. -->
@@ -347,7 +353,7 @@ function canDemote(user: UserAccount): boolean {
 
 				<button
 					type="button"
-					class="shrink-0 rounded-corner border border-ui-border bg-ui-surface/70 px-3 py-1.5 text-xs font-medium hover:bg-ui-surface"
+					class="shrink-0 rounded-corner-m border border-ui-border bg-ui-surface/70 px-3 py-1.5 text-xs font-medium hover:bg-ui-surface"
 					@click="expanded = expanded === user.uid ? null : user.uid"
 				>
 					{{ expanded === user.uid ? t('common.close') : t('common.edit') }}
@@ -427,7 +433,7 @@ function canDemote(user: UserAccount): boolean {
 								draftFor(user.uid).password.length < MIN_PASSWORD ||
 								draftFor(user.uid).password !== draftFor(user.uid).confirm
 							"
-							class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+							class="rounded-corner-m bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90 disabled:opacity-50"
 							@click="changePassword(user)"
 						>
 							{{ t('views.users.changePassword') }}
@@ -439,16 +445,16 @@ function canDemote(user: UserAccount): boolean {
 					<button
 						type="button"
 						:disabled="busy"
-						class="rounded-corner border border-status-error/30 bg-status-error/10 px-4 py-2 text-sm font-medium text-status-error hover:bg-status-error/20 disabled:opacity-50"
+						class="rounded-corner-m border border-status-error/30 bg-status-error/10 px-4 py-2 text-sm font-medium text-status-error hover:bg-status-error/20 disabled:opacity-50"
 						@click="deleteTarget = user"
 					>
 						{{ t('views.users.deleteAccount') }}
 					</button>
 				</div>
 			</div>
-		</SectionCard>
+		</Panel>
 
-		<SectionCard v-if="deleteTarget">
+		<Panel as="article" v-if="deleteTarget">
 			<h3 class="text-base font-medium text-status-error">
 				{{ t('views.users.deleteTitle').replace('{0}', deleteTarget.username) }}
 			</h3>
@@ -462,7 +468,7 @@ function canDemote(user: UserAccount): boolean {
 			<div class="mt-4 flex justify-end gap-2">
 				<button
 					type="button"
-					class="rounded-corner border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface"
+					class="rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-2 text-sm font-medium hover:bg-ui-surface"
 					@click="deleteTarget = null"
 				>
 					{{ t('common.cancel') }}
@@ -470,12 +476,12 @@ function canDemote(user: UserAccount): boolean {
 				<button
 					type="button"
 					:disabled="busy"
-					class="rounded-corner bg-status-error px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+					class="rounded-corner-m bg-status-error px-4 py-2 text-sm font-medium text-tx-on-error hover:opacity-90 disabled:opacity-50"
 					@click="confirmDelete"
 				>
 					{{ t('common.delete') }}
 				</button>
 			</div>
-		</SectionCard>
+		</Panel>
 	</div>
 </template>

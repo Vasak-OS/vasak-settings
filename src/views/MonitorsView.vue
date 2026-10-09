@@ -1,23 +1,26 @@
 <script setup lang="ts">
+import { setBrightness } from '@vasakgroup/plugin-display-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup, SwitchToggle } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	FormGroup,
+	NumberField,
+	PageHeader,
+	Panel,
+	SelectField,
+	SwitchToggle,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
 import MonitorCanvas, { type CanvasMonitor } from '@/components/monitors/MonitorCanvas.vue';
-import NumberInput from '@/components/ui/NumberInput.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import SelectInput from '@/components/ui/SelectInput.vue';
+import { useBrightness } from '@/composables/useBrightness';
 import {
 	applyMonitorLayout,
-	type BrightnessKind,
 	type DetectedMonitor,
 	formatRefresh,
 	getDetectedMonitors,
-	getMonitorBrightness,
 	logicalSize,
 	type MonitorMode,
 	type MonitorSetting,
-	setMonitorBrightness,
 } from '@/services/monitors.service';
 
 interface EditableMonitor extends MonitorSetting {
@@ -26,18 +29,26 @@ interface EditableMonitor extends MonitorSetting {
 	modes: MonitorMode[];
 }
 
-interface Brightness {
-	kind: BrightnessKind;
-	handle: string;
-	percent: number;
-}
-
 const { t } = useI18n();
+const {
+	report: brightnessReport,
+	error: brightnessError,
+	ddcMessages,
+	load: loadBrightness,
+} = useBrightness(t);
+
+/** El brillo de cada salida; los objetos son los del informe, así que el
+ * deslizador los cambia en el lugar. */
+const brightness = computed(() =>
+	Object.fromEntries(
+		(brightnessReport.value?.monitors ?? [])
+			.filter((entry) => entry.output !== null)
+			.map((entry) => [entry.output as string, entry])
+	)
+);
 
 const monitors = ref<EditableMonitor[]>([]);
 const original = ref('');
-const brightness = ref<Record<string, Brightness>>({});
-const ddcHint = ref('');
 const usingKernelFallback = ref(false);
 const loading = ref(true);
 const saving = ref(false);
@@ -141,21 +152,6 @@ async function load() {
 	}
 }
 
-async function loadBrightness() {
-	try {
-		const report = await getMonitorBrightness(connected.value.map((m) => m.name));
-		ddcHint.value = report.ddc_hint ?? '';
-		brightness.value = Object.fromEntries(
-			report.monitors.map((entry) => [
-				entry.output,
-				{ kind: entry.kind, handle: entry.handle, percent: entry.percent },
-			])
-		);
-	} catch (e) {
-		ddcHint.value = String(e);
-	}
-}
-
 function resolutionOptions(monitor: EditableMonitor) {
 	const seen = new Set<string>();
 	return monitor.modes
@@ -231,7 +227,7 @@ async function onBrightnessChange(name: string, percent: number) {
 	if (!entry) return;
 	entry.percent = percent;
 	try {
-		await setMonitorBrightness(entry.kind, entry.handle, percent);
+		await setBrightness(entry.kind, entry.handle, percent);
 	} catch (e) {
 		error.value = t('views.monitors.brightnessError')
 			.replace('{0}', name)
@@ -267,7 +263,8 @@ onMounted(load);
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.system')"
+			size="lg"
+			:eyebrow="t('sidebar.system')"
 			:title="t('views.monitors.title')"
 			:description="t('views.monitors.description')"
 		/>
@@ -284,15 +281,15 @@ onMounted(load);
 		</div>
 
 		<template v-else-if="monitors.length === 0">
-			<SectionCard>
+			<Panel as="article">
 				<p class="py-4 text-center text-sm text-tx-muted">
 					{{ t('views.monitors.emptyState') }}
 				</p>
-			</SectionCard>
+			</Panel>
 		</template>
 
 		<template v-else>
-			<SectionCard v-if="canvasMonitors.length > 0">
+			<Panel as="article" v-if="canvasMonitors.length > 0">
 				<h3 class="mb-1 text-sm font-medium">{{ t('views.monitors.arrangement') }}</h3>
 				<p class="mb-3 text-xs text-tx-muted">{{ t('views.monitors.dragHint') }}</p>
 				<MonitorCanvas
@@ -300,9 +297,9 @@ onMounted(load);
 					:primaryName="primaryName"
 					@position-change="onCanvasPositionChange"
 				/>
-			</SectionCard>
+			</Panel>
 
-			<SectionCard v-for="monitor in monitors" :key="monitor.name">
+			<Panel as="article" v-for="monitor in monitors" :key="monitor.name">
 				<div class="mb-3 flex items-center justify-between">
 					<div class="flex items-center gap-2">
 						<h3 class="text-base font-medium">{{ monitor.name }}</h3>
@@ -334,7 +331,7 @@ onMounted(load);
 						<button
 							v-if="monitor.name !== primaryName"
 							type="button"
-							class="rounded-corner border border-ui-border px-3 py-1 text-xs text-tx-muted transition-colors hover:border-primary/40 hover:text-primary"
+							class="rounded-corner-m border border-ui-border px-3 py-1 text-xs text-tx-muted transition-colors hover:border-primary/40 hover:text-primary"
 							@click="makePrimary(monitor)"
 						>
 							{{ t('views.monitors.setPrimary') }}
@@ -343,25 +340,25 @@ onMounted(load);
 
 					<div class="grid gap-4 sm:grid-cols-2">
 						<FormGroup :label="t('views.monitors.resolution')">
-							<SelectInput
+							<SelectField
+								v-bind="{ disabled: resolutionOptions(monitor).length === 0 }"
 								:modelValue="`${monitor.mode.width}x${monitor.mode.height}`"
 								:options="resolutionOptions(monitor)"
-								:disabled="resolutionOptions(monitor).length === 0"
 								@update:modelValue="(v: string) => onResolutionChange(monitor, v)"
 							/>
 						</FormGroup>
 
 						<FormGroup :label="t('views.monitors.refreshRate')">
-							<SelectInput
+							<SelectField
+								v-bind="{ disabled: refreshOptions(monitor).length === 0 }"
 								:modelValue="String(monitor.mode.refresh_mhz)"
 								:options="refreshOptions(monitor)"
-								:disabled="refreshOptions(monitor).length === 0"
 								@update:modelValue="(v: string) => onRefreshChange(monitor, v)"
 							/>
 						</FormGroup>
 
 						<FormGroup :label="t('views.monitors.scale')">
-							<NumberInput
+							<NumberField
 								:model-value="monitor.scale"
 								:min="0.5"
 								:max="3"
@@ -371,7 +368,7 @@ onMounted(load);
 						</FormGroup>
 
 						<FormGroup :label="t('views.monitors.rotation')">
-							<SelectInput
+							<SelectField
 								:modelValue="monitor.transform"
 								:options="transforms"
 								@update:modelValue="(v: string) => (monitor.transform = v)"
@@ -381,10 +378,12 @@ onMounted(load);
 						<FormGroup
 							v-if="brightness[monitor.name]"
 							:label="t('views.monitors.brightness')"
+							:html-for="`brightness-${monitor.name}`"
 							customClass="sm:col-span-2"
 						>
 							<div class="flex items-center gap-3">
 								<input
+									:id="`brightness-${monitor.name}`"
 									type="range"
 									min="1"
 									max="100"
@@ -412,15 +411,18 @@ onMounted(load);
 				<p v-else-if="!monitor.connected" class="text-sm text-tx-muted">
 					{{ t('views.monitors.connectHint') }}
 				</p>
-			</SectionCard>
+			</Panel>
 
-			<AlertMessage v-if="ddcHint" tone="info">{{ ddcHint }}</AlertMessage>
+			<AlertMessage v-for="message in ddcMessages" :key="message" tone="info">{{
+				message
+			}}</AlertMessage>
+			<AlertMessage v-if="brightnessError" tone="error">{{ brightnessError }}</AlertMessage>
 
 			<div v-if="connected.length > 0" class="flex justify-end">
 				<button
 					type="button"
 					:disabled="!isDirty || saving"
-					class="rounded-corner bg-primary px-6 py-2 text-sm font-medium text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50 hover:enabled:opacity-90"
+					class="rounded-corner-m bg-primary px-6 py-2 text-sm font-medium text-tx-on-primary transition-opacity disabled:cursor-not-allowed disabled:opacity-50 hover:enabled:opacity-90"
 					@click="save"
 				>
 					{{ saving ? t('common.saving') : t('views.monitors.saveAll') }}

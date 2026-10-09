@@ -44,6 +44,7 @@ sidebar:
     appearanceWallpaper: Fondos
     appearanceDesktop: Escritorio
     appearancePanel: Panel
+    appearanceStartMenu: Menú de inicio
     appearanceWindows: Ventanas
     multimediaAudio: Audio salida
     multimediaAudioInput: Audio entrada
@@ -60,14 +61,17 @@ sidebar:
     datetime: Fecha y hora
     brightness: Brillo y luz nocturna
     power: Energía
+    gameMode: Modo juego
     monitors: Pantallas
     actualizaciones: Actualizaciones
     privacySecurity: Privacidad y seguridad
+    screenTime: Tiempo de pantalla
     networkWifi: Wi-Fi
     networkBluetooth: Bluetooth
     networkVpn: VPN
     phoneDevices: Teléfonos
     loginScreen: Inicio de sesión
+    fastfetch: Fastfetch
 
 wayfire:
   plugins:
@@ -188,6 +192,32 @@ wayfire:
       description: Gira una ventana con el ratón.
 
 views:
+  fastfetch:
+    title: Fastfetch
+    description: El emblema y el tamaño de la lectura del terminal, con la vista previa en vivo.
+    previewTitle: Vista previa de la lectura
+    previewEmpty: No se pudo generar la vista previa.
+    previewNote: El logo real se dibuja con el protocolo de gráficos de kitty en la terminal; acá se muestra en texto.
+    emblemTitle: Emblema
+    emblemHelp: Se edita tu configuración en ~/.config/fastfetch/config.jsonc; «Restablecer» vuelve a la del sistema.
+    kind: Tipo
+    kinds:
+      image: Imagen
+      builtin: Integrado
+      ascii: ASCII
+      none: Ninguno
+    builtinName: Nombre del emblema integrado
+    builtinPlaceholder: arch
+    filePath: Archivo del emblema
+    filePlaceholder: Ruta de la imagen (PNG, JPG o WEBP)
+    width: Ancho
+    height: Altura
+    padding: Relleno
+    sizeNote: En celdas de carácter de terminal. 0 = automático.
+    save: Guardar
+    reset: Restablecer a predeterminado
+    saved: Configuración de fastfetch guardada.
+    notInstalled: fastfetch no está instalado; no se puede previsualizar ni aplicar.
   defaultApps:
     title: "Aplicaciones por defecto"
     description: "Con qué abre el sistema cada cosa."
@@ -267,6 +297,62 @@ views:
     aplicarNota: >-
       Aplicarlo desde esta pantalla necesita privilegios de administrador, y eso
       va a pasar por un servicio del sistema y no por esta ventana.
+  screenTime:
+    title: Tiempo de pantalla
+    description: >-
+      Cuánto se usa cada aplicación, en qué tipo de cosas y a qué hora. Lo mide un
+      servicio del equipo y nada de esto sale de acá.
+    record: Registrar el tiempo de pantalla
+    recordHint: >-
+      Con esto apagado, lo ya guardado se sigue pudiendo mirar, pero no se cuenta
+      nada nuevo.
+    saved: Preferencia guardada
+    loading: Cargando el tiempo de pantalla…
+    errorLoading: "No se pudo leer el tiempo de pantalla: {0}"
+    errorSaving: "No se pudo guardar la preferencia: {0}"
+    periodLabel: Período
+    period:
+      today: Hoy
+      week: 7 días
+      all: Todo
+    summary:
+      total: Tiempo total
+      apps: Aplicaciones
+    byApp:
+      title: Por aplicación
+    byCategory:
+      title: Por categoría
+    byHour:
+      title: Por horario
+      description: El total de cada hora del día, sumando todos los días del período.
+    noData:
+      title: Todavía no hay nada que mostrar
+      note: A medida que uses el equipo, acá va a aparecer en qué se te va el tiempo.
+      disabled: El registro está apagado. Prendelo para empezar a contar el uso.
+    duration:
+      hm: "{0} h {1} min"
+      hoursOnly: "{0} h"
+      minutesOnly: "{0} min"
+    categories:
+      audiovideo: Multimedia
+      development: Desarrollo
+      education: Educación
+      game: Juegos
+      graphics: Gráficos
+      network: Internet
+      office: Oficina
+      science: Ciencia
+      settings: Configuración
+      system: Sistema
+      utility: Utilidades
+      other: Otras
+    clear:
+      title: Borrar el historial
+      description: Elimina todo el tiempo de pantalla guardado. No se puede deshacer.
+      button: Borrar el historial
+      confirm: ¿Borrar todo el historial de tiempo de pantalla? No se puede deshacer.
+      confirmButton: Borrar todo
+      errorClearing: "No se pudo borrar el historial: {0}"
   privacySecurity:
     title: Privacidad y seguridad
     description: >-
@@ -458,6 +544,67 @@ views:
       onPrimary: Sobre primario
       terminalBackground: Terminal fondo
       terminalForeground: Terminal texto
+      onSecondary: Sobre secundario
+      terminalCursor: Terminal cursor
+    schemeList: Esquemas disponibles
+    ansi:
+      black: Negro
+      red: Rojo
+      green: Verde
+      yellow: Amarillo
+      blue: Azul
+      magenta: Magenta
+      cyan: Cian
+      white: Blanco
+      brightBlack: Negro brillante
+      brightRed: Rojo brillante
+      brightGreen: Verde brillante
+      brightYellow: Amarillo brillante
+      brightBlue: Azul brillante
+      brightMagenta: Magenta brillante
+      brightCyan: Cian brillante
+      brightWhite: Blanco brillante
+    contrast:
+      mainOnBackground: Texto sobre el fondo
+      mutedOnBackground: Texto suave sobre el fondo
+      mainOnSurface: Texto sobre la superficie
+      onPrimary: Texto sobre el primario
+      onSecondary: Texto sobre el secundario
+    wallpaperColors:
+      title: Colores del fondo
+      automatic: Automático
+      automaticHint: Crea el esquema Personalizado y saca sus colores del fondo de pantalla.
+      follow: Seguir al fondo
+      followHint: Al cambiar el fondo, los colores de la interfaz se vuelven a sacar de él. Los colores que cambiaste a mano se mantienen.
+      regenerate: Volver a sacar del fondo
+      unpin: Soltar
+      unpinHint: 'Soltar {0} para que vuelva a seguir al fondo'
+      previewAlt: El fondo de pantalla actual
+      paletteLabel: Colores sacados del fondo
+      accentFrom: de acá sale el primario
+      noWallpaper: No hay un fondo de pantalla elegido del que sacar colores.
+      unreadable: No se pudo leer el fondo de pantalla. Se mantienen los colores anteriores.
+      saveError: No se pudieron guardar los colores sacados del fondo.
+    custom:
+      name: Personalizado
+      basedOn: 'Basado en {0}'
+      createHint: Tu propio esquema, con todos los colores editables.
+      create: Crear a partir del actual
+      createError: 'No se pudo crear el esquema Personalizado: {0}'
+      saveError: 'No se pudo guardar el esquema Personalizado: {0}'
+      notActive: Los cambios se guardan en Personalizado. Se ven en el escritorio cuando lo apliques con «Aplicar Cambios».
+      variants: Variante del esquema
+      interface: Interfaz
+      contrastTitle: Contraste
+      lowContrast: 'Bajo {0}:1'
+      terminal: Terminal
+      ansi: Colores ANSI
+      invalidHex: 'Usá #rgb o #rrggbb'
+      resetFrom: Empezar de nuevo desde…
+      resetAction: Reemplazar
+      resetTitle: ¿Empezar de nuevo?
+      resetDescription: 'Personalizado va a pasar a ser una copia de {0}. Se pierden todos los colores que editaste.'
+      resetConfirm: Reemplazar mis colores
 
   appearanceFonts:
     sharpness: Trazos más gruesos
@@ -526,6 +673,14 @@ views:
     officialTitle: Wallpapers Oficiales
     optionsCount: '{0} opciones'
     noWallpapers: No se encontraron wallpapers en /usr/share/backgrounds/vasakos.
+    customFolderTitle: Carpeta propia
+    customFolderHint: >-
+      Elegí una carpeta —dentro o fuera del hogar— y sus imágenes y videos se
+      suman a los fondos disponibles, acá y en el selector del escritorio.
+    customFolderPick: Elegir carpeta
+    customFolderClear: Quitar carpeta
+    customFolderEmpty: Todavía no elegiste una carpeta propia.
+    customFolderNoImages: No se encontraron imágenes ni videos en esa carpeta.
     customPathTitle: Ruta Personalizada
     customPathHint: Define un path absoluto. Siempre se guarda el path completo.
     fullPath: Path completo
@@ -546,15 +701,46 @@ views:
     saved: Configuración del panel guardada
     bar: Barra del escritorio
     position: Posición
-    positionHint: >-
-      Arriba, abajo o de costado. El panel mide lo mismo de los cuatro lados: a
-      los costados se pone de pie y los iconos se apilan. Se mueve en el acto,
-      en la pantalla principal, y las ventanas maximizadas le dejan el lugar.
+    positionHint: Arriba, abajo o de costado. Se mueve en el acto.
     lados:
       top: Arriba
       bottom: Abajo
       left: A la izquierda
       right: A la derecha
+    appearance: Forma del panel
+    style: Tipo
+    styleHint: >-
+      Cómo se dibuja la barra. Píldoras sueltas sobre el escritorio, una barra
+      flotante redondeada, una barra de borde a borde, o un dock pegado al borde
+      y redondeado del lado de adentro.
+    styles:
+      pills: Píldoras
+      floating: Flotante
+      bar: Barra
+      dock: Dock
+      trapezoid: Trapecio
+    layout: Densidad
+    layoutHint: >-
+      Distribuido reparte los grupos a lo largo de la barra, como siempre.
+      Compacto los junta y los centra, y la barra se encoge a su contenido.
+    layouts:
+      distributed: Distribuido
+      compact: Compacto
+    animation: Animación
+    animationHint: >-
+      El movimiento de las píldoras. Respeta la preferencia de menos movimiento
+      del sistema.
+    animations:
+      off: Ninguna
+      stream: Transmisión
+      wave: Oleada
+      sweep: Barrido
+      reactor: Reactor
+      beat: Latido
+    autohide: Auto-ocultar
+    autohideHint: >-
+      El panel se esconde solo y vuelve al llevar el cursor al borde de la
+      pantalla. Deja de reservar su lugar: las ventanas maximizadas lo ocupan.
     indicators: Indicadores
     weather: Clima
     weatherHint: El icono y la temperatura de tu ciudad, al lado del reproductor.
@@ -566,9 +752,74 @@ views:
     trayHint: Los iconos que las aplicaciones ponen en la bandeja del sistema.
     privacy: Cámara y micrófono
     privacyHint: Avisa mientras una aplicación está usando la cámara o el micrófono.
+  startMenu:
+    title: Menú de inicio
+    description: Qué forma tiene el menú del escritorio y qué muestra.
+    applyChanges: Aplicar Cambios
+    loading: Cargando configuración...
+    errorLoading: 'Error cargando la configuración del menú: {0}'
+    errorSaving: 'Error guardando la configuración del menú: {0}'
+    saved: Configuración del menú guardada
+    preview: Vista previa
+    variant: Diseño
+    variantHint: El esqueleto del menú. La vista previa muestra cómo queda cada uno.
+    variants:
+      compact: Compacto
+      classic: Clásico
+      grid: Grilla
+      favorites: Favoritos
+      tiles: Mosaicos
+    displayMode: Tamaño del menú
+    displayModeHint: >-
+      Con qué tamaño abre el menú. Normal es el de hoy; completo lo abre a
+      pantalla completa; compacto lo hace chico.
+    displayModes:
+      normal: Normal
+      full: Pantalla completa
+      compact: Compacto
+    content: Contenido
+    widget: Widget del menú
+    widgetHint: Qué va en el hueco del menú, al lado de la lista.
+    widgets:
+      clock: Reloj
+      music: Reproductor
+      weather: Clima
+      files: Archivos recientes
+      none: Ninguno
+    showUser: Tarjeta de usuario
+    showUserHint: La foto y el nombre de quien tiene la sesión abierta.
+    showSessionActions: Acciones de sesión
+    showSessionActionsHint: Los botones para bloquear, cerrar sesión, suspender y apagar.
+    showPlaces: Lugares
+    showPlacesHint: Accesos a Inicio, Documentos, Descargas y la Papelera.
+    showFavorites: Favoritos
+    showFavoritesHint: >-
+      Un bloque con las aplicaciones que fijaste desde el menú contextual de cada
+      una. En el diseño «Favoritos» siempre está.
+    searchPosition: Posición del buscador
+    searchPositionHint: Arriba de todo o al pie del menú.
+    searchPositions:
+      top: Arriba
+      bottom: Abajo
+    header: Encabezado
+    headerHint: Una banda arriba del menú, con un saludo y, si querés, una imagen.
+    hero: Encabezado destacado
+    heroHint: Muestra una banda con saludo y clima arriba del menú.
+    headerImage: Imagen de fondo
+    headerImageHint: La imagen que se ve detrás del encabezado. Opcional.
+    headerImageNone: Sin imagen
+    headerImageChoose: Elegir imagen
+    headerImagePick: Elegí la imagen del encabezado
+    headerImageError: 'Error al elegir la imagen: {0}'
+    imageFilter: Imágenes
+    headerStrength: Visibilidad de la imagen
+    showGreeting: Saludo del día
+    showGreetingHint: Un «Buenos días» según la hora.
+    showWeather: Clima en el encabezado
+    showWeatherHint: La temperatura y el estado del tiempo de tu ciudad.
   appearanceWindows:
     title: Ventanas
-    description: Dónde va la barra de las aplicaciones, la que lleva el icono y los botones.
+    description: La barra de las aplicaciones, sus botones y el borde de las ventanas.
     applyChanges: Aplicar Cambios
     loading: Cargando configuración...
     errorLoading: 'Error cargando la configuración de las ventanas: {0}'
@@ -585,6 +836,36 @@ views:
       bottom: Abajo
       left: A la izquierda
       right: A la derecha
+    controls: Botones de la ventana
+    controlsStyle: Estilo
+    controlsStyleHint: >-
+      Los planos de siempre, o tres círculos como en macOS, en el rojo, el
+      amarillo y el verde del esquema.
+    controlsStyles:
+      default: Planos
+      macos: Estilo macOS
+    controlsOrder: Orden
+    controlsOrderHint: >-
+      Al final de la barra, o invertidos al principio como en macOS: cerrar,
+      minimizar y maximizar.
+    controlsOrders:
+      default: Al final
+      reversed: Invertido, al principio
+    border: Borde de las ventanas
+    borderWidth: Grosor
+    borderHint: >-
+      El borde de afuera de las ventanas, el panel, el centro de control y los
+      emergentes del escritorio. Los bordes de adentro de cada aplicación no
+      cambian.
+    borderWidths:
+      normal: Fino
+      thick: Grueso
+      heavy: Muy grueso
+    borderColor: Color
+    borderColorHint: El del esquema de colores, o el color de acento.
+    borderColors:
+      scheme: Del esquema
+      accent: De acento
   appearanceDesktop:
     title: Archivos del Escritorio
     description: Ajusta la visibilidad y el tamaño de los iconos en el fondo de escritorio.
@@ -864,6 +1145,7 @@ views:
     longitude: Longitud
     dayStarts: Empieza el día
     nightStarts: Empieza la noche
+    invalidCoordinates: La latitud y la longitud tienen que ser números.
 
   power:
     status:
@@ -907,6 +1189,22 @@ views:
     lockBeforeSleep: Bloquear al suspender
     lockBeforeSleepDescription: Pide la contraseña al volver de la suspensión.
 
+  gameMode:
+    title: Modo juego
+    description: Qué hace el modo juego del centro de control mientras está activo.
+    unavailable: No disponible
+    installHint: "GameMode no está instalado. Para usar esta acción, instalalo con"
+    nextActivation: Los cambios valen para la próxima vez que se active el modo juego, no para una partida en curso.
+    actions:
+      doNotDisturb:
+        title: No molestar
+        description: Silencia las notificaciones mientras dura y al salir las deja como estaban.
+      disableAnimations:
+        title: Apagar las animaciones
+        description: Desactiva las animaciones de las ventanas mientras dura y las restaura al salir.
+      gamemode:
+        title: GameMode
+        description: Le pide a GameMode que ajuste el sistema para jugar (procesador, prioridad del juego) mientras dura.
   monitors:
     title: Pantallas
     description: Administra la configuración de tus monitores y pantallas.
@@ -937,6 +1235,11 @@ views:
     connectHint: Conecta el monitor para configurarlo.
     brightness: Brillo
     brightnessError: "No se pudo cambiar el brillo de {0}: {1}"
+    ddcDetecting: Buscando monitores externos para ajustar su brillo…
+    ddcNotInstalled: Instalá ddcutil para controlar el brillo de los monitores externos.
+    ddcNoI2cDev: "Falta el módulo i2c-dev: sin él no se puede ajustar el brillo por DDC/CI."
+    ddcNoPermission: No se pudo acceder a los monitores por DDC/CI. Revisá que tu usuario esté en el grupo i2c.
+    ddcUnsupported: "{0} no permite ajustar el brillo desde el equipo (DDC/CI apagado o no soportado)."
     installWlrRandr: >-
       wlr-randr no está instalado, así que los modos disponibles y la disposición
       actual son solo una estimación. Instalalo para que la detección sea exacta.
@@ -1199,11 +1502,20 @@ views:
         Google lo llama secreto, pero no lo es: viaja dentro de cualquier
         programa que lo use. Lo que de verdad protege la conexión es PKCE, que
         este sistema usa siempre.
+      manage: Credenciales
       clear: Quitar credenciales
+      clearConfirm: >-
+        ¿Quitar tus credenciales de {0}? Las cuentas que ya tenías siguen
+        funcionando, pero para conectar una nueva vas a tener que volver a
+        pegarlas.
+      clearConfirmAction: Sí, quitarlas
       saved: Credenciales de {0} guardadas. Ya podés conectar la cuenta.
       cleared: >-
         Credenciales de {0} quitadas. Las cuentas que ya tenías siguen
         funcionando.
+      clearedSystemRemains: >-
+        Se quitaron tus credenciales de {0}. Sigue listo para conectar cuentas
+        con las que dejó el administrador del sistema.
     linkedAccounts: Cuentas vinculadas
     customDialogDescription: Configura manualmente los datos de tu servidor de correo y sincronización.
     displayName: Nombre para mostrar

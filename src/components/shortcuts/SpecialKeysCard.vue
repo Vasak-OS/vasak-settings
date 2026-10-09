@@ -58,7 +58,7 @@ const handleEdit = (entry: SpecialKeyEntry) => {
 </script>
 
 <template>
-	<div class="rounded-corner border border-ui-border bg-ui-surface/70 p-4">
+	<div class="rounded-corner-m border border-ui-border bg-ui-surface/70 p-4">
 		<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.shortcuts.specialKeys.title') }}</h3>
 		<p class="mb-4 text-sm text-tx-muted">
 			{{ t('views.shortcuts.specialKeys.description') }}
@@ -68,7 +68,7 @@ const handleEdit = (entry: SpecialKeyEntry) => {
 			<div
 				v-for="entry in entries"
 				:key="entry.def.keyToken"
-				class="flex items-center justify-between gap-3 rounded-corner border border-ui-border/60 bg-ui-surface/30 px-3 py-2.5"
+				class="flex items-center justify-between gap-3 rounded-corner-m border border-ui-border/60 bg-ui-surface/30 px-3 py-2.5"
 			>
 				<div class="flex min-w-0 items-center gap-3">
 					<!-- El mapa de `ref` que había acá era la forma de resolver un
@@ -114,7 +114,7 @@ const handleEdit = (entry: SpecialKeyEntry) => {
 
 				<button
 					type="button"
-					class="shrink-0 rounded-corner border border-ui-border bg-ui-surface/70 px-2.5 py-1.5 text-xs font-medium text-tx-main transition-colors hover:bg-ui-surface"
+					class="shrink-0 rounded-corner-m border border-ui-border bg-ui-surface/70 px-2.5 py-1.5 text-xs font-medium text-tx-main transition-colors hover:bg-ui-surface"
 					@click="handleEdit(entry)"
 				>
 					{{ entry.exists ? t('common.edit') : t('views.shortcuts.specialKeys.assign') }}

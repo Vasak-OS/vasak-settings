@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { invoke } from '@tauri-apps/api/core';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, FormGroup, SwitchToggle, TextInput } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	FormGroup,
+	PageHeader,
+	Panel,
+	SwitchToggle,
+	TextInput,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
 
 interface DateTimeInfo {
 	timezone: string;
@@ -157,7 +162,8 @@ function toggleLocalRtc(value: boolean) {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.system')"
+			size="lg"
+			:eyebrow="t('sidebar.system')"
 			:title="t('views.datetime.title')"
 			:description="t('views.datetime.description')"
 		/>
@@ -165,12 +171,12 @@ function toggleLocalRtc(value: boolean) {
 		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 		<AlertMessage v-if="success" tone="success">{{ success }}</AlertMessage>
 
-		<SectionCard>
+		<Panel as="article">
 			<p class="text-2xl font-semibold text-tx-main">{{ formattedNow }}</p>
 			<p class="mt-1 text-sm text-tx-muted">{{ syncLabel }}</p>
-		</SectionCard>
+		</Panel>
 
-		<SectionCard>
+		<Panel as="article">
 			<div class="flex items-start gap-3">
 				<div class="min-w-0 flex-1">
 					<h3 class="text-base font-medium">{{ t('views.datetime.automaticTime') }}</h3>
@@ -184,9 +190,9 @@ function toggleLocalRtc(value: boolean) {
 					@update:model-value="toggleAutomatic"
 				/>
 			</div>
-		</SectionCard>
+		</Panel>
 
-		<SectionCard>
+		<Panel as="article">
 			<h3 class="text-base font-medium">{{ t('views.datetime.timezone') }}</h3>
 			<p class="mt-0.5 mb-3 text-sm text-tx-muted">
 				{{ t('views.datetime.currentLabel') }} <strong>{{ info?.timezone ?? '—' }}</strong>
@@ -200,7 +206,7 @@ function toggleLocalRtc(value: boolean) {
 				/>
 			</FormGroup>
 
-			<ul class="mt-3 max-h-64 divide-y divide-ui-border overflow-y-auto rounded-corner border border-ui-border">
+			<ul class="mt-3 max-h-64 divide-y divide-ui-border overflow-y-auto rounded-corner-m border border-ui-border">
 				<li v-for="zone in filteredTimezones" :key="zone">
 					<button
 						type="button"
@@ -217,9 +223,9 @@ function toggleLocalRtc(value: boolean) {
 					{{ t('common.noResults') }}
 				</li>
 			</ul>
-		</SectionCard>
+		</Panel>
 
-		<SectionCard>
+		<Panel as="article">
 			<h3 class="text-base font-medium">{{ t('views.datetime.manualAdjust') }}</h3>
 			<p class="mt-0.5 mb-3 text-sm text-tx-muted">
 				{{ t('views.datetime.manualAdjustDescription') }}
@@ -246,16 +252,16 @@ function toggleLocalRtc(value: boolean) {
 					<button
 						type="button"
 						:disabled="isAutomatic || busy"
-						class="rounded-corner bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+						class="rounded-corner-m bg-primary px-4 py-2 text-sm font-medium text-tx-on-primary hover:opacity-90 disabled:opacity-50"
 						@click="applyManualTime"
 					>
 						{{ t('common.apply') }}
 					</button>
 				</div>
 			</div>
-		</SectionCard>
+		</Panel>
 
-		<SectionCard>
+		<Panel as="article">
 			<details>
 				<summary class="cursor-pointer text-sm font-medium text-tx-muted">{{ t('common.advancedOptions') }}</summary>
 				<div class="mt-3 flex items-start gap-3">
@@ -272,6 +278,6 @@ function toggleLocalRtc(value: boolean) {
 					/>
 				</div>
 			</details>
-		</SectionCard>
+		</Panel>
 	</div>
 </template>

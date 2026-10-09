@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { useConfigStore } from '@vasakgroup/plugin-config-manager';
-import { onMounted, onUnmounted, type Ref, ref, nextTick } from 'vue';
+import { nextTick, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import TextContextMenu from '@/components/ui/TextContextMenu.vue';
+import { useWallpaperColors } from '@/composables/useWallpaperColors';
 import WindowAppLayout from '@/layouts/WindowAppLayout.vue';
 
 let unListenConfig: Ref<UnlistenFn | null> = ref(null);
@@ -13,6 +14,16 @@ let unListenConfig: Ref<UnlistenFn | null> = ref(null);
 // app sigue con los valores por defecto — nunca deja la ventana sin montar.
 const configLoading = ref(true);
 const configError = ref(false);
+
+// «Seguir al fondo» lo corre vasak-desktop, que está siempre abierto. Cuando
+// reescribe `custom.json`, el editor de Apariencia tiene que tomar los colores
+// nuevos: si no, el próximo cambio a mano guardaría encima los de antes.
+const wallpaperColors = useWallpaperColors();
+const refreshCustomScheme = () => {
+	wallpaperColors.refreshFromDisk().catch((error) => {
+		console.error('Error al releer el esquema Personalizado', error);
+	});
+};
 
 onMounted(async () => {
 	// Que el layout se pinte primero, antes de cualquier lectura.
@@ -38,6 +49,7 @@ onMounted(async () => {
 			document.startViewTransition(() => {
 				configStore.loadConfig();
 			});
+			refreshCustomScheme();
 		});
 	} catch (error: any) {
 		console.error('No se pudo escuchar los cambios de configuración', error);

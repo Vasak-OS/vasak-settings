@@ -44,6 +44,7 @@ sidebar:
     appearanceWallpaper: Wallpapers
     appearanceDesktop: Desktop
     appearancePanel: Panel
+    appearanceStartMenu: Start menu
     appearanceWindows: Windows
     multimediaAudio: Audio output
     multimediaAudioInput: Audio input
@@ -60,14 +61,17 @@ sidebar:
     datetime: Date and time
     brightness: Brightness and night light
     power: Power
+    gameMode: Game mode
     monitors: Displays
     actualizaciones: Updates
     privacySecurity: Privacy and security
+    screenTime: Screen time
     networkWifi: Wi-Fi
     networkBluetooth: Bluetooth
     networkVpn: VPN
     phoneDevices: Phones
     loginScreen: Login Screen
+    fastfetch: Fastfetch
 
 wayfire:
   plugins:
@@ -188,6 +192,32 @@ wayfire:
       description: Rotates a window with the mouse.
 
 views:
+  fastfetch:
+    title: Fastfetch
+    description: The emblem and size of the terminal read-out, previewed live.
+    previewTitle: Read-out preview
+    previewEmpty: The preview could not be generated.
+    previewNote: The real logo is drawn with kitty's graphics protocol in the terminal; here it is shown as text.
+    emblemTitle: Emblem
+    emblemHelp: Edits your config at ~/.config/fastfetch/config.jsonc; "Reset" restores the system one.
+    kind: Type
+    kinds:
+      image: Image
+      builtin: Built-in
+      ascii: ASCII
+      none: None
+    builtinName: Built-in emblem name
+    builtinPlaceholder: arch
+    filePath: Emblem file
+    filePlaceholder: Image path (PNG, JPG or WEBP)
+    width: Width
+    height: Height
+    padding: Padding
+    sizeNote: In terminal character cells. 0 = automatic.
+    save: Save
+    reset: Reset to default
+    saved: Fastfetch configuration saved.
+    notInstalled: fastfetch is not installed; preview and apply are unavailable.
   defaultApps:
     title: "Default applications"
     description: "What the system opens each thing with."
@@ -265,6 +295,62 @@ views:
     aplicarNota: >-
       Applying it from this screen needs administrator privileges, and that will
       go through a system service rather than this window.
+  screenTime:
+    title: Screen time
+    description: >-
+      How long each application is used, on what kind of things, and at what time.
+      A service on this computer measures it, and none of it leaves here.
+    record: Record screen time
+    recordHint: >-
+      With this off, what's already saved can still be viewed, but nothing new is
+      counted.
+    saved: Preference saved
+    loading: Loading screen time…
+    errorLoading: "Could not read screen time: {0}"
+    errorSaving: "Could not save the preference: {0}"
+    periodLabel: Period
+    period:
+      today: Today
+      week: 7 days
+      all: All
+    summary:
+      total: Total time
+      apps: Applications
+    byApp:
+      title: By application
+    byCategory:
+      title: By category
+    byHour:
+      title: By time of day
+      description: The total for each hour of the day, summed over every day in the period.
+    noData:
+      title: Nothing to show yet
+      note: As you use the computer, where your time goes will appear here.
+      disabled: Recording is off. Turn it on to start counting usage.
+    duration:
+      hm: "{0} h {1} min"
+      hoursOnly: "{0} h"
+      minutesOnly: "{0} min"
+    categories:
+      audiovideo: Multimedia
+      development: Development
+      education: Education
+      game: Games
+      graphics: Graphics
+      network: Internet
+      office: Office
+      science: Science
+      settings: Settings
+      system: System
+      utility: Utilities
+      other: Other
+    clear:
+      title: Clear history
+      description: Removes all saved screen time. This cannot be undone.
+      button: Clear history
+      confirm: Clear all screen time history? This cannot be undone.
+      confirmButton: Clear all
+      errorClearing: "Could not clear the history: {0}"
   privacySecurity:
     title: Privacy and security
     description: >-
@@ -454,6 +540,67 @@ views:
       onPrimary: On primary
       terminalBackground: Terminal background
       terminalForeground: Terminal text
+      onSecondary: On secondary
+      terminalCursor: Terminal cursor
+    schemeList: Available schemes
+    ansi:
+      black: Black
+      red: Red
+      green: Green
+      yellow: Yellow
+      blue: Blue
+      magenta: Magenta
+      cyan: Cyan
+      white: White
+      brightBlack: Bright black
+      brightRed: Bright red
+      brightGreen: Bright green
+      brightYellow: Bright yellow
+      brightBlue: Bright blue
+      brightMagenta: Bright magenta
+      brightCyan: Bright cyan
+      brightWhite: Bright white
+    contrast:
+      mainOnBackground: Text on background
+      mutedOnBackground: Muted text on background
+      mainOnSurface: Text on surface
+      onPrimary: Text on primary
+      onSecondary: Text on secondary
+    wallpaperColors:
+      title: Wallpaper colors
+      automatic: Automatic
+      automaticHint: Creates the Custom scheme and takes its colors from the wallpaper.
+      follow: Follow the wallpaper
+      followHint: When the wallpaper changes, the interface colors are taken from it again. Colors you changed by hand are kept.
+      regenerate: Take colors from the wallpaper again
+      unpin: Release
+      unpinHint: 'Release {0} so it follows the wallpaper again'
+      previewAlt: The current wallpaper
+      paletteLabel: Colors taken from the wallpaper
+      accentFrom: the primary comes from here
+      noWallpaper: There is no wallpaper selected to take colors from.
+      unreadable: The wallpaper could not be read. The previous colors are kept.
+      saveError: The colors taken from the wallpaper could not be saved.
+    custom:
+      name: Custom
+      basedOn: 'Based on {0}'
+      createHint: Your own scheme, with every color editable.
+      create: Create from current
+      createError: 'Could not create the Custom scheme: {0}'
+      saveError: 'Could not save the Custom scheme: {0}'
+      notActive: Changes are saved to Custom. The desktop shows them once you apply it with «Apply Changes».
+      variants: Scheme variant
+      interface: Interface
+      contrastTitle: Contrast
+      lowContrast: 'Below {0}:1'
+      terminal: Terminal
+      ansi: ANSI colors
+      invalidHex: 'Use #rgb or #rrggbb'
+      resetFrom: Start over from…
+      resetAction: Replace
+      resetTitle: Start over?
+      resetDescription: 'Custom will become a copy of {0}. Every color you edited is lost.'
+      resetConfirm: Replace my colors
 
   appearanceFonts:
     sharpness: Thicker strokes
@@ -522,6 +669,14 @@ views:
     officialTitle: Official Wallpapers
     optionsCount: '{0} options'
     noWallpapers: No wallpapers were found in /usr/share/backgrounds/vasakos.
+    customFolderTitle: Custom folder
+    customFolderHint: >-
+      Pick a folder —inside or outside your home— and its images and videos are
+      added to the available wallpapers, here and in the desktop picker.
+    customFolderPick: Choose folder
+    customFolderClear: Remove folder
+    customFolderEmpty: You haven't picked a custom folder yet.
+    customFolderNoImages: No images or videos were found in that folder.
     customPathTitle: Custom Path
     customPathHint: Set an absolute path. The full path is always saved.
     fullPath: Full path
@@ -542,15 +697,46 @@ views:
     saved: Panel configuration saved
     bar: Desktop bar
     position: Position
-    positionHint: >-
-      Top, bottom or on a side. The panel is the same size on all four: on the
-      sides it stands up and the icons stack. It moves right away, on the main
-      screen, and maximised windows make room for it.
+    positionHint: Top, bottom or on a side. It moves right away.
     lados:
       top: Top
       bottom: Bottom
       left: Left
       right: Right
+    appearance: Panel shape
+    style: Type
+    styleHint: >-
+      How the bar is drawn. Separate pills over the desktop, a rounded floating
+      bar, an edge-to-edge bar, or a dock stuck to the edge and rounded on the
+      inner side.
+    styles:
+      pills: Pills
+      floating: Floating
+      bar: Bar
+      dock: Dock
+      trapezoid: Trapezoid
+    layout: Density
+    layoutHint: >-
+      Distributed spreads the groups along the bar, as always. Compact gathers
+      and centres them, and the bar shrinks to its content.
+    layouts:
+      distributed: Distributed
+      compact: Compact
+    animation: Animation
+    animationHint: >-
+      The motion of the pills. It respects the system's reduced-motion
+      preference.
+    animations:
+      off: None
+      stream: Stream
+      wave: Wave
+      sweep: Sweep
+      reactor: Reactor
+      beat: Beat
+    autohide: Auto-hide
+    autohideHint: >-
+      The panel hides on its own and comes back when you move the cursor to the
+      edge of the screen. It stops reserving its spot: maximised windows use it.
     indicators: Indicators
     weather: Weather
     weatherHint: The icon and the temperature for your city, next to the player.
@@ -562,9 +748,74 @@ views:
     trayHint: The icons applications put in the system tray.
     privacy: Camera and microphone
     privacyHint: Warns while an application is using the camera or the microphone.
+  startMenu:
+    title: Start menu
+    description: What shape the desktop menu has and what it shows.
+    applyChanges: Apply Changes
+    loading: Loading configuration...
+    errorLoading: 'Error loading the menu configuration: {0}'
+    errorSaving: 'Error saving the menu configuration: {0}'
+    saved: Menu configuration saved
+    preview: Preview
+    variant: Layout
+    variantHint: The menu skeleton. The preview shows how each one looks.
+    variants:
+      compact: Compact
+      classic: Classic
+      grid: Grid
+      favorites: Favorites
+      tiles: Tiles
+    displayMode: Menu size
+    displayModeHint: >-
+      How big the menu opens. Normal is today's; full screen opens it as an
+      overlay; compact makes it small.
+    displayModes:
+      normal: Normal
+      full: Full screen
+      compact: Compact
+    content: Content
+    widget: Menu widget
+    widgetHint: What goes in the menu slot, next to the list.
+    widgets:
+      clock: Clock
+      music: Music player
+      weather: Weather
+      files: Recent files
+      none: None
+    showUser: User card
+    showUserHint: The picture and name of whoever is signed in.
+    showSessionActions: Session actions
+    showSessionActionsHint: The buttons to lock, sign out, suspend and power off.
+    showPlaces: Places
+    showPlacesHint: Shortcuts to Home, Documents, Downloads and the Trash.
+    showFavorites: Favorites
+    showFavoritesHint: >-
+      A block with the applications you pinned from each one's context menu. The
+      «Favorites» layout always has it.
+    searchPosition: Search position
+    searchPositionHint: At the very top or at the foot of the menu.
+    searchPositions:
+      top: Top
+      bottom: Bottom
+    header: Header
+    headerHint: A band above the menu, with a greeting and, if you want, an image.
+    hero: Featured header
+    heroHint: Shows a band with a greeting and weather above the menu.
+    headerImage: Background image
+    headerImageHint: The image shown behind the header. Optional.
+    headerImageNone: No image
+    headerImageChoose: Choose image
+    headerImagePick: Choose the header image
+    headerImageError: 'Error choosing the image: {0}'
+    imageFilter: Images
+    headerStrength: Image visibility
+    showGreeting: Daily greeting
+    showGreetingHint: A «Good morning» depending on the time.
+    showWeather: Weather in the header
+    showWeatherHint: The temperature and weather of your city.
   appearanceWindows:
     title: Windows
-    description: Where the application bar goes, the one with the icon and the buttons.
+    description: The application bar, its buttons and the window border.
     applyChanges: Apply Changes
     loading: Loading configuration...
     errorLoading: 'Error loading the window configuration: {0}'
@@ -581,6 +832,35 @@ views:
       bottom: Bottom
       left: Left
       right: Right
+    controls: Window buttons
+    controlsStyle: Style
+    controlsStyleHint: >-
+      The usual flat buttons, or three circles like on macOS, in the scheme's
+      red, yellow and green.
+    controlsStyles:
+      default: Flat
+      macos: macOS style
+    controlsOrder: Order
+    controlsOrderHint: >-
+      At the end of the bar, or reversed at the start like on macOS: close,
+      minimize and maximize.
+    controlsOrders:
+      default: At the end
+      reversed: Reversed, at the start
+    border: Window border
+    borderWidth: Thickness
+    borderHint: >-
+      The outer border of windows, the panel, the control center and desktop
+      popups. Borders inside each application don't change.
+    borderWidths:
+      normal: Thin
+      thick: Thick
+      heavy: Extra thick
+    borderColor: Color
+    borderColorHint: The color scheme's, or the accent color.
+    borderColors:
+      scheme: From the scheme
+      accent: Accent
   appearanceDesktop:
     title: Desktop Files
     description: Adjust the visibility and size of the icons on the desktop background.
@@ -860,6 +1140,7 @@ views:
     longitude: Longitude
     dayStarts: Day starts
     nightStarts: Night starts
+    invalidCoordinates: Latitude and longitude must be numbers.
 
   power:
     status:
@@ -903,6 +1184,22 @@ views:
     lockBeforeSleep: Lock on suspend
     lockBeforeSleepDescription: Asks for the password when resuming from suspend.
 
+  gameMode:
+    title: Game mode
+    description: What the control center's game mode does while it is on.
+    unavailable: Unavailable
+    installHint: "GameMode is not installed. To use this action, install it with"
+    nextActivation: Changes apply the next time game mode is turned on, not to a game in progress.
+    actions:
+      doNotDisturb:
+        title: Do not disturb
+        description: Silences notifications while it lasts and restores them on exit.
+      disableAnimations:
+        title: Turn off animations
+        description: Disables window animations while it lasts and restores them on exit.
+      gamemode:
+        title: GameMode
+        description: Asks GameMode to tune the system for gaming (CPU governor, game priority) while it lasts.
   monitors:
     title: Displays
     description: Manage the settings of your monitors and displays.
@@ -933,6 +1230,11 @@ views:
     connectHint: Connect the monitor to configure it.
     brightness: Brightness
     brightnessError: "Could not change the brightness of {0}: {1}"
+    ddcDetecting: Looking for external monitors to adjust their brightness…
+    ddcNotInstalled: Install ddcutil to control the brightness of external monitors.
+    ddcNoI2cDev: "The i2c-dev module is missing: without it brightness cannot be adjusted over DDC/CI."
+    ddcNoPermission: Could not reach the monitors over DDC/CI. Check that your user is in the i2c group.
+    ddcUnsupported: "{0} does not allow adjusting its brightness from the computer (DDC/CI off or unsupported)."
     installWlrRandr: >-
       wlr-randr is not installed, so the available modes and the current layout
       can only be guessed. Install it for accurate detection.
@@ -1193,9 +1495,17 @@ views:
         Google calls it a secret, but it is not one: it travels inside any
         program that uses it. What actually protects the connection is PKCE,
         which this system always uses.
+      manage: Credentials
       clear: Remove credentials
+      clearConfirm: >-
+        Remove your credentials for {0}? Accounts you already had keep working,
+        but to connect a new one you will have to paste them again.
+      clearConfirmAction: Yes, remove them
       saved: Credentials for {0} saved. You can connect the account now.
       cleared: Credentials for {0} removed. Accounts you already had keep working.
+      clearedSystemRemains: >-
+        Your credentials for {0} were removed. It is still ready to connect
+        accounts with the ones the system administrator set up.
     linkedAccounts: Linked accounts
     customDialogDescription: Set up your mail and sync server details manually.
     displayName: Display name

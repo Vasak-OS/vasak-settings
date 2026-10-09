@@ -71,6 +71,11 @@ export function categoriasDelMenu(t: Traductor): SidebarCategory[] {
 					icon: 'preferences-system-windows',
 				},
 				{
+					id: 'appearance-start-menu',
+					label: t('sidebar.items.appearanceStartMenu'),
+					icon: 'start-here',
+				},
+				{
 					id: 'appearance-windows',
 					label: t('sidebar.items.appearanceWindows'),
 					icon: 'preferences-system-windows',
@@ -148,6 +153,7 @@ export function categoriasDelMenu(t: Traductor): SidebarCategory[] {
 				{ id: 'datetime', label: t('sidebar.items.datetime'), icon: 'preferences-system-time' },
 				{ id: 'brightness', label: t('sidebar.items.brightness'), icon: 'display-brightness' },
 				{ id: 'power', label: t('sidebar.items.power'), icon: 'battery' },
+				{ id: 'game-mode', label: t('sidebar.items.gameMode'), icon: 'applications-games' },
 				{ id: 'monitors', label: t('sidebar.items.monitors'), icon: 'video-display' },
 				{
 					id: 'actualizaciones',
@@ -160,9 +166,19 @@ export function categoriasDelMenu(t: Traductor): SidebarCategory[] {
 					icon: 'security-high',
 				},
 				{
+					id: 'screen-time',
+					label: t('sidebar.items.screenTime'),
+					icon: 'preferences-system-time',
+				},
+				{
 					id: 'login-screen',
 					label: t('sidebar.items.loginScreen'),
 					icon: 'preferences-system-login',
+				},
+				{
+					id: 'fastfetch',
+					label: t('sidebar.items.fastfetch'),
+					icon: 'utilities-terminal',
 				},
 			],
 		},

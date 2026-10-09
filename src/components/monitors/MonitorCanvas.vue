@@ -179,7 +179,7 @@ function onPointerUp() {
 
 <template>
 	<div
-		class="relative overflow-auto rounded-corner border border-ui-border bg-ui-bg/50"
+		class="relative overflow-auto rounded-corner-m border border-ui-border bg-ui-bg/50"
 		style="width: 100%; height: 320px; touch-action: none"
 		@pointermove="onPointerMove"
 		@pointerup="onPointerUp"
@@ -194,7 +194,7 @@ function onPointerUp() {
 					:y1="l.y1"
 					:x2="l.x2"
 					:y2="l.y2"
-					stroke="var(--color-primary, #0084ff)"
+					stroke="var(--color-primary)"
 					stroke-width="2"
 					stroke-dasharray="6 3"
 					style="opacity: 0.6"
@@ -204,7 +204,7 @@ function onPointerUp() {
 			<div
 				v-for="m in props.monitors"
 				:key="m.name"
-				class="absolute flex cursor-grab select-none flex-col items-center justify-center overflow-hidden rounded-corner border-2 text-center transition-shadow active:cursor-grabbing"
+				class="absolute flex cursor-grab select-none flex-col items-center justify-center overflow-hidden rounded-corner-m border-2 text-center transition-shadow active:cursor-grabbing"
 				:class="
 					dragging?.name === m.name
 						? 'border-primary shadow-lg shadow-primary/20'

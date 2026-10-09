@@ -99,12 +99,12 @@ pub fn fit_inside(width: u32, height: u32, max_width: u32, max_height: u32) -> (
         max_height as f64 / height as f64,
     );
 
-    let par = |valor: f64| -> u32 {
-        let entero = valor.round().max(2.0) as u32;
-        entero - (entero % 2)
+    let even = |value: f64| -> u32 {
+        let whole = value.round().max(2.0) as u32;
+        whole - (whole % 2)
     };
 
-    (par(width as f64 * factor), par(height as f64 * factor))
+    (even(width as f64 * factor), even(height as f64 * factor))
 }
 
 /// El nombre del archivo en la caché.
@@ -125,12 +125,12 @@ pub fn cache_key(source: &Path, size: u64, modified_secs: u64, target: (u32, u32
 
 /// El avance que informa ffmpeg, en segundos de video ya procesados.
 pub fn parse_progress(line: &str) -> Option<f64> {
-    let valor = line.strip_prefix("out_time_us=")?.trim();
-    valor.parse::<f64>().ok().map(|micros| micros / 1_000_000.0)
+    let value = line.strip_prefix("out_time_us=")?.trim();
+    value.parse::<f64>().ok().map(|micros| micros / 1_000_000.0)
 }
 
 fn cache_dir() -> Option<PathBuf> {
-    cache_dir_bajo(dirs::cache_dir())
+    cache_dir_under(dirs::cache_dir())
 }
 
 /// La misma decisión sin leer el entorno.
@@ -144,13 +144,13 @@ fn cache_dir() -> Option<PathBuf> {
 /// vacía— y cualquier ruta relativa, que el estándar manda ignorar. Con seis
 /// escrituras colgando de acá, eso dejaba los videos de fondo bajo el directorio
 /// de trabajo del proceso.
-fn cache_dir_bajo(base: Option<PathBuf>) -> Option<PathBuf> {
+fn cache_dir_under(base: Option<PathBuf>) -> Option<PathBuf> {
     let base = base.filter(|base| base.is_absolute())?;
     Some(base.join("vasak").join("wallpapers"))
 }
 
 async fn probe(path: &str) -> Result<VideoFacts, String> {
-    let salida = Command::new("ffprobe")
+    let output = Command::new("ffprobe")
         .args([
             "-v",
             "error",
@@ -164,15 +164,15 @@ async fn probe(path: &str) -> Result<VideoFacts, String> {
         .await
         .map_err(|e| format!("no se pudo ejecutar ffprobe: {e}"))?;
 
-    if !salida.status.success() {
-        return Err(String::from_utf8_lossy(&salida.stderr).trim().to_string());
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
     }
 
-    parse_ffprobe(&String::from_utf8_lossy(&salida.stdout))
+    parse_ffprobe(&String::from_utf8_lossy(&output.stdout))
 }
 
 /// Lee la salida de ffprobe. Separado para poder probarlo con texto fijo.
-pub fn parse_ffprobe(texto: &str) -> Result<VideoFacts, String> {
+pub fn parse_ffprobe(text: &str) -> Result<VideoFacts, String> {
     let mut facts = VideoFacts {
         width: 0,
         height: 0,
@@ -181,27 +181,27 @@ pub fn parse_ffprobe(texto: &str) -> Result<VideoFacts, String> {
         has_audio: false,
         duration: 0.0,
     };
-    let mut en_video = false;
+    let mut in_video = false;
 
-    for linea in texto.lines() {
-        let (clave, valor) = match linea.split_once('=') {
-            Some(par) => par,
+    for line in text.lines() {
+        let (key, value) = match line.split_once('=') {
+            Some(even) => even,
             None => continue,
         };
 
-        match clave {
+        match key {
             "codec_type" => {
-                en_video = valor == "video";
-                if valor == "audio" {
+                in_video = value == "video";
+                if value == "audio" {
                     facts.has_audio = true;
                 }
             }
-            "codec_name" if en_video => facts.codec = valor.to_string(),
-            "width" if en_video => facts.width = valor.parse().unwrap_or(0),
-            "height" if en_video => facts.height = valor.parse().unwrap_or(0),
-            "r_frame_rate" if en_video => {
+            "codec_name" if in_video => facts.codec = value.to_string(),
+            "width" if in_video => facts.width = value.parse().unwrap_or(0),
+            "height" if in_video => facts.height = value.parse().unwrap_or(0),
+            "r_frame_rate" if in_video => {
                 // Viene como fracción: 30000/1001.
-                if let Some((num, den)) = valor.split_once('/') {
+                if let Some((num, den)) = value.split_once('/') {
                     let num: f64 = num.parse().unwrap_or(0.0);
                     let den: f64 = den.parse().unwrap_or(1.0);
                     if den > 0.0 {
@@ -209,7 +209,7 @@ pub fn parse_ffprobe(texto: &str) -> Result<VideoFacts, String> {
                     }
                 }
             }
-            "duration" => facts.duration = valor.parse().unwrap_or(0.0),
+            "duration" => facts.duration = value.parse().unwrap_or(0.0),
             _ => {}
         }
     }
@@ -265,83 +265,83 @@ pub async fn wallpaper_thumbnail(path: String) -> Result<String, String> {
     let dir = cache_dir().ok_or("no se pudo determinar la carpeta de caché")?;
     std::fs::create_dir_all(&dir).map_err(|e| format!("{e}"))?;
 
-    let destino = dir.join(thumbnail_name(&source, metadata.len(), modified));
+    let target_path = dir.join(thumbnail_name(&source, metadata.len(), modified));
 
-    if destino.exists() {
-        return Ok(destino.to_string_lossy().into_owned());
+    if target_path.exists() {
+        return Ok(target_path.to_string_lossy().into_owned());
     }
 
-    let parcial = destino.with_extension("parcial.jpg");
+    let partial = target_path.with_extension("parcial.jpg");
 
     // Una imagen y un video no se tratan igual. En un video conviene saltar un
     // segundo, porque el primer cuadro de muchos es negro; en una imagen ese
     // salto hace que ffmpeg escriba un archivo **vacío y devuelva éxito**, que
     // es la peor forma de fallar: el chequeo de «terminó bien y el archivo
     // existe» lo daba por bueno y la previsualización quedaba en blanco.
-    let salto: &[&str] = if es_video(&source) {
+    let seek: &[&str] = if is_video(&source) {
         &["-ss", "1"]
     } else {
         &[]
     };
 
-    if !extraer_cuadro(&path, &parcial, salto).await? && es_video(&source) {
+    if !extract_frame(&path, &partial, seek).await? && is_video(&source) {
         // Un video más corto que el salto: se reintenta desde el principio.
-        extraer_cuadro(&path, &parcial, &[]).await?;
+        extract_frame(&path, &partial, &[]).await?;
     }
 
-    if !archivo_con_contenido(&parcial) {
-        let _ = std::fs::remove_file(&parcial);
+    if !has_content(&partial) {
+        let _ = std::fs::remove_file(&partial);
         return Err("no se pudo generar la miniatura".into());
     }
 
-    std::fs::rename(&parcial, &destino).map_err(|e| format!("{e}"))?;
-    Ok(destino.to_string_lossy().into_owned())
+    std::fs::rename(&partial, &target_path).map_err(|e| format!("{e}"))?;
+    Ok(target_path.to_string_lossy().into_owned())
 }
 
 /// Si el archivo es un video, por su extensión.
 ///
 /// Alcanza con la extensión: lo único que decide es qué argumentos usar, y
 /// equivocarse cuesta un reintento, no una miniatura mal hecha.
-pub fn es_video(path: &Path) -> bool {
-    const VIDEOS: [&str; 6] = ["mp4", "webm", "ogv", "mkv", "mov", "avi"];
+pub fn is_video(path: &Path) -> bool {
+    const VIDEO_EXTENSIONS: [&str; 6] = ["mp4", "webm", "ogv", "mkv", "mov", "avi"];
 
     path.extension()
         .and_then(|e| e.to_str())
         .map(|e| e.to_ascii_lowercase())
-        .map(|e| VIDEOS.contains(&e.as_str()))
+        .map(|e| VIDEO_EXTENSIONS.contains(&e.as_str()))
         .unwrap_or(false)
 }
 
 /// Que el archivo exista no alcanza: ffmpeg puede dejar uno vacío y terminar
 /// bien. Un JPEG de menos de cien bytes no es una imagen.
-pub fn archivo_con_contenido(path: &Path) -> bool {
+pub fn has_content(path: &Path) -> bool {
     std::fs::metadata(path)
         .map(|m| m.len() > 100)
         .unwrap_or(false)
 }
 
 /// Corre ffmpeg una vez. Devuelve si dejó una miniatura de verdad.
-async fn extraer_cuadro(entrada: &str, salida: &Path, salto: &[&str]) -> Result<bool, String> {
-    let destino = salida.to_str().ok_or("ruta inválida")?;
+async fn extract_frame(input: &str, output: &Path, seek: &[&str]) -> Result<bool, String> {
+    let target_path = output.to_str().ok_or("ruta inválida")?;
     // El filtro se arma con la constante en lugar de repetir el 480: estaban los
     // dos por separado, así que cambiar uno dejaba al otro atrás sin que nada lo
     // avisara. Se liga antes porque los argumentos son préstamos.
-    let filtro = format!("scale={ANCHO_MINIATURA}:-2");
+    let filter = format!("scale={THUMBNAIL_WIDTH}:-2");
     let mut args: Vec<&str> = vec!["-hide_banner", "-nostdin", "-y"];
-    args.extend_from_slice(salto);
+    args.extend_from_slice(seek);
     args.extend_from_slice(&[
         "-i",
-        entrada,
+        input,
         "-frames:v",
         "1",
         "-vf",
-        &filtro,
+        &filter,
         "-q:v",
         "4",
-        destino,
+        target_path,
     ]);
 
-    let resultado = Command::new("ffmpeg")
+    let result = Command::new("ffmpeg")
         .args(&args)
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -349,13 +349,13 @@ async fn extraer_cuadro(entrada: &str, salida: &Path, salto: &[&str]) -> Result<
         .await
         .map_err(|e| format!("no se pudo ejecutar ffmpeg: {e}"))?;
 
-    Ok(resultado.status.success() && archivo_con_contenido(salida))
+    Ok(result.status.success() && has_content(output))
 }
 
 /// El ancho de las miniaturas. La grilla dibuja recuadros de unos 200 px, así
 /// que 480 alcanza para pantallas con escala y sigue siendo dos órdenes de
 /// magnitud menos memoria que un 5K.
-const ANCHO_MINIATURA: u32 = 480;
+const THUMBNAIL_WIDTH: u32 = 480;
 
 /// El nombre de la miniatura en la caché, con la misma idea que el del video: si
 /// el archivo cambia, la clave cambia y no se muestra una miniatura vieja.
@@ -376,8 +376,25 @@ pub async fn prepare_wallpaper_video(
     app: AppHandle,
     path: String,
 ) -> Result<PreparedWallpaper, String> {
+    prepare_video(path, move |percent| {
+        let _ = app.emit("wallpaper-video-progress", percent);
+    })
+    .await
+}
+
+/// Lo mismo que el comando, sin la ventana: el avance va a `on_progress`.
+///
+/// Aparte porque hay dos que lo piden. La pantalla de fondos, que muestra el
+/// avance en su barra, y el escritorio, que aplica un fondo desde su selector
+/// rápido llamando a `vasak-settings --wallpaper prepare` (ver
+/// `wallpaper_cli.rs`). Con la preparación escrita una sola vez, un video
+/// elegido desde cualquiera de los dos lados queda igual.
+pub async fn prepare_video<F>(path: String, on_progress: F) -> Result<PreparedWallpaper, String>
+where
+    F: Fn(u32) + Send + 'static,
+{
     let source = PathBuf::from(&path);
-    let sin_cambios = |detail: &str| PreparedWallpaper {
+    let unchanged = |detail: &str| PreparedWallpaper {
         path: path.clone(),
         optimized: false,
         detail: detail.to_string(),
@@ -385,14 +402,14 @@ pub async fn prepare_wallpaper_video(
 
     let facts = match probe(&path).await {
         Ok(facts) => facts,
-        Err(error) => return Ok(sin_cambios(&format!("no se pudo analizar: {error}"))),
+        Err(error) => return Ok(unchanged(&format!("no se pudo analizar: {error}"))),
     };
 
     let target = target_resolution().await;
     let plan = plan_for(&facts, target);
 
     if plan.is_empty() {
-        return Ok(sin_cambios("ya estaba en el formato más conveniente"));
+        return Ok(unchanged("ya estaba en el formato más conveniente"));
     }
 
     let metadata = std::fs::metadata(&source).map_err(|e| format!("{e}"))?;
@@ -405,11 +422,11 @@ pub async fn prepare_wallpaper_video(
 
     let dir = cache_dir().ok_or("no se pudo determinar la carpeta de caché")?;
     std::fs::create_dir_all(&dir).map_err(|e| format!("{e}"))?;
-    let destino = dir.join(cache_key(&source, metadata.len(), modified, target));
+    let target_path = dir.join(cache_key(&source, metadata.len(), modified, target));
 
-    if destino.exists() {
+    if target_path.exists() {
         return Ok(PreparedWallpaper {
-            path: destino.to_string_lossy().into_owned(),
+            path: target_path.to_string_lossy().into_owned(),
             optimized: true,
             detail: "se reutilizó la copia optimizada".into(),
         });
@@ -418,14 +435,14 @@ pub async fn prepare_wallpaper_video(
     // Se escribe aparte y se renombra al final: si la recodificación se
     // interrumpe, la caché no queda con un archivo a medias que después se
     // sirve como si estuviera bien.
-    let parcial = destino.with_extension("parcial.mp4");
-    let mut filtros: Vec<String> = Vec::new();
+    let partial = target_path.with_extension("parcial.mp4");
+    let mut filters: Vec<String> = Vec::new();
 
     if let Some((width, height)) = plan.scale_to {
-        filtros.push(format!("scale={width}:{height}"));
+        filters.push(format!("scale={width}:{height}"));
     }
     if plan.cap_fps {
-        filtros.push(format!("fps={MAX_FPS}"));
+        filters.push(format!("fps={MAX_FPS}"));
     }
 
     let mut args: Vec<String> = vec![
@@ -437,9 +454,9 @@ pub async fn prepare_wallpaper_video(
         "-an".into(),
     ];
 
-    if !filtros.is_empty() {
+    if !filters.is_empty() {
         args.push("-vf".into());
-        args.push(filtros.join(","));
+        args.push(filters.join(","));
     }
 
     args.extend([
@@ -458,57 +475,60 @@ pub async fn prepare_wallpaper_video(
         "-progress".into(),
         "pipe:1".into(),
         "-nostats".into(),
-        parcial.to_string_lossy().into_owned(),
+        partial.to_string_lossy().into_owned(),
     ]);
 
-    let mut hijo = Command::new("ffmpeg")
+    let mut child = Command::new("ffmpeg")
         .args(&args)
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
         .map_err(|e| format!("no se pudo ejecutar ffmpeg: {e}"))?;
 
-    if let Some(stdout) = hijo.stdout.take() {
-        let duracion = facts.duration.max(0.1);
-        let app = app.clone();
+    if let Some(stdout) = child.stdout.take() {
+        let duration_secs = facts.duration.max(0.1);
         tauri::async_runtime::spawn(async move {
-            let mut lineas = BufReader::new(stdout).lines();
-            while let Ok(Some(linea)) = lineas.next_line().await {
-                if let Some(segundos) = parse_progress(&linea) {
-                    let avance = ((segundos / duracion) * 100.0).clamp(0.0, 100.0);
-                    let _ = app.emit("wallpaper-video-progress", avance.round() as u32);
+            let mut lines = BufReader::new(stdout).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                if let Some(seconds) = parse_progress(&line) {
+                    let percent = ((seconds / duration_secs) * 100.0).clamp(0.0, 100.0);
+                    on_progress(percent.round() as u32);
                 }
             }
         });
     }
 
-    let estado = hijo
+    let status = child
         .wait()
         .await
         .map_err(|e| format!("ffmpeg terminó mal: {e}"))?;
 
-    if !estado.success() {
-        let _ = std::fs::remove_file(&parcial);
-        return Ok(sin_cambios("ffmpeg no pudo optimizarlo"));
+    // Con la API de Tokio y no la de `std`: esto corre en el bucle asíncrono, y
+    // ahora también desde la línea de comandos (`wallpaper_cli.rs`).
+    if !status.success() {
+        let _ = tokio::fs::remove_file(&partial).await;
+        return Ok(unchanged("ffmpeg no pudo optimizarlo"));
     }
 
-    std::fs::rename(&parcial, &destino).map_err(|e| format!("{e}"))?;
+    tokio::fs::rename(&partial, &target_path)
+        .await
+        .map_err(|e| format!("{e}"))?;
 
-    let mut hecho: Vec<String> = Vec::new();
+    let mut done: Vec<String> = Vec::new();
     if let Some((width, height)) = plan.scale_to {
-        hecho.push(format!("{width}×{height}"));
+        done.push(format!("{width}×{height}"));
     }
     if plan.cap_fps {
-        hecho.push(format!("{MAX_FPS:.0} fps"));
+        done.push(format!("{MAX_FPS:.0} fps"));
     }
     if plan.drop_audio {
-        hecho.push("sin audio".into());
+        done.push("sin audio".into());
     }
 
     Ok(PreparedWallpaper {
-        path: destino.to_string_lossy().into_owned(),
+        path: target_path.to_string_lossy().into_owned(),
         optimized: true,
-        detail: hecho.join(", "),
+        detail: done.join(", "),
     })
 }
 
@@ -563,9 +583,9 @@ mod tests {
         // ancho sale de la proporción: 1080 × (1080/1920) = 607,5 → 608.
         assert_eq!(fit_inside(1080, 1920, 1920, 1080), (608, 1080));
 
-        let (ancho, alto) = fit_inside(1999, 1333, 1280, 1024);
-        assert_eq!(ancho % 2, 0);
-        assert_eq!(alto % 2, 0);
+        let (width, height) = fit_inside(1999, 1333, 1280, 1024);
+        assert_eq!(width % 2, 0);
+        assert_eq!(height % 2, 0);
     }
 
     /// Un códec que no es H.264 se recodifica: es el único que se puede dar por
@@ -578,15 +598,15 @@ mod tests {
 
     #[test]
     fn lee_la_salida_de_ffprobe() {
-        let texto = "codec_type=video\ncodec_name=h264\nwidth=3840\nheight=2160\n\
+        let text = "codec_type=video\ncodec_name=h264\nwidth=3840\nheight=2160\n\
                      r_frame_rate=60000/1001\ncodec_type=audio\ncodec_name=aac\nduration=12.500000\n";
-        let leido = parse_ffprobe(texto).unwrap();
-        assert_eq!(leido.width, 3840);
-        assert_eq!(leido.height, 2160);
-        assert!((leido.fps - 59.94).abs() < 0.1);
-        assert_eq!(leido.codec, "h264");
-        assert!(leido.has_audio);
-        assert!((leido.duration - 12.5).abs() < 0.01);
+        let parsed = parse_ffprobe(text).unwrap();
+        assert_eq!(parsed.width, 3840);
+        assert_eq!(parsed.height, 2160);
+        assert!((parsed.fps - 59.94).abs() < 0.1);
+        assert_eq!(parsed.codec, "h264");
+        assert!(parsed.has_audio);
+        assert!((parsed.duration - 12.5).abs() < 0.01);
     }
 
     /// Un archivo sin pista de video no es un fondo, y decirlo acá evita
@@ -598,31 +618,43 @@ mod tests {
 
     #[test]
     fn la_clave_de_cache_cambia_si_cambia_el_archivo() {
-        let ruta = Path::new("/home/pato/fondo.mp4");
-        let a = cache_key(ruta, 1000, 111, (1920, 1080));
+        let path_under_test = Path::new("/home/pato/fondo.mp4");
+        let a = cache_key(path_under_test, 1000, 111, (1920, 1080));
         assert_eq!(
             a,
-            cache_key(ruta, 1000, 111, (1920, 1080)),
+            cache_key(path_under_test, 1000, 111, (1920, 1080)),
             "misma entrada, misma clave"
         );
-        assert_ne!(a, cache_key(ruta, 2000, 111, (1920, 1080)), "otro tamaño");
-        assert_ne!(a, cache_key(ruta, 1000, 222, (1920, 1080)), "otra fecha");
-        assert_ne!(a, cache_key(ruta, 1000, 111, (3840, 2160)), "otra pantalla");
+        assert_ne!(
+            a,
+            cache_key(path_under_test, 2000, 111, (1920, 1080)),
+            "otro tamaño"
+        );
+        assert_ne!(
+            a,
+            cache_key(path_under_test, 1000, 222, (1920, 1080)),
+            "otra fecha"
+        );
+        assert_ne!(
+            a,
+            cache_key(path_under_test, 1000, 111, (3840, 2160)),
+            "otra pantalla"
+        );
     }
 
     /// Una imagen y un video no llevan los mismos argumentos, y confundirlos no
     /// da un error: da un archivo vacío.
     #[test]
     fn distingue_imagen_de_video_por_la_extension() {
-        assert!(es_video(Path::new("/home/pato/fondo.mp4")));
+        assert!(is_video(Path::new("/home/pato/fondo.mp4")));
         assert!(
-            es_video(Path::new("/home/pato/fondo.WEBM")),
+            is_video(Path::new("/home/pato/fondo.WEBM")),
             "sin importar mayúsculas"
         );
-        assert!(!es_video(Path::new(
+        assert!(!is_video(Path::new(
             "/usr/share/backgrounds/vasakos/wallpaper-1.jpg"
         )));
-        assert!(!es_video(Path::new("/home/pato/sin-extension")));
+        assert!(!is_video(Path::new("/home/pato/sin-extension")));
     }
 
     /// El error que rompió la previsualización: con `-ss 1` sobre una imagen,
@@ -633,36 +665,33 @@ mod tests {
         let dir = std::env::temp_dir().join("vasak-miniatura-prueba");
         let _ = std::fs::create_dir_all(&dir);
 
-        let vacio = dir.join("vacio.jpg");
-        std::fs::write(&vacio, b"").unwrap();
-        assert!(!archivo_con_contenido(&vacio));
+        let empty = dir.join("vacio.jpg");
+        std::fs::write(&empty, b"").unwrap();
+        assert!(!has_content(&empty));
 
-        let recortado = dir.join("recortado.jpg");
-        std::fs::write(&recortado, b"apenas unos bytes").unwrap();
-        assert!(
-            !archivo_con_contenido(&recortado),
-            "un JPEG no pesa 17 bytes"
-        );
+        let truncated = dir.join("recortado.jpg");
+        std::fs::write(&truncated, b"apenas unos bytes").unwrap();
+        assert!(!has_content(&truncated), "un JPEG no pesa 17 bytes");
 
-        let bueno = dir.join("bueno.jpg");
-        std::fs::write(&bueno, vec![0u8; 4096]).unwrap();
-        assert!(archivo_con_contenido(&bueno));
+        let good = dir.join("bueno.jpg");
+        std::fs::write(&good, vec![0u8; 4096]).unwrap();
+        assert!(has_content(&good));
 
-        assert!(!archivo_con_contenido(&dir.join("no-existe.jpg")));
+        assert!(!has_content(&dir.join("no-existe.jpg")));
     }
 
     /// La miniatura se rehace si el archivo cambió, y nunca choca con la clave
     /// del video optimizado del mismo archivo.
     #[test]
     fn la_clave_de_la_miniatura_es_propia_y_cambia_con_el_archivo() {
-        let ruta = Path::new("/home/pato/fondo.mp4");
-        let a = thumbnail_name(ruta, 1000, 111);
-        assert_eq!(a, thumbnail_name(ruta, 1000, 111));
-        assert_ne!(a, thumbnail_name(ruta, 2000, 111));
+        let path_under_test = Path::new("/home/pato/fondo.mp4");
+        let a = thumbnail_name(path_under_test, 1000, 111);
+        assert_eq!(a, thumbnail_name(path_under_test, 1000, 111));
+        assert_ne!(a, thumbnail_name(path_under_test, 2000, 111));
         assert!(a.ends_with(".jpg"));
         assert_ne!(
             a.trim_start_matches("miniatura-"),
-            cache_key(ruta, 1000, 111, (1920, 1080)).trim_start_matches("fondo-"),
+            cache_key(path_under_test, 1000, 111, (1920, 1080)).trim_start_matches("fondo-"),
             "la miniatura y el video optimizado no pueden compartir clave"
         );
     }
@@ -676,7 +705,7 @@ mod tests {
     #[test]
     fn la_cache_cuelga_del_directorio_de_cache() {
         assert_eq!(
-            cache_dir_bajo(Some(PathBuf::from("/home/pato/.cache"))),
+            cache_dir_under(Some(PathBuf::from("/home/pato/.cache"))),
             Some(PathBuf::from("/home/pato/.cache/vasak/wallpapers"))
         );
     }
@@ -690,13 +719,13 @@ mod tests {
         //
         // Las cuatro formas de no ser absoluta: la del nombre suelto es la que
         // se escapa cuando uno se acuerda sólo de la vacía.
-        for relativa in ["", "cache", "./cache", "../cache"] {
+        for relative in ["", "cache", "./cache", "../cache"] {
             assert_eq!(
-                cache_dir_bajo(Some(PathBuf::from(relativa))),
+                cache_dir_under(Some(PathBuf::from(relative))),
                 None,
-                "una base de {relativa:?} no tiene que dar carpeta"
+                "una base de {relative:?} no tiene que dar carpeta"
             );
         }
-        assert_eq!(cache_dir_bajo(None), None);
+        assert_eq!(cache_dir_under(None), None);
     }
 }

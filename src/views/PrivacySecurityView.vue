@@ -49,12 +49,9 @@
  * quitar la pantalla anterior.
  */
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, ThemeIcon } from '@vasakgroup/vue-libvasak';
+import { AlertMessage, EmptyState, PageHeader, Panel, ThemeIcon } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
-import IconoDeApp from '@/components/permisos/IconoDeApp.vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
+import AppIcon from '@/components/permissions/AppIcon.vue';
 import {
 	allowBlocked,
 	type BlockedItem,
@@ -65,20 +62,20 @@ import {
 	type PermissionEntry,
 	setPermission,
 } from '@/services/permissions.service';
-import { groupByResource } from '@/tools/permissions-by-resource';
+import { groupByResource } from '@/utils/permissions-by-resource';
 import {
 	PRIVACY_RESOURCES,
 	type PrivacyResource,
 	resourceIcon,
 	resourceLabelKey,
-} from '@/tools/privacy-resources';
+} from '@/utils/privacy-resources';
 
 const { t } = useI18n();
 
 /**
  * El nombre de un recurso en el idioma de la sesión.
  *
- * La lista, las claves y los iconos viven en `tools/privacy-resources.ts`,
+ * La lista, las claves y los iconos viven en `utils/privacy-resources.ts`,
  * probados aparte: acá sólo se traduce. Los ids con punto (`account.email`,
  * `store.email`) no pueden ir tal cual a la clave, y el mapa de ese módulo es
  * lo que lo evita.
@@ -134,7 +131,7 @@ const load = async (refresh = false) => {
  * El servicio contesta por aplicación porque así es como decide, pero la
  * pregunta que alguien trae acá es «¿quién puede usar mi cámara?». Con la lista
  * por aplicación había que abrir una por una y recordar lo que decía la
- * anterior. La cuenta está en `tools/permissions-by-resource.ts`, probada aparte.
+ * anterior. La cuenta está en `utils/permissions-by-resource.ts`, probada aparte.
  */
 const resourceGroups = computed(() => groupByResource(entries.value, PRIVACY_RESOURCES));
 
@@ -240,7 +237,8 @@ onMounted(load);
 <template>
 	<div class="flex flex-col gap-4">
 		<PageHeader
-			:section="t('sidebar.system')"
+			size="lg"
+			:eyebrow="t('sidebar.system')"
 			:title="t('views.privacySecurity.title')"
 			:description="t('views.privacySecurity.description')"
 		/>
@@ -249,7 +247,7 @@ onMounted(load);
 		     Va en su propia tarjeta y arriba de la lista de aplicaciones porque
 		     es lo único de esta pantalla que pide una acción: lo demás es
 		     estado que se consulta. -->
-		<SectionCard v-if="blockedItems.length > 0">
+		<Panel as="article" v-if="blockedItems.length > 0">
 			<header>
 				<h2 class="text-lg font-medium text-tx-main">
 					{{ t('views.privacySecurity.blocked.title') }}
@@ -262,7 +260,7 @@ onMounted(load);
 			<article
 				v-for="b in blockedItems"
 				:key="blockedKey(b)"
-				class="rounded-corner border border-ui-border bg-ui-surface/70 p-4 flex flex-col gap-3"
+				class="rounded-corner-m border border-ui-border bg-ui-surface/70 p-4 flex flex-col gap-3"
 			>
 				<div class="min-w-0">
 					<h3 class="font-semibold text-tx-main truncate">{{ b.perfil }}</h3>
@@ -283,7 +281,7 @@ onMounted(load);
 					<button
 						type="button"
 						:disabled="busyBlockedKey === blockedKey(b)"
-						class="rounded-corner px-3 py-1 text-xs border border-ui-border text-tx-main hover:bg-ui-surface disabled:opacity-50"
+						class="rounded-corner-m px-3 py-1 text-xs border border-ui-border text-tx-main hover:bg-ui-surface disabled:opacity-50"
 						@click="allowBlockedItem(b)"
 					>
 						{{ t('views.privacySecurity.allow') }}
@@ -291,16 +289,16 @@ onMounted(load);
 					<button
 						type="button"
 						:disabled="busyBlockedKey === blockedKey(b)"
-						class="rounded-corner px-3 py-1 text-xs border border-ui-border text-tx-muted hover:bg-ui-surface disabled:opacity-50"
+						class="rounded-corner-m px-3 py-1 text-xs border border-ui-border text-tx-muted hover:bg-ui-surface disabled:opacity-50"
 						@click="dismissBlockedItem(b)"
 					>
 						{{ t('views.privacySecurity.blocked.dismiss') }}
 					</button>
 				</div>
 			</article>
-		</SectionCard>
+		</Panel>
 
-		<SectionCard>
+		<Panel as="article">
 			<AlertMessage v-if="errorMessage" tone="error">{{ errorMessage }}</AlertMessage>
 			<p v-if="loading" class="text-sm text-tx-muted">{{ t('common.loading') }}</p>
 
@@ -312,7 +310,7 @@ onMounted(load);
 				<li v-for="group in resourceGroups" :key="group.id">
 					<button
 						type="button"
-						class="flex w-full items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 p-3 text-left hover:bg-ui-surface"
+						class="flex w-full items-center gap-3 rounded-corner-m border border-ui-border bg-ui-surface/70 p-3 text-left hover:bg-ui-surface"
 						@click="openResource = group.id"
 					>
 						<ThemeIcon :name="resourceIcon(group.id)" type="symbol" :size="24" />
@@ -324,7 +322,7 @@ onMounted(load);
 						     dibuja nada, para que el ojo vaya a los que sí. -->
 						<span
 							v-if="group.allowedCount > 0"
-							class="shrink-0 rounded-corner-sm bg-status-success/20 px-1.5 text-xs text-status-success"
+							class="shrink-0 rounded-corner-xs bg-status-success/20 px-1.5 text-xs text-status-success"
 						>
 							{{ group.allowedCount }}
 						</span>
@@ -343,7 +341,7 @@ onMounted(load);
 				<div class="flex items-center gap-3 border-b border-ui-border pb-3">
 					<button
 						type="button"
-						class="rounded-corner border border-ui-border px-3 py-1.5 text-sm text-tx-muted hover:bg-ui-surface"
+						class="rounded-corner-m border border-ui-border px-3 py-1.5 text-sm text-tx-muted hover:bg-ui-surface"
 						@click="openResource = null"
 					>
 						‹ {{ t('views.privacySecurity.back') }}
@@ -355,19 +353,21 @@ onMounted(load);
 					</h3>
 				</div>
 
-				<EmptyStateBox
+				<EmptyState
+					icon=""
+					size="sm"
+					bordered
 					v-if="activeGroup && activeGroup.apps.length === 0"
-					padding="lg"
-					:message="t('views.privacySecurity.noAppsForResource')"
+					:title="t('views.privacySecurity.noAppsForResource')"
 				/>
 
 				<ul v-else class="flex flex-col gap-2">
 					<li
 						v-for="{ entry, decision } in activeGroup?.apps ?? []"
 						:key="entry.application.binary_path"
-						class="flex flex-wrap items-center gap-3 rounded-corner border border-ui-border bg-ui-surface/70 p-3"
+						class="flex flex-wrap items-center gap-3 rounded-corner-m border border-ui-border bg-ui-surface/70 p-3"
 					>
-						<IconoDeApp :nombre="entry.application.icon" />
+						<AppIcon :name="entry.application.icon" />
 
 						<div class="min-w-0 flex-1">
 							<h3 class="truncate font-semibold text-tx-main">
@@ -388,7 +388,7 @@ onMounted(load);
 							<button
 								type="button"
 								:disabled="busyPath === entry.application.binary_path || !canDecide(entry)"
-								class="rounded-corner px-3 py-1 text-xs disabled:opacity-50"
+								class="rounded-corner-m px-3 py-1 text-xs disabled:opacity-50"
 								:class="
 									decision === 'allowed'
 										? 'bg-status-success/20 font-semibold text-status-success'
@@ -401,7 +401,7 @@ onMounted(load);
 							<button
 								type="button"
 								:disabled="busyPath === entry.application.binary_path || !canDecide(entry)"
-								class="rounded-corner px-3 py-1 text-xs disabled:opacity-50"
+								class="rounded-corner-m px-3 py-1 text-xs disabled:opacity-50"
 								:class="
 									decision === 'denied'
 										? 'bg-status-error/20 font-semibold text-status-error'
@@ -418,7 +418,7 @@ onMounted(load);
 								type="button"
 								:disabled="busyPath === entry.application.binary_path"
 								:title="t('views.privacySecurity.forgetHint')"
-								class="rounded-corner border border-ui-border px-3 py-1 text-xs text-tx-main hover:bg-ui-surface disabled:opacity-50"
+								class="rounded-corner-m border border-ui-border px-3 py-1 text-xs text-tx-main hover:bg-ui-surface disabled:opacity-50"
 								@click="forget(entry)"
 							>
 								{{ t('views.privacySecurity.forget') }}
@@ -442,6 +442,6 @@ onMounted(load);
 			<p class="border-t border-ui-border pt-3 text-xs leading-relaxed text-tx-muted">
 				{{ t('views.privacySecurity.scope') }}
 			</p>
-		</SectionCard>
+		</Panel>
 	</div>
 </template>

@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { listen } from '@tauri-apps/api/event';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	ConfigSection,
+	EmptyState,
+	PageHeader,
+	Panel,
+} from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
 import NewProfileComponent from '@/components/vpn/NewProfileComponent.vue';
 import VpnProfileItem from '@/components/vpn/VpnProfileItem.vue';
 import VpnStatusPanel from '@/components/vpn/VpnStatusPanel.vue';
@@ -217,20 +220,21 @@ onUnmounted(() => {
 <template>
 	<div class="flex min-h-full flex-col gap-4 pb-4">
 		<PageHeader
-			:section="t('sidebar.network')"
+			size="lg"
+			:eyebrow="t('sidebar.network')"
 			:title="t('views.networkVpn.title')"
 			:description="t('views.networkVpn.description')"
 		>
 			<template #actions>
 				<div class="flex gap-2">
 					<button
-						class="rounded-corner border border-primary/20 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15"
+						class="rounded-corner-m border border-primary/20 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15"
 						@click="showProfileDialog = true"
 					>
 						{{ t('views.networkVpn.newProfile') }}
 					</button>
 					<button
-						class="rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-1.5 text-sm text-tx-muted transition-colors hover:bg-ui-surface"
+						class="rounded-corner-m border border-ui-border bg-ui-surface/50 px-3 py-1.5 text-sm text-tx-muted transition-colors hover:bg-ui-surface"
 						@click="refreshVpnData"
 						:disabled="loading"
 					>
@@ -243,10 +247,10 @@ onUnmounted(() => {
 		<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 
 		<div class="grid gap-4 xl:grid-cols-3">
-			<SectionCard class="xl:col-span-2">
+			<Panel as="article" class="xl:col-span-2">
 				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.networkVpn.currentStatus') }}</h3>
 
-				<EmptyStateBox v-if="loading" :message="t('views.networkVpn.readingStatus')" />
+				<EmptyState icon="" size="sm" bordered v-if="loading" :title="t('views.networkVpn.readingStatus')" />
 
 				<VpnStatusPanel
 					v-else
@@ -254,10 +258,9 @@ onUnmounted(() => {
 					:active-profile="activeProfile"
 					:is-loading="loading"
 				/>
-			</SectionCard>
+			</Panel>
 
-			<SectionCard>
-				<h3 class="mb-4 text-lg font-medium text-tx-main">{{ t('views.networkVpn.quickConnect') }}</h3>
+			<ConfigSection :title="t('views.networkVpn.quickConnect')">
 				<div class="space-y-2 text-sm text-tx-muted">
 					<p>{{ t('views.networkVpn.availableProfiles') }} {{ vpnProfiles.length }}</p>
 					<p>
@@ -265,17 +268,17 @@ onUnmounted(() => {
 						<span class="font-medium text-tx-main">{{ vpnStateLabel }}</span>
 					</p>
 					<button
-						class="mt-2 w-full rounded-corner border border-ui-border bg-ui-surface/50 px-3 py-1.5 text-sm text-tx-muted hover:bg-ui-surface disabled:cursor-not-allowed disabled:opacity-50"
+						class="mt-2 w-full rounded-corner-m border border-ui-border bg-ui-surface/50 px-3 py-1.5 text-sm text-tx-muted hover:bg-ui-surface disabled:cursor-not-allowed disabled:opacity-50"
 						@click="disconnectProfile()"
 						:disabled="!hasActiveVpn || actionProfileUuid === '__active__'"
 					>
 						{{ actionProfileUuid === '__active__' ? t('views.networkVpn.disconnecting') : t('views.networkVpn.disconnectActive') }}
 					</button>
 				</div>
-			</SectionCard>
+			</ConfigSection>
 		</div>
 
-		<SectionCard>
+		<Panel as="article">
 			<div class="mb-4 flex items-center justify-between">
 				<h3 class="text-lg font-medium text-tx-main">{{ t('views.networkVpn.profiles') }}</h3>
 				<span class="text-xs uppercase tracking-[0.16em] text-tx-muted">
@@ -283,9 +286,12 @@ onUnmounted(() => {
 				</span>
 			</div>
 
-			<EmptyStateBox
+			<EmptyState
+				icon=""
+				size="sm"
+				bordered
 				v-if="!loading && vpnProfiles.length === 0"
-				:message="t('views.networkVpn.emptyProfiles')"
+				:title="t('views.networkVpn.emptyProfiles')"
 			/>
 
 			<ul v-else class="space-y-2">
@@ -303,7 +309,7 @@ onUnmounted(() => {
 					@delete="removeProfile(profile)"
 				/>
 			</ul>
-		</SectionCard>
+		</Panel>
 
 		<NewProfileComponent
 			:open="showProfileDialog"

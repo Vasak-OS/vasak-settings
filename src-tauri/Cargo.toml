@@ -1,6 +1,6 @@
 [package]
 name = "vasak-settings"
-version = "0.30.0"
+version = "0.46.0"
 description = "A Vasak Application (template)"
 authors = ["Vasak Group", "Joaquin (Pato) Decima"]
 edition = "2021"
@@ -28,7 +28,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-vicons = "2.2"
 #tauri-plugin-vicons = {path = "../../tauri-plugin-vicons"}
-tauri-plugin-config-manager = "2"
+tauri-plugin-config-manager = "2.11"
 #tauri-plugin-config-manager = {path = "../../tauri-plugin-config-manager"}
 tauri-plugin-system-fonts = "2"
 tauri-plugin-i18n-vsk = "2.3.0"
@@ -38,7 +38,7 @@ base64 = "0.23"
 chrono = "0.4"
 uuid = { version = "1", features = ["v4"] }
 open = "5"
-tokio = { version = "1", features = ["net", "io-util", "time", "macros"] }
+tokio = { version = "1", features = ["net", "io-util", "time", "macros", "fs"] }
 # TLS para la prueba de conexión de las cuentas de correo. rustls y no
 # native-tls: es Rust puro, así que no suma ninguna biblioteca compartida al
 # paquete.
@@ -53,9 +53,15 @@ dirs = "7"
 futures-util = "0.3"
 notify = "8"
 zbus = { version = "4", default-features = false, features = ["tokio"] }
-tauri-plugin-bluetooth-manager = "2.1"
+# 2.2 como piso: desde ahí el evento `bluetooth-change` trae `changeType`, que
+# es lo único que lee «Red y Bluetooth» (`src/utils/bluetooth-change.ts`).
+tauri-plugin-bluetooth-manager = "2.2"
 #tauri-plugin-bluetooth-manager = { path = "../../tauri-plugin-bluetooth-manager" }
 tauri-plugin-network-manager = "2"
+# El perfil de energía y el brillo por monitor viven en plugins compartidos
+# con el centro de control del escritorio (vasak-desktop#174, decisión 4).
+tauri-plugin-power-profiles = "2"
+tauri-plugin-display-manager = "2"
 tauri-plugin-vsk-contextual-menu = "2"
 tauri-plugin-vsk-journal = "2"
 # Para leer las respuestas PROPFIND del autodescubrimiento de CalDAV/CardDAV.

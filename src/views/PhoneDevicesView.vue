@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { AlertMessage, TextInput } from '@vasakgroup/vue-libvasak';
+import {
+	AlertMessage,
+	Badge,
+	EmptyState,
+	PageHeader,
+	Panel,
+	TextInput,
+} from '@vasakgroup/vue-libvasak';
 import { onBeforeUnmount, onMounted, ref } from 'vue';
-import EmptyStateBox from '@/components/ui/EmptyStateBox.vue';
-import PageHeader from '@/components/ui/PageHeader.vue';
-import SectionCard from '@/components/ui/SectionCard.vue';
-import StatusBadge from '@/components/ui/StatusBadge.vue';
 import {
 	forgetDevice,
 	type KnownDevice,
@@ -93,7 +96,8 @@ onBeforeUnmount(() => unlisten?.());
 <template>
 	<div class="flex flex-col gap-4">
 		<PageHeader
-			:section="t('views.phoneDevices.section')"
+			size="lg"
+			:eyebrow="t('views.phoneDevices.section')"
 			:title="t('views.phoneDevices.title')"
 			:description="t('views.phoneDevices.description')"
 		/>
@@ -105,26 +109,28 @@ onBeforeUnmount(() => unlisten?.());
 		     believes otherwise will think they revoked something they did not. -->
 		<AlertMessage tone="info">{{ t('views.phoneDevices.trustNotice') }}</AlertMessage>
 
-		<SectionCard>
-			<EmptyStateBox v-if="loading" :message="t('views.phoneDevices.loading')" />
-			<EmptyStateBox
+		<Panel as="article">
+			<EmptyState icon="" size="sm" bordered v-if="loading" :title="t('views.phoneDevices.loading')" />
+			<EmptyState
+				icon=""
+				size="sm"
+				bordered
 				v-else-if="devices.length === 0"
-				:message="t('views.phoneDevices.empty')"
-				padding="lg"
+				:title="t('views.phoneDevices.empty')"
 			/>
 
 			<ul v-else class="flex flex-col gap-3">
 				<li
 					v-for="device in devices"
 					:key="device.serial"
-					class="flex flex-col gap-3 rounded-corner border border-ui-border bg-ui-surface/20 p-4 sm:flex-row sm:items-center"
+					class="flex flex-col gap-3 rounded-corner-m border border-ui-border bg-ui-surface/20 p-4 sm:flex-row sm:items-center"
 				>
 					<div class="min-w-0 flex-1">
 						<div v-if="editing === device.serial" class="flex items-center gap-2">
 							<TextInput v-model="draftAlias" @keyup.enter="saveAlias(device)" />
 							<button
 								type="button"
-								class="rounded-corner bg-primary px-3 py-1 text-sm text-white"
+								class="rounded-corner-m bg-primary px-3 py-1 text-sm text-tx-on-primary"
 								@click="saveAlias(device)"
 							>
 								{{ t('views.phoneDevices.save') }}
@@ -140,18 +146,18 @@ onBeforeUnmount(() => unlisten?.());
 					</div>
 
 					<div class="flex shrink-0 items-center gap-2">
-						<StatusBadge :text="stateLabel(device)" :tone="stateTone(device)" />
+						<Badge size="md" :label="stateLabel(device)" :tone="stateTone(device)" />
 						<button
 							v-if="editing !== device.serial"
 							type="button"
-							class="rounded-corner border border-ui-border px-3 py-1 text-sm hover:bg-ui-surface"
+							class="rounded-corner-m border border-ui-border px-3 py-1 text-sm hover:bg-ui-surface"
 							@click="startRename(device)"
 						>
 							{{ t('views.phoneDevices.rename') }}
 						</button>
 						<button
 							type="button"
-							class="rounded-corner border border-status-error/40 px-3 py-1 text-sm text-status-error hover:bg-status-error/10"
+							class="rounded-corner-m border border-status-error/40 px-3 py-1 text-sm text-status-error hover:bg-status-error/10"
 							@click="forget(device)"
 						>
 							{{ t('views.phoneDevices.forget') }}
@@ -159,6 +165,6 @@ onBeforeUnmount(() => unlisten?.());
 					</div>
 				</li>
 			</ul>
-		</SectionCard>
+		</Panel>
 	</div>
 </template>

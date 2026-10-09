@@ -4,6 +4,7 @@ mod logger;
 mod structs;
 mod tools;
 mod utils;
+mod wallpaper_cli;
 
 use std::path::PathBuf;
 
@@ -96,6 +97,12 @@ async fn pedir_al_frente() {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // `vasak-settings --wallpaper …` contesta y sale sin armar la aplicación:
+    // ver `wallpaper_cli.rs`, que explica por qué tiene que ser antes.
+    if let Some(code) = wallpaper_cli::run_from_args(std::env::args()) {
+        std::process::exit(code);
+    }
+
     tauri::Builder::default()
         // Una sola ventana de configuración.
         //
@@ -142,6 +149,8 @@ pub fn run() {
         .plugin(tauri_plugin_vicons::init())
         .plugin(tauri_plugin_bluetooth_manager::init())
         .plugin(tauri_plugin_network_manager::init())
+        .plugin(tauri_plugin_power_profiles::init())
+        .plugin(tauri_plugin_display_manager::init())
         // El diario del sistema, con el nombre de esta aplicación. Va **primero**
         // de todos los plugins: instala el gancho de pánico, y un pánico mientras
         // arranca otro plugin es de los más probables y de los que menos rastro
@@ -171,6 +180,8 @@ pub fn run() {
             commands::system_config::get_icon_packs,
             commands::system_config::get_icon_pack_icons,
             commands::system_config::get_official_wallpapers,
+            commands::system_config::get_custom_wallpapers,
+            commands::wallpaper_assets::allow_wallpaper_asset,
             commands::shortcuts::get_shortcuts,
             commands::shortcuts::save_shortcuts,
             commands::wayfire_ini::read_wayfire_section,
@@ -185,12 +196,14 @@ pub fn run() {
             commands::datetime::set_ntp,
             commands::datetime::set_system_time,
             commands::datetime::set_local_rtc,
-            commands::display_power::get_backlights,
-            commands::display_power::set_backlight_percent,
-            commands::display_power::get_night_light,
-            commands::display_power::set_night_light,
+            commands::night_light_service::get_night_light_enabled,
+            commands::night_light_service::set_night_light_enabled,
             commands::nitidez::nitidez_activa,
             commands::nitidez::fijar_nitidez,
+            commands::game_mode::is_gamemode_available,
+            commands::fastfetch::get_fastfetch_config,
+            commands::fastfetch::set_fastfetch_logo,
+            commands::fastfetch::reset_fastfetch_config,
             commands::idle::get_idle_config,
             commands::idle::set_idle_config,
             commands::users::list_users,
@@ -202,9 +215,6 @@ pub fn run() {
             commands::users::set_user_locked,
             commands::users::set_user_icon,
             commands::battery::get_battery_info,
-            commands::power_profiles::get_power_profiles,
-            commands::power_profiles::get_active_power_profile,
-            commands::power_profiles::set_power_profile,
             commands::audio::get_audio_volume,
             commands::audio::set_audio_volume,
             commands::audio::toggle_audio_mute,
@@ -218,9 +228,8 @@ pub fn run() {
             commands::monitors::get_detected_monitors,
             commands::wallpaper_video::prepare_wallpaper_video,
             commands::wallpaper_video::wallpaper_thumbnail,
+            commands::wallpaper_colors::wallpaper_pixels,
             commands::monitors::apply_monitor_layout,
-            commands::brightness::get_monitor_brightness,
-            commands::brightness::set_monitor_brightness,
             commands::language::get_available_locales,
             commands::language::get_current_locale,
             commands::language::set_system_locale,
@@ -253,6 +262,10 @@ pub fn run() {
             commands::connect::connect_list_known_devices,
             commands::connect::connect_set_alias,
             commands::connect::connect_forget_device,
+            commands::screen_time::screen_time,
+            commands::screen_time::clear_screen_time,
+            commands::screen_time::screen_time_set_enabled,
+            commands::screen_time::screen_time_enabled,
         ])
         // One setup hook, not two: `Builder::setup` replaces whatever was
         // registered before it, so a second call silently threw the first away.

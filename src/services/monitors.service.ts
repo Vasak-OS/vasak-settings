@@ -45,20 +45,6 @@ export interface MonitorSetting {
 	transform: string;
 }
 
-export type BrightnessKind = 'backlight' | 'ddc';
-
-export interface MonitorBrightness {
-	output: string;
-	kind: BrightnessKind;
-	handle: string;
-	percent: number;
-}
-
-export interface BrightnessReport {
-	monitors: MonitorBrightness[];
-	ddc_hint: string | null;
-}
-
 export function getDetectedMonitors(): Promise<MonitorReport> {
 	return invoke<MonitorReport>('get_detected_monitors');
 }
@@ -70,18 +56,6 @@ export function getDetectedMonitors(): Promise<MonitorReport> {
  */
 export function applyMonitorLayout(monitors: MonitorSetting[]): Promise<MonitorSetting[]> {
 	return invoke<MonitorSetting[]>('apply_monitor_layout', { monitors });
-}
-
-export function getMonitorBrightness(outputs: string[]): Promise<BrightnessReport> {
-	return invoke<BrightnessReport>('get_monitor_brightness', { outputs });
-}
-
-export function setMonitorBrightness(
-	kind: BrightnessKind,
-	handle: string,
-	percent: number
-): Promise<void> {
-	return invoke('set_monitor_brightness', { kind, handle, percent });
 }
 
 /** The size a screen occupies in the layout, mirroring the backend's rule. */
@@ -98,5 +72,9 @@ export function logicalSize(mode: MonitorMode, scale: number, transform: string)
 }
 
 export function formatRefresh(mode: MonitorMode): string {
+	// 0 significa frecuencia desconocida: el respaldo del kernel no la trae. Antes
+	// se inventaba 60 Hz y era el síntoma del bug; mostramos un guion y el aviso
+	// de instalar wlr-randr ya explica por qué.
+	if (mode.refresh_mhz <= 0) return '—';
 	return `${(mode.refresh_mhz / 1000).toFixed(3).replace(/\.?0+$/, '')} Hz`;
 }
