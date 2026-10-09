@@ -207,7 +207,9 @@ views:
       ascii: ASCII
       none: Ninguno
     builtinName: Nombre del emblema integrado
+    builtinPlaceholder: arch
     filePath: Archivo del emblema
+    filePlaceholder: Ruta de la imagen (PNG, JPG o WEBP)
     width: Ancho
     height: Altura
     padding: Relleno

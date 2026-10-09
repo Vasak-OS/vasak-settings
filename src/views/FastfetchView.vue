@@ -57,6 +57,11 @@ const showSize = computed(() => usesSize(kind.value));
 const sourceLabel = computed(() =>
 	kind.value === 'builtin' ? t('views.fastfetch.builtinName') : t('views.fastfetch.filePath')
 );
+const sourcePlaceholder = computed(() =>
+	kind.value === 'builtin'
+		? t('views.fastfetch.builtinPlaceholder')
+		: t('views.fastfetch.filePlaceholder')
+);
 
 function apply(state: FastfetchState) {
 	available.value = state.available;
@@ -145,7 +150,7 @@ onMounted(load);
 		<ConfigSection :title="t('views.fastfetch.previewTitle')">
 			<pre
 				v-if="preview"
-				class="overflow-x-auto rounded-lg bg-ui-surface/70 p-3 font-mono text-xs leading-relaxed text-tx"
+				class="overflow-x-auto rounded-corner-m bg-ui-surface/70 p-3 font-mono text-xs leading-relaxed text-tx-main"
 			>{{ preview }}</pre>
 			<p v-else class="text-xs text-tx-muted">{{ t('views.fastfetch.previewEmpty') }}</p>
 			<p class="mt-2 text-xs text-tx-muted">{{ t('views.fastfetch.previewNote') }}</p>
@@ -163,11 +168,7 @@ onMounted(load);
 				/>
 
 				<FormGroup v-if="showSource" :label="sourceLabel">
-					<TextInput
-						v-model="source"
-						:placeholder="kind === 'builtin' ? 'arch' : '~/Pictures/emblem.png'"
-						:disabled="saving"
-					/>
+					<TextInput v-model="source" :placeholder="sourcePlaceholder" :disabled="saving" />
 				</FormGroup>
 
 				<div v-if="showSize" class="flex flex-wrap gap-4">

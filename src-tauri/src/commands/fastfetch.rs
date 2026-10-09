@@ -470,6 +470,17 @@ mod tests {
     }
 
     #[test]
+    fn get_devuelve_un_estado_sin_reventar() {
+        // Lee el estado real de la máquina y no escribe ni borra nada, así que
+        // es seguro correrlo en cualquier lado. En CI, sin fastfetch instalado,
+        // `available` es false. Cubre read_state, los ayudantes que lanzan el
+        // proceso y la caída de effective_config cuando no hay config propia.
+        let state = tauri::async_runtime::block_on(get_fastfetch_config()).expect("devuelve Ok");
+        // El emblema siempre trae un tipo; el resto depende de la máquina.
+        assert!(!state.logo.kind.is_empty());
+    }
+
+    #[test]
     fn sin_config_del_usuario_la_base_no_revienta() {
         let path = std::env::temp_dir().join("ff-inexistente-xyz/config.jsonc");
         // No existe: effective_config cae al sistema o a un objeto, nunca panic.

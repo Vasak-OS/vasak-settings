@@ -541,6 +541,14 @@
 		}
 	},
 	{
+		"id": "fastfetch",
+		"icono": "utilities-terminal",
+		"nombres": {
+			"es": "Fastfetch",
+			"en": "Fastfetch"
+		}
+	},
+	{
 		"id": "network-wifi",
 		"icono": "network-wireless",
 		"nombres": {
