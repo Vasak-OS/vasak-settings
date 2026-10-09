@@ -691,6 +691,7 @@ views:
       floating: Flotante
       bar: Barra
       dock: Dock
+      trapezoid: Trapecio
     layout: Densidad
     layoutHint: >-
       Distribuido reparte los grupos a lo largo de la barra, como siempre.

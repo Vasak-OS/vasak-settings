@@ -687,6 +687,7 @@ views:
       floating: Floating
       bar: Bar
       dock: Dock
+      trapezoid: Trapezoid
     layout: Density
     layoutHint: >-
       Distributed spreads the groups along the bar, as always. Compact gathers

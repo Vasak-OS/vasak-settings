@@ -250,7 +250,7 @@ export function writePanelPosition(config: Record<string, unknown>, position: Pa
  * como la posición: un valor que no es de los conocidos cae al de fábrica, y la
  * escritura conserva el resto de la sección `panel` (posición e indicadores).
  */
-export const PANEL_STYLES = ['pills', 'floating', 'bar', 'dock'] as const;
+export const PANEL_STYLES = ['pills', 'floating', 'bar', 'dock', 'trapezoid'] as const;
 
 export type PanelStyle = (typeof PANEL_STYLES)[number];
 
