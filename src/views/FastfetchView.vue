@@ -55,9 +55,7 @@ const kindOptions = computed<SegmentedOption<LogoKind>[]>(() =>
 const showSource = computed(() => usesSource(kind.value));
 const showSize = computed(() => usesSize(kind.value));
 const sourceLabel = computed(() =>
-	kind.value === 'builtin'
-		? t('views.fastfetch.builtinName')
-		: t('views.fastfetch.filePath')
+	kind.value === 'builtin' ? t('views.fastfetch.builtinName') : t('views.fastfetch.filePath')
 );
 
 function apply(state: FastfetchState) {

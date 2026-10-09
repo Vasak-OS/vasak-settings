@@ -12,14 +12,22 @@
 //! lista que ya estuviera —por eso cargamos la config efectiva de base y sólo
 //! reemplazamos su bloque `logo`, en vez de escribir uno nuevo que dejaría la
 //! lectura sin ninguna fila.
+//!
+//! El trabajo que bloquea —leer y escribir archivos, lanzar `fastfetch`— va
+//! adentro de `spawn_blocking`: los comandos son `async`, y la macro de Tauri
+//! los despacha fuera del hilo principal, pero una espera bloqueante suelta en
+//! la tarea taparía un hilo del ejecutor igual. La lógica de archivo vive en
+//! funciones con la ruta inyectable, para poder probarla sin tocar el `$HOME`.
 
 use crate::logger::{log_debug, log_error};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const SYSTEM_CONFIG: &str = "/etc/fastfetch/config.jsonc";
+const SCHEMA: &str =
+    "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json";
 
 /// El emblema, en los términos que entiende la pantalla.
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
@@ -217,6 +225,22 @@ fn logo_to_value(logo: &FastfetchLogo) -> Value {
     Value::Object(obj)
 }
 
+/// Mezcla el emblema sobre una config de base, preservando el resto (la lista de
+/// módulos, sobre todo) y asegurando el `$schema`.
+fn merge_logo(base: Value, logo: &FastfetchLogo) -> Value {
+    let mut root = if base.is_object() {
+        base
+    } else {
+        Value::Object(Map::new())
+    };
+    if let Value::Object(map) = &mut root {
+        map.insert("logo".into(), logo_to_value(logo));
+        map.entry("$schema")
+            .or_insert_with(|| Value::String(SCHEMA.into()));
+    }
+    root
+}
+
 fn fastfetch_available() -> bool {
     Command::new("fastfetch")
         .arg("--version")
@@ -225,30 +249,50 @@ fn fastfetch_available() -> bool {
         .unwrap_or(false)
 }
 
-/// La config efectiva, para leer o para usar de base al escribir: la del
-/// usuario si existe, si no la del sistema, si no la que genera fastfetch.
-fn effective_config() -> Result<Value, String> {
-    if let Some(path) = user_config_path() {
+/// La config efectiva: la del usuario si existe, si no la del sistema, si no la
+/// que genera fastfetch. `user_path` se inyecta para poder probarla.
+fn effective_config(user_path: Option<&Path>) -> Value {
+    if let Some(path) = user_path {
         if path.exists() {
-            let raw = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
-            return parse_jsonc(&raw);
+            if let Ok(raw) = std::fs::read_to_string(path) {
+                if let Ok(value) = parse_jsonc(&raw) {
+                    return value;
+                }
+            }
         }
     }
     if let Ok(raw) = std::fs::read_to_string(SYSTEM_CONFIG) {
         if let Ok(value) = parse_jsonc(&raw) {
-            return Ok(value);
+            return value;
         }
     }
     // Último recurso: la config que fastfetch genera, para no perder la lista de
     // módulos. Si ni eso, un objeto vacío.
-    if let Ok(out) = Command::new("fastfetch").arg("--gen-config-force").arg("-").output() {
+    if let Ok(out) = Command::new("fastfetch")
+        .arg("--gen-config-force")
+        .arg("-")
+        .output()
+    {
         if out.status.success() {
             if let Ok(value) = parse_jsonc(&String::from_utf8_lossy(&out.stdout)) {
-                return Ok(value);
+                return value;
             }
         }
     }
-    Ok(Value::Object(Map::new()))
+    Value::Object(Map::new())
+}
+
+/// Escribe el emblema en `user_path`, preservando el resto de la config efectiva.
+fn write_logo_at(user_path: &Path, logo: &FastfetchLogo) -> Result<(), String> {
+    let root = merge_logo(effective_config(Some(user_path)), logo);
+    if let Some(parent) = user_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let pretty = serde_json::to_string_pretty(&root).map_err(|e| e.to_string())?;
+    std::fs::write(user_path, pretty).map_err(|e| {
+        log_error(&format!("No se pudo escribir {}: {e}", user_path.display()));
+        e.to_string()
+    })
 }
 
 fn run_preview() -> String {
@@ -263,59 +307,56 @@ fn run_preview() -> String {
         .unwrap_or_default()
 }
 
-/// Lee el estado para abrir la pantalla.
-#[tauri::command]
-pub async fn get_fastfetch_config() -> Result<FastfetchState, String> {
-    log_debug("Leyendo la configuración de fastfetch");
+/// Arma el estado para la pantalla. Sincrónica: la llaman los comandos adentro
+/// de `spawn_blocking`.
+fn read_state() -> FastfetchState {
+    let path = user_config_path();
     let available = fastfetch_available();
-    let user_config_exists = user_config_path().map(|p| p.exists()).unwrap_or(false);
-    let logo = effective_config().map(|v| logo_from_value(&v)).unwrap_or_default();
+    let user_config_exists = path.as_deref().map(Path::exists).unwrap_or(false);
+    let logo = logo_from_value(&effective_config(path.as_deref()));
     let preview = if available { run_preview() } else { String::new() };
-    Ok(FastfetchState {
+    FastfetchState {
         available,
         user_config_exists,
         logo,
         preview,
-    })
+    }
+}
+
+/// Lee el estado para abrir la pantalla.
+#[tauri::command]
+pub async fn get_fastfetch_config() -> Result<FastfetchState, String> {
+    log_debug("Leyendo la configuración de fastfetch");
+    tauri::async_runtime::spawn_blocking(read_state)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// Escribe el emblema, preservando el resto de la configuración efectiva.
 #[tauri::command]
 pub async fn set_fastfetch_logo(logo: FastfetchLogo) -> Result<FastfetchState, String> {
-    let path = user_config_path().ok_or("No se pudo resolver ~/.config")?;
-    let mut root = effective_config()?;
-    if !root.is_object() {
-        root = Value::Object(Map::new());
-    }
-    if let Value::Object(map) = &mut root {
-        map.insert("logo".into(), logo_to_value(&logo));
-        // Asegurar el `$schema`, que ayuda a los editores.
-        map.entry("$schema").or_insert_with(|| {
-            Value::String(
-                "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json".into(),
-            )
-        });
-    }
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    let pretty = serde_json::to_string_pretty(&root).map_err(|e| e.to_string())?;
-    std::fs::write(&path, pretty).map_err(|e| {
-        log_error(&format!("No se pudo escribir {}: {e}", path.display()));
-        e.to_string()
-    })?;
-    get_fastfetch_config().await
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = user_config_path().ok_or("No se pudo resolver ~/.config")?;
+        write_logo_at(&path, &logo)?;
+        Ok(read_state())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// Borra la config del usuario: vuelve a mandar la del sistema.
 #[tauri::command]
 pub async fn reset_fastfetch_config() -> Result<FastfetchState, String> {
-    if let Some(path) = user_config_path() {
-        if path.exists() {
-            std::fs::remove_file(&path).map_err(|e| e.to_string())?;
+    tauri::async_runtime::spawn_blocking(|| {
+        if let Some(path) = user_config_path() {
+            if path.exists() {
+                std::fs::remove_file(&path).map_err(|e| e.to_string())?;
+            }
         }
-    }
-    get_fastfetch_config().await
+        Ok(read_state())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[cfg(test)]
@@ -378,5 +419,61 @@ mod tests {
         };
         let round = logo_from_value(&serde_json::json!({ "logo": logo_to_value(&logo) }));
         assert_eq!(round, logo);
+    }
+
+    #[test]
+    fn merge_preserva_los_modulos_y_pone_schema() {
+        let base = serde_json::json!({ "modules": ["title", "os", "kernel"] });
+        let logo = FastfetchLogo {
+            kind: "file".into(),
+            source: Some("l.png".into()),
+            ..Default::default()
+        };
+        let merged = merge_logo(base, &logo);
+        assert_eq!(merged["modules"], serde_json::json!(["title", "os", "kernel"]));
+        assert_eq!(merged["logo"]["type"], "file");
+        assert_eq!(merged["$schema"], SCHEMA);
+    }
+
+    #[test]
+    fn escribir_y_volver_a_leer_el_emblema() {
+        let dir = std::env::temp_dir().join(format!("ff-test-{}", std::process::id()));
+        let path = dir.join("config.jsonc");
+        let _ = std::fs::remove_dir_all(&dir);
+
+        // Una config de base con módulos, como la que ya tuviera alguien.
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            &path,
+            r#"{ // mía
+                "modules": ["title", "os"],
+                "logo": "arch",
+            }"#,
+        )
+        .unwrap();
+
+        let logo = FastfetchLogo {
+            kind: "file".into(),
+            source: Some("~/l.png".into()),
+            width: Some(28),
+            height: Some(12),
+            padding: Some(3),
+        };
+        write_logo_at(&path, &logo).expect("escribe");
+
+        // Se relee: el emblema cambió y los módulos siguen.
+        let root = effective_config(Some(&path));
+        assert_eq!(logo_from_value(&root), logo);
+        assert_eq!(root["modules"], serde_json::json!(["title", "os"]));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn sin_config_del_usuario_la_base_no_revienta() {
+        let path = std::env::temp_dir().join("ff-inexistente-xyz/config.jsonc");
+        // No existe: effective_config cae al sistema o a un objeto, nunca panic.
+        let value = effective_config(Some(&path));
+        assert!(value.is_object());
     }
 }
