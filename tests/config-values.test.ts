@@ -10,12 +10,9 @@ import {
 	DEFAULT_MENU_WIDGET,
 	DEFAULT_PANEL_ANIMATION,
 	DEFAULT_PANEL_LAYOUT,
-	DEFAULT_PANEL_SIZE,
 	DEFAULT_PANEL_STYLE,
 	MAX_HEADER_STRENGTH,
-	MAX_PANEL_SIZE,
 	type MenuSettings,
-	MIN_PANEL_SIZE,
 	PANEL_ANIMATIONS,
 	PANEL_LAYOUTS,
 	PANEL_POSITIONS,
@@ -26,7 +23,6 @@ import {
 	readPanelAutohide,
 	readPanelLayout,
 	readPanelPosition,
-	readPanelSize,
 	readPanelStyle,
 	readScreenTimeEnabled,
 	readWallpaperFolder,
@@ -230,7 +226,7 @@ describe('writePanelPosition', () => {
 	});
 });
 
-describe('el aspecto del panel: tipo, densidad, animación y tamaño', () => {
+describe('el aspecto del panel: tipo, densidad y animación', () => {
 	test('sin nada puesto, los valores de fábrica', () => {
 		// El contrato coincide con el que lee el escritorio (`panel-appearance.ts`):
 		// mismos valores de fábrica. Una instalación vieja tiene la sección `panel`
@@ -239,7 +235,6 @@ describe('el aspecto del panel: tipo, densidad, animación y tamaño', () => {
 			expect(readPanelStyle(config)).toBe(DEFAULT_PANEL_STYLE);
 			expect(readPanelLayout(config)).toBe(DEFAULT_PANEL_LAYOUT);
 			expect(readPanelAnimation(config)).toBe(DEFAULT_PANEL_ANIMATION);
-			expect(readPanelSize(config)).toBe(DEFAULT_PANEL_SIZE);
 			expect(readPanelAutohide(config)).toBe(false);
 		}
 	});
@@ -266,14 +261,6 @@ describe('el aspecto del panel: tipo, densidad, animación y tamaño', () => {
 		expect(readPanelStyle({ panel: 'bar' })).toBe(DEFAULT_PANEL_STYLE);
 	});
 
-	test('el tamaño se acota a [80, 120]; lo que no es número vale 100', () => {
-		expect(readPanelSize({ panel: { size: 90 } })).toBe(90);
-		expect(readPanelSize({ panel: { size: 500 } })).toBe(MAX_PANEL_SIZE);
-		expect(readPanelSize({ panel: { size: 10 } })).toBe(MIN_PANEL_SIZE);
-		expect(readPanelSize({ panel: { size: Number.NaN } })).toBe(DEFAULT_PANEL_SIZE);
-		expect(readPanelSize({ panel: { size: '120' } })).toBe(DEFAULT_PANEL_SIZE);
-	});
-
 	test('escribir el aspecto conserva la posición y los indicadores', () => {
 		// Todo vive en la misma sección `panel`: reemplazarla entera apagaría los
 		// indicadores y movería el panel cada vez que alguien cambia el tipo.
@@ -285,7 +272,6 @@ describe('el aspecto del panel: tipo, densidad, animación y tamaño', () => {
 			style: 'dock',
 			layout: 'compact',
 			animation: 'reactor',
-			size: 110,
 			autohide: true,
 		});
 
@@ -295,23 +281,34 @@ describe('el aspecto del panel: tipo, densidad, animación y tamaño', () => {
 			style: 'dock',
 			layout: 'compact',
 			animation: 'reactor',
-			size: 110,
 			autohide: true,
 		});
 	});
 
-	test('al escribir, el tamaño también se acota', () => {
-		const config: Record<string, unknown> = {};
+	test('escribir no toca un size viejo que haya quedado en el archivo', () => {
+		// El control de tamaño se sacó porque el escritorio no consumía
+		// `--panel-scale`: la pantalla ya no escribe `panel.size`, pero una
+		// instalación vieja puede tenerlo guardado. Se conserva tal cual —es
+		// inofensivo, el escritorio lo ignora— en lugar de borrarlo.
+		const config: Record<string, unknown> = {
+			panel: { size: 110, position: 'bottom' },
+		};
 
 		writePanelAppearance(config, {
 			style: 'bar',
 			layout: 'distributed',
 			animation: 'off',
-			size: 999,
 			autohide: false,
 		});
 
-		expect((config.panel as { size: number }).size).toBe(MAX_PANEL_SIZE);
+		expect(config.panel).toEqual({
+			size: 110,
+			position: 'bottom',
+			style: 'bar',
+			layout: 'distributed',
+			animation: 'off',
+			autohide: false,
+		});
 	});
 });
 
