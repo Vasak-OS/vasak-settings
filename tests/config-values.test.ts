@@ -26,12 +26,20 @@ import {
 	readPanelStyle,
 	readScreenTimeEnabled,
 	readWallpaperFolder,
+	readWindowBorder,
+	readWindowControls,
+	WINDOW_BORDER_COLORS,
+	WINDOW_BORDER_WIDTHS,
+	WINDOW_CONTROLS_ORDERS,
+	WINDOW_CONTROLS_STYLES,
 	writeBarPosition,
 	writeMenuSettings,
 	writePanelAppearance,
 	writePanelPosition,
 	writeScheme,
 	writeScreenTimeEnabled,
+	writeWindowBorder,
+	writeWindowControls,
 } from '../src/utils/config-values';
 
 /**
@@ -173,6 +181,156 @@ describe('writeBarPosition', () => {
 		writeBarPosition(config, 'bottom');
 
 		expect(config.window).toEqual({ otherKey: 1, barPosition: 'bottom' });
+	});
+});
+
+describe('readWindowControls', () => {
+	test('las opciones son las que entiende la librería', () => {
+		// `WindowControls` de vue-libvasak compara contra estas cadenas: una que
+		// se escriba distinto acá queda guardada y la ventana no le hace caso.
+		expect([...WINDOW_CONTROLS_STYLES]).toEqual(['default', 'macos']);
+		expect([...WINDOW_CONTROLS_ORDERS]).toEqual(['default', 'reversed']);
+	});
+
+	test('sin nada puesto, los botones planos y al final', () => {
+		const deFabrica = { style: 'default', order: 'default' };
+		expect(readWindowControls({})).toEqual(deFabrica);
+		expect(readWindowControls(null)).toEqual(deFabrica);
+		expect(readWindowControls(undefined)).toEqual(deFabrica);
+		expect(readWindowControls({ window: {} })).toEqual(deFabrica);
+	});
+
+	test('cada estilo y cada orden se leen', () => {
+		for (const style of WINDOW_CONTROLS_STYLES) {
+			for (const order of WINDOW_CONTROLS_ORDERS) {
+				expect(
+					readWindowControls({ window: { controlsStyle: style, controlsOrder: order } })
+				).toEqual({ style, order });
+			}
+		}
+	});
+
+	test('un valor desconocido cae al de siempre sin arrastrar al otro', () => {
+		// El archivo se edita a mano: un estilo mal escrito no tiene que
+		// llevarse puesto el orden, que sí es válido.
+		expect(
+			readWindowControls({ window: { controlsStyle: 'mac', controlsOrder: 'reversed' } })
+		).toEqual({ style: 'default', order: 'reversed' });
+		expect(
+			readWindowControls({ window: { controlsStyle: 'macos', controlsOrder: 'invertido' } })
+		).toEqual({ style: 'macos', order: 'default' });
+		expect(readWindowControls({ window: { controlsStyle: 1, controlsOrder: true } })).toEqual({
+			style: 'default',
+			order: 'default',
+		});
+		expect(readWindowControls({ window: 'macos' })).toEqual({
+			style: 'default',
+			order: 'default',
+		});
+	});
+});
+
+describe('writeWindowControls', () => {
+	test('deja el estilo y el orden elegidos', () => {
+		const config: Record<string, unknown> = {};
+
+		writeWindowControls(config, { style: 'macos', order: 'reversed' });
+
+		expect(config.window).toEqual({ controlsStyle: 'macos', controlsOrder: 'reversed' });
+	});
+
+	test('y conserva la posición de la barra y lo que no conoce', () => {
+		// `window` la comparten la barra y los botones: guardar unos no puede
+		// devolver la barra arriba.
+		const config: Record<string, unknown> = {
+			window: { barPosition: 'left', futureKey: { a: 1 }, controlsStyle: 'macos' },
+			style: { radius: 8 },
+		};
+
+		writeWindowControls(config, { style: 'default', order: 'reversed' });
+
+		expect(config.window).toEqual({
+			barPosition: 'left',
+			futureKey: { a: 1 },
+			controlsStyle: 'default',
+			controlsOrder: 'reversed',
+		});
+		expect(config.style).toEqual({ radius: 8 });
+	});
+});
+
+describe('readWindowBorder', () => {
+	test('las opciones son las que entiende el config-manager', () => {
+		expect([...WINDOW_BORDER_WIDTHS]).toEqual(['normal', 'thick']);
+		expect([...WINDOW_BORDER_COLORS]).toEqual(['scheme', 'accent']);
+	});
+
+	test('sin nada puesto, el borde fino y del color del esquema', () => {
+		const deFabrica = { width: 'normal', color: 'scheme' };
+		expect(readWindowBorder({})).toEqual(deFabrica);
+		expect(readWindowBorder(null)).toEqual(deFabrica);
+		expect(readWindowBorder({ style: {} })).toEqual(deFabrica);
+		expect(readWindowBorder({ style: { border: {} } })).toEqual(deFabrica);
+	});
+
+	test('cada grosor y cada color se leen', () => {
+		for (const width of WINDOW_BORDER_WIDTHS) {
+			for (const color of WINDOW_BORDER_COLORS) {
+				expect(readWindowBorder({ style: { border: { width, color } } })).toEqual({
+					width,
+					color,
+				});
+			}
+		}
+	});
+
+	test('un valor desconocido cae al de siempre sin arrastrar al otro', () => {
+		expect(readWindowBorder({ style: { border: { width: 2, color: 'accent' } } })).toEqual({
+			width: 'normal',
+			color: 'accent',
+		});
+		expect(readWindowBorder({ style: { border: { width: 'thick', color: '#ff0000' } } })).toEqual({
+			width: 'thick',
+			color: 'scheme',
+		});
+		expect(readWindowBorder({ style: { border: 'thick' } })).toEqual({
+			width: 'normal',
+			color: 'scheme',
+		});
+	});
+});
+
+describe('writeWindowBorder', () => {
+	test('deja el grosor y el color elegidos', () => {
+		const config: Record<string, unknown> = {};
+
+		writeWindowBorder(config, { width: 'thick', color: 'accent' });
+
+		expect(config.style).toEqual({ border: { width: 'thick', color: 'accent' } });
+	});
+
+	test('y conserva el esquema, el radio y lo que no conoce dentro del borde', () => {
+		// `style` lleva el esquema elegido y el radio: perderlos al guardar el
+		// borde cambiaría los colores y las esquinas de todo el escritorio.
+		const config: Record<string, unknown> = {
+			style: {
+				darkmode: true,
+				'color-scheme': 'nord',
+				radius: 12,
+				border: { width: 'normal', color: 'scheme', glow: true },
+			},
+			window: { barPosition: 'bottom' },
+		};
+
+		writeWindowBorder(config, { width: 'thick', color: 'accent' });
+
+		expect(config.style).toEqual({
+			darkmode: true,
+			'color-scheme': 'nord',
+			radius: 12,
+			border: { width: 'thick', color: 'accent', glow: true },
+		});
+		expect(config.window).toEqual({ barPosition: 'bottom' });
 	});
 });
 

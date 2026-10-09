@@ -198,6 +198,107 @@ export function writeBarPosition(config: Record<string, unknown>, position: BarP
 }
 
 /**
+ * Cómo se dibujan los botones de ventana: los planos de siempre o los tres
+ * círculos de macOS. Lo lee `WindowControls` de `@vasakgroup/vue-libvasak`
+ * de `window.controlsStyle`.
+ */
+export const WINDOW_CONTROLS_STYLES = ['default', 'macos'] as const;
+
+export type WindowControlsStyle = (typeof WINDOW_CONTROLS_STYLES)[number];
+
+/**
+ * De qué lado van: al final (minimizar, maximizar, cerrar) o invertidos al
+ * principio como en macOS (cerrar, minimizar, maximizar). Lo lee
+ * `WindowControls` de `window.controlsOrder`.
+ */
+export const WINDOW_CONTROLS_ORDERS = ['default', 'reversed'] as const;
+
+export type WindowControlsOrder = (typeof WINDOW_CONTROLS_ORDERS)[number];
+
+export interface WindowControlsPreference {
+	style: WindowControlsStyle;
+	order: WindowControlsOrder;
+}
+
+function windowSection(config: unknown): Record<string, unknown> | undefined {
+	return config && typeof config === 'object'
+		? ((config as Record<string, unknown>).window as Record<string, unknown> | undefined)
+		: undefined;
+}
+
+/**
+ * El estilo y el orden de los botones de ventana.
+ *
+ * Con el mismo criterio que la librería: lo que no sea uno de los valores
+ * conocidos vale por el de siempre. Si esta pantalla leyera distinto, diría una
+ * cosa y las ventanas harían otra.
+ */
+export function readWindowControls(config: unknown): WindowControlsPreference {
+	const section = windowSection(config);
+	const style = section?.controlsStyle;
+	const order = section?.controlsOrder;
+	return {
+		style: WINDOW_CONTROLS_STYLES.includes(style as WindowControlsStyle)
+			? (style as WindowControlsStyle)
+			: 'default',
+		order: WINDOW_CONTROLS_ORDERS.includes(order as WindowControlsOrder)
+			? (order as WindowControlsOrder)
+			: 'default',
+	};
+}
+
+/** Deja la sección `window` con los botones elegidos, conservando lo demás. */
+export function writeWindowControls(
+	config: Record<string, unknown>,
+	controls: WindowControlsPreference
+): void {
+	const previous = (config.window as Record<string, unknown> | undefined) ?? {};
+	config.window = { ...previous, controlsStyle: controls.style, controlsOrder: controls.order };
+}
+
+/**
+ * El grosor del borde de afuera —la ventana entera, el panel, el centro de
+ * control y los emergentes del escritorio—: 1 px o 2 px. Lo aplica el
+ * config-manager desde `style.border.width`.
+ */
+export const WINDOW_BORDER_WIDTHS = ['normal', 'thick'] as const;
+
+export type WindowBorderWidth = (typeof WINDOW_BORDER_WIDTHS)[number];
+
+/** El color del borde de afuera: el del esquema o el de acento. */
+export const WINDOW_BORDER_COLORS = ['scheme', 'accent'] as const;
+
+export type WindowBorderColor = (typeof WINDOW_BORDER_COLORS)[number];
+
+export interface WindowBorderPreference {
+	width: WindowBorderWidth;
+	color: WindowBorderColor;
+}
+
+/** El borde de afuera, con el mismo criterio que el config-manager. */
+export function readWindowBorder(config: unknown): WindowBorderPreference {
+	const style =
+		config && typeof config === 'object'
+			? ((config as Record<string, unknown>).style as Record<string, unknown> | undefined)
+			: undefined;
+	const border = style?.border as Record<string, unknown> | undefined;
+	return {
+		width: border?.width === 'thick' ? 'thick' : 'normal',
+		color: border?.color === 'accent' ? 'accent' : 'scheme',
+	};
+}
+
+/** Deja `style.border` con lo elegido, conservando lo demás de `style`. */
+export function writeWindowBorder(
+	config: Record<string, unknown>,
+	border: WindowBorderPreference
+): void {
+	const style = (config.style as Record<string, unknown> | undefined) ?? {};
+	const previous = (style.border as Record<string, unknown> | undefined) ?? {};
+	config.style = { ...style, border: { ...previous, width: border.width, color: border.color } };
+}
+
+/**
  * Los cuatro lados donde puede quedar el panel del escritorio.
  *
  * Son los mismos que los de la barra de las ventanas, y por eso comparten el
