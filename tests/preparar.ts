@@ -14,14 +14,17 @@
  * un componente que se renderiza antes de que algún archivo doble
  * `@tauri-apps/api/core` —el orden entre archivos cambia entre local y CI— llama
  * a `window.__TAURI_INTERNALS__.invoke`, que no existe, y el acceso a `.invoke`
- * **tira sincrónico**. Eso no es un promise rechazado —que quien llama ya atrapa,
- * como el plugin de i18n con su «Failed to load translations»— sino una
- * excepción que nadie espera; bajo carga cae dentro de una prueba y voltea la
+ * **tira sincrónico**; bajo carga eso cae dentro de una prueba y voltea la
  * corrida entera aunque ninguna falle (ver la memoria del taller sobre
- * `__TAURI_INTERNALS__`). Devolviendo un promise rechazado, ese camino vuelve a
- * ser el que ya se maneja, y la suite deja de depender del orden. Un archivo que
- * quiera respuestas de verdad sigue poniendo su `mock.module`, que gana sobre
- * esto.
+ * `__TAURI_INTERNALS__`).
+ *
+ * El `invoke` del piso **resuelve** —no rechaza—: un rechazo lo atrapa quien
+ * llama (el plugin de i18n con su «Failed to load translations»), pero sigue
+ * siendo un error de corrida que Bun en CI cuenta y hace salir con código 1. Al
+ * resolver `undefined` no se produce ningún error: el único backend que se toca
+ * al montar es el i18n, y su `translate` cae a la clave cuando no hay catálogo.
+ * Un archivo que quiera respuestas de verdad sigue poniendo su `mock.module`,
+ * que gana sobre esto.
  */
 
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
@@ -30,7 +33,7 @@ import './complemento-vue';
 GlobalRegistrator.register();
 
 const capaNativa = {
-	invoke: () => Promise.reject(new Error('Tauri no está disponible en las pruebas')),
+	invoke: () => Promise.resolve(undefined),
 	transformCallback: (callback?: unknown) => callback,
 };
 
