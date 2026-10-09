@@ -175,6 +175,11 @@ export function categoriasDelMenu(t: Traductor): SidebarCategory[] {
 					label: t('sidebar.items.loginScreen'),
 					icon: 'preferences-system-login',
 				},
+				{
+					id: 'fastfetch',
+					label: t('sidebar.items.fastfetch'),
+					icon: 'utilities-terminal',
+				},
 			],
 		},
 		{

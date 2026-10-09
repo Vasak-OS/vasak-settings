@@ -179,6 +179,11 @@ const routes = [
 		name: 'login-screen',
 		component: () => import('@/views/LoginScreenView.vue'),
 	},
+	{
+		path: '/fastfetch',
+		name: 'fastfetch',
+		component: () => import('@/views/FastfetchView.vue'),
+	},
 ];
 export const router = createRouter({
 	history: createMemoryHistory(),

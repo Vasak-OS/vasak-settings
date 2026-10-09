@@ -71,6 +71,7 @@ sidebar:
     networkVpn: VPN
     phoneDevices: Phones
     loginScreen: Login Screen
+    fastfetch: Fastfetch
 
 wayfire:
   plugins:
@@ -191,6 +192,30 @@ wayfire:
       description: Rotates a window with the mouse.
 
 views:
+  fastfetch:
+    title: Fastfetch
+    description: The emblem and size of the terminal read-out, previewed live.
+    previewTitle: Read-out preview
+    previewEmpty: The preview could not be generated.
+    previewNote: The real logo is drawn with kitty's graphics protocol in the terminal; here it is shown as text.
+    emblemTitle: Emblem
+    emblemHelp: Edits your config at ~/.config/fastfetch/config.jsonc; "Reset" restores the system one.
+    kind: Type
+    kinds:
+      image: Image
+      builtin: Built-in
+      ascii: ASCII
+      none: None
+    builtinName: Built-in emblem name
+    filePath: Emblem file
+    width: Width
+    height: Height
+    padding: Padding
+    sizeNote: In terminal character cells. 0 = automatic.
+    save: Save
+    reset: Reset to default
+    saved: Fastfetch configuration saved.
+    notInstalled: fastfetch is not installed; preview and apply are unavailable.
   defaultApps:
     title: "Default applications"
     description: "What the system opens each thing with."
