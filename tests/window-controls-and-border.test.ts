@@ -24,7 +24,7 @@ import AppearanceWindowsView from '../src/views/AppearanceWindowsView.vue';
 
 const STYLES = ['default', 'macos'];
 const ORDERS = ['default', 'reversed'];
-const WIDTHS = ['normal', 'thick'];
+const WIDTHS = ['normal', 'thick', 'heavy'];
 const COLORS = ['scheme', 'accent'];
 
 /** Lo que hay en el archivo antes de abrir la pantalla. */
@@ -177,6 +177,26 @@ describe('la pantalla de las ventanas: botones y borde', () => {
 		const written = writeSpy.mock.calls[0][0] as unknown as Record<string, unknown>;
 		expect(written.window).toMatchObject({ controlsStyle: 'macos', controlsOrder: 'reversed' });
 		expect(written.style).toEqual({ radius: 8, border: { width: 'thick', color: 'accent' } });
+	});
+
+	test('muestra el muy grueso guardado', async () => {
+		stored = { style: { radius: 8, border: { width: 'heavy', color: 'scheme' } } };
+		const wrapper = await mountView();
+
+		expect((selectWith(wrapper, WIDTHS).element as HTMLSelectElement).value).toBe('heavy');
+	});
+
+	test('al elegir muy grueso guarda heavy en el archivo', async () => {
+		stored = { style: { radius: 8 }, desktop: {}, fonts: {}, icons: {} };
+		const wrapper = await mountView();
+
+		await selectWith(wrapper, WIDTHS).setValue('heavy');
+		await applyButton(wrapper).trigger('click');
+		await flushPromises();
+
+		expect(writeSpy).toHaveBeenCalledTimes(1);
+		const written = writeSpy.mock.calls[0][0] as unknown as Record<string, unknown>;
+		expect(written.style).toEqual({ radius: 8, border: { width: 'heavy', color: 'scheme' } });
 	});
 
 	test('después de guardar recarga la configuración para que esta ventana tome el borde', async () => {

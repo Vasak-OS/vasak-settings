@@ -261,7 +261,7 @@ describe('writeWindowControls', () => {
 
 describe('readWindowBorder', () => {
 	test('las opciones son las que entiende el config-manager', () => {
-		expect([...WINDOW_BORDER_WIDTHS]).toEqual(['normal', 'thick']);
+		expect([...WINDOW_BORDER_WIDTHS]).toEqual(['normal', 'thick', 'heavy']);
 		expect([...WINDOW_BORDER_COLORS]).toEqual(['scheme', 'accent']);
 	});
 
@@ -281,6 +281,19 @@ describe('readWindowBorder', () => {
 					color,
 				});
 			}
+		}
+	});
+
+	test('el muy grueso guardado se lee como muy grueso y no como el de siempre', () => {
+		expect(readWindowBorder({ style: { border: { width: 'heavy', color: 'accent' } } })).toEqual({
+			width: 'heavy',
+			color: 'accent',
+		});
+	});
+
+	test('una clave heredada de Object no se toma por un grosor', () => {
+		for (const width of ['toString', 'constructor', '__proto__', 'length', 'HEAVY']) {
+			expect(readWindowBorder({ style: { border: { width } } }).width).toBe('normal');
 		}
 	});
 
@@ -307,6 +320,15 @@ describe('writeWindowBorder', () => {
 		writeWindowBorder(config, { width: 'thick', color: 'accent' });
 
 		expect(config.style).toEqual({ border: { width: 'thick', color: 'accent' } });
+	});
+
+	test('guarda el muy grueso tal cual lo entiende el config-manager', () => {
+		const config: Record<string, unknown> = {};
+
+		writeWindowBorder(config, { width: 'heavy', color: 'scheme' });
+
+		expect(config.style).toEqual({ border: { width: 'heavy', color: 'scheme' } });
+		expect(readWindowBorder(config).width).toBe('heavy');
 	});
 
 	test('y conserva el esquema, el radio y lo que no conoce dentro del borde', () => {

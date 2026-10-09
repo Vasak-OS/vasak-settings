@@ -855,6 +855,7 @@ views:
     borderWidths:
       normal: Thin
       thick: Thick
+      heavy: Extra thick
     borderColor: Color
     borderColorHint: The color scheme's, or the accent color.
     borderColors:

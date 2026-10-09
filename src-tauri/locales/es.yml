@@ -860,6 +860,7 @@ views:
     borderWidths:
       normal: Fino
       thick: Grueso
+      heavy: Muy grueso
     borderColor: Color
     borderColorHint: El del esquema de colores, o el color de acento.
     borderColors:

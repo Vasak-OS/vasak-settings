@@ -258,10 +258,10 @@ export function writeWindowControls(
 
 /**
  * El grosor del borde de afuera —la ventana entera, el panel, el centro de
- * control y los emergentes del escritorio—: 1 px o 2 px. Lo aplica el
+ * control y los emergentes del escritorio—: 1 px, 2 px o 3 px. Lo aplica el
  * config-manager desde `style.border.width`.
  */
-export const WINDOW_BORDER_WIDTHS = ['normal', 'thick'] as const;
+export const WINDOW_BORDER_WIDTHS = ['normal', 'thick', 'heavy'] as const;
 
 export type WindowBorderWidth = (typeof WINDOW_BORDER_WIDTHS)[number];
 
@@ -283,7 +283,9 @@ export function readWindowBorder(config: unknown): WindowBorderPreference {
 			: undefined;
 	const border = style?.border as Record<string, unknown> | undefined;
 	return {
-		width: border?.width === 'thick' ? 'thick' : 'normal',
+		width: WINDOW_BORDER_WIDTHS.includes(border?.width as WindowBorderWidth)
+			? (border?.width as WindowBorderWidth)
+			: 'normal',
 		color: border?.color === 'accent' ? 'accent' : 'scheme',
 	};
 }
