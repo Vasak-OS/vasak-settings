@@ -6,6 +6,7 @@ pub mod clipboard;
 pub mod connect;
 pub mod datetime;
 pub mod dav_discover;
+pub mod fastfetch;
 pub mod game_mode;
 pub mod greeter;
 pub mod iconos_de_apps;

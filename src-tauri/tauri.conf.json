@@ -59,6 +59,7 @@
           "upower",
           "ffmpeg",
           "xdg-utils",
+          "fastfetch",
           "wlr-randr",
           "desktop-file-utils",
           "hicolor-icon-theme"

@@ -71,6 +71,7 @@ sidebar:
     networkVpn: VPN
     phoneDevices: Teléfonos
     loginScreen: Inicio de sesión
+    fastfetch: Fastfetch
 
 wayfire:
   plugins:
@@ -191,6 +192,32 @@ wayfire:
       description: Gira una ventana con el ratón.
 
 views:
+  fastfetch:
+    title: Fastfetch
+    description: El emblema y el tamaño de la lectura del terminal, con la vista previa en vivo.
+    previewTitle: Vista previa de la lectura
+    previewEmpty: No se pudo generar la vista previa.
+    previewNote: El logo real se dibuja con el protocolo de gráficos de kitty en la terminal; acá se muestra en texto.
+    emblemTitle: Emblema
+    emblemHelp: Se edita tu configuración en ~/.config/fastfetch/config.jsonc; «Restablecer» vuelve a la del sistema.
+    kind: Tipo
+    kinds:
+      image: Imagen
+      builtin: Integrado
+      ascii: ASCII
+      none: Ninguno
+    builtinName: Nombre del emblema integrado
+    builtinPlaceholder: arch
+    filePath: Archivo del emblema
+    filePlaceholder: Ruta de la imagen (PNG, JPG o WEBP)
+    width: Ancho
+    height: Altura
+    padding: Relleno
+    sizeNote: En celdas de carácter de terminal. 0 = automático.
+    save: Guardar
+    reset: Restablecer a predeterminado
+    saved: Configuración de fastfetch guardada.
+    notInstalled: fastfetch no está instalado; no se puede previsualizar ni aplicar.
   defaultApps:
     title: "Aplicaciones por defecto"
     description: "Con qué abre el sistema cada cosa."
