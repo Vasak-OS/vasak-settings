@@ -704,3 +704,215 @@ pub fn set_default_audio_input_device(device_id: &str, app: AppHandle) -> Result
     log_info("Dispositivo de entrada por defecto establecido correctamente");
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Salida de `pactl list cards` con dos tarjetas: la analógica integrada
+    /// (con su perfil activo) y la HDMI de la GPU apagada aunque el monitor
+    /// está enchufado (su puerto figura disponible, pero `Active Profile: off`
+    /// hace que su sink no exista en `pactl list sinks`).
+    const CARDS_FIXTURE: &str = "\
+Card #0
+\tName: alsa_card.pci-0000_00_1f.3
+\tDriver: alsa
+\tProperties:
+\t\talsa.card = \"0\"
+\t\tdevice.description = \"Audio interno\"
+\tProfiles:
+\t\toutput:analog-stereo: Analógico estéreo salida (sinks: 1, sources: 0, priority: 6500, available: yes)
+\t\toutput:analog-stereo+input:analog-stereo: Dúplex analógico estéreo (sinks: 1, sources: 1, priority: 6565, available: yes)
+\t\tinput:analog-stereo: Analógico estéreo entrada (sinks: 0, sources: 1, priority: 65, available: yes)
+\t\toff: Apagado (sinks: 0, sources: 0, priority: 0, available: yes)
+\tActive Profile: output:analog-stereo+input:analog-stereo
+\tPorts:
+\t\tanalog-output-speaker: Altavoces (type: Speaker, priority: 10000, availability unknown)
+\t\t\tPart of profile(s): output:analog-stereo, output:analog-stereo+input:analog-stereo
+\t\tanalog-input-internal-mic: Micrófono interno (type: Mic, priority: 8900, availability unknown)
+\t\t\tPart of profile(s): input:analog-stereo, output:analog-stereo+input:analog-stereo
+Card #1
+\tName: alsa_card.pci-0000_01_00.1
+\tDriver: alsa
+\tProperties:
+\t\talsa.card = \"1\"
+\t\tdevice.description = \"Audio HDMI de la GPU\"
+\tProfiles:
+\t\toutput:hdmi-stereo: Estéreo digital (HDMI) salida (sinks: 1, sources: 0, priority: 5900, available: yes)
+\t\toutput:hdmi-surround-71: Envolvente 7.1 digital (HDMI) salida (sinks: 1, sources: 0, priority: 100, available: no)
+\t\toff: Apagado (sinks: 0, sources: 0, priority: 0, available: yes)
+\tActive Profile: off
+\tPorts:
+\t\thdmi-output-0: HDMI / DisplayPort (type: HDMI, priority: 5900, availability group: Legacy 1, available: yes)
+\t\t\tPart of profile(s): output:hdmi-stereo, output:hdmi-surround-71
+";
+
+    fn hdmi(output: &[AudioOutputProfile]) -> &AudioOutputProfile {
+        output
+            .iter()
+            .find(|o| o.card_name == "alsa_card.pci-0000_01_00.1")
+            .expect("la salida HDMI tiene que estar en la lista")
+    }
+
+    #[test]
+    fn la_salida_hdmi_apagada_se_lista_como_disponible_e_inactiva() {
+        // El corazón del arreglo: con el perfil de la tarjeta en `off`, la vieja
+        // enumeración por `pactl list sinks` no veía esta salida. Acá tiene que
+        // aparecer, marcada como disponible (el monitor está) y no activa.
+        let outputs = parse_card_output_profiles(CARDS_FIXTURE);
+        let hdmi = hdmi(&outputs);
+
+        assert_eq!(hdmi.card_name, "alsa_card.pci-0000_01_00.1");
+        assert_eq!(hdmi.profile_name, "output:hdmi-stereo");
+        assert!(
+            hdmi.is_available,
+            "el puerto HDMI está presente, tiene que ser available"
+        );
+        assert!(
+            !hdmi.is_active,
+            "la tarjeta está en `off`, la salida no puede figurar activa"
+        );
+        assert!(hdmi.description.contains("HDMI"));
+    }
+
+    #[test]
+    fn el_perfil_activo_de_la_tarjeta_marca_la_salida_como_activa() {
+        let outputs = parse_card_output_profiles(CARDS_FIXTURE);
+        let speaker = outputs
+            .iter()
+            .find(|o| o.card_name == "alsa_card.pci-0000_00_1f.3")
+            .expect("la salida analógica tiene que estar en la lista");
+
+        assert!(
+            speaker.is_active,
+            "su perfil dúplex es el Active Profile de la tarjeta"
+        );
+        assert!(speaker.is_available);
+    }
+
+    #[test]
+    fn el_puerto_de_entrada_no_se_ofrece_como_salida() {
+        let outputs = parse_card_output_profiles(CARDS_FIXTURE);
+        assert!(
+            outputs.iter().all(|o| !o.description.contains("Micrófono")),
+            "un puerto que sólo pertenece a perfiles `input:` no es una salida"
+        );
+    }
+
+    #[test]
+    fn la_salida_de_mayor_prioridad_queda_primera() {
+        let outputs = parse_card_output_profiles(CARDS_FIXTURE);
+        assert!(outputs.len() >= 2);
+        assert!(
+            outputs.windows(2).all(|w| w[0].priority >= w[1].priority),
+            "la lista tiene que venir ordenada de mayor a menor prioridad"
+        );
+    }
+
+    #[test]
+    fn parse_profile_line_lee_sinks_prioridad_y_disponibilidad() {
+        let profile = parse_profile_line(
+            "output:hdmi-stereo: Estéreo digital (HDMI) salida (sinks: 1, sources: 0, priority: 5900, available: no)",
+        )
+        .expect("una línea de perfil se parsea");
+
+        assert_eq!(profile.name, "output:hdmi-stereo");
+        assert_eq!(profile.sinks, 1);
+        assert_eq!(profile.priority, 5900);
+        assert!(
+            !profile.available,
+            "`available: no` tiene que leerse como no disponible"
+        );
+    }
+
+    #[test]
+    fn parse_profile_line_conserva_el_prefijo_input() {
+        // El discriminador entrada/salida se apoya en que el nombre conserva su
+        // prefijo `input:` / `output:`.
+        let input = parse_profile_line(
+            "input:analog-stereo: Analógico estéreo entrada (sinks: 0, sources: 1, priority: 65, available: yes)",
+        )
+        .expect("perfil de entrada parseado");
+        assert!(input.name.starts_with("input:"));
+        assert_eq!(input.sinks, 0);
+
+        let output = parse_profile_line(
+            "output:analog-stereo: Analógico estéreo salida (sinks: 1, sources: 0, priority: 6500, available: yes)",
+        )
+        .expect("perfil de salida parseado");
+        assert!(output.name.starts_with("output:"));
+        assert!(output.available);
+    }
+
+    #[test]
+    fn parse_port_header_distingue_el_puerto_no_disponible() {
+        let presente = parse_port_header(
+            "hdmi-output-0: HDMI / DisplayPort (type: HDMI, priority: 5900, availability group: Legacy 1, available: yes)",
+        )
+        .expect("cabecera de puerto parseada");
+        assert_eq!(presente.description, "HDMI / DisplayPort");
+        assert_eq!(presente.priority, 5900);
+        assert!(presente.available);
+
+        let ausente = parse_port_header(
+            "hdmi-output-1: HDMI / DisplayPort 2 (type: HDMI, priority: 5800, not available)",
+        )
+        .expect("cabecera de puerto parseada");
+        assert!(
+            !ausente.available,
+            "`not available` tiene que leerse como puerto ausente"
+        );
+    }
+
+    #[test]
+    fn pick_sink_for_card_arma_el_nombre_del_sink_hdmi() {
+        // `alsa_card.X` → `alsa_output.X`, y el sufijo sale del perfil sin el
+        // prefijo `output:`.
+        let short = "\
+0\talsa_output.pci-0000_00_1f.3.analog-stereo\tPipeWire\ts16le 2ch 48000Hz\tRUNNING
+1\talsa_output.pci-0000_01_00.1.hdmi-stereo\tPipeWire\ts16le 2ch 48000Hz\tIDLE
+";
+        let sink = pick_sink_for_card(short, "alsa_card.pci-0000_01_00.1", "output:hdmi-stereo");
+        assert_eq!(
+            sink.as_deref(),
+            Some("alsa_output.pci-0000_01_00.1.hdmi-stereo")
+        );
+    }
+
+    #[test]
+    fn pick_sink_for_card_descarta_el_sufijo_de_entrada_del_perfil() {
+        let short = "0\talsa_output.pci-0000_00_1f.3.analog-stereo\tPipeWire\ts16le\tRUNNING\n";
+        let sink = pick_sink_for_card(
+            short,
+            "alsa_card.pci-0000_00_1f.3",
+            "output:analog-stereo+input:analog-stereo",
+        );
+        assert_eq!(
+            sink.as_deref(),
+            Some("alsa_output.pci-0000_00_1f.3.analog-stereo"),
+            "el `+input:...` del perfil no entra en el nombre del sink"
+        );
+    }
+
+    #[test]
+    fn pick_sink_for_card_cae_al_prefijo_cuando_el_nombre_exacto_no_aparece() {
+        // El sink existe con otro sufijo del esperado; igual se encuentra por el
+        // prefijo de la tarjeta.
+        let short = "7\talsa_output.pci-0000_01_00.1.hdmi-stereo-extra1\tPipeWire\ts16le\tIDLE\n";
+        let sink = pick_sink_for_card(short, "alsa_card.pci-0000_01_00.1", "output:hdmi-stereo");
+        assert_eq!(
+            sink.as_deref(),
+            Some("alsa_output.pci-0000_01_00.1.hdmi-stereo-extra1")
+        );
+    }
+
+    #[test]
+    fn pick_sink_for_card_no_inventa_sink_de_otra_tarjeta() {
+        let short = "0\talsa_output.pci-0000_00_1f.3.analog-stereo\tPipeWire\ts16le\tRUNNING\n";
+        let sink = pick_sink_for_card(short, "alsa_card.pci-0000_01_00.1", "output:hdmi-stereo");
+        assert!(
+            sink.is_none(),
+            "ningún sink pertenece a la tarjeta HDMI, no hay que devolver el de otra"
+        );
+    }
+}
