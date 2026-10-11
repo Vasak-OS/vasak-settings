@@ -1,6 +1,7 @@
 use std::process::Command;
 use std::sync::{Mutex, OnceLock};
-use std::time::Instant;
+use std::thread::sleep;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 
 use crate::logger::{log_debug, log_error, log_info};
@@ -611,10 +612,14 @@ fn profile_to_sink_suffix(profile_name: &str) -> &str {
 /// Encuentra, en la salida de `pactl list sinks short`, el sink que acaba de
 /// crear el perfil elegido para una tarjeta. Función pura para probarla sin
 /// `pactl`.
+///
+/// Acepta el sink exacto del perfil, o uno cuyo nombre lo extienda (PipeWire a
+/// veces le agrega un sufijo `-extraN`). Nunca acepta un sink de OTRO perfil de
+/// la misma tarjeta: el viejo sink que el perfil anterior dejó sigue en la
+/// lista unos instantes y no es la salida que se pidió.
 fn pick_sink_for_card(short_output: &str, card_name: &str, profile_name: &str) -> Option<String> {
     let prefix = sink_prefix_for_card(card_name);
     let candidate = format!("{}.{}", prefix, profile_to_sink_suffix(profile_name));
-    let dotted_prefix = format!("{}.", prefix);
 
     let names = short_output
         .lines()
@@ -625,11 +630,32 @@ fn pick_sink_for_card(short_output: &str, card_name: &str, profile_name: &str) -
         if name == candidate {
             return Some(candidate);
         }
-        if fallback.is_none() && name.starts_with(&dotted_prefix) {
+        if fallback.is_none() && name.starts_with(&candidate) {
             fallback = Some(name.to_string());
         }
     }
     fallback
+}
+
+/// Reintenta leer `pactl list sinks short` hasta que aparezca el sink válido del
+/// perfil recién activado. El sink no existe en el instante en que se conmuta el
+/// perfil: PipeWire tarda en crearlo, así que un único intento cae en la carrera
+/// y no lo ve. Glue fina sobre `pactl`; la selección la hace `pick_sink_for_card`.
+fn poll_sink_for_card(card_name: &str, profile_name: &str) -> Option<String> {
+    const ATTEMPTS: u32 = 10;
+    const DELAY: Duration = Duration::from_millis(150);
+
+    for attempt in 0..ATTEMPTS {
+        if attempt > 0 {
+            sleep(DELAY);
+        }
+        if let Ok(short) = run_pactl(&["list", "sinks", "short"]) {
+            if let Some(sink) = pick_sink_for_card(&short, card_name, profile_name) {
+                return Some(sink);
+            }
+        }
+    }
+    None
 }
 
 /// Lista las salidas que viven detrás de un perfil de tarjeta (HDMI, S/PDIF),
@@ -662,19 +688,19 @@ pub fn set_audio_output_profile(
     run_pactl(&["set-card-profile", card_name, profile_name])?;
     clear_cache();
 
-    let short = run_pactl(&["list", "sinks", "short"])?;
-    match pick_sink_for_card(&short, card_name, profile_name) {
-        Some(sink) => {
-            run_pactl(&["set-default-sink", &sink])?;
-            log_info(&format!("Salida por defecto fijada en {}", sink));
-        }
-        None => {
-            log_error(&format!(
-                "No se encontró el sink para la tarjeta {} tras activar {}",
-                card_name, profile_name
-            ));
-        }
-    }
+    // El sink del perfil no aparece al instante: se espera a que PipeWire lo
+    // cree. Si no aparece uno válido, se devuelve error en vez de reportar un
+    // cambio que no ocurrió (el perfil cambió pero la salida por defecto no).
+    let sink = poll_sink_for_card(card_name, profile_name).ok_or_else(|| {
+        let msg = format!(
+            "No apareció el sink de la tarjeta {} tras activar {}",
+            card_name, profile_name
+        );
+        log_error(&msg);
+        msg
+    })?;
+    run_pactl(&["set-default-sink", &sink])?;
+    log_info(&format!("Salida por defecto fijada en {}", sink));
 
     if let Ok(devices) = list_audio_devices() {
         let _ = app.emit("audio-devices-changed", devices);
@@ -863,6 +889,70 @@ Card #1
     }
 
     #[test]
+    fn parse_first_percent_toma_el_primer_porcentaje_de_la_linea_volume() {
+        let output = "Sink #1\n\tVolume: front-left: 45000 /  69% / -9.00 dB\n";
+        assert_eq!(parse_first_percent(output), Ok(69));
+    }
+
+    #[test]
+    fn parse_first_percent_sin_linea_de_volumen_da_error() {
+        assert!(parse_first_percent("Sink #1\n\tMute: no\n").is_err());
+    }
+
+    #[test]
+    fn parse_volume_and_mute_lee_el_sink_que_coincide_con_el_nombre() {
+        let output = "\
+Sink #1
+\tName: alsa_output.other
+\tVolume: front-left: 30000 / 30% / -20.00 dB
+\tMute: no
+
+Sink #2
+\tName: alsa_output.target
+\tMute: yes
+\tVolume: front-left: 52000 / 80% / -5.00 dB
+";
+        let (vol, muted) = parse_volume_and_mute(output, "alsa_output.target").unwrap();
+        assert_eq!(vol, 80, "toma el volumen del sink pedido, no del primero");
+        assert!(muted, "el sink pedido está en mute");
+    }
+
+    #[test]
+    fn parse_volume_and_mute_sin_coincidencia_cae_al_primer_porcentaje() {
+        // No hay un sink con ese nombre: se devuelve el primer volumen que haya,
+        // sin mute.
+        let output = "Sink #1\n\tName: otro\n\tVolume: front-left: 50000 / 50% / -9 dB\n";
+        let (vol, muted) = parse_volume_and_mute(output, "inexistente").unwrap();
+        assert_eq!(vol, 50);
+        assert!(!muted);
+    }
+
+    #[test]
+    fn parse_devices_arma_la_lista_y_marca_el_por_defecto() {
+        let output = "\
+Sink #1
+\tName: alsa_output.a
+\tDescription: Altavoces
+\tVolume: front-left: 40000 / 40% / -12 dB
+
+Sink #2
+\tName: alsa_output.b
+\tVolume: front-left: 100000 / 100% / 0 dB
+";
+        let devices = parse_devices(output, Some("alsa_output.b"), "Sink");
+        assert_eq!(devices.len(), 2);
+        assert_eq!(devices[0].description, "alsa_output.a");
+        assert_eq!(devices[0].name, "Altavoces", "sin Description usa el Name");
+        assert!((devices[0].volume - 0.40).abs() < 1e-6);
+        assert!(!devices[0].is_default);
+        assert_eq!(
+            devices[1].name, "alsa_output.b",
+            "sin Description el nombre visible cae al Name"
+        );
+        assert!(devices[1].is_default, "el que coincide es el por defecto");
+    }
+
+    #[test]
     fn pick_sink_for_card_arma_el_nombre_del_sink_hdmi() {
         // `alsa_card.X` → `alsa_output.X`, y el sufijo sale del perfil sin el
         // prefijo `output:`.
@@ -911,6 +1001,36 @@ Card #1
         assert!(
             sink.is_none(),
             "ningún sink pertenece a la tarjeta HDMI, no hay que devolver el de otra"
+        );
+    }
+
+    #[test]
+    fn pick_sink_for_card_rechaza_un_sink_de_otro_perfil_de_la_misma_tarjeta() {
+        // La tarjeta todavía tiene colgado el sink del perfil anterior
+        // (`analog-stereo`) mientras se conmuta a `hdmi-stereo`. Ese sink es de
+        // la misma tarjeta pero de OTRO perfil: no es la salida pedida y no debe
+        // devolverse, o la UI fijaría por defecto una salida equivocada.
+        let short = "3\talsa_output.pci-0000_00_1f.3.analog-stereo\tPipeWire\ts16le\tRUNNING\n";
+        let sink = pick_sink_for_card(short, "alsa_card.pci-0000_00_1f.3", "output:hdmi-stereo");
+        assert!(
+            sink.is_none(),
+            "un sink de otro perfil de la misma tarjeta no es el sink HDMI pedido"
+        );
+    }
+
+    #[test]
+    fn pick_sink_for_card_elige_el_del_perfil_pedido_entre_varios_de_la_tarjeta() {
+        // La misma tarjeta expone a la vez el sink analógico viejo y el HDMI
+        // recién creado; hay que quedarse con el del perfil pedido.
+        let short = "\
+3\talsa_output.pci-0000_00_1f.3.analog-stereo\tPipeWire\ts16le\tRUNNING
+4\talsa_output.pci-0000_00_1f.3.hdmi-stereo\tPipeWire\ts16le\tIDLE
+";
+        let sink = pick_sink_for_card(short, "alsa_card.pci-0000_00_1f.3", "output:hdmi-stereo");
+        assert_eq!(
+            sink.as_deref(),
+            Some("alsa_output.pci-0000_00_1f.3.hdmi-stereo"),
+            "entre varios sinks de la tarjeta, se elige el del perfil pedido"
         );
     }
 }
