@@ -218,6 +218,27 @@ views:
     reset: Reset to default
     saved: Fastfetch configuration saved.
     notInstalled: fastfetch is not installed; preview and apply are unavailable.
+    modules:
+      title: Modules
+      help: What is shown and in what order. The switch shows or hides it.
+      moveUp: Move up
+      moveDown: Move down
+      options: Options
+      empty: No modules; add one below.
+      add: Add module
+      addPlaceholder: Pick a module…
+      addButton: Add
+    display:
+      title: Display
+      help: General read-out options (separator, colors, key width, etc.).
+    schema:
+      addItem: Add
+      removeItem: Remove
+      branchBoolean: On/Off
+      branchNumber: Number
+      branchObject: Detailed
+      branchArray: List
+      branchString: Text
   defaultApps:
     title: "Default applications"
     description: "What the system opens each thing with."
