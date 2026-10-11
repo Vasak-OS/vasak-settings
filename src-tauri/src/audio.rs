@@ -587,7 +587,7 @@ fn parse_card_output_profiles(output: &str) -> Vec<AudioOutputProfile> {
         }
     }
 
-    outputs.sort_by(|a, b| b.priority.cmp(&a.priority));
+    outputs.sort_by_key(|o| std::cmp::Reverse(o.priority));
     outputs
 }
 
@@ -616,11 +616,9 @@ fn pick_sink_for_card(short_output: &str, card_name: &str, profile_name: &str) -
     let candidate = format!("{}.{}", prefix, profile_to_sink_suffix(profile_name));
     let dotted_prefix = format!("{}.", prefix);
 
-    let names = short_output.lines().filter_map(|line| {
-        line.split(|c: char| c == '\t' || c == ' ')
-            .filter(|s| !s.is_empty())
-            .nth(1)
-    });
+    let names = short_output
+        .lines()
+        .filter_map(|line| line.split(['\t', ' ']).filter(|s| !s.is_empty()).nth(1));
 
     let mut fallback = None;
     for name in names {
