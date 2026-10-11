@@ -203,6 +203,7 @@ pub fn run() {
             commands::game_mode::is_gamemode_available,
             commands::fastfetch::get_fastfetch_config,
             commands::fastfetch::set_fastfetch_logo,
+            commands::fastfetch::set_fastfetch_config,
             commands::fastfetch::reset_fastfetch_config,
             commands::idle::get_idle_config,
             commands::idle::set_idle_config,

@@ -53,6 +53,9 @@ pub struct FastfetchState {
     /// Si existe la configuración del usuario (si no, manda la del sistema).
     pub user_config_exists: bool,
     pub logo: FastfetchLogo,
+    /// La configuración efectiva entera (logo, display, modules, …), para que el
+    /// editor completo pueble el formulario desde el schema.
+    pub config: Value,
     /// La lectura previsualizada (texto plano), o vacía si no se pudo.
     pub preview: String,
 }
@@ -313,7 +316,8 @@ fn read_state() -> FastfetchState {
     let path = user_config_path();
     let available = fastfetch_available();
     let user_config_exists = path.as_deref().map(Path::exists).unwrap_or(false);
-    let logo = logo_from_value(&effective_config(path.as_deref()));
+    let config = effective_config(path.as_deref());
+    let logo = logo_from_value(&config);
     let preview = if available {
         run_preview()
     } else {
@@ -323,8 +327,42 @@ fn read_state() -> FastfetchState {
         available,
         user_config_exists,
         logo,
+        config,
         preview,
     }
+}
+
+/// Mezcla un parcial sobre la config de base reemplazando cada clave de primer
+/// nivel entera (`logo`, `display`, `modules`, …) y preservando las que el
+/// parcial no nombra. El editor es el dueño de las claves que manda; `modules` es
+/// un arreglo y se reemplaza como una unidad, no se fusiona por índice.
+fn merge_config(base: Value, partial: &Value) -> Value {
+    let mut root = if base.is_object() {
+        base
+    } else {
+        Value::Object(Map::new())
+    };
+    if let (Value::Object(map), Value::Object(incoming)) = (&mut root, partial) {
+        for (key, value) in incoming {
+            map.insert(key.clone(), value.clone());
+        }
+        map.entry("$schema")
+            .or_insert_with(|| Value::String(SCHEMA.into()));
+    }
+    root
+}
+
+/// Escribe en `user_path` el parcial mezclado sobre la config efectiva.
+fn write_config_at(user_path: &Path, partial: &Value) -> Result<(), String> {
+    let root = merge_config(effective_config(Some(user_path)), partial);
+    if let Some(parent) = user_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let pretty = serde_json::to_string_pretty(&root).map_err(|e| e.to_string())?;
+    std::fs::write(user_path, pretty).map_err(|e| {
+        log_error(&format!("No se pudo escribir {}: {e}", user_path.display()));
+        e.to_string()
+    })
 }
 
 /// Lee el estado para abrir la pantalla.
@@ -342,6 +380,19 @@ pub async fn set_fastfetch_logo(logo: FastfetchLogo) -> Result<FastfetchState, S
     tauri::async_runtime::spawn_blocking(move || {
         let path = user_config_path().ok_or("No se pudo resolver ~/.config")?;
         write_logo_at(&path, &logo)?;
+        Ok(read_state())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// Escribe un parcial de configuración (logo, display, modules, …), preservando
+/// las claves que no toca. Es lo que usa el editor completo.
+#[tauri::command]
+pub async fn set_fastfetch_config(config: Value) -> Result<FastfetchState, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let path = user_config_path().ok_or("No se pudo resolver ~/.config")?;
+        write_config_at(&path, &config)?;
         Ok(read_state())
     })
     .await
@@ -440,6 +491,38 @@ mod tests {
         );
         assert_eq!(merged["logo"]["type"], "file");
         assert_eq!(merged["$schema"], SCHEMA);
+    }
+
+    #[test]
+    fn merge_config_reemplaza_claves_y_preserva_el_resto() {
+        let base = serde_json::json!({ "general": { "thread": true }, "modules": ["title"] });
+        let partial =
+            serde_json::json!({ "modules": ["os", "cpu"], "display": { "separator": ": " } });
+        let merged = merge_config(base, &partial);
+        // Las claves que manda el editor se reemplazan enteras.
+        assert_eq!(merged["modules"], serde_json::json!(["os", "cpu"]));
+        assert_eq!(merged["display"]["separator"], ": ");
+        // Lo que no nombra se preserva.
+        assert_eq!(merged["general"]["thread"], true);
+        assert_eq!(merged["$schema"], SCHEMA);
+    }
+
+    #[test]
+    fn escribir_config_preserva_lo_que_no_toca() {
+        let dir = std::env::temp_dir().join(format!("ff-cfg-{}", std::process::id()));
+        let path = dir.join("config.jsonc");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            &path,
+            r#"{ "general": { "thread": true }, "modules": ["title"] }"#,
+        )
+        .unwrap();
+        write_config_at(&path, &serde_json::json!({ "modules": ["os"] })).expect("escribe");
+        let root = effective_config(Some(&path));
+        assert_eq!(root["modules"], serde_json::json!(["os"]));
+        assert_eq!(root["general"]["thread"], true);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

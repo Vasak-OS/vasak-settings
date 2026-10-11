@@ -218,6 +218,27 @@ views:
     reset: Restablecer a predeterminado
     saved: Configuración de fastfetch guardada.
     notInstalled: fastfetch no está instalado; no se puede previsualizar ni aplicar.
+    modules:
+      title: Módulos
+      help: Qué información se muestra y en qué orden. El interruptor la muestra u oculta.
+      moveUp: Subir
+      moveDown: Bajar
+      options: Opciones
+      empty: No hay módulos; agregá uno abajo.
+      add: Agregar módulo
+      addPlaceholder: Elegí un módulo…
+      addButton: Agregar
+    display:
+      title: Presentación
+      help: Opciones generales de la lectura (separador, colores, ancho de clave, etc.).
+    schema:
+      addItem: Agregar
+      removeItem: Quitar
+      branchBoolean: Sí/No
+      branchNumber: Número
+      branchObject: Detallado
+      branchArray: Lista
+      branchString: Texto
   defaultApps:
     title: "Aplicaciones por defecto"
     description: "Con qué abre el sistema cada cosa."
