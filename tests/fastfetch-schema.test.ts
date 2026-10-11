@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import {
-	deref,
 	defaultModuleNames,
+	deref,
 	displayFields,
 	moduleVariants,
 	optionFields,
-	resolveRef,
 	type RootSchema,
+	resolveRef,
 } from '../src/utils/fastfetch-schema';
 
 /** Un schema chico con la misma forma que el de fastfetch: módulos por `anyOf`

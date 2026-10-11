@@ -13,6 +13,8 @@ import {
 	TextInput,
 } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
+import ModulesManager from '@/components/fastfetch/ModulesManager.vue';
+import SchemaField from '@/components/fastfetch/SchemaField.vue';
 import {
 	type FastfetchLogo,
 	type LogoKind,
@@ -20,15 +22,24 @@ import {
 	usesSize,
 	usesSource,
 } from '@/utils/fastfetch-logo';
+import { type ModuleEntry, parseModules, serializeModules } from '@/utils/fastfetch-modules';
+import { displayFields, moduleVariants } from '@/utils/fastfetch-schema';
+import { loadFastfetchSchema } from '@/utils/fastfetch-schema-data';
 
 interface FastfetchState {
 	available: boolean;
 	user_config_exists: boolean;
 	logo: FastfetchLogo;
+	config: Record<string, unknown>;
 	preview: string;
 }
 
 const { t } = useI18n();
+
+// El schema es constante: se lee una vez para armar el formulario.
+const schema = loadFastfetchSchema();
+const variants = moduleVariants(schema);
+const dispFields = displayFields(schema);
 
 const LOGO_KINDS: LogoKind[] = ['image', 'builtin', 'ascii', 'none'];
 
@@ -40,13 +51,16 @@ const preview = ref('');
 const error = ref('');
 const saved = ref(false);
 
-// El tamaño va como número con 0 = automático, para no pelear con el campo
-// numérico por un `null`; `normalizeLogo` ya trata el 0 como «sin fijar».
+// Emblema (como en #168): el tamaño va como número con 0 = automático.
 const kind = ref<LogoKind>('builtin');
 const source = ref('');
 const width = ref(0);
 const height = ref(0);
 const padding = ref(0);
+
+// El resto de la config: módulos (lista editable) y el bloque display.
+const moduleEntries = ref<ModuleEntry[]>([]);
+const displayValue = ref<Record<string, unknown>>({});
 
 const kindOptions = computed<SegmentedOption<LogoKind>[]>(() =>
 	LOGO_KINDS.map((value) => ({ value, label: t(`views.fastfetch.kinds.${value}`) }))
@@ -74,6 +88,13 @@ function apply(state: FastfetchState) {
 	width.value = state.logo.width ?? 0;
 	height.value = state.logo.height ?? 0;
 	padding.value = state.logo.padding ?? 0;
+
+	const config = state.config ?? {};
+	moduleEntries.value = parseModules(config.modules);
+	displayValue.value =
+		config.display && typeof config.display === 'object'
+			? (config.display as Record<string, unknown>)
+			: {};
 }
 
 async function load() {
@@ -100,12 +121,24 @@ function currentLogo(): FastfetchLogo {
 	});
 }
 
+function setDisplayKey(key: string, value: unknown) {
+	const next = { ...displayValue.value };
+	if (value === undefined || value === null || value === '') delete next[key];
+	else next[key] = value;
+	displayValue.value = next;
+}
+
 async function save() {
 	saving.value = true;
 	error.value = '';
 	saved.value = false;
 	try {
-		apply(await invoke<FastfetchState>('set_fastfetch_logo', { logo: currentLogo() }));
+		const partial = {
+			logo: currentLogo(),
+			modules: serializeModules(moduleEntries.value),
+			display: displayValue.value,
+		};
+		apply(await invoke<FastfetchState>('set_fastfetch_config', { config: partial }));
 		saved.value = true;
 	} catch (err) {
 		error.value = String(err);
@@ -183,6 +216,27 @@ onMounted(load);
 					</FormGroup>
 				</div>
 				<p v-if="showSize" class="text-xs text-tx-muted">{{ t('views.fastfetch.sizeNote') }}</p>
+			</div>
+		</ConfigSection>
+
+		<ModulesManager
+			v-model="moduleEntries"
+			:root="schema"
+			:variants="variants"
+			:disabled="saving"
+		/>
+
+		<ConfigSection :title="t('views.fastfetch.display.title')" :description="t('views.fastfetch.display.help')">
+			<div class="flex flex-col gap-3">
+				<SchemaField
+					v-for="field in dispFields"
+					:key="field.key"
+					:root="schema"
+					:schema="field.schema"
+					:model-value="displayValue[field.key]"
+					:label="field.key"
+					@update:model-value="(value) => setDisplayKey(field.key, value)"
+				/>
 			</div>
 		</ConfigSection>
 
