@@ -8,7 +8,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["src/**/*", "tests/**/*", "!**/*.svg"]
+    "includes": ["src/**/*", "tests/**/*", "!**/*.svg", "!src/assets/fastfetch-schema.json"]
   },
   "formatter": {
     "enabled": true,
