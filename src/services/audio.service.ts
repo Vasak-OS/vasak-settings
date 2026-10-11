@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { AudioDevice, VolumeInfo } from '@/types/audio';
+import type { AudioDevice, AudioOutputProfile, VolumeInfo } from '@/types/audio';
 
 export const getAudioVolume = (): Promise<VolumeInfo> => {
 	return invoke<VolumeInfo>('get_audio_volume');
@@ -19,6 +19,14 @@ export const getAudioDevices = (): Promise<AudioDevice[]> => {
 
 export const setAudioDevice = (deviceId: string): Promise<boolean> => {
 	return invoke<boolean>('set_audio_device', { deviceId });
+};
+
+export const getAudioOutputProfiles = (): Promise<AudioOutputProfile[]> => {
+	return invoke<AudioOutputProfile[]>('get_audio_output_profiles');
+};
+
+export const setAudioOutputProfile = (cardName: string, profileName: string): Promise<boolean> => {
+	return invoke<boolean>('set_audio_output_profile_cmd', { cardName, profileName });
 };
 
 export const getAudioInputVolume = (): Promise<VolumeInfo> => {

@@ -13,12 +13,14 @@ import {
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import {
 	getAudioDevices,
+	getAudioOutputProfiles,
 	getAudioVolume,
 	setAudioDevice,
+	setAudioOutputProfile,
 	setAudioVolume,
 	toggleAudioMute,
 } from '@/services/audio.service';
-import type { AudioDevice, VolumeInfo } from '@/types/audio';
+import type { AudioDevice, AudioOutputProfile, VolumeInfo } from '@/types/audio';
 import { onRadioArrow, radioTabIndex } from '@/utils/radio-group';
 
 const { t } = useI18n();
@@ -39,9 +41,20 @@ const deviceIds = computed(() => devices.value.map((device) => device.id));
 const selectedDeviceId = ref('');
 const devicesLoading = ref(false);
 
+// --- Estado Salidas detrás de perfil de tarjeta (HDMI, S/PDIF) ---
+const outputProfiles: Ref<AudioOutputProfile[]> = ref([]);
+// Sólo las salidas disponibles pero inactivas: su sink no existe porque el
+// perfil de la tarjeta no está activo. Es el caso del HDMI de la GPU cuando la
+// tarjeta está en «off» o en analógico.
+const availableOutputs = computed(() =>
+	outputProfiles.value.filter((output) => output.is_available && !output.is_active)
+);
+const switchingProfile = ref('');
+
 // --- Cierre de listeners ---
 let unlistenVolume: (() => void) | null = null;
 let unlistenDevices: (() => void) | null = null;
+let unlistenOutputProfiles: (() => void) | null = null;
 
 // --- Lógica Volumen ---
 const getVolumeIconName = (isMuted: boolean, percentage: number): string => {
@@ -106,6 +119,14 @@ const getDeviceName = (device: AudioDevice): string => {
 	return device.name.replace('ALSA', '').replace('PulseAudio', '').replace('PipeWire', '').trim();
 };
 
+const loadOutputProfiles = async () => {
+	try {
+		outputProfiles.value = await getAudioOutputProfiles();
+	} catch (e) {
+		console.error('Failed to load output profiles:', e);
+	}
+};
+
 const loadDevices = async () => {
 	devicesLoading.value = true;
 	try {
@@ -116,10 +137,25 @@ const loadDevices = async () => {
 		if (defaultDevice) {
 			selectedDeviceId.value = defaultDevice.id;
 		}
+
+		await loadOutputProfiles();
 	} catch (e) {
 		console.error('Failed to load audio devices:', e);
 	} finally {
 		devicesLoading.value = false;
+	}
+};
+
+const selectOutputProfile = async (output: AudioOutputProfile) => {
+	switchingProfile.value = output.profile_name;
+	try {
+		await setAudioOutputProfile(output.card_name, output.profile_name);
+		// Tras conmutar el perfil el sink ya existe: refrescamos ambas listas.
+		await loadDevices();
+	} catch (e) {
+		console.error('Failed to switch output profile:', e);
+	} finally {
+		switchingProfile.value = '';
 	}
 };
 
@@ -153,11 +189,19 @@ onMounted(async () => {
 			selectedDeviceId.value = defaultDevice.id;
 		}
 	});
+
+	unlistenOutputProfiles = await listen<AudioOutputProfile[]>(
+		'audio-output-profiles-changed',
+		(event) => {
+			outputProfiles.value = event.payload;
+		}
+	);
 });
 
 onUnmounted(() => {
 	if (unlistenVolume) unlistenVolume();
 	if (unlistenDevices) unlistenDevices();
+	if (unlistenOutputProfiles) unlistenOutputProfiles();
 });
 </script>
 
@@ -274,6 +318,47 @@ onUnmounted(() => {
 						<span v-if="device.is_default" class="rounded bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary border border-primary/20">
 							{{ t('views.multimediaAudio.defaultBadge') }}
 						</span>
+					</li>
+				</ul>
+			</Panel>
+
+			<!-- Salidas disponibles detrás de un perfil de tarjeta (HDMI, S/PDIF) -->
+			<Panel as="article" v-if="availableOutputs.length > 0" class="xl:col-span-2">
+				<h3 class="mb-1 text-lg font-medium text-tx-main">
+					{{ t('views.multimediaAudio.availableOutputs') }}
+				</h3>
+				<p class="mb-4 text-xs text-tx-muted">
+					{{ t('views.multimediaAudio.availableOutputsHint') }}
+				</p>
+
+				<ul class="flex flex-col gap-2 max-h-[14rem] overflow-y-auto pr-1">
+					<li
+						v-for="output in availableOutputs"
+						:key="output.card_name + '::' + output.profile_name"
+						class="group flex items-center justify-between gap-3 rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-3 transition-colors hover:border-primary/50 hover:bg-ui-surface"
+					>
+						<div class="flex flex-1 items-center gap-3 min-w-0">
+							<ThemeIcon
+								name="video-display-symbolic"
+								type="symbol"
+								:size="20"
+								:alt="output.description"
+								class="shrink-0 text-tx-muted"
+							/>
+							<span class="text-sm font-medium text-tx-main truncate">
+								{{ output.description }}
+							</span>
+						</div>
+
+						<button
+							class="shrink-0 cursor-pointer rounded-corner-m border border-ui-border bg-ui-surface px-3 py-1.5 text-xs font-semibold text-tx-main transition-colors hover:bg-primary hover:text-tx-on-primary disabled:cursor-wait disabled:opacity-60"
+							:disabled="switchingProfile === output.profile_name"
+							@click="selectOutputProfile(output)"
+						>
+							{{ switchingProfile === output.profile_name
+								? t('views.multimediaAudio.activating')
+								: t('views.multimediaAudio.activateOutput') }}
+						</button>
 					</li>
 				</ul>
 			</Panel>
