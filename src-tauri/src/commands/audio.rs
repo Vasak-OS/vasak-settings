@@ -2,11 +2,11 @@ use tauri::AppHandle;
 
 use crate::audio::{
     get_input_volume, get_volume, list_audio_devices, list_audio_input_devices,
-    set_default_audio_device, set_default_audio_input_device, set_input_volume, set_volume,
-    toggle_input_mute, toggle_mute,
+    list_audio_output_profiles, set_audio_output_profile, set_default_audio_device,
+    set_default_audio_input_device, set_input_volume, set_volume, toggle_input_mute, toggle_mute,
 };
 use crate::logger::{log_debug, log_error, log_info};
-use crate::structs::{AudioDevice, VolumeInfo};
+use crate::structs::{AudioDevice, AudioOutputProfile, VolumeInfo};
 
 #[tauri::command]
 pub fn get_audio_volume() -> Result<VolumeInfo, String> {
@@ -50,6 +50,32 @@ pub fn set_audio_device(device_id: String, app: AppHandle) -> Result<bool, Strin
         })
         .map_err(|e| {
             log_error(&format!("Error al cambiar dispositivo de audio: {}", e));
+            e.to_string()
+        })
+}
+
+#[tauri::command]
+pub fn get_audio_output_profiles() -> Result<Vec<AudioOutputProfile>, String> {
+    list_audio_output_profiles().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn set_audio_output_profile_cmd(
+    card_name: String,
+    profile_name: String,
+    app: AppHandle,
+) -> Result<bool, String> {
+    log_info(&format!(
+        "Conmutando a la salida {} de la tarjeta {}",
+        profile_name, card_name
+    ));
+    set_audio_output_profile(&card_name, &profile_name, app)
+        .map(|_| {
+            log_info("Perfil de salida conmutado correctamente");
+            true
+        })
+        .map_err(|e| {
+            log_error(&format!("Error al conmutar el perfil de salida: {}", e));
             e.to_string()
         })
 }

@@ -1571,6 +1571,10 @@ views:
     emptyDevices: No audio devices available
     level: 'Level:'
     defaultBadge: Active
+    availableOutputs: Available outputs
+    availableOutputsHint: Connected outputs that are not active yet, such as HDMI audio. Activate one to be able to pick it.
+    activateOutput: Activate
+    activating: Activating...
   multimediaAudioInput:
     title: Input Audio
     description: Manage microphones and system capture level.

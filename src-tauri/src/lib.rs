@@ -221,6 +221,8 @@ pub fn run() {
             commands::audio::toggle_audio_mute,
             commands::audio::get_audio_devices,
             commands::audio::set_audio_device,
+            commands::audio::get_audio_output_profiles,
+            commands::audio::set_audio_output_profile_cmd,
             commands::audio::get_audio_input_volume,
             commands::audio::set_audio_input_volume,
             commands::audio::toggle_audio_input_mute,

@@ -19,6 +19,31 @@ pub struct AudioDevice {
     pub volume: f64,
 }
 
+/// Una salida de audio que vive detrás de un perfil de tarjeta.
+///
+/// Un sink sólo existe cuando el perfil que lo crea está activo: la salida HDMI
+/// de la GPU no aparece en `pactl list sinks` mientras el perfil de la tarjeta
+/// está en `off` o en analógico, aunque el monitor esté enchufado y disponible.
+/// Esto representa esas salidas conmutables —el puerto físico y el perfil que
+/// hay que activar para que su sink exista— para poder ofrecerlas antes de que
+/// el sink exista.
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AudioOutputProfile {
+    /// Nombre de la tarjeta (`alsa_card.pci-...`), para `set-card-profile`.
+    pub card_name: String,
+    /// Perfil que hay que activar para que esta salida tenga sink
+    /// (`output:hdmi-stereo`).
+    pub profile_name: String,
+    /// Descripción del puerto, legible («HDMI / DisplayPort»).
+    pub description: String,
+    /// El perfil de la tarjeta ya está activo en este puerto.
+    pub is_active: bool,
+    /// El puerto está disponible (el monitor/cable está presente).
+    pub is_available: bool,
+    /// Prioridad del puerto, para ordenar de mayor a menor.
+    pub priority: i64,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SystemInfo {
     pub cpu: CpuInfo,
