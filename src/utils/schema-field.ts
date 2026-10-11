@@ -72,7 +72,7 @@ export function matchingBranch(branches: SchemaNode[], value: unknown): number {
 		if (kind === 'array') return vt === 'array';
 		return vt === 'string';
 	});
-	return index >= 0 ? index : 0;
+	return Math.max(index, 0);
 }
 
 /** El nombre de una rama de unión: su título del schema, o uno por tipo. */
