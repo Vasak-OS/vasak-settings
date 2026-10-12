@@ -58,17 +58,19 @@ describe('shouldRefresh', () => {
 	});
 });
 
-describe('NetworkBluetoothView', () => {
-	const view = readFileSync(
-		join(import.meta.dir, '..', 'src/views/NetworkBluetoothView.vue'),
+describe('useBluetooth', () => {
+	// La decisión de refrescar vive en el composable desde que la vista pasó a
+	// consumirlo (escaneo en streaming): acá se mira ese archivo, no la vista.
+	const composable = readFileSync(
+		join(import.meta.dir, '..', 'src/composables/useBluetooth.ts'),
 		'utf8'
 	);
 
 	test('decide con el ayudante', () => {
-		expect(view).toMatch(/shouldRefresh\(event\.payload\)/);
+		expect(composable).toMatch(/shouldRefresh\(event\.payload\)/);
 	});
 
 	test('no vuelve a leer `change_type`', () => {
-		expect(view).not.toMatch(/change_type/);
+		expect(composable).not.toMatch(/change_type/);
 	});
 });

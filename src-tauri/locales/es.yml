@@ -1352,6 +1352,8 @@ views:
     emptyConnected: No hay dispositivos conectados
     emptyAvailable: No se encontraron dispositivos en el área
     scanTooltip: Escanear
+    stopScanTooltip: Detener
+    scanning: Buscando dispositivos…
     connect: Conectar
     disconnect: Desconectar
     signal: '{0} dBm'
