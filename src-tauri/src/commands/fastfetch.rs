@@ -352,28 +352,32 @@ fn merge_config(base: Value, partial: &Value) -> Value {
     root
 }
 
-/// Escribe en `user_path` el parcial mezclado sobre la config efectiva.
 /// Normaliza un parcial que viene de la pantalla antes de mezclarlo. Hoy sólo el
 /// emblema: el formulario lo manda como `FastfetchLogo` (`{ kind, source, … }`),
 /// pero fastfetch quiere `{ "type": … }` y sin los campos vacíos. Se reusa
 /// `logo_to_value` —la misma forma que el camino del editor de emblema— para no
 /// escribir `logo.kind`, que fastfetch rechaza con «Unknown logo key».
-fn normalize_partial(partial: &Value) -> Value {
+///
+/// Si el `logo` trae `kind` pero no se puede parsear (por ejemplo un ancho que
+/// no es un número), **falla** en vez de dejar pasar el objeto crudo: escribirlo
+/// pondría `logo.kind` en la config y fastfetch se caería al arrancar —el mismo
+/// fallo que esto evita—, pero con un «guardado con éxito» que engaña.
+fn normalize_partial(partial: &Value) -> Result<Value, String> {
     let mut out = partial.clone();
     if let Value::Object(map) = &mut out {
         if let Some(logo) = map.get("logo") {
             if logo.get("kind").is_some() {
-                if let Ok(parsed) = serde_json::from_value::<FastfetchLogo>(logo.clone()) {
-                    map.insert("logo".into(), logo_to_value(&parsed));
-                }
+                let parsed: FastfetchLogo = serde_json::from_value(logo.clone())
+                    .map_err(|e| format!("Emblema inválido: {e}"))?;
+                map.insert("logo".into(), logo_to_value(&parsed));
             }
         }
     }
-    out
+    Ok(out)
 }
 
 fn write_config_at(user_path: &Path, partial: &Value) -> Result<(), String> {
-    let partial = normalize_partial(partial);
+    let partial = normalize_partial(partial)?;
     let root = merge_config(effective_config(Some(user_path)), &partial);
     if let Some(parent) = user_path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
@@ -534,7 +538,7 @@ mod tests {
             "logo": { "kind": "file", "source": "l.png", "width": null, "height": null, "padding": null },
             "modules": ["os"]
         });
-        let out = normalize_partial(&partial);
+        let out = normalize_partial(&partial).expect("logo válido");
         assert_eq!(out["logo"]["type"], "file");
         assert_eq!(out["logo"]["source"], "l.png");
         assert!(out["logo"].get("kind").is_none(), "no debe quedar `kind`");
@@ -549,7 +553,15 @@ mod tests {
     #[test]
     fn normalize_partial_sin_logo_no_toca_nada() {
         let partial = serde_json::json!({ "modules": ["os"], "display": { "separator": ": " } });
-        assert_eq!(normalize_partial(&partial), partial);
+        assert_eq!(normalize_partial(&partial).expect("ok"), partial);
+    }
+
+    #[test]
+    fn normalize_partial_falla_con_un_logo_que_no_parsea() {
+        // Un ancho que no es número: antes se escribía el `kind` crudo y fastfetch
+        // se caía al arrancar. Ahora falla acá, antes de escribir nada.
+        let partial = serde_json::json!({ "logo": { "kind": "file", "width": "ancho" } });
+        assert!(normalize_partial(&partial).is_err());
     }
 
     #[test]

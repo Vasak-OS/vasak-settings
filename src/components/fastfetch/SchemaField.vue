@@ -111,12 +111,13 @@ const boolValue = computed(() => props.modelValue === true);
 			@update:model-value="(value) => { if (value != null) pickBranch(value); }"
 		/>
 		<template #footer>
+			<!-- La rama elegida: lleva su propia etiqueta (la de la variante) y su
+			     propia ayuda, para no repetir el título ni la ayuda de la unión. -->
 			<SchemaField
 				:root="root"
 				:schema="deref(root, branches[activeBranch] ?? {})"
 				:model-value="modelValue"
-				:label="label"
-				:description="help"
+				:label="branchOptions[activeBranch]?.label ?? displayLabel"
 				@update:model-value="(value) => emit('update:modelValue', value)"
 			/>
 		</template>
