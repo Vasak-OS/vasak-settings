@@ -314,3 +314,144 @@ describe('con el chip apagado', () => {
 		wrapper.unmount();
 	});
 });
+
+describe('encender y apagar el chip', () => {
+	test('alternar enciende, espera al bus y relee los dispositivos', async () => {
+		const { deps } = makeDeps();
+		deps.listDevices.mockImplementation(() => Promise.resolve([device('/dev/a', true)]));
+		const { wrapper, api } = mountBluetooth(deps);
+		await api.start();
+
+		// `toggleBT` espera 600 ms al bus por dentro; se aguarda su promesa, no se
+		// duerme a mano ni se sondea.
+		await api.toggleBT();
+
+		expect(deps.toggleBluetooth).toHaveBeenCalledTimes(1);
+		// Releyó: una `listDevices` en `start` y otra tras encender.
+		expect(deps.listDevices).toHaveBeenCalledTimes(2);
+		expect(api.connectedDevices.value.map((d) => d.path)).toEqual(['/dev/a']);
+		expect(api.isTogglingBluetooth.value).toBe(false);
+		expect(api.error.value).toBe('');
+
+		wrapper.unmount();
+	});
+
+	test('si alternar falla, deja el error y apaga la bandera', async () => {
+		const { deps } = makeDeps();
+		deps.toggleBluetooth.mockImplementation(() => Promise.reject(new Error('dbus mudo')));
+		const { wrapper, api } = mountBluetooth(deps);
+		await api.start();
+
+		await api.toggleBT();
+
+		expect(api.error.value).toBe('views.networkBluetooth.errors.toggle');
+		expect(api.isTogglingBluetooth.value).toBe(false);
+
+		wrapper.unmount();
+	});
+});
+
+describe('conectar y desconectar un dispositivo', () => {
+	test('conectar llama al complemento con la ruta y no marca error', async () => {
+		const { deps } = makeDeps();
+		const { wrapper, api } = mountBluetooth(deps);
+		await api.start();
+
+		await api.connect(device('/dev/a'));
+
+		expect(deps.connectDevice).toHaveBeenCalledWith('/dev/a');
+		expect(api.error.value).toBe('');
+
+		wrapper.unmount();
+	});
+
+	test('si conectar falla, deja el error', async () => {
+		const { deps } = makeDeps();
+		deps.connectDevice.mockImplementation(() => Promise.reject(new Error('pairing roto')));
+		const { wrapper, api } = mountBluetooth(deps);
+		await api.start();
+
+		await api.connect(device('/dev/a'));
+
+		expect(api.error.value).toBe('views.networkBluetooth.errors.connect');
+
+		wrapper.unmount();
+	});
+
+	test('desconectar llama al complemento con la ruta', async () => {
+		const { deps } = makeDeps();
+		const { wrapper, api } = mountBluetooth(deps);
+		await api.start();
+
+		await api.disconnect(device('/dev/a', true));
+
+		expect(deps.disconnectDevice).toHaveBeenCalledWith('/dev/a');
+		expect(api.error.value).toBe('');
+
+		wrapper.unmount();
+	});
+
+	test('si desconectar falla, deja el error', async () => {
+		const { deps } = makeDeps();
+		deps.disconnectDevice.mockImplementation(() => Promise.reject(new Error('sigue pegado')));
+		const { wrapper, api } = mountBluetooth(deps);
+		await api.start();
+
+		await api.disconnect(device('/dev/a', true));
+
+		expect(api.error.value).toBe('views.networkBluetooth.errors.disconnect');
+
+		wrapper.unmount();
+	});
+});
+
+describe('los errores del escaneo no dejan la vista colgada', () => {
+	test('si `startScan` falla, no queda «buscando» y deja el error', async () => {
+		const { deps } = makeDeps();
+		deps.startScan.mockImplementation(() => Promise.reject(new Error('adaptador ocupado')));
+		const { wrapper, api } = mountBluetooth(deps);
+		await api.start();
+
+		await api.startScanning();
+
+		// La bandera vuelve a apagarse: el botón no queda en «detener» para siempre.
+		expect(api.isScanning.value).toBe(false);
+		expect(api.error.value).toBe('views.networkBluetooth.errors.scan');
+
+		wrapper.unmount();
+	});
+
+	test('si `stopScan` falla, igual apaga la bandera y no propaga', async () => {
+		const { deps } = makeDeps();
+		deps.stopScan.mockImplementation(() => Promise.reject(new Error('ya estaba parado')));
+		const { wrapper, api } = mountBluetooth(deps);
+		await api.start();
+		await api.startScanning();
+
+		// No debe lanzar aunque el complemento se queje.
+		await api.stopScanning();
+
+		expect(deps.stopScan).toHaveBeenCalledWith(ADAPTER.path);
+		expect(api.isScanning.value).toBe(false);
+
+		wrapper.unmount();
+	});
+});
+
+describe('un refresco ruidoso que falla sí vacía', () => {
+	test('si la lectura inicial falla, deja las listas vacías y sin carga', async () => {
+		const { deps } = makeDeps();
+		deps.listDevices.mockImplementation(() => Promise.reject(new Error('bus caído al abrir')));
+		const { wrapper, api } = mountBluetooth(deps);
+
+		// `start` llama al refresco «ruidoso» (no silencioso): ante el error, a
+		// diferencia del refresco en vivo, sí vacía y suelta la carga.
+		await api.start();
+
+		expect(api.connectedDevices.value).toEqual([]);
+		expect(api.availableDevices.value).toEqual([]);
+		expect(api.loading.value).toBe(false);
+
+		wrapper.unmount();
+	});
+});
