@@ -1,6 +1,24 @@
 import { describe, expect, test } from 'bun:test';
 import type { SchemaNode } from '../src/utils/fastfetch-schema';
-import { blankFor, branchLabel, matchingBranch, schemaKind } from '../src/utils/schema-field';
+import {
+	blankFor,
+	branchLabel,
+	humanizeKey,
+	matchingBranch,
+	schemaKind,
+} from '../src/utils/schema-field';
+
+describe('humanizeKey', () => {
+	test('separa camelCase y deja legible', () => {
+		expect(humanizeKey('showPeCoreCount')).toBe('Show pe core count');
+		expect(humanizeKey('tempSensor')).toBe('Temp sensor');
+		expect(humanizeKey('key')).toBe('Key');
+	});
+
+	test('no rompe lo que no es una clave', () => {
+		expect(humanizeKey('#1')).toBe('#1');
+	});
+});
 
 describe('schemaKind', () => {
 	test('una unión gana sobre el type', () => {

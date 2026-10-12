@@ -4,25 +4,30 @@
  *
  * Es recursivo: un objeto dibuja un `SchemaField` por cada propiedad, un arreglo
  * uno por cada elemento, y una unión (`oneOf`/`anyOf`) deja elegir la variante y
- * dibuja la elegida. Así una opción nueva en el schema aparece sola, sin tocar
- * esto. Las etiquetas y ayudas salen del schema (el vocabulario de fastfetch, en
- * inglés): son datos, no texto de la aplicación.
+ * dibuja la elegida. Cada opción es una fila Once UI (`SettingRow`): la etiqueta
+ * legible y la ayuda a un lado, el control al otro. Las etiquetas salen de la
+ * clave del schema, humanizada; la ayuda, de su `description`.
  */
-
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import {
 	ActionButton,
-	FormGroup,
 	NumberField,
 	SegmentedControl,
 	type SegmentedOption,
 	SelectField,
+	SettingRow,
 	SwitchToggle,
 	TextInput,
 } from '@vasakgroup/vue-libvasak';
 import { computed } from 'vue';
 import { deref, type RootSchema, type SchemaNode } from '@/utils/fastfetch-schema';
-import { blankFor, branchLabel, matchingBranch, schemaKind } from '@/utils/schema-field';
+import {
+	blankFor,
+	branchLabel,
+	humanizeKey,
+	matchingBranch,
+	schemaKind,
+} from '@/utils/schema-field';
 
 const props = defineProps<{
 	root: RootSchema;
@@ -37,14 +42,11 @@ const emit = defineEmits<{ 'update:modelValue': [value: unknown] }>();
 const { t } = useI18n();
 
 const kind = computed(() => schemaKind(props.schema));
+const displayLabel = computed(() => humanizeKey(props.label));
 const help = computed(() => props.description || props.schema.description || '');
 
-// --- enum / select ---
-const enumOptions = computed<SegmentedOption<string>[]>(() =>
-	(props.schema.enum ?? []).map((value) => ({ value: String(value), label: String(value) }))
-);
+const enumOptions = computed(() => (props.schema.enum ?? []).map(String));
 
-// --- object ---
 const objectFields = computed(() =>
 	Object.entries(props.schema.properties ?? {})
 		.filter(([key]) => key !== 'type')
@@ -60,7 +62,6 @@ function setObjectKey(key: string, value: unknown) {
 	emit('update:modelValue', next);
 }
 
-// --- array ---
 const arrayValue = computed<unknown[]>(() =>
 	Array.isArray(props.modelValue) ? (props.modelValue as unknown[]) : []
 );
@@ -81,7 +82,6 @@ function removeItem(index: number) {
 	emit('update:modelValue', next);
 }
 
-// --- union (oneOf / anyOf) ---
 const branches = computed(() => props.schema.oneOf ?? props.schema.anyOf ?? []);
 const branchOptions = computed<SegmentedOption<number>[]>(() =>
 	branches.value.map((branch, index) => ({ value: index, label: branchLabel(branch, t) }))
@@ -91,15 +91,8 @@ function pickBranch(index: number) {
 	emit('update:modelValue', blankFor(deref(props.root, branches.value[index])));
 }
 
-// --- typed setters ---
 function setString(value: string) {
 	emit('update:modelValue', value === '' ? undefined : value);
-}
-function setNumber(value: number) {
-	emit('update:modelValue', value);
-}
-function setBool(value: boolean) {
-	emit('update:modelValue', value);
 }
 
 const stringValue = computed(() => (props.modelValue == null ? '' : String(props.modelValue)));
@@ -108,112 +101,109 @@ const boolValue = computed(() => props.modelValue === true);
 </script>
 
 <template>
-	<div class="flex flex-col gap-1">
-		<!-- Unión: elegir la variante y dibujarla -->
-		<template v-if="kind === 'union'">
-			<FormGroup :label="label">
-				<SegmentedControl
-					:model-value="activeBranch"
-					variant="chips"
-					:label="label"
-					:options="branchOptions"
-					@update:model-value="(value) => { if (value != null) pickBranch(value); }"
-				/>
-			</FormGroup>
+	<!-- Unión: elegir la variante y dibujarla debajo -->
+	<SettingRow v-if="kind === 'union'" :label="displayLabel" :description="help">
+		<SegmentedControl
+			:model-value="activeBranch"
+			variant="chips"
+			:label="displayLabel"
+			:options="branchOptions"
+			@update:model-value="(value) => { if (value != null) pickBranch(value); }"
+		/>
+		<template #footer>
+			<!-- La rama elegida: lleva su propia etiqueta (la de la variante) y su
+			     propia ayuda, para no repetir el título ni la ayuda de la unión. -->
 			<SchemaField
 				:root="root"
 				:schema="deref(root, branches[activeBranch] ?? {})"
 				:model-value="modelValue"
-				:label="label"
-				:description="help"
+				:label="branchOptions[activeBranch]?.label ?? displayLabel"
 				@update:model-value="(value) => emit('update:modelValue', value)"
 			/>
 		</template>
+	</SettingRow>
 
-		<!-- Enum -->
-		<FormGroup v-else-if="schema.enum" :label="label">
-			<SelectField :model-value="stringValue" @update:model-value="(value) => setString(value)">
-				<option v-for="opt in enumOptions" :key="opt.value" :value="opt.value">
-					{{ opt.label }}
-				</option>
-			</SelectField>
-		</FormGroup>
+	<!-- Enum -->
+	<SettingRow v-else-if="schema.enum" :label="displayLabel" :description="help">
+		<SelectField :model-value="stringValue" @update:model-value="(value) => setString(value)">
+			<option v-for="opt in enumOptions" :key="opt" :value="opt">{{ opt }}</option>
+		</SelectField>
+	</SettingRow>
 
-		<!-- Booleano -->
-		<div v-else-if="kind === 'boolean'" class="flex items-start justify-between gap-4">
-			<div class="min-w-0 flex-1">
-				<h4 class="text-sm font-medium">{{ label }}</h4>
+	<!-- Booleano -->
+	<SettingRow v-else-if="kind === 'boolean'" :label="displayLabel" :description="help">
+		<SwitchToggle
+			:model-value="boolValue"
+			:label="displayLabel"
+			@update:model-value="(value) => emit('update:modelValue', value)"
+		/>
+	</SettingRow>
+
+	<!-- Número -->
+	<SettingRow v-else-if="kind === 'number'" :label="displayLabel" :description="help">
+		<NumberField
+			:model-value="numberValue"
+			:min="schema.minimum"
+			:max="schema.maximum"
+			narrow
+			@update:model-value="(value) => emit('update:modelValue', value)"
+		/>
+	</SettingRow>
+
+	<!-- Objeto: un grupo con una fila por propiedad -->
+	<div v-else-if="kind === 'object'" class="flex flex-col gap-2 rounded-corner-m bg-ui-surface/50 p-3">
+		<div>
+			<h5 class="text-sm font-medium">{{ displayLabel }}</h5>
+			<p v-if="help" class="text-xs text-tx-muted">{{ help }}</p>
+		</div>
+		<SchemaField
+			v-for="field in objectFields"
+			:key="field.key"
+			:root="root"
+			:schema="field.schema"
+			:model-value="objectValue()[field.key]"
+			:label="field.key"
+			@update:model-value="(value) => setObjectKey(field.key, value)"
+		/>
+	</div>
+
+	<!-- Arreglo: lista de elementos -->
+	<div v-else-if="kind === 'array'" class="flex flex-col gap-2 rounded-corner-m bg-ui-surface/50 p-3">
+		<div class="flex items-center justify-between gap-2">
+			<div>
+				<h5 class="text-sm font-medium">{{ displayLabel }}</h5>
 				<p v-if="help" class="text-xs text-tx-muted">{{ help }}</p>
 			</div>
-			<SwitchToggle
-				:model-value="boolValue"
-				:label="label"
-				@update:model-value="(value) => setBool(value)"
+			<ActionButton
+				variant="secondary"
+				icon="list-add"
+				size="sm"
+				:label="t('views.fastfetch.schema.addItem')"
+				@click="addItem"
 			/>
 		</div>
-
-		<!-- Número -->
-		<FormGroup v-else-if="kind === 'number'" :label="label">
-			<NumberField
-				:model-value="numberValue"
-				:min="schema.minimum"
-				:max="schema.maximum"
-				narrow
-				@update:model-value="(value) => setNumber(value)"
-			/>
-		</FormGroup>
-
-		<!-- Objeto: un campo por propiedad -->
-		<div v-else-if="kind === 'object'" class="flex flex-col gap-3 rounded-corner-m bg-ui-surface/50 p-3">
-			<h4 class="text-sm font-medium">{{ label }}</h4>
-			<p v-if="help" class="text-xs text-tx-muted">{{ help }}</p>
-			<SchemaField
-				v-for="field in objectFields"
-				:key="field.key"
-				:root="root"
-				:schema="field.schema"
-				:model-value="objectValue()[field.key]"
-				:label="field.key"
-				@update:model-value="(value) => setObjectKey(field.key, value)"
-			/>
-		</div>
-
-		<!-- Arreglo: lista de elementos -->
-		<div v-else-if="kind === 'array'" class="flex flex-col gap-2 rounded-corner-m bg-ui-surface/50 p-3">
-			<div class="flex items-center justify-between">
-				<h4 class="text-sm font-medium">{{ label }}</h4>
-				<ActionButton
-					variant="secondary"
-					icon="list-add"
-					size="sm"
-					:label="t('views.fastfetch.schema.addItem')"
-					@click="addItem"
+		<div v-for="(_, index) in arrayValue" :key="index" class="flex items-start gap-2">
+			<div class="min-w-0 flex-1">
+				<SchemaField
+					:root="root"
+					:schema="itemSchema"
+					:model-value="arrayValue[index]"
+					:label="`#${index + 1}`"
+					@update:model-value="(value) => setItem(index, value)"
 				/>
 			</div>
-			<p v-if="help" class="text-xs text-tx-muted">{{ help }}</p>
-			<div v-for="(_, index) in arrayValue" :key="index" class="flex items-start gap-2">
-				<div class="min-w-0 flex-1">
-					<SchemaField
-						:root="root"
-						:schema="itemSchema"
-						:model-value="arrayValue[index]"
-						:label="`#${index + 1}`"
-						@update:model-value="(value) => setItem(index, value)"
-					/>
-				</div>
-				<ActionButton
-					variant="ghost"
-					icon="list-remove"
-					size="sm"
-					:label="t('views.fastfetch.schema.removeItem')"
-					@click="removeItem(index)"
-				/>
-			</div>
+			<ActionButton
+				variant="ghost"
+				icon="list-remove"
+				size="sm"
+				:label="t('views.fastfetch.schema.removeItem')"
+				@click="removeItem(index)"
+			/>
 		</div>
-
-		<!-- Texto (por defecto) -->
-		<FormGroup v-else :label="label">
-			<TextInput :model-value="stringValue" @update:model-value="(value) => setString(value)" />
-		</FormGroup>
 	</div>
+
+	<!-- Texto (por defecto) -->
+	<SettingRow v-else :label="displayLabel" :description="help">
+		<TextInput :model-value="stringValue" @update:model-value="(value) => setString(value)" />
+	</SettingRow>
 </template>

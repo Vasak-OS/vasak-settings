@@ -75,6 +75,19 @@ export function matchingBranch(branches: SchemaNode[], value: unknown): number {
 	return Math.max(index, 0);
 }
 
+/** Vuelve legible una clave del schema: `showPeCoreCount` → «Show pe core count».
+ *  Las claves de fastfetch son camelCase; esto separa por mayúscula y deja la
+ *  primera en mayúscula. Lo que no es una clave (p. ej. `#1` de un elemento de
+ *  lista) vuelve casi igual. */
+export function humanizeKey(key: string): string {
+	const spaced = key
+		.replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+		.replace(/[_-]+/g, ' ')
+		.trim();
+	if (!spaced) return key;
+	return spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase();
+}
+
 /** El nombre de una rama de unión: su título del schema, o uno por tipo. */
 export function branchLabel(branch: SchemaNode, t: (key: string) => string): string {
 	if (branch.title) return branch.title;
