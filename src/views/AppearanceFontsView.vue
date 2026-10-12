@@ -196,11 +196,11 @@ const isFormValid = computed(() => {
 
 		<EmptyState icon="" size="sm" bordered v-if="loading" :title="t('views.appearanceFonts.loading')" />
 
-		<div v-else class="flex flex-col gap-4 pb-4">
+		<div v-else class="@container flex flex-col gap-4 pb-4">
 			<AlertMessage v-if="error" tone="error">{{ error }}</AlertMessage>
 			<AlertMessage v-if="successMessage" tone="success">{{ successMessage }}</AlertMessage>
 
-			<div class="grid gap-4 xl:grid-cols-[360px_1fr]">
+			<div class="grid items-start gap-4 @2xl:grid-cols-[360px_1fr]">
 				<Panel as="article">
 					<div class="flex flex-col gap-4">
 						<FormGroup :label="t('views.appearanceFonts.activeTarget')" html-for="font-target">
@@ -273,7 +273,7 @@ const isFormValid = computed(() => {
 					</div>
 				</Panel>
 
-				<Panel as="article">
+				<Panel as="article" class="@2xl:col-span-2">
 					<div class="flex items-center justify-between gap-3">
 						<div>
 							<h3 class="text-lg font-medium text-tx-main">{{ t('views.appearanceFonts.library') }}</h3>
@@ -286,7 +286,7 @@ const isFormValid = computed(() => {
 						</div>
 					</div>
 
-					<div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+					<div class="mt-4 grid gap-3 grid-cols-[repeat(auto-fill,minmax(14rem,1fr))]">
 						<button
 							v-for="font in filteredFonts"
 							:key="font.id"
