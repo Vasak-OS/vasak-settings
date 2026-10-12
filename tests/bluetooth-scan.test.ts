@@ -13,7 +13,7 @@
  * rojo según el orden de la corrida.
  */
 
-import { describe, expect, mock, test } from 'bun:test';
+import { describe, expect, jest, mock, test } from 'bun:test';
 import type { Event } from '@tauri-apps/api/event';
 import type {
 	AdapterInfo,
@@ -114,6 +114,32 @@ describe('el escaneo es un flujo abierto', () => {
 		// Lo que antes rompía: un `stopScan` al rato. Ahora no se llama.
 		expect(deps.stopScan).not.toHaveBeenCalled();
 		// Y el escaneo queda marcado como activo, para el indicador «Buscando…».
+		expect(api.isScanning.value).toBe(true);
+
+		wrapper.unmount();
+	});
+
+	test('aunque pase el tiempo de la foto vieja, el escaneo sigue abierto', async () => {
+		// La regresión era un `setTimeout(…) => stopScan` a los 6 s. No alcanza
+		// con no esperar: hay que *mover el reloj* más allá de esa ventana y
+		// comprobar que nada cerró el escaneo. Sin esto, un cronómetro reintroducido
+		// pasa inadvertido porque el `setTimeout` nunca llega a disparar en la prueba.
+		const { deps } = makeDeps();
+		const { wrapper, api } = mountBluetooth(deps);
+		await api.start();
+
+		jest.useFakeTimers();
+		try {
+			await api.startScanning();
+			// Mucho más que los 6 s del cronómetro viejo.
+			jest.advanceTimersByTime(60_000);
+		} finally {
+			jest.useRealTimers();
+		}
+		await flushPromises();
+
+		// Ningún reloj cerró el escaneo: ni `stopScan` ni la bandera apagada.
+		expect(deps.stopScan).not.toHaveBeenCalled();
 		expect(api.isScanning.value).toBe(true);
 
 		wrapper.unmount();
