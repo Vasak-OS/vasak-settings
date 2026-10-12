@@ -62,6 +62,7 @@ describe('candados de Tauri', () => {
 		// parejas, la prueba de abajo pasaría sin comparar nada.
 		expect(pairs.map((pair) => pair.crate)).toContain('tauri');
 		expect(pairs.map((pair) => pair.crate)).toContain('tauri-plugin-shell');
+		expect(pairs.map((pair) => pair.crate)).toContain('tauri-plugin-dialog');
 	});
 
 	test('cada crate de Tauri coincide en major.minor con su paquete de npm', () => {
