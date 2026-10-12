@@ -353,8 +353,28 @@ fn merge_config(base: Value, partial: &Value) -> Value {
 }
 
 /// Escribe en `user_path` el parcial mezclado sobre la config efectiva.
+/// Normaliza un parcial que viene de la pantalla antes de mezclarlo. Hoy sólo el
+/// emblema: el formulario lo manda como `FastfetchLogo` (`{ kind, source, … }`),
+/// pero fastfetch quiere `{ "type": … }` y sin los campos vacíos. Se reusa
+/// `logo_to_value` —la misma forma que el camino del editor de emblema— para no
+/// escribir `logo.kind`, que fastfetch rechaza con «Unknown logo key».
+fn normalize_partial(partial: &Value) -> Value {
+    let mut out = partial.clone();
+    if let Value::Object(map) = &mut out {
+        if let Some(logo) = map.get("logo") {
+            if logo.get("kind").is_some() {
+                if let Ok(parsed) = serde_json::from_value::<FastfetchLogo>(logo.clone()) {
+                    map.insert("logo".into(), logo_to_value(&parsed));
+                }
+            }
+        }
+    }
+    out
+}
+
 fn write_config_at(user_path: &Path, partial: &Value) -> Result<(), String> {
-    let root = merge_config(effective_config(Some(user_path)), partial);
+    let partial = normalize_partial(partial);
+    let root = merge_config(effective_config(Some(user_path)), &partial);
     if let Some(parent) = user_path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
@@ -505,6 +525,31 @@ mod tests {
         // Lo que no nombra se preserva.
         assert_eq!(merged["general"]["thread"], true);
         assert_eq!(merged["$schema"], SCHEMA);
+    }
+
+    #[test]
+    fn normalize_partial_arregla_el_logo_de_la_pantalla() {
+        // La pantalla manda `kind` y nulls; fastfetch quiere `type` y sin vacíos.
+        let partial = serde_json::json!({
+            "logo": { "kind": "file", "source": "l.png", "width": null, "height": null, "padding": null },
+            "modules": ["os"]
+        });
+        let out = normalize_partial(&partial);
+        assert_eq!(out["logo"]["type"], "file");
+        assert_eq!(out["logo"]["source"], "l.png");
+        assert!(out["logo"].get("kind").is_none(), "no debe quedar `kind`");
+        assert!(
+            out["logo"].get("width").is_none(),
+            "no deben viajar los nulls"
+        );
+        // Lo que no es logo se deja igual.
+        assert_eq!(out["modules"], serde_json::json!(["os"]));
+    }
+
+    #[test]
+    fn normalize_partial_sin_logo_no_toca_nada() {
+        let partial = serde_json::json!({ "modules": ["os"], "display": { "separator": ": " } });
+        assert_eq!(normalize_partial(&partial), partial);
     }
 
     #[test]
