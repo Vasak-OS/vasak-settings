@@ -1,153 +1,42 @@
 <script lang="ts" setup>
-import { type Event, listen } from '@tauri-apps/api/event';
-import {
-	type AdapterInfo,
-	type BluetoothChange,
-	connectDevice,
-	type DeviceInfo,
-	disconnectDevice,
-	getDefaultAdapter,
-	listDevices,
-	startScan,
-	stopScan,
-	toggleBluetooth,
-} from '@vasakgroup/plugin-bluetooth-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import {
 	AlertMessage,
 	DeviceCard,
 	EmptyState,
+	LoadingState,
 	PageHeader,
 	Panel,
 	SwitchToggle,
 } from '@vasakgroup/vue-libvasak';
-import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
-import { shouldRefresh } from '@/utils/bluetooth-change';
+import { onMounted } from 'vue';
+import { bluetoothApi, useBluetooth } from '@/composables/useBluetooth';
 import { deviceCardProps } from '@/utils/bluetooth-device-card';
 
 const { t } = useI18n();
 
-// El armado de cada fila —de un dispositivo de BlueZ a las propiedades de
-// `DeviceCard`— vive en `@/utils/bluetooth-device-card`, como función pura:
-// así se prueba sin Tauri y sin montar esta vista.
+// Toda la lógica —adaptador, listas y el escaneo abierto— vive en el
+// composable, que recibe sus dependencias por parámetro para poder probarse
+// sin montar la vista. El armado de cada fila (de un dispositivo de BlueZ a las
+// propiedades de `DeviceCard`) sigue en `@/utils/bluetooth-device-card`.
+const {
+	connectedDevices,
+	availableDevices,
+	loading,
+	isTogglingBluetooth,
+	isScanning,
+	error,
+	isBluetoothOn,
+	start,
+	toggleBT,
+	startScanning,
+	stopScanning,
+	connect,
+	disconnect,
+} = useBluetooth({ ...bluetoothApi, t });
 
-// --- Estado ---
-const connectedDevices: Ref<DeviceInfo[]> = ref([]);
-const availableDevices: Ref<DeviceInfo[]> = ref([]);
-const isTogglingBluetooth = ref(false);
-const defaultAdapter = ref<AdapterInfo | null>(null);
-const loading = ref(true);
-const isScanning = ref(false);
-const error = ref('');
-
-let unlistenBluetooth: (() => void) | null = null;
-
-// --- Funciones Computadas ---
-const isBluetoothOn = computed(() => defaultAdapter.value?.powered ?? false);
-
-// --- Lógica del Adaptador y Refresco ---
-const toggleBT = async () => {
-	isTogglingBluetooth.value = true;
-	error.value = '';
-	try {
-		await toggleBluetooth();
-		// Una pequeña espera ayuda a que el bus dbus recupere el estado
-		await new Promise((r) => setTimeout(r, 600));
-		await refreshDevices();
-	} catch (err) {
-		error.value = t('views.networkBluetooth.errors.toggle').replace('{0}', String(err));
-	} finally {
-		isTogglingBluetooth.value = false;
-	}
-};
-
-const refreshDevices = async () => {
-	defaultAdapter.value = await getDefaultAdapter();
-
-	console.log(
-		'[BT] Adapter:',
-		defaultAdapter.value?.path,
-		'powered:',
-		defaultAdapter.value?.powered
-	);
-
-	if (!defaultAdapter.value?.powered) {
-		connectedDevices.value = [];
-		availableDevices.value = [];
-		loading.value = false;
-		return;
-	}
-
-	loading.value = true;
-	try {
-		const allDevices = await listDevices(defaultAdapter.value.path);
-		console.log('[BT] Total devices from listDevices:', allDevices.length, allDevices);
-		connectedDevices.value = allDevices.filter((d) => d.connected);
-		availableDevices.value = allDevices.filter((d) => !d.connected);
-	} catch (err) {
-		console.error('[BT] Error refreshing devices:', err);
-		connectedDevices.value = [];
-		availableDevices.value = [];
-	} finally {
-		loading.value = false;
-	}
-};
-
-const scanDevices = async () => {
-	if (!defaultAdapter.value?.powered) return;
-
-	isScanning.value = true;
-	error.value = '';
-	try {
-		await startScan(defaultAdapter.value.path);
-		await new Promise((r) => setTimeout(r, 6000));
-		await stopScan(defaultAdapter.value.path);
-		await refreshDevices();
-	} catch (err) {
-		try {
-			await stopScan(defaultAdapter.value.path);
-		} catch {}
-		error.value = t('views.networkBluetooth.errors.scan').replace('{0}', String(err));
-	} finally {
-		isScanning.value = false;
-	}
-};
-
-const connect = async (device: DeviceInfo) => {
-	try {
-		await connectDevice(device.path);
-	} catch (err) {
-		error.value = t('views.networkBluetooth.errors.connect')
-			.replace('{0}', String(device.alias || device.name))
-			.replace('{1}', String(err));
-	}
-};
-
-const disconnect = async (device: DeviceInfo) => {
-	try {
-		await disconnectDevice(device.path);
-	} catch (err) {
-		error.value = t('views.networkBluetooth.errors.disconnect').replace('{0}', String(err));
-	}
-};
-
-// --- Manejo unificado de eventos de sistema ---
-// Para mantener la UI rápida reconstruimos las listas cuando hay un evento. Qué
-// cambios refrescan lo decide `shouldRefresh`, que lee `changeType` y no el
-// nombre viejo, que el complemento va a sacar.
-const handleBluetoothChange = async (event: Event<BluetoothChange>) => {
-	if (shouldRefresh(event.payload)) {
-		await refreshDevices();
-	}
-};
-
-onMounted(async () => {
-	await refreshDevices();
-	unlistenBluetooth = await listen<BluetoothChange>('bluetooth-change', handleBluetoothChange);
-});
-
-onUnmounted(() => {
-	if (unlistenBluetooth) unlistenBluetooth();
+onMounted(() => {
+	void start();
 });
 </script>
 
@@ -219,24 +108,35 @@ onUnmounted(() => {
 
 				<!-- Disponibles -->
 				<Panel as="article">
-					<div class="mb-4 flex items-center justify-between">
-						<h3 class="text-lg font-medium text-tx-main">{{ t('views.networkBluetooth.availableDevices') }}</h3>
-						
+					<div class="mb-4 flex items-center justify-between gap-3">
+						<h3 class="min-w-0 truncate text-lg font-medium text-tx-main">{{ t('views.networkBluetooth.availableDevices') }}</h3>
+
+						<!-- El botón alterna: arranca el escaneo abierto y, mientras busca,
+						     lo detiene. Nunca se corta por un cronómetro. -->
 						<button
-							class="flex items-center justify-center rounded p-1.5 transition-colors hover:bg-ui-surface border-transparent border hover:border-ui-border"
-							:class="isScanning ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'"
-							@click="scanDevices"
-							:disabled="isScanning"
-							:title="t('views.networkBluetooth.scanTooltip')" :aria-label="t('views.networkBluetooth.scanTooltip')">
+							class="flex shrink-0 cursor-pointer items-center justify-center rounded-corner-m border border-transparent p-1.5 transition-colors hover:border-ui-border hover:bg-ui-surface"
+							@click="isScanning ? stopScanning() : startScanning()"
+							:title="isScanning ? t('views.networkBluetooth.stopScanTooltip') : t('views.networkBluetooth.scanTooltip')"
+							:aria-label="isScanning ? t('views.networkBluetooth.stopScanTooltip') : t('views.networkBluetooth.scanTooltip')">
 							<svg class="h-4 w-4 text-tx-muted" :class="{ 'animate-spin text-primary': isScanning }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 							</svg>
 						</button>
 					</div>
 
-					<EmptyState icon="" size="sm" bordered v-if="availableDevices.length === 0" :title="t('views.networkBluetooth.emptyAvailable')" />
-					
-					<ul v-else class="flex flex-col gap-1 max-h-[50vh] overflow-y-auto pr-1">
+					<!-- Mientras el escaneo está abierto: el indicador queda arriba de la
+					     lista para que se vea que sigue buscando aunque ya haya algo. -->
+					<LoadingState
+						v-if="isScanning"
+						size="sm"
+						bordered
+						:label="t('views.networkBluetooth.scanning')"
+						class="mb-3"
+					/>
+
+					<EmptyState icon="" size="sm" bordered v-if="!isScanning && availableDevices.length === 0" :title="t('views.networkBluetooth.emptyAvailable')" />
+
+					<ul v-if="availableDevices.length > 0" class="flex flex-col gap-1 max-h-[50vh] overflow-y-auto pr-1">
 						<li v-for="dev in availableDevices" :key="dev.path">
 							<DeviceCard
 								v-bind="deviceCardProps(dev, t)"

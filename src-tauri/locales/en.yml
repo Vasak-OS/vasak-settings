@@ -1347,6 +1347,8 @@ views:
     emptyConnected: No connected devices
     emptyAvailable: No devices were found nearby
     scanTooltip: Scan
+    stopScanTooltip: Stop
+    scanning: Searching for devices…
     connect: Connect
     disconnect: Disconnect
     signal: '{0} dBm'
