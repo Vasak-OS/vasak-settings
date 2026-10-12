@@ -45,7 +45,7 @@ const kind = computed(() => schemaKind(props.schema));
 const displayLabel = computed(() => humanizeKey(props.label));
 const help = computed(() => props.description || props.schema.description || '');
 
-const enumOptions = computed(() => (props.schema.enum ?? []).map((value) => String(value)));
+const enumOptions = computed(() => (props.schema.enum ?? []).map(String));
 
 const objectFields = computed(() =>
 	Object.entries(props.schema.properties ?? {})
