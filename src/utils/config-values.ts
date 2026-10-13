@@ -112,8 +112,27 @@ export function writeScreenTimeEnabled(config: Record<string, unknown>, enabled:
 	config.screen_time = { ...previous, enabled };
 }
 
-/** Lo que el panel muestra y se puede apagar, en el orden en que aparece. */
-export const PANEL_INDICATORS = ['weather', 'music', 'transfer', 'tray', 'privacy'] as const;
+/**
+ * Lo que el panel muestra y se puede apagar, en el orden en que aparece.
+ *
+ * Las primeras cinco son los indicadores de siempre; las cinco últimas se
+ * sumaron con el panel configurable (`workspaces` y `windows` son píldoras
+ * enteras; `networkName`, `volumeNumber` y `batteryNumber` son el detalle que
+ * cada indicador muestra de más). Todas comparten la misma lectura tolerante
+ * —la clave ausente vale por encendido— porque el escritorio las lee así.
+ */
+export const PANEL_INDICATORS = [
+	'weather',
+	'music',
+	'transfer',
+	'tray',
+	'privacy',
+	'workspaces',
+	'windows',
+	'networkName',
+	'volumeNumber',
+	'batteryNumber',
+] as const;
 
 export type PanelIndicator = (typeof PANEL_INDICATORS)[number];
 
@@ -152,6 +171,107 @@ export function writePanelIndicators(
 ): void {
 	const previous = (config.panel as Record<string, unknown> | undefined) ?? {};
 	config.panel = { ...previous, ...values };
+}
+
+/**
+ * Una aplicación anclada al panel.
+ *
+ * Es lo que el escritorio necesita para dibujarla y lanzarla sin volver a leer
+ * el `.desktop`: el identificador del archivo (`firefox.desktop`), el nombre
+ * visible, el nombre del icono del tema y la línea de ejecución ya sin los
+ * códigos de campo. El contrato es idéntico al del comando `list_installed_apps`
+ * del backend y al que lee vasak-desktop.
+ */
+export interface PinnedApp {
+	id: string;
+	name: string;
+	icon: string;
+	exec: string;
+}
+
+/**
+ * Las dos aplicaciones ancladas de siempre: Configuración y Archivos.
+ *
+ * Es lo que el panel ancló desde siempre, y lo que vale cuando `panel.pinned`
+ * **no existe**. Los valores salen de los `.desktop` de las dos aplicaciones
+ * (`vasak-settings.desktop` con `preferences-system`, `vasak-file-manager.desktop`
+ * con `folder`); el nombre es el de respaldo —la pantalla lo reemplaza por el del
+ * idioma de la sesión al sembrar, leyéndolo de `list_installed_apps`—.
+ */
+export const DEFAULT_PINNED: readonly PinnedApp[] = [
+	{
+		id: 'vasak-settings.desktop',
+		name: 'Settings',
+		icon: 'preferences-system',
+		exec: 'vasak-settings',
+	},
+	{
+		id: 'vasak-file-manager.desktop',
+		name: 'File Manager',
+		icon: 'folder',
+		exec: 'vasak-file-manager',
+	},
+] as const;
+
+/** Una entrada del archivo que tenga la forma de una app anclada. */
+function isPinnedApp(value: unknown): value is PinnedApp {
+	if (value === null || typeof value !== 'object') return false;
+	const entry = value as Record<string, unknown>;
+	return (
+		typeof entry.id === 'string' &&
+		typeof entry.name === 'string' &&
+		typeof entry.icon === 'string' &&
+		typeof entry.exec === 'string'
+	);
+}
+
+/**
+ * Las aplicaciones ancladas al panel.
+ *
+ * El contrato distingue **ausente** de **vacío**: si `panel.pinned` no es un
+ * arreglo, se usan las dos de siempre (`DEFAULT_PINNED`); si lo es —aunque esté
+ * vacío—, se usa exactamente esa lista. Por eso la copia de los defaults se
+ * devuelve sólo cuando la clave no es un arreglo, no cuando el arreglo quedó sin
+ * elementos: alguien que quitó todos sus anclados no quiere que le vuelvan a
+ * aparecer los dos de fábrica.
+ *
+ * El archivo se puede editar a mano, así que cada entrada se comprueba en lugar
+ * de afirmarse: las que no tienen la forma `{ id, name, icon, exec }` se
+ * descartan, una por una, sin tirar las demás.
+ */
+export function readPanelPinned(config: unknown): PinnedApp[] {
+	const stored = panelSection(config)?.pinned;
+	if (!Array.isArray(stored)) {
+		return DEFAULT_PINNED.map((app) => ({ ...app }));
+	}
+	return stored.filter(isPinnedApp).map((app) => ({
+		id: app.id,
+		name: app.name,
+		icon: app.icon,
+		exec: app.exec,
+	}));
+}
+
+/**
+ * Deja la sección `panel` con la lista de anclados elegida.
+ *
+ * Se escribe siempre el arreglo —aunque esté vacío—, porque un arreglo presente
+ * y vacío es justamente lo que lo distingue de «no personalizado nunca»: a
+ * partir de que la persona toca los anclados, la lista es la que diga el archivo
+ * y no los dos de fábrica. Conserva el resto de la sección `panel` (posición,
+ * aspecto e indicadores), igual que el resto de los escritores.
+ */
+export function writePanelPinned(config: Record<string, unknown>, pinned: PinnedApp[]): void {
+	const previous = (config.panel as Record<string, unknown> | undefined) ?? {};
+	config.panel = {
+		...previous,
+		pinned: pinned.map((app) => ({
+			id: app.id,
+			name: app.name,
+			icon: app.icon,
+			exec: app.exec,
+		})),
+	};
 }
 
 /** Los cuatro lados donde puede quedar la barra de una ventana. */

@@ -769,6 +769,27 @@ views:
     trayHint: The icons applications put in the system tray.
     privacy: Camera and microphone
     privacyHint: Warns while an application is using the camera or the microphone.
+    workspaces: Workspaces
+    workspacesHint: The pill that shows which desktop you are on and lets you switch.
+    windows: Open applications
+    windowsHint: The pill with the open windows, to switch between them.
+    networkName: Network name
+    networkNameHint: Show the network name next to the icon, not just the icon.
+    volumeNumber: Volume number
+    volumeNumberHint: Show the volume percentage next to the icon.
+    batteryNumber: Battery number
+    batteryNumberHint: Show the battery percentage next to the icon.
+    pinned: Pinned
+    pinnedHint: >-
+      The applications fixed to the panel, in the order they appear. Add, remove
+      and reorder the ones you want to keep at hand.
+    pinnedEmpty: No applications are pinned.
+    pinnedAdd: Add an application
+    pinnedSearch: Search for an application...
+    pinnedNoApps: No more applications to add.
+    pinnedMoveUp: Move {0} up
+    pinnedMoveDown: Move {0} down
+    pinnedRemove: Remove {0}
   startMenu:
     title: Start menu
     description: What shape the desktop menu has and what it shows.

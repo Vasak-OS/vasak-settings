@@ -31,6 +31,11 @@ describe('leer los indicadores del panel', () => {
 			transfer: true,
 			tray: true,
 			privacy: true,
+			workspaces: true,
+			windows: true,
+			networkName: true,
+			volumeNumber: true,
+			batteryNumber: true,
 		});
 	});
 
@@ -64,6 +69,11 @@ describe('guardar los indicadores del panel', () => {
 			transfer: true,
 			tray: true,
 			privacy: false,
+			workspaces: true,
+			windows: true,
+			networkName: true,
+			volumeNumber: true,
+			batteryNumber: true,
 		});
 
 		expect(readPanelIndicators(config).privacy).toBe(false);
@@ -78,6 +88,11 @@ describe('guardar los indicadores del panel', () => {
 			transfer: true,
 			tray: true,
 			privacy: false,
+			workspaces: true,
+			windows: true,
+			networkName: true,
+			volumeNumber: true,
+			batteryNumber: true,
 		});
 
 		expect((config.panel as Record<string, unknown>).height).toBe(32);
@@ -90,7 +105,7 @@ describe('la pantalla usa ese camino', () => {
 		expect(VIEW).toContain('writePanelIndicators(');
 	});
 
-	test('los cinco interruptores arrancan encendidos y se guardan', () => {
+	test('cada interruptor arranca encendido y se guarda', () => {
 		const initiallyOn = [...VIEW.matchAll(/const (\w+) = ref\(true\);/g)].map(([, n]) => n);
 
 		for (const key of PANEL_INDICATORS) {

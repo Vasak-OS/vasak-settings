@@ -7,14 +7,18 @@ import {
 } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import {
+	ActionButton,
 	AlertMessage,
 	ConfigSection,
 	EmptyState,
 	PageHeader,
+	SearchSelect,
 	SelectField,
 	SwitchToggle,
 } from '@vasakgroup/vue-libvasak';
-import { onMounted, type Ref, ref } from 'vue';
+import { computed, onMounted, type Ref, ref } from 'vue';
+import AppIcon from '@/components/permissions/AppIcon.vue';
+import { listInstalledApps } from '@/services/installed-apps.service';
 import {
 	PANEL_ANIMATIONS,
 	PANEL_LAYOUTS,
@@ -24,14 +28,17 @@ import {
 	type PanelLayout,
 	type PanelPosition,
 	type PanelStyle,
+	type PinnedApp,
 	readPanelAnimation,
 	readPanelAutohide,
 	readPanelIndicators,
 	readPanelLayout,
+	readPanelPinned,
 	readPanelPosition,
 	readPanelStyle,
 	writePanelAppearance,
 	writePanelIndicators,
+	writePanelPinned,
 	writePanelPosition,
 } from '@/utils/config-values';
 
@@ -60,6 +67,18 @@ const tray = ref(true);
 const privacy = ref(true);
 
 /**
+ * Los indicadores que se sumaron con el panel configurable. `workspaces` y
+ * `windows` son píldoras enteras; `networkName`, `volumeNumber` y
+ * `batteryNumber` son el detalle que cada indicador muestra de más. Todos
+ * arrancan encendidos, con el mismo criterio que los de arriba.
+ */
+const workspaces = ref(true);
+const windows = ref(true);
+const networkName = ref(true);
+const volumeNumber = ref(true);
+const batteryNumber = ref(true);
+
+/**
  * De qué lado queda la barra.
  *
  * Arriba por omisión, que es donde estuvo siempre. El escritorio la reancla y
@@ -85,6 +104,58 @@ const animation = ref<PanelAnimation>('off');
  */
 const autohide = ref(false);
 
+/**
+ * Las aplicaciones ancladas y las que se pueden anclar.
+ *
+ * `pinned` arranca con lo que diga `panel.pinned` —o los dos de siempre si la
+ * clave no existe— y `installedApps` con todo lo instalado, que es de donde se
+ * agregan. Cada anclado se refresca contra la lista instalada por su
+ * identificador: así los dos de fábrica salen con el nombre en el idioma de la
+ * sesión y el icono del tema, y no con los de respaldo que trae `DEFAULT_PINNED`.
+ */
+const installedApps = ref<PinnedApp[]>([]);
+const pinned = ref<PinnedApp[]>([]);
+const addSelection = ref('');
+
+/** Un anclado con el nombre, el icono y la ejecución frescos, si está instalado. */
+function refreshed(app: PinnedApp): PinnedApp {
+	const found = installedApps.value.find((a) => a.id === app.id);
+	return found ? { ...found } : { ...app };
+}
+
+/** Lo que todavía se puede agregar: lo instalado que no esté ya anclado. */
+const addableApps = computed(() =>
+	installedApps.value.filter((app) => !pinned.value.some((p) => p.id === app.id))
+);
+
+/** Las opciones del selector de agregar, ordenadas por nombre. */
+const addOptions = computed(() =>
+	[...addableApps.value]
+		.sort((a, b) => a.name.localeCompare(b.name))
+		.map((app) => ({ valor: app.id, etiqueta: app.name, detalle: app.exec }))
+);
+
+function addApp(id: string) {
+	if (!id) return;
+	const app = installedApps.value.find((a) => a.id === id);
+	if (!app || pinned.value.some((p) => p.id === id)) return;
+	pinned.value.push({ ...app });
+	// El selector se devuelve a vacío: queda listo para elegir la siguiente, y
+	// no muestra una elegida que ya salió de la lista.
+	addSelection.value = '';
+}
+
+function removeApp(index: number) {
+	pinned.value.splice(index, 1);
+}
+
+/** Intercambia dos anclados: así se reordena con los botones de subir y bajar. */
+function swap(a: number, b: number) {
+	if (a < 0 || b < 0 || a >= pinned.value.length || b >= pinned.value.length) return;
+	const list = pinned.value;
+	[list[a], list[b]] = [list[b], list[a]];
+}
+
 onMounted(async () => {
 	try {
 		configStore.value = useConfigStore();
@@ -92,17 +163,33 @@ onMounted(async () => {
 		await configStore.value.loadConfig();
 		vskConfig.value = await readConfig();
 
-		const panel = readPanelIndicators(vskConfig.value);
-		weather.value = panel.weather;
-		music.value = panel.music;
-		transfer.value = panel.transfer;
-		tray.value = panel.tray;
-		privacy.value = panel.privacy;
+		const indicators = readPanelIndicators(vskConfig.value);
+		weather.value = indicators.weather;
+		music.value = indicators.music;
+		transfer.value = indicators.transfer;
+		tray.value = indicators.tray;
+		privacy.value = indicators.privacy;
+		workspaces.value = indicators.workspaces;
+		windows.value = indicators.windows;
+		networkName.value = indicators.networkName;
+		volumeNumber.value = indicators.volumeNumber;
+		batteryNumber.value = indicators.batteryNumber;
 		position.value = readPanelPosition(vskConfig.value);
 		style.value = readPanelStyle(vskConfig.value);
 		layout.value = readPanelLayout(vskConfig.value);
 		animation.value = readPanelAnimation(vskConfig.value);
 		autohide.value = readPanelAutohide(vskConfig.value);
+
+		// Un tropiezo del backend no debe dejar la pantalla en blanco: sin la
+		// lista instalada, los anclados se siguen leyendo y editando con lo que
+		// hay guardado, sólo que no se refrescan ni se pueden agregar nuevos.
+		try {
+			installedApps.value = await listInstalledApps();
+		} catch (err) {
+			console.error(err);
+			installedApps.value = [];
+		}
+		pinned.value = readPanelPinned(vskConfig.value).map(refreshed);
 	} catch (err) {
 		error.value = t('views.appearancePanel.errorLoading').replace('{0}', String(err));
 	} finally {
@@ -124,6 +211,11 @@ const saveConfig = async () => {
 			transfer: transfer.value,
 			tray: tray.value,
 			privacy: privacy.value,
+			workspaces: workspaces.value,
+			windows: windows.value,
+			networkName: networkName.value,
+			volumeNumber: volumeNumber.value,
+			batteryNumber: batteryNumber.value,
 		});
 
 		writePanelPosition(vskConfig.value as unknown as Record<string, unknown>, position.value);
@@ -134,6 +226,11 @@ const saveConfig = async () => {
 			animation: animation.value,
 			autohide: autohide.value,
 		});
+
+		// Se escribe el arreglo entero —aunque sea el de los dos de siempre—: a
+		// partir de acá `panel.pinned` existe, y el escritorio deja de usar los
+		// dos de fábrica para usar exactamente esta lista.
+		writePanelPinned(vskConfig.value as unknown as Record<string, unknown>, pinned.value);
 
 		await writeConfig(vskConfig.value);
 
@@ -274,6 +371,30 @@ const saveConfig = async () => {
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
 							<span class="text-sm font-medium text-tx-main">
+								{{ t('views.appearancePanel.workspaces') }}
+							</span>
+							<span class="text-xs text-tx-muted">
+								{{ t('views.appearancePanel.workspacesHint') }}
+							</span>
+						</div>
+						<SwitchToggle :label="t('views.appearancePanel.workspaces')" :model-value="workspaces" @update:model-value="(val) => (workspaces = val)" />
+					</div>
+
+					<div class="flex items-start justify-between gap-4">
+						<div class="flex flex-col">
+							<span class="text-sm font-medium text-tx-main">
+								{{ t('views.appearancePanel.windows') }}
+							</span>
+							<span class="text-xs text-tx-muted">
+								{{ t('views.appearancePanel.windowsHint') }}
+							</span>
+						</div>
+						<SwitchToggle :label="t('views.appearancePanel.windows')" :model-value="windows" @update:model-value="(val) => (windows = val)" />
+					</div>
+
+					<div class="flex items-start justify-between gap-4">
+						<div class="flex flex-col">
+							<span class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.weather') }}
 							</span>
 							<span class="text-xs text-tx-muted">
@@ -310,6 +431,42 @@ const saveConfig = async () => {
 					<div class="flex items-start justify-between gap-4">
 						<div class="flex flex-col">
 							<span class="text-sm font-medium text-tx-main">
+								{{ t('views.appearancePanel.networkName') }}
+							</span>
+							<span class="text-xs text-tx-muted">
+								{{ t('views.appearancePanel.networkNameHint') }}
+							</span>
+						</div>
+						<SwitchToggle :label="t('views.appearancePanel.networkName')" :model-value="networkName" @update:model-value="(val) => (networkName = val)" />
+					</div>
+
+					<div class="flex items-start justify-between gap-4">
+						<div class="flex flex-col">
+							<span class="text-sm font-medium text-tx-main">
+								{{ t('views.appearancePanel.volumeNumber') }}
+							</span>
+							<span class="text-xs text-tx-muted">
+								{{ t('views.appearancePanel.volumeNumberHint') }}
+							</span>
+						</div>
+						<SwitchToggle :label="t('views.appearancePanel.volumeNumber')" :model-value="volumeNumber" @update:model-value="(val) => (volumeNumber = val)" />
+					</div>
+
+					<div class="flex items-start justify-between gap-4">
+						<div class="flex flex-col">
+							<span class="text-sm font-medium text-tx-main">
+								{{ t('views.appearancePanel.batteryNumber') }}
+							</span>
+							<span class="text-xs text-tx-muted">
+								{{ t('views.appearancePanel.batteryNumberHint') }}
+							</span>
+						</div>
+						<SwitchToggle :label="t('views.appearancePanel.batteryNumber')" :model-value="batteryNumber" @update:model-value="(val) => (batteryNumber = val)" />
+					</div>
+
+					<div class="flex items-start justify-between gap-4">
+						<div class="flex flex-col">
+							<span class="text-sm font-medium text-tx-main">
 								{{ t('views.appearancePanel.tray') }}
 							</span>
 							<span class="text-xs text-tx-muted">
@@ -330,6 +487,81 @@ const saveConfig = async () => {
 						</div>
 						<SwitchToggle :label="t('views.appearancePanel.privacy')" :model-value="privacy" @update:model-value="(val) => (privacy = val)" />
 					</div>
+				</div>
+			</ConfigSection>
+
+			<ConfigSection :title="t('views.appearancePanel.pinned')">
+				<div class="flex flex-col gap-4">
+					<p class="text-xs text-tx-muted">
+						{{ t('views.appearancePanel.pinnedHint') }}
+					</p>
+
+					<!-- La lista de anclados. Cada fila es icono + nombre + los
+					     controles de subir, bajar y quitar. -->
+					<ul v-if="pinned.length" class="flex flex-col gap-2">
+						<li
+							v-for="(app, index) in pinned"
+							:key="app.id"
+							class="flex items-center gap-3 rounded-corner-m border border-ui-border bg-ui-surface/70 p-2"
+						>
+							<AppIcon :name="app.icon" />
+							<span class="min-w-0 flex-1 truncate text-sm font-medium text-tx-main">
+								{{ app.name }}
+							</span>
+							<div class="flex shrink-0 items-center gap-1">
+								<ActionButton
+									variant="ghost"
+									size="sm"
+									icon="go-up"
+									:label="t('views.appearancePanel.pinnedMoveUp').replace('{0}', app.name)"
+									:title="t('views.appearancePanel.pinnedMoveUp').replace('{0}', app.name)"
+									:disabled="index === 0"
+									@click="swap(index, index - 1)"
+								/>
+								<ActionButton
+									variant="ghost"
+									size="sm"
+									icon="go-down"
+									:label="t('views.appearancePanel.pinnedMoveDown').replace('{0}', app.name)"
+									:title="t('views.appearancePanel.pinnedMoveDown').replace('{0}', app.name)"
+									:disabled="index === pinned.length - 1"
+									@click="swap(index, index + 1)"
+								/>
+								<ActionButton
+									variant="danger"
+									size="sm"
+									icon="list-remove"
+									:label="t('views.appearancePanel.pinnedRemove').replace('{0}', app.name)"
+									:title="t('views.appearancePanel.pinnedRemove').replace('{0}', app.name)"
+									@click="removeApp(index)"
+								/>
+							</div>
+						</li>
+					</ul>
+
+					<!-- Sin anclados la lista no se dibuja vacía: se dice que no hay
+					     ninguno, que se lee mejor que una caja en blanco. -->
+					<EmptyState
+						v-else
+						icon=""
+						size="sm"
+						bordered
+						:title="t('views.appearancePanel.pinnedEmpty')"
+					/>
+
+					<!-- Agregar: elige una de las instaladas que todavía no esté
+					     anclada. El menú se abre hacia arriba porque el control vive
+					     al pie de la sección. -->
+					<SearchSelect
+						:model-value="addSelection"
+						:options="addOptions"
+						up
+						:label="t('views.appearancePanel.pinnedAdd')"
+						:placeholder="t('views.appearancePanel.pinnedAdd')"
+						:search-placeholder="t('views.appearancePanel.pinnedSearch')"
+						:empty-text="t('views.appearancePanel.pinnedNoApps')"
+						@update:model-value="addApp"
+					/>
 				</div>
 			</ConfigSection>
 		</div>

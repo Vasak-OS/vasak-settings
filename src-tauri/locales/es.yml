@@ -773,6 +773,27 @@ views:
     trayHint: Los iconos que las aplicaciones ponen en la bandeja del sistema.
     privacy: Cámara y micrófono
     privacyHint: Avisa mientras una aplicación está usando la cámara o el micrófono.
+    workspaces: Espacios de trabajo
+    workspacesHint: La píldora que muestra en qué escritorio estás y deja cambiar.
+    windows: Aplicaciones abiertas
+    windowsHint: La píldora con las ventanas abiertas, para alternar entre ellas.
+    networkName: Nombre de la red
+    networkNameHint: Mostrar el nombre de la red al lado del icono, no sólo el icono.
+    volumeNumber: Número del volumen
+    volumeNumberHint: Mostrar el porcentaje del volumen al lado del icono.
+    batteryNumber: Número de la batería
+    batteryNumberHint: Mostrar el porcentaje de la batería al lado del icono.
+    pinned: Anclados
+    pinnedHint: >-
+      Las aplicaciones fijas al panel, en el orden en que aparecen. Agregá,
+      quitá y reordená las que quieras tener siempre a mano.
+    pinnedEmpty: No hay ninguna aplicación anclada.
+    pinnedAdd: Agregar una aplicación
+    pinnedSearch: Buscar una aplicación...
+    pinnedNoApps: No hay más aplicaciones para agregar.
+    pinnedMoveUp: Subir {0}
+    pinnedMoveDown: Bajar {0}
+    pinnedRemove: Quitar {0}
   startMenu:
     title: Menú de inicio
     description: Qué forma tiene el menú del escritorio y qué muestra.
