@@ -147,6 +147,29 @@ const addOptions = computed(() =>
 		.map((app) => ({ valor: app.id, etiqueta: app.name, detalle: app.exec }))
 );
 
+/**
+ * Las opciones de cada desplegable, como `{ value, label }`.
+ *
+ * Desde vue-libvasak 2.19.0 `SelectField` es un listbox propio que recibe las
+ * opciones por propiedad y ya no por una ranura de `<option>`: van calculadas
+ * acá para que la etiqueta siga el idioma de la sesión.
+ */
+const positionOptions = computed(() =>
+	PANEL_POSITIONS.map((side) => ({ value: side, label: t(`views.appearancePanel.lados.${side}`) }))
+);
+const styleOptions = computed(() =>
+	PANEL_STYLES.map((name) => ({ value: name, label: t(`views.appearancePanel.styles.${name}`) }))
+);
+const layoutOptions = computed(() =>
+	PANEL_LAYOUTS.map((name) => ({ value: name, label: t(`views.appearancePanel.layouts.${name}`) }))
+);
+const animationOptions = computed(() =>
+	PANEL_ANIMATIONS.map((name) => ({
+		value: name,
+		label: t(`views.appearancePanel.animations.${name}`),
+	}))
+);
+
 function addApp(id: string) {
 	if (!id) return;
 	const app = installedApps.value.find((a) => a.id === id);
@@ -314,12 +337,9 @@ const saveConfig = async () => {
 					<SelectField
 						v-model="position"
 						:label="t('views.appearancePanel.position')"
+						:options="positionOptions"
 						class="w-60 shrink-0"
-					>
-						<option v-for="side in PANEL_POSITIONS" :key="side" :value="side">
-							{{ t(`views.appearancePanel.lados.${side}`) }}
-						</option>
-					</SelectField>
+					/>
 				</div>
 			</ConfigSection>
 
@@ -332,12 +352,9 @@ const saveConfig = async () => {
 						<SelectField
 							v-model="style"
 							:label="t('views.appearancePanel.style')"
+							:options="styleOptions"
 							class="w-60 shrink-0"
-						>
-							<option v-for="name in PANEL_STYLES" :key="name" :value="name">
-								{{ t(`views.appearancePanel.styles.${name}`) }}
-							</option>
-						</SelectField>
+						/>
 					</div>
 
 					<div class="flex items-start justify-between gap-4">
@@ -347,12 +364,9 @@ const saveConfig = async () => {
 						<SelectField
 							v-model="layout"
 							:label="t('views.appearancePanel.layout')"
+							:options="layoutOptions"
 							class="w-60 shrink-0"
-						>
-							<option v-for="name in PANEL_LAYOUTS" :key="name" :value="name">
-								{{ t(`views.appearancePanel.layouts.${name}`) }}
-							</option>
-						</SelectField>
+						/>
 					</div>
 
 					<div class="flex items-start justify-between gap-4">
@@ -362,12 +376,9 @@ const saveConfig = async () => {
 						<SelectField
 							v-model="animation"
 							:label="t('views.appearancePanel.animation')"
+							:options="animationOptions"
 							class="w-60 shrink-0"
-						>
-							<option v-for="name in PANEL_ANIMATIONS" :key="name" :value="name">
-								{{ t(`views.appearancePanel.animations.${name}`) }}
-							</option>
-						</SelectField>
+						/>
 					</div>
 
 					<div class="flex items-start justify-between gap-4">

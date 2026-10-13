@@ -140,9 +140,11 @@ const boolValue = computed(() => props.modelValue === true);
 
 	<!-- Enum -->
 	<SettingRow v-else-if="effSchema.enum" :label="displayLabel" :description="help">
-		<SelectField :model-value="stringValue" @update:model-value="(value) => setString(value)">
-			<option v-for="opt in enumOptions" :key="opt" :value="opt">{{ opt }}</option>
-		</SelectField>
+		<SelectField
+			:model-value="stringValue"
+			:options="enumOptions"
+			@update:model-value="(value) => setString(value)"
+		/>
 	</SettingRow>
 
 	<!-- Booleano -->

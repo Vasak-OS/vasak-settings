@@ -41,6 +41,19 @@ const variantByName = computed(() => {
 const enabledNames = computed(() => new Set(props.modelValue.map((entry) => entry.name)));
 const available = computed(() => availableModules(props.variants, enabledNames.value));
 
+/**
+ * Las opciones del desplegable de agregar, como `{ value, label }`.
+ *
+ * Desde vue-libvasak 2.19.0 `SelectField` recibe las opciones por propiedad y ya
+ * no por una ranura de `<option>`. El lugar vacío —antes un `<option value="">`—
+ * sigue siendo la primera opción, de valor vacío: `SelectField` no tiene una
+ * propiedad `placeholder`, así que el hueco va en la lista.
+ */
+const addOptions = computed(() => [
+	{ value: '', label: t('views.fastfetch.modules.addPlaceholder') },
+	...available.value.map((variant) => ({ value: variant.name, label: variant.title })),
+]);
+
 function titleOf(name: string): string {
 	return variantByName.value.get(name)?.title ?? name;
 }
@@ -151,13 +164,9 @@ function toggleExpand(index: number) {
 					v-model="toAdd"
 					class="min-w-0 flex-1"
 					:label="t('views.fastfetch.modules.add')"
+					:options="addOptions"
 					:disabled="disabled || !available.length"
-				>
-					<option value="">{{ t('views.fastfetch.modules.addPlaceholder') }}</option>
-					<option v-for="variant in available" :key="variant.name" :value="variant.name">
-						{{ variant.title }}
-					</option>
-				</SelectField>
+				/>
 				<ActionButton
 					variant="primary"
 					icon="list-add"

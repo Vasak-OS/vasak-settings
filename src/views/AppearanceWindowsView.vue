@@ -30,7 +30,7 @@ import {
 	PageHeader,
 	SelectField,
 } from '@vasakgroup/vue-libvasak';
-import { onMounted, type Ref, ref } from 'vue';
+import { computed, onMounted, type Ref, ref } from 'vue';
 import {
 	BAR_POSITIONS,
 	type BarPosition,
@@ -59,6 +59,41 @@ const vskConfig: Ref<VSKConfig | null> = ref(null);
 const position = ref<BarPosition>('top');
 const controls = ref<WindowControlsPreference>({ style: 'default', order: 'default' });
 const border = ref<WindowBorderPreference>({ width: 'normal', color: 'scheme' });
+
+/**
+ * Las opciones de cada desplegable, como `{ value, label }`.
+ *
+ * Desde vue-libvasak 2.19.0 `SelectField` recibe las opciones por propiedad y ya
+ * no por una ranura de `<option>`: van calculadas acá para que la etiqueta siga
+ * el idioma de la sesión.
+ */
+const positionOptions = computed(() =>
+	BAR_POSITIONS.map((side) => ({ value: side, label: t(`views.appearanceWindows.lados.${side}`) }))
+);
+const controlsStyleOptions = computed(() =>
+	WINDOW_CONTROLS_STYLES.map((style) => ({
+		value: style,
+		label: t(`views.appearanceWindows.controlsStyles.${style}`),
+	}))
+);
+const controlsOrderOptions = computed(() =>
+	WINDOW_CONTROLS_ORDERS.map((order) => ({
+		value: order,
+		label: t(`views.appearanceWindows.controlsOrders.${order}`),
+	}))
+);
+const borderWidthOptions = computed(() =>
+	WINDOW_BORDER_WIDTHS.map((width) => ({
+		value: width,
+		label: t(`views.appearanceWindows.borderWidths.${width}`),
+	}))
+);
+const borderColorOptions = computed(() =>
+	WINDOW_BORDER_COLORS.map((color) => ({
+		value: color,
+		label: t(`views.appearanceWindows.borderColors.${color}`),
+	}))
+);
 
 onMounted(async () => {
 	try {
@@ -145,12 +180,9 @@ const saveConfig = async () => {
 					<SelectField
 						v-model="position"
 						:label="t('views.appearanceWindows.barPosition')"
+						:options="positionOptions"
 						class="w-48 shrink-0"
-					>
-						<option v-for="side in BAR_POSITIONS" :key="side" :value="side">
-							{{ t(`views.appearanceWindows.lados.${side}`) }}
-						</option>
-					</SelectField>
+					/>
 				</div>
 			</ConfigSection>
 
@@ -162,12 +194,9 @@ const saveConfig = async () => {
 					<SelectField
 						v-model="controls.style"
 						:label="t('views.appearanceWindows.controlsStyle')"
+						:options="controlsStyleOptions"
 						class="w-48 shrink-0"
-					>
-						<option v-for="style in WINDOW_CONTROLS_STYLES" :key="style" :value="style">
-							{{ t(`views.appearanceWindows.controlsStyles.${style}`) }}
-						</option>
-					</SelectField>
+					/>
 				</div>
 				<div class="flex items-start justify-between gap-4">
 					<p class="text-tx-muted text-xs">
@@ -176,12 +205,9 @@ const saveConfig = async () => {
 					<SelectField
 						v-model="controls.order"
 						:label="t('views.appearanceWindows.controlsOrder')"
+						:options="controlsOrderOptions"
 						class="w-48 shrink-0"
-					>
-						<option v-for="order in WINDOW_CONTROLS_ORDERS" :key="order" :value="order">
-							{{ t(`views.appearanceWindows.controlsOrders.${order}`) }}
-						</option>
-					</SelectField>
+					/>
 				</div>
 			</ConfigSection>
 
@@ -193,12 +219,9 @@ const saveConfig = async () => {
 					<SelectField
 						v-model="border.width"
 						:label="t('views.appearanceWindows.borderWidth')"
+						:options="borderWidthOptions"
 						class="w-48 shrink-0"
-					>
-						<option v-for="width in WINDOW_BORDER_WIDTHS" :key="width" :value="width">
-							{{ t(`views.appearanceWindows.borderWidths.${width}`) }}
-						</option>
-					</SelectField>
+					/>
 				</div>
 				<div class="flex items-start justify-between gap-4">
 					<p class="text-tx-muted text-xs">
@@ -207,12 +230,9 @@ const saveConfig = async () => {
 					<SelectField
 						v-model="border.color"
 						:label="t('views.appearanceWindows.borderColor')"
+						:options="borderColorOptions"
 						class="w-48 shrink-0"
-					>
-						<option v-for="color in WINDOW_BORDER_COLORS" :key="color" :value="color">
-							{{ t(`views.appearanceWindows.borderColors.${color}`) }}
-						</option>
-					</SelectField>
+					/>
 				</div>
 			</ConfigSection>
 		</div>
