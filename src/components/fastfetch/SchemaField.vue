@@ -56,7 +56,9 @@ const effSchema = computed(() =>
 
 const kind = computed(() => (isUnion.value ? 'union' : schemaKind(effSchema.value)));
 const displayLabel = computed(() => humanizeKey(props.label));
-const help = computed(() => props.description || props.schema.description || '');
+const help = computed(
+	() => props.description || props.schema.description || effSchema.value.description || ''
+);
 
 const enumOptions = computed(() => (effSchema.value.enum ?? []).map(String));
 
