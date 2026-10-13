@@ -53,9 +53,14 @@ dirs = "7"
 futures-util = "0.3"
 notify = "8"
 zbus = { version = "4", default-features = false, features = ["tokio"] }
-# 2.2 como piso: desde ahí el evento `bluetooth-change` trae `changeType`, que
-# es lo único que lee «Red y Bluetooth» (`src/utils/bluetooth-change.ts`).
-tauri-plugin-bluetooth-manager = "2.2"
+# 2.3.2 como piso. Dos razones: desde 2.2.0 el evento `bluetooth-change` trae
+# `changeType`, que es lo único que lee «Red y Bluetooth»
+# (`src/utils/bluetooth-change.ts`); y desde 2.2.2 el escaneo reusa la conexión
+# persistente —2.2.1 abría una `Connection::system()` por `start_scan` que zbus
+# cerraba al retornar, y BlueZ cortaba el descubrimiento al instante, así que el
+# escaneo en streaming se quedaba buscando sin encontrar nada—. 2.3.2 suma además
+# el `SetDiscoveryFilter(Transport=auto)`.
+tauri-plugin-bluetooth-manager = "2.3.2"
 #tauri-plugin-bluetooth-manager = { path = "../../tauri-plugin-bluetooth-manager" }
 tauri-plugin-network-manager = "2"
 # El perfil de energía y el brillo por monitor viven en plugins compartidos
