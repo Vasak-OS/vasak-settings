@@ -174,7 +174,13 @@ describe('SchemeResetControl', () => {
 
 	test('y al confirmar sale con el esquema elegido', async () => {
 		const wrapper = mountAttached(SchemeResetControl, { props: { options } });
-		await wrapper.get('select').setValue('nord');
+		// Elegir «Nord» como se elige en la pantalla: abrir la lista y hacer
+		// clic en la opción. Desde vue-libvasak 2.19.0 no hay `<select>`.
+		await wrapper.get('button[aria-haspopup="listbox"]').trigger('click');
+		await wrapper
+			.findAll('[role="option"]')
+			.find((option) => option.text() === 'Nord')
+			?.trigger('click');
 		await wrapper.get('[data-reset-open]').trigger('click');
 		await nextTick();
 
