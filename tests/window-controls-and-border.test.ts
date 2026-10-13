@@ -12,9 +12,14 @@
  * un `mock.module`: otro doble del mismo módulo da verde o rojo según el orden
  * de la corrida. Los espías se restauran después de cada prueba.
  *
- * Los desplegables se buscan por sus opciones y no por su etiqueta: el i18n
- * puede estar doblado por otro archivo o caer a la clave, y la prueba no tiene
- * que depender de cuál de las dos cosas pasó.
+ * Los desplegables se buscan por sus opciones y no por su etiqueta. Desde
+ * vue-libvasak 2.19.0 `SelectField` no es un `<select>` sino un botón con una
+ * lista `role="listbox"`, y una opción ya no lleva su valor en el DOM: lleva el
+ * texto, que es `t('…controlsStyles.macos')`. Sin catálogo el i18n cae a la
+ * clave —y el doble de otro archivo también la devuelve—, así que el valor es
+ * lo que va después del último punto; si alguna vez llega traducido, se busca
+ * en el catálogo (ver `optionValue`). Se elige como lo hace quien usa la pantalla:
+ * abriendo la lista y haciendo clic en la opción.
  */
 
 import { afterEach, beforeEach, describe, expect, type Mock, spyOn, test } from 'bun:test';
@@ -90,19 +95,87 @@ async function mountView() {
 	return view;
 }
 
-/** El `select` cuyas opciones son exactamente éstas. */
-function selectWith(wrapper: VueWrapper, values: string[]) {
-	const found = wrapper
-		.findAll('select')
-		.filter(
-			(select) =>
-				JSON.stringify(select.findAll('option').map((option) => option.element.value)) ===
-				JSON.stringify(values)
-		);
-	if (found.length !== 1) {
-		throw new Error(`se esperaba un desplegable con [${values.join(', ')}] y hay ${found.length}`);
+const CATALOGS = await Promise.all(
+	['es', 'en'].map(
+		async (language) =>
+			Bun.YAML.parse(
+				await Bun.file(new URL(`../src-tauri/locales/${language}.yml`, import.meta.url)).text()
+			) as { views: { appearanceWindows: Record<string, Record<string, string>> } }
+	)
+);
+
+/** El valor detrás del texto de una opción: la clave cruda o su traducción. */
+function optionValue(text: string): string {
+	const clean = text.trim();
+	if (clean.startsWith('views.appearanceWindows.')) return clean.split('.').at(-1) ?? clean;
+	for (const catalog of CATALOGS) {
+		for (const group of Object.values(catalog.views.appearanceWindows)) {
+			if (typeof group !== 'object') continue;
+			const found = Object.entries(group).find(([, label]) => label === clean);
+			if (found) return found[0];
+		}
 	}
-	return found[0];
+	return clean;
+}
+
+/** Un desplegable de la pantalla, manejado como lo maneja quien la usa. */
+interface Dropdown {
+	/** El valor que muestra el botón cerrado. */
+	shown: () => string;
+	/** El valor que la lista abierta marca como elegido. */
+	selectedInList: () => Promise<string | undefined>;
+	/** Abrir la lista y hacer clic en la opción. */
+	choose: (value: string) => Promise<void>;
+}
+
+/** El desplegable cuyas opciones son exactamente éstas. */
+async function selectWith(wrapper: VueWrapper, values: string[]): Promise<Dropdown> {
+	const matches: Dropdown[] = [];
+	for (const button of wrapper.findAll('button[aria-haspopup="listbox"]')) {
+		const root = button.element.parentElement as HTMLElement;
+		const options = async () => {
+			if (button.attributes('aria-expanded') !== 'true') await button.trigger('click');
+			return [...root.querySelectorAll<HTMLElement>('[role="option"]')];
+		};
+		const close = async () => {
+			if (button.attributes('aria-expanded') === 'true') await button.trigger('click');
+		};
+		const listed = (await options()).map((option) => optionValue(option.textContent ?? ''));
+		await close();
+		if (JSON.stringify(listed) !== JSON.stringify(values)) continue;
+		matches.push({
+			shown: () => optionValue(button.text()),
+			selectedInList: async () => {
+				const chosen = (await options()).find(
+					(option) => option.getAttribute('aria-selected') === 'true'
+				);
+				await close();
+				return chosen ? optionValue(chosen.textContent ?? '') : undefined;
+			},
+			choose: async (value) => {
+				const option = (await options()).find(
+					(candidate) => optionValue(candidate.textContent ?? '') === value
+				);
+				if (!option) throw new Error(`no está la opción ${value}`);
+				option.click();
+				await flushPromises();
+			},
+		});
+	}
+	if (matches.length !== 1) {
+		throw new Error(
+			`se esperaba un desplegable con [${values.join(', ')}] y hay ${matches.length}`
+		);
+	}
+	return matches[0];
+}
+
+/** Lo que muestra un desplegable, cerrado y abierto: tienen que decir lo mismo. */
+async function shownIn(wrapper: VueWrapper, values: string[]) {
+	const dropdown = await selectWith(wrapper, values);
+	const shown = dropdown.shown();
+	expect(await dropdown.selectedInList()).toBe(shown);
+	return shown;
 }
 
 function applyButton(wrapper: VueWrapper) {
@@ -120,29 +193,29 @@ describe('la pantalla de las ventanas: botones y borde', () => {
 	test('muestra las cuatro opciones guardadas', async () => {
 		const wrapper = await mountView();
 
-		expect((selectWith(wrapper, STYLES).element as HTMLSelectElement).value).toBe('macos');
-		expect((selectWith(wrapper, ORDERS).element as HTMLSelectElement).value).toBe('reversed');
-		expect((selectWith(wrapper, WIDTHS).element as HTMLSelectElement).value).toBe('thick');
-		expect((selectWith(wrapper, COLORS).element as HTMLSelectElement).value).toBe('accent');
+		expect(await shownIn(wrapper, STYLES)).toBe('macos');
+		expect(await shownIn(wrapper, ORDERS)).toBe('reversed');
+		expect(await shownIn(wrapper, WIDTHS)).toBe('thick');
+		expect(await shownIn(wrapper, COLORS)).toBe('accent');
 	});
 
 	test('sin nada guardado muestra los valores de siempre', async () => {
 		stored = { style: { radius: 8 }, desktop: {}, fonts: {}, icons: {} };
 		const wrapper = await mountView();
 
-		expect((selectWith(wrapper, STYLES).element as HTMLSelectElement).value).toBe('default');
-		expect((selectWith(wrapper, ORDERS).element as HTMLSelectElement).value).toBe('default');
-		expect((selectWith(wrapper, WIDTHS).element as HTMLSelectElement).value).toBe('normal');
-		expect((selectWith(wrapper, COLORS).element as HTMLSelectElement).value).toBe('scheme');
+		expect(await shownIn(wrapper, STYLES)).toBe('default');
+		expect(await shownIn(wrapper, ORDERS)).toBe('default');
+		expect(await shownIn(wrapper, WIDTHS)).toBe('normal');
+		expect(await shownIn(wrapper, COLORS)).toBe('scheme');
 	});
 
 	test('al aplicar guarda las cuatro opciones y conserva lo demás del archivo', async () => {
 		const wrapper = await mountView();
 
-		await selectWith(wrapper, STYLES).setValue('default');
-		await selectWith(wrapper, ORDERS).setValue('default');
-		await selectWith(wrapper, WIDTHS).setValue('normal');
-		await selectWith(wrapper, COLORS).setValue('scheme');
+		await (await selectWith(wrapper, STYLES)).choose('default');
+		await (await selectWith(wrapper, ORDERS)).choose('default');
+		await (await selectWith(wrapper, WIDTHS)).choose('normal');
+		await (await selectWith(wrapper, COLORS)).choose('scheme');
 		await applyButton(wrapper).trigger('click');
 		await flushPromises();
 
@@ -167,10 +240,10 @@ describe('la pantalla de las ventanas: botones y borde', () => {
 		stored = { style: { radius: 8 }, desktop: {}, fonts: {}, icons: {} };
 		const wrapper = await mountView();
 
-		await selectWith(wrapper, STYLES).setValue('macos');
-		await selectWith(wrapper, ORDERS).setValue('reversed');
-		await selectWith(wrapper, WIDTHS).setValue('thick');
-		await selectWith(wrapper, COLORS).setValue('accent');
+		await (await selectWith(wrapper, STYLES)).choose('macos');
+		await (await selectWith(wrapper, ORDERS)).choose('reversed');
+		await (await selectWith(wrapper, WIDTHS)).choose('thick');
+		await (await selectWith(wrapper, COLORS)).choose('accent');
 		await applyButton(wrapper).trigger('click');
 		await flushPromises();
 
@@ -183,14 +256,14 @@ describe('la pantalla de las ventanas: botones y borde', () => {
 		stored = { style: { radius: 8, border: { width: 'heavy', color: 'scheme' } } };
 		const wrapper = await mountView();
 
-		expect((selectWith(wrapper, WIDTHS).element as HTMLSelectElement).value).toBe('heavy');
+		expect(await shownIn(wrapper, WIDTHS)).toBe('heavy');
 	});
 
 	test('al elegir muy grueso guarda heavy en el archivo', async () => {
 		stored = { style: { radius: 8 }, desktop: {}, fonts: {}, icons: {} };
 		const wrapper = await mountView();
 
-		await selectWith(wrapper, WIDTHS).setValue('heavy');
+		await (await selectWith(wrapper, WIDTHS)).choose('heavy');
 		await applyButton(wrapper).trigger('click');
 		await flushPromises();
 

@@ -52,6 +52,7 @@ import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { AlertMessage, EmptyState, PageHeader, Panel, ThemeIcon } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
 import AppIcon from '@/components/permissions/AppIcon.vue';
+import ScreenTimePrivacyControls from '@/components/screen-time/ScreenTimePrivacyControls.vue';
 import {
 	allowBlocked,
 	type BlockedItem,
@@ -443,5 +444,10 @@ onMounted(load);
 				{{ t('views.privacySecurity.scope') }}
 			</p>
 		</Panel>
+
+		<!-- El tiempo de pantalla: es un registro de uso, y esta es la pantalla donde
+		     se buscan los ajustes de privacidad (vasak-settings#145). Va al final:
+		     arriba están los permisos, que son a lo que se viene más seguido. -->
+		<ScreenTimePrivacyControls />
 	</div>
 </template>
