@@ -128,15 +128,14 @@ impl Entrada {
 /// `flatpak run com.foo` y quedarse con `flatpak` lanzaría otra cosa.
 pub fn linea_de_ejecucion(exec: &str) -> Option<String> {
     let mut salida = String::new();
-    let mut caracteres = exec.chars().peekable();
+    let mut caracteres = exec.chars();
 
     while let Some(c) = caracteres.next() {
         if c == '%' {
-            // El carácter que sigue decide: `%%` es un porcentaje, cualquier otro
-            // es un marcador de campo que se descarta entero.
-            match caracteres.next() {
-                Some('%') => salida.push('%'),
-                _ => {}
+            // El carácter que sigue decide: `%%` es un porcentaje literal y se
+            // conserva; cualquier otro es un marcador de campo que se descarta.
+            if let Some('%') = caracteres.next() {
+                salida.push('%');
             }
         } else {
             salida.push(c);
