@@ -25,6 +25,7 @@ import {
 	blankFor,
 	branchLabel,
 	humanizeKey,
+	isNullSchema,
 	matchingBranch,
 	schemaKind,
 } from '@/utils/schema-field';
@@ -41,14 +42,26 @@ const emit = defineEmits<{ 'update:modelValue': [value: unknown] }>();
 
 const { t } = useI18n();
 
-const kind = computed(() => schemaKind(props.schema));
+// Las ramas de una unión, ya resueltas y sin la rama `null`: una unión `[T, null]`
+// es «T o nada», así que `null` no es una variante que elegir. Con una sola rama
+// útil no hay unión —se dibuja esa rama directamente, vacía = sin definir—.
+const rawBranches = computed(() => props.schema.oneOf ?? props.schema.anyOf ?? []);
+const branches = computed(() =>
+	rawBranches.value.map((b) => deref(props.root, b)).filter((b) => !isNullSchema(b))
+);
+const isUnion = computed(() => branches.value.length >= 2);
+const effSchema = computed(() =>
+	rawBranches.value.length > 0 && branches.value.length === 1 ? branches.value[0] : props.schema
+);
+
+const kind = computed(() => (isUnion.value ? 'union' : schemaKind(effSchema.value)));
 const displayLabel = computed(() => humanizeKey(props.label));
 const help = computed(() => props.description || props.schema.description || '');
 
-const enumOptions = computed(() => (props.schema.enum ?? []).map(String));
+const enumOptions = computed(() => (effSchema.value.enum ?? []).map(String));
 
 const objectFields = computed(() =>
-	Object.entries(props.schema.properties ?? {})
+	Object.entries(effSchema.value.properties ?? {})
 		.filter(([key]) => key !== 'type')
 		.map(([key, child]) => ({ key, schema: deref(props.root, child) }))
 );
@@ -66,7 +79,7 @@ const arrayValue = computed<unknown[]>(() =>
 	Array.isArray(props.modelValue) ? (props.modelValue as unknown[]) : []
 );
 const itemSchema = computed(() =>
-	props.schema.items ? deref(props.root, props.schema.items) : {}
+	effSchema.value.items ? deref(props.root, effSchema.value.items) : {}
 );
 function setItem(index: number, value: unknown) {
 	const next = [...arrayValue.value];
@@ -82,13 +95,13 @@ function removeItem(index: number) {
 	emit('update:modelValue', next);
 }
 
-const branches = computed(() => props.schema.oneOf ?? props.schema.anyOf ?? []);
+// `branches` ya viene resuelto y sin `null` (arriba).
 const branchOptions = computed<SegmentedOption<number>[]>(() =>
 	branches.value.map((branch, index) => ({ value: index, label: branchLabel(branch, t) }))
 );
 const activeBranch = computed(() => matchingBranch(branches.value, props.modelValue));
 function pickBranch(index: number) {
-	emit('update:modelValue', blankFor(deref(props.root, branches.value[index])));
+	emit('update:modelValue', blankFor(branches.value[index]));
 }
 
 function setString(value: string) {
@@ -115,7 +128,7 @@ const boolValue = computed(() => props.modelValue === true);
 			     propia ayuda, para no repetir el título ni la ayuda de la unión. -->
 			<SchemaField
 				:root="root"
-				:schema="deref(root, branches[activeBranch] ?? {})"
+				:schema="branches[activeBranch] ?? {}"
 				:model-value="modelValue"
 				:label="branchOptions[activeBranch]?.label ?? displayLabel"
 				@update:model-value="(value) => emit('update:modelValue', value)"
@@ -124,7 +137,7 @@ const boolValue = computed(() => props.modelValue === true);
 	</SettingRow>
 
 	<!-- Enum -->
-	<SettingRow v-else-if="schema.enum" :label="displayLabel" :description="help">
+	<SettingRow v-else-if="effSchema.enum" :label="displayLabel" :description="help">
 		<SelectField :model-value="stringValue" @update:model-value="(value) => setString(value)">
 			<option v-for="opt in enumOptions" :key="opt" :value="opt">{{ opt }}</option>
 		</SelectField>
@@ -143,8 +156,8 @@ const boolValue = computed(() => props.modelValue === true);
 	<SettingRow v-else-if="kind === 'number'" :label="displayLabel" :description="help">
 		<NumberField
 			:model-value="numberValue"
-			:min="schema.minimum"
-			:max="schema.maximum"
+			:min="effSchema.minimum"
+			:max="effSchema.maximum"
 			narrow
 			@update:model-value="(value) => emit('update:modelValue', value)"
 		/>

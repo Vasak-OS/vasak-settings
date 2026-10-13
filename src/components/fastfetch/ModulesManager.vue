@@ -9,7 +9,12 @@
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { ActionButton, ConfigSection, SelectField, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { computed, ref } from 'vue';
-import { type ModuleEntry, moveEntry } from '@/utils/fastfetch-modules';
+import {
+	availableModules,
+	type ModuleEntry,
+	moveEntry,
+	REPEATABLE_MODULES,
+} from '@/utils/fastfetch-modules';
 import { type ModuleVariant, optionFields, type RootSchema } from '@/utils/fastfetch-schema';
 import SchemaField from './SchemaField.vue';
 
@@ -34,9 +39,7 @@ const variantByName = computed(() => {
 });
 
 const enabledNames = computed(() => new Set(props.modelValue.map((entry) => entry.name)));
-const available = computed(() =>
-	props.variants.filter((variant) => !enabledNames.value.has(variant.name))
-);
+const available = computed(() => availableModules(props.variants, enabledNames.value));
 
 function titleOf(name: string): string {
 	return variantByName.value.get(name)?.title ?? name;
@@ -63,7 +66,10 @@ function move(index: number, delta: number) {
 }
 
 function addSelected() {
-	if (!toAdd.value || enabledNames.value.has(toAdd.value)) return;
+	// Un repetible (separator/break/…) se puede agregar aunque ya esté; el resto,
+	// sólo si no está.
+	const repeatable = REPEATABLE_MODULES.has(toAdd.value);
+	if (!toAdd.value || (enabledNames.value.has(toAdd.value) && !repeatable)) return;
 	update([...props.modelValue, { name: toAdd.value, options: {} }]);
 	toAdd.value = '';
 }
