@@ -20,6 +20,7 @@ import { computed, onMounted, type Ref, ref } from 'vue';
 import AppIcon from '@/components/permissions/AppIcon.vue';
 import { listInstalledApps } from '@/services/installed-apps.service';
 import {
+	hasPanelPinned,
 	PANEL_ANIMATIONS,
 	PANEL_LAYOUTS,
 	PANEL_POSITIONS,
@@ -117,6 +118,17 @@ const installedApps = ref<PinnedApp[]>([]);
 const pinned = ref<PinnedApp[]>([]);
 const addSelection = ref('');
 
+/**
+ * Si la persona tocó los anclados en esta pantalla, y si la configuración ya
+ * traía una lista propia. Con cualquiera de las dos se escribe `panel.pinned`;
+ * sin ninguna, no se toca: guardar sólo un indicador no debe materializar los
+ * dos de fábrica como lista fija, porque eso congela al usuario en los defaults
+ * de hoy y le tapa cualquier cambio futuro de los predeterminados del escritorio
+ * (y, si `listInstalledApps` falló, guardaría los nombres de respaldo).
+ */
+const pinsTouched = ref(false);
+const pinnedExisted = ref(false);
+
 /** Un anclado con el nombre, el icono y la ejecución frescos, si está instalado. */
 function refreshed(app: PinnedApp): PinnedApp {
 	const found = installedApps.value.find((a) => a.id === app.id);
@@ -140,6 +152,7 @@ function addApp(id: string) {
 	const app = installedApps.value.find((a) => a.id === id);
 	if (!app || pinned.value.some((p) => p.id === id)) return;
 	pinned.value.push({ ...app });
+	pinsTouched.value = true;
 	// El selector se devuelve a vacío: queda listo para elegir la siguiente, y
 	// no muestra una elegida que ya salió de la lista.
 	addSelection.value = '';
@@ -147,6 +160,7 @@ function addApp(id: string) {
 
 function removeApp(index: number) {
 	pinned.value.splice(index, 1);
+	pinsTouched.value = true;
 }
 
 /** Intercambia dos anclados: así se reordena con los botones de subir y bajar. */
@@ -154,6 +168,7 @@ function swap(a: number, b: number) {
 	if (a < 0 || b < 0 || a >= pinned.value.length || b >= pinned.value.length) return;
 	const list = pinned.value;
 	[list[a], list[b]] = [list[b], list[a]];
+	pinsTouched.value = true;
 }
 
 onMounted(async () => {
@@ -189,6 +204,7 @@ onMounted(async () => {
 			console.error(err);
 			installedApps.value = [];
 		}
+		pinnedExisted.value = hasPanelPinned(vskConfig.value);
 		pinned.value = readPanelPinned(vskConfig.value).map(refreshed);
 	} catch (err) {
 		error.value = t('views.appearancePanel.errorLoading').replace('{0}', String(err));
@@ -227,10 +243,17 @@ const saveConfig = async () => {
 			autohide: autohide.value,
 		});
 
-		// Se escribe el arreglo entero —aunque sea el de los dos de siempre—: a
-		// partir de acá `panel.pinned` existe, y el escritorio deja de usar los
-		// dos de fábrica para usar exactamente esta lista.
-		writePanelPinned(vskConfig.value as unknown as Record<string, unknown>, pinned.value);
+		// Sólo se escribe `panel.pinned` si la persona tocó los anclados acá, o si
+		// la configuración ya traía su propia lista. Guardar un indicador suelto no
+		// debe materializar los dos de fábrica como lista fija: eso haría que el
+		// escritorio dejara de usar sus predeterminados para esta cuenta, y le
+		// taparía cualquier cambio futuro de ellos (ver `hasPanelPinned`).
+		if (pinsTouched.value || pinnedExisted.value) {
+			writePanelPinned(vskConfig.value as unknown as Record<string, unknown>, pinned.value);
+			// Ya existe en el archivo: los guardados siguientes la mantienen al día.
+			pinnedExisted.value = true;
+			pinsTouched.value = false;
+		}
 
 		await writeConfig(vskConfig.value);
 

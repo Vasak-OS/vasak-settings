@@ -12,6 +12,7 @@ import {
 	DEFAULT_PANEL_LAYOUT,
 	DEFAULT_PANEL_STYLE,
 	DEFAULT_PINNED,
+	hasPanelPinned,
 	MAX_HEADER_STRENGTH,
 	type MenuSettings,
 	PANEL_ANIMATIONS,
@@ -877,5 +878,34 @@ describe('writePanelPinned', () => {
 		expect((config.panel as Record<string, unknown>).pinned).toEqual([
 			{ id: 'a.desktop', name: 'A', icon: 'a', exec: 'a' },
 		]);
+	});
+});
+
+describe('hasPanelPinned', () => {
+	// Distingue «nunca personalizó» de «eligió su lista», que es lo que decide si
+	// la pantalla escribe `panel.pinned` al guardar un cambio ajeno.
+	test('sin sección panel, no hay lista propia', () => {
+		expect(hasPanelPinned({})).toBe(false);
+		expect(hasPanelPinned(undefined)).toBe(false);
+	});
+
+	test('con sección panel pero sin la clave, tampoco', () => {
+		expect(hasPanelPinned({ panel: { weather: false } })).toBe(false);
+	});
+
+	test('un arreglo —aunque esté vacío— es una lista propia', () => {
+		expect(hasPanelPinned({ panel: { pinned: [] } })).toBe(true);
+		expect(
+			hasPanelPinned({
+				panel: { pinned: [{ id: 'a.desktop', name: 'A', icon: 'a', exec: 'a' }] },
+			})
+		).toBe(true);
+	});
+
+	test('una clave que no es arreglo no cuenta como lista propia', () => {
+		// El archivo se edita a mano: un valor raro se trata como «ausente», igual
+		// que lo lee `readPanelPinned`.
+		expect(hasPanelPinned({ panel: { pinned: 'firefox.desktop' } })).toBe(false);
+		expect(hasPanelPinned({ panel: { pinned: null } })).toBe(false);
 	});
 });

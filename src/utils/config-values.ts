@@ -253,6 +253,19 @@ export function readPanelPinned(config: unknown): PinnedApp[] {
 }
 
 /**
+ * Si la configuración ya trae una lista de anclados propia.
+ *
+ * Es lo que distingue «nunca personalizó» (la clave no es un arreglo: el panel
+ * usa `DEFAULT_PINNED`) de «eligió su lista» (un arreglo, aunque esté vacío).
+ * La pantalla lo consulta para no materializar los dos de fábrica al guardar un
+ * cambio que no tocó los anclados: si lo hiciera, el usuario dejaría de recibir
+ * cualquier cambio futuro de los predeterminados del escritorio.
+ */
+export function hasPanelPinned(config: unknown): boolean {
+	return Array.isArray(panelSection(config)?.pinned);
+}
+
+/**
  * Deja la sección `panel` con la lista de anclados elegida.
  *
  * Se escribe siempre el arreglo —aunque esté vacío—, porque un arreglo presente
