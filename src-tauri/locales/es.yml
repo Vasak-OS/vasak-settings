@@ -221,8 +221,7 @@ views:
     modules:
       title: Módulos
       help: Qué información se muestra y en qué orden. El interruptor la muestra u oculta.
-      moveUp: Subir
-      moveDown: Bajar
+      reorder: Reordenar, arrastrando
       options: Opciones
       empty: No hay módulos; agregá uno abajo.
       add: Agregar módulo
@@ -798,8 +797,7 @@ views:
     pinnedAdd: Agregar una aplicación
     pinnedSearch: Buscar una aplicación...
     pinnedNoApps: No hay más aplicaciones para agregar.
-    pinnedMoveUp: Subir {0}
-    pinnedMoveDown: Bajar {0}
+    pinnedReorder: Reordenar, arrastrando
     pinnedRemove: Quitar {0}
   startMenu:
     title: Menú de inicio

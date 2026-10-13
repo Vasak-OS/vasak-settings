@@ -57,14 +57,3 @@ export function serializeModules(entries: ModuleEntry[]): unknown[] {
 		return { type: entry.name, ...entry.options };
 	});
 }
-
-/** Mueve un elemento de `from` a `to` (clamp), devolviendo una lista nueva. */
-export function moveEntry<T>(list: T[], from: number, to: number): T[] {
-	if (from < 0 || from >= list.length) return list;
-	const target = Math.max(0, Math.min(list.length - 1, to));
-	if (target === from) return list;
-	const next = [...list];
-	const [item] = next.splice(from, 1);
-	next.splice(target, 0, item);
-	return next;
-}

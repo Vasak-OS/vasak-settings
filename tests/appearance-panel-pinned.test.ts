@@ -19,7 +19,7 @@
 
 import { afterEach, beforeEach, describe, expect, type Mock, spyOn, test } from 'bun:test';
 import * as plugin from '@vasakgroup/plugin-config-manager';
-import { ActionButton, SearchSelect } from '@vasakgroup/vue-libvasak';
+import { ActionButton, SearchSelect, SortableList } from '@vasakgroup/vue-libvasak';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import * as installedApps from '../src/services/installed-apps.service';
 import { DEFAULT_PINNED } from '../src/utils/config-values';
@@ -154,11 +154,15 @@ describe('Apariencia → Panel: `panel.pinned` al guardar', () => {
 		expect(writtenPinned()).toEqual([]);
 	});
 
-	test('reordenar con los botones guarda el nuevo orden', async () => {
+	test('reordenar (arrastrar) guarda el nuevo orden', async () => {
 		const wrapper = await mountView();
 
-		// Bajar el primero lo intercambia con el segundo.
-		await pinnedButtons(wrapper, 'go-down')[0].get('button').trigger('click');
+		// `SortableList` hace el arrastre y entrega la lista ya reordenada por
+		// `v-model`: se simula invirtiéndola y emitiendo `update:modelValue`, que
+		// es lo que la pantalla tiene que guardar.
+		const sortable = wrapper.findComponent(SortableList);
+		const reordered = [...(sortable.props('modelValue') as Array<{ id: string }>)].reverse();
+		sortable.vm.$emit('update:modelValue', reordered);
 		await flushPromises();
 		await applyButton(wrapper).trigger('click');
 		await flushPromises();

@@ -1,10 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import {
-	availableModules,
-	moveEntry,
-	parseModules,
-	serializeModules,
-} from '../src/utils/fastfetch-modules';
+import { availableModules, parseModules, serializeModules } from '../src/utils/fastfetch-modules';
 
 describe('availableModules', () => {
 	const variants = [{ name: 'os' }, { name: 'cpu' }, { name: 'separator' }, { name: 'break' }];
@@ -62,21 +57,5 @@ describe('serializeModules', () => {
 	test('ida y vuelta preserva el contenido', () => {
 		const original = ['title', { type: 'cpu', temp: true, showPeCoreCount: false }, 'os'];
 		expect(serializeModules(parseModules(original))).toEqual(original);
-	});
-});
-
-describe('moveEntry', () => {
-	test('mueve hacia arriba', () => {
-		expect(moveEntry(['a', 'b', 'c'], 1, 0)).toEqual(['b', 'a', 'c']);
-	});
-
-	test('mueve hacia abajo', () => {
-		expect(moveEntry(['a', 'b', 'c'], 0, 1)).toEqual(['b', 'a', 'c']);
-	});
-
-	test('clamp en los bordes y no hace copia si no cambia', () => {
-		const list = ['a', 'b'];
-		expect(moveEntry(list, 0, -1)).toBe(list);
-		expect(moveEntry(list, 1, 5)).toEqual(['a', 'b']);
 	});
 });

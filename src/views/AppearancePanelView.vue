@@ -14,6 +14,7 @@ import {
 	PageHeader,
 	SearchSelect,
 	SelectField,
+	SortableList,
 	SwitchToggle,
 } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, type Ref, ref } from 'vue';
@@ -186,13 +187,24 @@ function removeApp(index: number) {
 	pinsTouched.value = true;
 }
 
-/** Intercambia dos anclados: así se reordena con los botones de subir y bajar. */
-function swap(a: number, b: number) {
-	if (a < 0 || b < 0 || a >= pinned.value.length || b >= pinned.value.length) return;
-	const list = pinned.value;
-	[list[a], list[b]] = [list[b], list[a]];
+/**
+ * El nuevo orden que emite `SortableList` al arrastrar una fila.
+ *
+ * Reemplaza los botones de subir y bajar: el componente de la librería ya trae
+ * el asa y el arrastre, y entrega la lista reordenada por `v-model`. Se marca
+ * tocado para que el guardado materialice `panel.pinned` (ver `pinsTouched`).
+ */
+function reorderPinned(items: PinnedApp[]) {
+	pinned.value = items;
 	pinsTouched.value = true;
 }
+
+/**
+ * Cómo identifica `SortableList` cada anclado: por el id del `.desktop`, que es
+ * único. Va como función y no como nombre de campo porque el componente valida
+ * `itemKey` como `Function` en ejecución.
+ */
+const pinnedKey = (app: PinnedApp) => app.id;
 
 onMounted(async () => {
 	try {
@@ -530,48 +542,34 @@ const saveConfig = async () => {
 						{{ t('views.appearancePanel.pinnedHint') }}
 					</p>
 
-					<!-- La lista de anclados. Cada fila es icono + nombre + los
-					     controles de subir, bajar y quitar. -->
-					<ul v-if="pinned.length" class="flex flex-col gap-2">
-						<li
-							v-for="(app, index) in pinned"
-							:key="app.id"
-							class="flex items-center gap-3 rounded-corner-m border border-ui-border bg-ui-surface/70 p-2"
-						>
-							<AppIcon :name="app.icon" />
-							<span class="min-w-0 flex-1 truncate text-sm font-medium text-tx-main">
-								{{ app.name }}
-							</span>
-							<div class="flex shrink-0 items-center gap-1">
-								<ActionButton
-									variant="ghost"
-									size="sm"
-									icon="go-up"
-									:label="t('views.appearancePanel.pinnedMoveUp').replace('{0}', app.name)"
-									:title="t('views.appearancePanel.pinnedMoveUp').replace('{0}', app.name)"
-									:disabled="index === 0"
-									@click="swap(index, index - 1)"
-								/>
-								<ActionButton
-									variant="ghost"
-									size="sm"
-									icon="go-down"
-									:label="t('views.appearancePanel.pinnedMoveDown').replace('{0}', app.name)"
-									:title="t('views.appearancePanel.pinnedMoveDown').replace('{0}', app.name)"
-									:disabled="index === pinned.length - 1"
-									@click="swap(index, index + 1)"
-								/>
+					<!-- La lista de anclados. El asa y el arrastre los pone
+					     `SortableList`; cada fila es icono + nombre + el botón de
+					     quitar. Reordenar llega por `v-model`. -->
+					<SortableList
+						v-if="pinned.length"
+						:model-value="pinned"
+						:item-key="pinnedKey"
+						:label="t('views.appearancePanel.pinned')"
+						:handle-label="t('views.appearancePanel.pinnedReorder')"
+						@update:model-value="reorderPinned"
+					>
+						<template #item="{ item }">
+							<div class="flex min-w-0 flex-1 items-center gap-3">
+								<AppIcon :name="item.icon" />
+								<span class="min-w-0 flex-1 truncate text-sm font-medium text-tx-main">
+									{{ item.name }}
+								</span>
 								<ActionButton
 									variant="danger"
 									size="sm"
 									icon="list-remove"
-									:label="t('views.appearancePanel.pinnedRemove').replace('{0}', app.name)"
-									:title="t('views.appearancePanel.pinnedRemove').replace('{0}', app.name)"
-									@click="removeApp(index)"
+									:label="t('views.appearancePanel.pinnedRemove').replace('{0}', item.name)"
+									:title="t('views.appearancePanel.pinnedRemove').replace('{0}', item.name)"
+									@click="removeApp(pinned.indexOf(item))"
 								/>
 							</div>
-						</li>
-					</ul>
+						</template>
+					</SortableList>
 
 					<!-- Sin anclados la lista no se dibuja vacía: se dice que no hay
 					     ninguno, que se lee mejor que una caja en blanco. -->

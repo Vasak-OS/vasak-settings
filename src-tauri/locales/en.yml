@@ -221,8 +221,7 @@ views:
     modules:
       title: Modules
       help: What is shown and in what order. The switch shows or hides it.
-      moveUp: Move up
-      moveDown: Move down
+      reorder: Reorder by dragging
       options: Options
       empty: No modules; add one below.
       add: Add module
@@ -794,8 +793,7 @@ views:
     pinnedAdd: Add an application
     pinnedSearch: Search for an application...
     pinnedNoApps: No more applications to add.
-    pinnedMoveUp: Move {0} up
-    pinnedMoveDown: Move {0} down
+    pinnedReorder: Reorder by dragging
     pinnedRemove: Remove {0}
   startMenu:
     title: Start menu

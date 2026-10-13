@@ -7,14 +7,15 @@
  */
 
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { ActionButton, ConfigSection, SelectField, SwitchToggle } from '@vasakgroup/vue-libvasak';
-import { computed, ref } from 'vue';
 import {
-	availableModules,
-	type ModuleEntry,
-	moveEntry,
-	REPEATABLE_MODULES,
-} from '@/utils/fastfetch-modules';
+	ActionButton,
+	ConfigSection,
+	SelectField,
+	SortableList,
+	SwitchToggle,
+} from '@vasakgroup/vue-libvasak';
+import { computed, ref } from 'vue';
+import { availableModules, type ModuleEntry, REPEATABLE_MODULES } from '@/utils/fastfetch-modules';
 import { type ModuleVariant, optionFields, type RootSchema } from '@/utils/fastfetch-schema';
 import SchemaField from './SchemaField.vue';
 
@@ -74,10 +75,6 @@ function remove(index: number) {
 	update(next);
 }
 
-function move(index: number, delta: number) {
-	update(moveEntry(props.modelValue, index, index + delta));
-}
-
 function addSelected() {
 	// Un repetible (separator/break/…) se puede agregar aunque ya esté; el resto,
 	// sólo si no está.
@@ -102,58 +99,53 @@ function toggleExpand(index: number) {
 <template>
 	<ConfigSection :title="t('views.fastfetch.modules.title')" :description="t('views.fastfetch.modules.help')">
 		<div class="flex flex-col gap-2">
-			<div
-				v-for="(entry, index) in modelValue"
-				:key="`${entry.name}-${index}`"
-				class="rounded-corner-m bg-ui-surface/70 p-2"
+			<!-- El asa y el arrastre los pone `SortableList`; reordenar llega por
+			     `update:modelValue` y se emite tal cual al padre. Los módulos
+			     repetibles (separador/salto) comparten nombre, así que se
+			     identifican por identidad de objeto (sin `item-key`). -->
+			<SortableList
+				v-if="modelValue.length"
+				:model-value="modelValue"
+				:label="t('views.fastfetch.modules.title')"
+				:handle-label="t('views.fastfetch.modules.reorder')"
+				:disabled="disabled"
+				@update:model-value="update"
 			>
-				<div class="flex items-center gap-2">
-					<SwitchToggle
-						:model-value="true"
-						:label="titleOf(entry.name)"
-						:disabled="disabled"
-						@update:model-value="() => remove(index)"
-					/>
-					<span class="min-w-0 flex-1 truncate text-sm font-medium">{{ titleOf(entry.name) }}</span>
-					<ActionButton
-						variant="ghost"
-						size="sm"
-						icon="go-up"
-						:label="t('views.fastfetch.modules.moveUp')"
-						:disabled="disabled || index === 0"
-						@click="move(index, -1)"
-					/>
-					<ActionButton
-						variant="ghost"
-						size="sm"
-						icon="go-down"
-						:label="t('views.fastfetch.modules.moveDown')"
-						:disabled="disabled || index === modelValue.length - 1"
-						@click="move(index, 1)"
-					/>
-					<ActionButton
-						v-if="fieldsOf(entry.name).length"
-						variant="secondary"
-						size="sm"
-						:icon="expanded === index ? 'pan-up' : 'pan-down'"
-						:label="t('views.fastfetch.modules.options')"
-						:disabled="disabled"
-						@click="toggleExpand(index)"
-					/>
-				</div>
+				<template #item="{ item: entry, index }">
+					<div class="min-w-0 flex-1">
+						<div class="flex items-center gap-2">
+							<SwitchToggle
+								:model-value="true"
+								:label="titleOf(entry.name)"
+								:disabled="disabled"
+								@update:model-value="() => remove(index)"
+							/>
+							<span class="min-w-0 flex-1 truncate text-sm font-medium">{{ titleOf(entry.name) }}</span>
+							<ActionButton
+								v-if="fieldsOf(entry.name).length"
+								variant="secondary"
+								size="sm"
+								:icon="expanded === index ? 'pan-up' : 'pan-down'"
+								:label="t('views.fastfetch.modules.options')"
+								:disabled="disabled"
+								@click="toggleExpand(index)"
+							/>
+						</div>
 
-				<div v-if="expanded === index" class="mt-3 flex flex-col gap-3 border-t border-ui-line pt-3">
-					<SchemaField
-						v-for="field in fieldsOf(entry.name)"
-						:key="field.key"
-						:root="root"
-						:schema="field.schema"
-						:model-value="entry.options[field.key]"
-						:label="field.key"
-						@update:model-value="(value) => setOption(index, field.key, value)"
-					/>
-				</div>
-			</div>
+						<div v-if="expanded === index" class="mt-3 flex flex-col gap-3 border-t border-ui-line pt-3">
+							<SchemaField
+								v-for="field in fieldsOf(entry.name)"
+								:key="field.key"
+								:root="root"
+								:schema="field.schema"
+								:model-value="entry.options[field.key]"
+								:label="field.key"
+								@update:model-value="(value) => setOption(index, field.key, value)"
+							/>
+						</div>
+					</div>
+				</template>
+			</SortableList>
 
 			<p v-if="!modelValue.length" class="text-xs text-tx-muted">
 				{{ t('views.fastfetch.modules.empty') }}
