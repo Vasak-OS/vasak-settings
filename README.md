@@ -1,125 +1,370 @@
-# vasak-settings
+# Vasak settings
 
-Aplicacion de configuracion de VasakOS construida con Tauri 2, Vue 3, TypeScript y Tailwind.
+Las configuraciones del sistema en un solo lugar, de una manera comoda y simple para todos los usuarios, diseñado para VasakOS
 
-Permite gestionar temas, esquemas de color, iconos, fondos, escritorio, conectividad, audio y fuentes del sistema desde una interfaz unificada.
+---
 
-## Stack
+## Tecnología
 
-- Frontend: Vue 3 + Vite + TypeScript + Pinia + Vue Router + Tailwind
-- Backend desktop: Tauri 2 (Rust)
-- Tooling JS/TS: Bun
+[![Rust](https://img.shields.io/badge/Rust-1.82%2B-orange?style=flat&logo=rust)](https://www.rust-lang.org/) [![Tauri](https://img.shields.io/badge/Tauri-2.0-24283b?style=flat&logo=tauri)](https://tauri.app/) [![Vue](https://img.shields.io/badge/Vue-3.5-42b883?style=flat&logo=vue.js)](https://vuejs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178c6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
 
-## Requisitos
+## Estado
 
-### 1) Bun
+[![CI](https://github.com/Vasak-OS/vasak-settings/actions/workflows/ci.yml/badge.svg)](https://github.com/Vasak-OS/vasak-settings/actions/workflows/ci.yml)
+[![Versión](https://img.shields.io/github/v/release/Vasak-OS/vasak-settings?style=flat&label=Versi%C3%B3n)](https://github.com/Vasak-OS/vasak-settings/releases)
+[![Licencia](https://img.shields.io/github/license/Vasak-OS/vasak-settings?style=flat)](LICENSE)
+[![Cobertura](https://sonarcloud.io/api/project_badges/measure?project=Vasak-OS_vasak-settings&metric=coverage&style=flat)](https://sonarcloud.io/summary/new_code?id=Vasak-OS_vasak-settings)
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=Vasak-OS_vasak-settings&metric=alert_status&style=flat)](https://sonarcloud.io/summary/new_code?id=Vasak-OS_vasak-settings)
+[![Tamaño repo](https://img.shields.io/github/repo-size/Vasak-OS/vasak-settings?style=flat)](https://github.com/Vasak-OS/vasak-settings)
 
-Instala Bun (si aun no lo tienes):
+---
 
-```bash
-curl -fsSL https://bun.sh/install | bash
+## Descripción
+
+Las configuraciones del sistema en un solo lugar, de una manera comoda y simple para todos los usuarios, diseñado para VasakOS
+
+**Para el usuario:** Las configuraciones del sistema en un solo lugar, de una manera comoda y simple para todos los usuarios, diseñado para VasakOS
+
+**Integración VasakOS:** Integra con el ecosistema VasakOS vía D-Bus y configuración compartida.
+
+---
+
+## Arquitectura (diagramas)
+
+> Copia y pega la plantilla que necesites, descomenta y adapta.
+
+### Flujo de datos
+
+```mermaid
+<!--
+graph TD
+    A[Entrada: Teclado / Ratón / D-Bus / Sistema] --> B[Procesamiento: Core Rust + Tauri Commands]
+    B --> C[Salida: UI actualizada / Acciones del sistema]
+    style A fill:#e1f5fe
+    style C fill:#e8f5e9
+-->
 ```
 
-Verifica:
+### Componentes internos
 
-```bash
-bun --version
+```mermaid
+<!--
+flowchart LR
+    subgraph App[Vasak settings]
+        UI[Frontend Vue 3 + vue-libvasak]
+        Core[Core Rust: lógica principal]
+        IPC[Tauri Commands / Eventos]
+        System[Systemd / D-Bus / PipeWire / Wayland]
+    end
+    UI --> IPC
+    IPC --> Core
+    Core --> DBus[(D-Bus / zbus)]
+    Core --> System
+    style UI fill:#f3e5f5
+    style Core fill:#e3f2fd
+    style DBus fill:#fff3e0
+    style System fill:#fce4ec
+-->
 ```
 
-### 2) Toolchain Rust
+### Integración en el sistema VasakOS
 
-Tauri necesita Rust para compilar el backend:
-
-```bash
-rustc --version
-cargo --version
+```mermaid
+<!--
+C4Context
+    title Vasak settings en VasakOS
+    Person(usuario, "Usuario", "Persona que usa el sistema")
+    System_Boundary(c1, "VasakOS") {
+        System(app, "Vasak settings", "Las configuraciones del sistema en un solo lugar, de una manera comoda y simple ")
+        System_Ext(settings, "vasak-settings", "Configuración central")
+        System_Ext(keyring, "vasak-keyring", "Secrets y claves")
+        System_Ext(accounts, "vasak-accounts", "Cuentas e identidad")
+        System_Ext(permissions, "vasak-permissions", "Permisos y portales")
+    }
+    System_Ext(systemd, "systemd", "Gestión de servicios")
+    System_Ext(dbus, "D-Bus", "Bus de mensajes del sistema")
+    System_Ext(wayland, "Wayland / Wayfire", "Compositor")
+    System_Ext(pipewire, "PipeWire", "Multimedia")
+    Rel(usuario, app, "Usa")
+    Rel(app, settings, "Lee/escribe config")
+    Rel(app, keyring, "Guarda/lee secrets")
+    Rel(app, accounts, "Identidad de cuenta")
+    Rel(app, permissions, "Solicita permisos")
+    Rel(app, systemd, "Activación / sockets")
+    Rel(app, dbus, "Expone / consume interfaces")
+    Rel(app, wayland, "Superficies / protocolos")
+    Rel(app, pipewire, "Streams de audio/video")
+-->
 ```
 
-Si no lo tienes instalado:
+---
+
+## Instalación
+
+### Arch Linux (repo oficial)
 
 ```bash
-curl https://sh.rustup.rs -sSf | sh
+pacman -S vasak-vasak-settings
 ```
 
-### 3) Dependencias del sistema (Linux)
-
-Para compilar apps Tauri en Linux se requieren librerias de WebKitGTK y GTK.
-Instala los paquetes equivalentes de tu distro antes de ejecutar la app.
-
-En tiempo de ejecucion, la pagina de Pantallas usa dos programas externos. La
-app funciona sin ellos, pero avisa y ofrece menos:
-
-| Paquete    | Para que | Sin el |
-| ---------- | -------- | ------ |
-| `wlr-randr` | Leer los modos de cada salida con su frecuencia exacta, y la posicion, escala y rotacion vigentes | Los modos salen de `/sys/class/drm/*/modes`, sin frecuencias, y la disposicion se lee solo del `wayfire.ini` |
-| `ddcutil`   | Brillo de los monitores externos por DDC/CI | Solo se puede ajustar el brillo del panel interno |
-
-`ddcutil` necesita ademas el modulo `i2c-dev` cargado y el usuario en el grupo
-`i2c`.
-
-## Instalacion
-
-Desde la raiz de este proyecto:
+### Debian / Ubuntu (.deb)
 
 ```bash
-bun install
+wget https://github.com/Vasak-OS/vasak-settings/releases/download/v{{VERSION}}/vasak-vasak-settings_{{VERSION}}_amd64.deb
+sudo apt install ./vasak-vasak-settings_{{VERSION}}_amd64.deb
 ```
 
-## Desarrollo (usando Bun)
-
-### Frontend (Vite)
+### Desde fuente
 
 ```bash
+git clone https://github.com/Vasak-OS/vasak-settings.git
+cd vasak-settings
+
+# Desarrollo (recarga en caliente frontend + backend)
 bun run dev
-```
 
-### App desktop (Tauri)
-
-```bash
-bun run tauri dev
-```
-
-## Build
-
-### Build del frontend
-
-```bash
+# Build producción
 bun run build
+
+# Solo frontend
+bun run build:frontend
+
+# Solo backend Rust
+cargo build --release --locked
 ```
 
-### Build de la app desktop
+### Flatpak / AppImage
+
+> *Placeholder: añadir cuando exista paquete Flatpak o AppImage oficial.*
+
+---
+
+## Uso rápido
 
 ```bash
+# Se lanza automáticamente (systemd --user) o manualmente:
+vasak-settings
+```
+
+### Atajos / flags principales
+
+| Acción | Comando / Tecla |
+|--------|-----------------|
+| Acción principal | `vasak-settings` |
+| Configuración | `vasak-settings --config` |
+| Ayuda | `vasak-settings --help` |
+
+> **Captura:** `assets/demo.gif` *(placeholder — sustituir por GIF real)*
+
+---
+
+## Configuración
+
+### Archivo de configuración
+
+```
+~/.config/vasak/vasak-settings.toml
+```
+
+### Variables de entorno
+
+| Variable | Descripción | Por defecto |
+|----------|-------------|-------------|
+| `VASAK_DEBUG` | Activa logs de depuración en consola | `false` |
+| `VASAK_PROFILE` | Perfil de rendimiento: `balanced`, `performance`, `power-save` | `balanced` |
+
+### Integración con `tauri-plugin-config-manager`
+
+- Esquemas de color: respeta `--ui-primary`, `--ui-surface`, `--ui-focus`, `--ui-on-surface`, `--ui-border`
+- Tema de iconos: usa el tema del sistema (`vasakos-icon-theme`) vía `vicon` lookup
+- Radio de bordes: variable CSS `--ui-radius` del esquema activo (por defecto 12px)
+- Fuentes: `--ui-font-family`, `--ui-font-size-base` desde el esquema
+
+---
+
+## Desarrollo
+
+### Requisitos
+
+- **Rust:** `rustup` toolchain estable (`rust-toolchain.toml` fija la versión)
+- **Node / bun:** `bun` ≥ 1.1 (nunca npm/yarn/pnpm para apps Tauri)
+- **Sistema:** `pkg-config`, `libgtk-3-dev`, `libwebkit2gtk-4.1-dev`, `libssl-dev`
+- *`libgtk-layer-shell-dev`, `wayland-protocols`, `wayfire-dev` para Wayland*
+
+### Dependencias de desarrollo
+
+#### Sistema (paquetes Arch / Debian / Fedora)
+
+`base-devel`, `pkgconf`, `libssl-dev`, `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`, `gstreamer1.0-plugins-base`, `gstreamer1.0-plugins-good`, `libpipewire-0.3-dev`, `libwireplumber-0.5-dev`, `libdbus-1-dev`, `libudev-dev`, `libxkbcommon-dev`, `libwayland-dev`, `meson`, `ninja`, `clang`, `lld`
+
+#### Rust
+
+`rustup` → `stable` + `rustfmt` + `clippy`
+
+#### Node
+
+**Solo `bun`** (nunca npm/yarn/pnpm para apps Tauri). `bun --version` ≥ 1.1
+
+#### Herramientas CLI
+
+`just` (command runner), `cargo-binstall` (opcional), `cargo-llvm-cov` (para cobertura)
+
+### Correr la app en desarrollo
+
+```bash
+# Frontend (Vite dev server + Tauri dev)
+bun run tauri dev
+
+# Solo frontend (Vite)
+bun run dev
+
+# Solo backend (cargo watch)
+cargo watch -x "run --bin vasak-settings"
+```
+
+### Compilar / Build de release
+
+```bash
+# Build completo (frontend + backend + bundle)
 bun run tauri build
+
+# Solo frontend (para testear bundle después)
+bun run build
+
+# Solo backend Rust (binario optimizado)
+cargo build --release --locked
+
+# Paquetes nativos
+# Arch: makepkg -sf en PKGBUILDS/vasak-settings/
+# Debian: cargo deb --no-build --target-dir src-tauri/target/release/debian
 ```
 
-## Calidad de codigo
-
-### Lint
+### Targets principales
 
 ```bash
-bun run lint
+# Desarrollo (Tauri dev server + hot reload)
+bun run dev
+
+# Build producción
+bun run build
+
+# Solo frontend
+bun run build:frontend
+
+# Solo backend Rust
+cargo build --release --locked
+
+# Lint + tipos (pre-commit / CI)
+bunx --bun biome check .
+bunx vue-tsc --noEmit
+cargo fmt --check
 ```
 
-### Lint con autocorreccion y formato
+### Pruebas
 
 ```bash
-bun run lint:fix
+# Suite completa JS (Vitest via bun:test)
+bun test
+
+# Suite completa Rust (crates en pruebas_rust del CI)
+cargo test -p vasak-settings-core -p vasak-settings-ui --locked
+
+# Integración (requiere Wayfire corriendo)
+cargo test -p vasak-settings-integration --locked -- --ignored
 ```
 
-### Formato
+### Convención de commits
 
-```bash
-bun run format
+[Conventional Commits](https://www.conventionalcommits.org/es/v1.0.0/):
+
+```
+<tipo>(<ámbito>): <descripción corta>
+
+[cuerpo opcional]
+
+[pie opcional: Closes #N]
 ```
 
-## Scripts disponibles
+Tipos habituales: `feat`, `fix`, `bugfix`, `docs`, `ci`, `chore`, `security`, `refactor`, `perf`, `test`.
 
-- `bun run dev`: levanta Vite en modo desarrollo
-- `bun run build`: typecheck + build de frontend
-- `bun run preview`: previsualiza el build de frontend
-- `bun run tauri dev`: ejecuta la app desktop en desarrollo
-- `bun run tauri build`: genera build de produccion de Tauri
-- `bun run lint`: chequeo con Biome
-- `bun run lint:fix`: corrige issues y formatea
-- `bun run format`: aplica formato con Biome
+### Cómo abrir PR
+
+1. Rama desde `origin/main`:
+   ```bash
+   git worktree add -b feat/tema ~/wt/vasak-settings-tema origin/main
+   ```
+2. Prefijos de rama: `fix/`, `feat/`, `bugfix/`, `docs/`, `ci/`, `chore/`, `security/`
+3. Escribe el fix → **`qa` escribe las pruebas** (fallan sin el fix) → suite verde → abre PR
+4. Al abrir PR, **cuatro cosas obligatorias**:
+   - Asignado a `JoaquinDecima`
+   - Etiqueta `enhancement` o `bug` (+ `ci` / `dependencies` si aplica)
+   - Añadido al proyecto «VasakOS Roadmap»
+   - Status **In Progress**
+
+---
+
+## Arquitectura (texto)
+
+### Crates / módulos principales
+
+| `vasak-settings-core` | Lógica compartida: estado, D-Bus, IPC |
+| `vasak-settings-ui` | Frontend Vue 3 + componentes vue-libvasak |
+| `vasak-settings-tauri` | Puente Tauri: commands, eventos, WebView |
+
+### Interfaces D-Bus / zbus expuestas
+
+| `org.vasak.Vasak-settings` | `GetState()`, `StateChanged(dict)`, `SetConfig(dict)` | Estado y control principal |
+| `org.vasak.Vasak-settings.Panel` | `SetPosition(string)`, `SetAutohide(bool)`, `Height(u32)` | Configuración panel en runtime |
+
+### Puntos de extensión
+
+- **Plugins:** Sistema de plugins modular
+- **Hooks:** Hooks de ciclo de vida
+- **API pública Rust:** API pública del crate principal
+
+### Features / Cargo features
+
+| Feature | Descripción | Default |
+|---------|-------------|---------|
+| `system-tray` | Bandeja del sistema + menú contextual | ✓ |
+| `notifications` | Integración libnotify / freedesktop | ✓ |
+| `updater` | Auto-actualización (tauri-plugin-updater) | |
+| `devtools` | DevTools en release (solo debug) | |
+| `experimental-wayland` | Protocolo Wayland inestable | |
+
+Y para apps Tauri+Vue: features del `tauri.conf.json` → `bundle` / `plugins` / `allowlist` (capabilities).
+
+---
+
+## Pruebas y calidad
+
+- **Cobertura objetivo:** ≥ 80 % del código nuevo (SonarCloud Quality Gate)
+- **Informes:** GitHub Actions → pestaña *SonarCloud Code Analysis* → enlace a SonarCloud
+- **Añadir pruebas:** ver `AGENTS.md` sección 9 (mapa de repos y comandos de prueba)
+- **Regla:** toda corrección lleva prueba escrita por `qa` que falla sin el fix
+
+---
+
+## Contribuir
+
+- **Guía:** [.github/CONTRIBUTING.md](https://github.com/Vasak-OS/.github/blob/main/CONTRIBUTING.md)
+- **Plantillas de issue:** [.github/ISSUE_TEMPLATE/](https://github.com/Vasak-OS/.github/tree/main/ISSUE_TEMPLATE)
+- **Código de conducta:** [CODE_OF_CONDUCT.md](https://github.com/Vasak-OS/.github/blob/main/CODE_OF_CONDUCT.md)
+
+---
+
+## Donadores / Sponsors
+
+[![Sponsors](https://img.shields.io/github/sponsors/Vasak-OS?style=flat&label=Sponsors)](https://github.com/sponsors/Vasak-OS)
+
+> **Backers:** *Actualizado automáticamente en CI desde GitHub Sponsors / OpenCollective / Polar.*
+
+[💖 Donar al proyecto](https://github.com/sponsors/Vasak-OS)
+
+---
+
+## Licencia
+
+`GPL-3.0` — Copyright © 2026 **Vasak-OS Contributors**
+
+[Ver licencia completa](LICENSE)
