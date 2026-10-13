@@ -61,8 +61,29 @@ pub struct Entrada {
     pub nombre: String,
     pub icono: String,
     pub programa: String,
+    /// La línea de ejecución entera, sin los códigos de campo (`%U`, `%f`…).
+    ///
+    /// A diferencia de `programa` —el primer token, que es lo único que necesita
+    /// `TERMINAL=`—, acá va el comando completo con sus argumentos: lo pide el
+    /// selector de anclados del panel, porque anclar `flatpak run com.foo` y
+    /// quedarse sólo con `flatpak` lanzaría otra cosa.
+    pub exec: String,
     pub tipos: Vec<String>,
     pub categorias: Vec<String>,
+}
+
+/// Una aplicación instalada, para el selector de anclados del panel del escritorio.
+///
+/// Es `Entrada` reducida a lo que el panel guarda en `panel.pinned`: el
+/// identificador del `.desktop`, el nombre visible, el icono del tema y la línea
+/// de ejecución. Los nombres de los campos van en inglés porque es el contrato
+/// JSON que lee el frontend (`{ id, name, icon, exec }`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct InstalledApp {
+    pub id: String,
+    pub name: String,
+    pub icon: String,
+    pub exec: String,
 }
 
 impl Entrada {
@@ -84,6 +105,48 @@ impl Entrada {
             icono: self.icono.clone(),
             programa: self.programa.clone(),
         }
+    }
+
+    pub fn a_instalada(&self) -> InstalledApp {
+        InstalledApp {
+            id: self.id.clone(),
+            name: self.nombre.clone(),
+            icon: self.icono.clone(),
+            exec: self.exec.clone(),
+        }
+    }
+}
+
+/// La línea de ejecución de un `.desktop`, sin los códigos de campo.
+///
+/// `Exec` trae marcadores que el lanzador expande al abrir —`%U` por las URL,
+/// `%f` por el archivo, `%i` por el icono…—. Un anclado se lanza sin ningún
+/// documento, así que no hay nada con qué expandirlos y dejarlos daría una línea
+/// que no corre (`vasak-file-manager %U`). Se quitan todos; `%%` es un porcentaje
+/// literal y se conserva como `%`. A diferencia de `programa_de_exec`, que se
+/// queda con el primer token, acá se conservan los argumentos: anclar
+/// `flatpak run com.foo` y quedarse con `flatpak` lanzaría otra cosa.
+pub fn linea_de_ejecucion(exec: &str) -> Option<String> {
+    let mut salida = String::new();
+    let mut caracteres = exec.chars();
+
+    while let Some(c) = caracteres.next() {
+        if c == '%' {
+            // El carácter que sigue decide: `%%` es un porcentaje literal y se
+            // conserva; cualquier otro es un marcador de campo que se descarta.
+            if let Some('%') = caracteres.next() {
+                salida.push('%');
+            }
+        } else {
+            salida.push(c);
+        }
+    }
+
+    let limpio = salida.split_whitespace().collect::<Vec<_>>().join(" ");
+    if limpio.is_empty() {
+        None
+    } else {
+        Some(limpio)
     }
 }
 
@@ -138,6 +201,10 @@ pub fn leer_entrada(id: &str, contenido: &str, idioma: &str) -> Option<Entrada> 
         .clone();
 
     let programa = programa_de_exec(leer("Exec"))?;
+    // Que `programa_de_exec` haya dado algo garantiza que `Exec` no está vacío,
+    // así que `linea_de_ejecucion` también devuelve algo: el `unwrap_or_default`
+    // es por tipos, no un caso que se dé.
+    let exec = linea_de_ejecucion(leer("Exec")).unwrap_or_default();
 
     Some(Entrada {
         id: id.to_string(),
@@ -151,6 +218,7 @@ pub fn leer_entrada(id: &str, contenido: &str, idioma: &str) -> Option<Entrada> 
             }
         },
         programa,
+        exec,
         tipos: lista(leer("MimeType")),
         categorias: lista(leer("Categories")),
     })
@@ -328,6 +396,18 @@ pub fn candidatas_para(tipos: Vec<String>) -> Vec<Candidata> {
         .collect()
 }
 
+/// Todas las aplicaciones visibles instaladas.
+///
+/// Lo pide el selector de anclados del panel: a diferencia de `candidatas_para`,
+/// que filtra por tipo MIME, acá va la lista entera —filtrada sólo por
+/// `NoDisplay`/`Hidden`, igual que el resto— porque se puede anclar cualquier
+/// aplicación, no sólo la que maneja un tipo. Reusa el mismo criterio de lectura
+/// y de precedencia que el resto de la pantalla.
+#[tauri::command]
+pub fn list_installed_apps() -> Vec<InstalledApp> {
+    entradas().iter().map(Entrada::a_instalada).collect()
+}
+
 /// Las terminales instaladas.
 #[tauri::command]
 pub fn terminales_disponibles() -> Vec<Candidata> {
@@ -489,6 +569,91 @@ mod pruebas {
         assert_eq!(entrada.icono, "utilities-terminal");
         assert_eq!(entrada.programa, "vasak-terminal");
         assert!(entrada.es_terminal());
+    }
+
+    #[test]
+    fn la_linea_de_ejecucion_saca_los_codigos_de_campo() {
+        // El anclado se lanza sin ningún documento: `%U` y compañía no se pueden
+        // expandir y dejarlos daría una línea que no corre.
+        assert_eq!(
+            linea_de_ejecucion("/usr/bin/vasak-file-manager %U"),
+            Some("/usr/bin/vasak-file-manager".into())
+        );
+        assert_eq!(linea_de_ejecucion("gimp %U %f"), Some("gimp".into()));
+    }
+
+    #[test]
+    fn la_linea_de_ejecucion_conserva_los_argumentos_de_verdad() {
+        // A diferencia de `programa_de_exec`, que se queda con el primer token:
+        // quedarse con `flatpak` lanzaría otra cosa.
+        assert_eq!(
+            linea_de_ejecucion("flatpak run --branch=stable com.foo.Bar %U"),
+            Some("flatpak run --branch=stable com.foo.Bar".into())
+        );
+    }
+
+    #[test]
+    fn un_porcentaje_literal_se_conserva() {
+        // `%%` es un porcentaje de verdad en la especificación, no un marcador.
+        assert_eq!(
+            linea_de_ejecucion("barra --al 50%%"),
+            Some("barra --al 50%".into())
+        );
+    }
+
+    #[test]
+    fn una_linea_de_solo_codigos_no_deja_nada() {
+        assert_eq!(linea_de_ejecucion("%U %f"), None);
+        assert_eq!(linea_de_ejecucion(""), None);
+    }
+
+    #[test]
+    fn la_entrada_lleva_la_linea_de_ejecucion_completa() {
+        // El selector de anclados guarda el `Exec` entero sin los marcadores.
+        let contenido =
+            "[Desktop Entry]\nName=Archivos\nExec=/usr/bin/vasak-file-manager %U\nIcon=folder\n";
+        let entrada = leer_entrada("vasak-file-manager.desktop", contenido, "es").unwrap();
+
+        assert_eq!(entrada.exec, "/usr/bin/vasak-file-manager");
+        // Y el programa pelado sigue siendo el primer token, para `TERMINAL=`.
+        assert_eq!(entrada.programa, "/usr/bin/vasak-file-manager");
+    }
+
+    #[test]
+    fn la_app_instalada_lleva_los_campos_en_ingles() {
+        // El contrato con el frontend es `{ id, name, icon, exec }`.
+        let contenido = "[Desktop Entry]\nName=Settings\nName[es]=Configuración\nExec=vasak-settings\nIcon=preferences-system\n";
+        let entrada = leer_entrada("vasak-settings.desktop", contenido, "es").unwrap();
+        let instalada = entrada.a_instalada();
+
+        assert_eq!(instalada.id, "vasak-settings.desktop");
+        assert_eq!(instalada.name, "Configuración");
+        assert_eq!(instalada.icon, "preferences-system");
+        assert_eq!(instalada.exec, "vasak-settings");
+    }
+
+    #[test]
+    fn la_lista_de_instaladas_sale_de_entradas_visibles() {
+        // Las que piden no mostrarse no entran, igual que en el resto de la
+        // pantalla: el selector de anclados no debe ofrecer manejadores internos.
+        let archivos = [
+            (
+                "visible.desktop".to_string(),
+                "[Desktop Entry]\nName=Visible\nExec=visible\nIcon=v\n".to_string(),
+            ),
+            (
+                "oculta.desktop".to_string(),
+                "[Desktop Entry]\nName=Oculta\nExec=oculta\nIcon=o\nNoDisplay=true\n".to_string(),
+            ),
+        ];
+
+        let instaladas: Vec<InstalledApp> = resolver_precedencia(archivos, "es")
+            .iter()
+            .map(Entrada::a_instalada)
+            .collect();
+
+        assert_eq!(instaladas.len(), 1);
+        assert_eq!(instaladas[0].id, "visible.desktop");
     }
 
     #[test]

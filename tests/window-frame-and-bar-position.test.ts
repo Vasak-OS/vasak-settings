@@ -94,8 +94,11 @@ describe('la pantalla de las ventanas', () => {
 
 	test('los cuatro lados salen de la lista y no escritos a mano', () => {
 		// Escritos a mano, agregar un lado en la librería deja esta pantalla
-		// sin ofrecerlo y nadie se entera.
-		expect(viewSource).toContain('v-for="side in BAR_POSITIONS"');
+		// sin ofrecerlo y nadie se entera. Desde vue-libvasak 2.19.0 `SelectField`
+		// toma las opciones por propiedad desde un computed armado con
+		// `BAR_POSITIONS`, no por una ranura de `<option>`.
+		expect(viewSource).toContain('BAR_POSITIONS.map(');
+		expect(viewSource).toContain(':options="positionOptions"');
 	});
 
 	test('y los cuatro tienen texto en los dos idiomas', () => {

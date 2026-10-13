@@ -43,7 +43,12 @@ describe('la pantalla del panel', () => {
 	});
 
 	test('los cuatro lados salen de la lista y no escritos a mano', () => {
-		expect(viewSource).toContain('v-for="side in PANEL_POSITIONS"');
+		// Desde vue-libvasak 2.19.0 `SelectField` recibe las opciones por
+		// propiedad y no por una ranura de `<option>`: el desplegable las toma de
+		// un computed armado desde `PANEL_POSITIONS`, así que siguen saliendo de la
+		// lista y no escritas una por una.
+		expect(viewSource).toContain('PANEL_POSITIONS.map(');
+		expect(viewSource).toContain(':options="positionOptions"');
 	});
 
 	test('y los textos están en los dos idiomas', () => {

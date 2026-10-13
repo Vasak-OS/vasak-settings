@@ -164,6 +164,7 @@ pub fn run() {
             commands::actualizaciones::intervalo_de_comprobacion,
             commands::actualizaciones::poner_intervalo_de_comprobacion,
             commands::aplicaciones_por_defecto::candidatas_para,
+            commands::aplicaciones_por_defecto::list_installed_apps,
             commands::aplicaciones_por_defecto::terminales_disponibles,
             commands::aplicaciones_por_defecto::aplicacion_por_defecto,
             commands::aplicaciones_por_defecto::definir_aplicacion,

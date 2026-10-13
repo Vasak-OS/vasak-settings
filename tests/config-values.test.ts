@@ -11,17 +11,23 @@ import {
 	DEFAULT_PANEL_ANIMATION,
 	DEFAULT_PANEL_LAYOUT,
 	DEFAULT_PANEL_STYLE,
+	DEFAULT_PINNED,
+	hasPanelPinned,
 	MAX_HEADER_STRENGTH,
 	type MenuSettings,
 	PANEL_ANIMATIONS,
+	PANEL_INDICATORS,
 	PANEL_LAYOUTS,
 	PANEL_POSITIONS,
 	PANEL_STYLES,
+	type PinnedApp,
 	readBarPosition,
 	readMenuSettings,
 	readPanelAnimation,
 	readPanelAutohide,
+	readPanelIndicators,
 	readPanelLayout,
+	readPanelPinned,
 	readPanelPosition,
 	readPanelStyle,
 	readScreenTimeEnabled,
@@ -35,6 +41,8 @@ import {
 	writeBarPosition,
 	writeMenuSettings,
 	writePanelAppearance,
+	writePanelIndicators,
+	writePanelPinned,
 	writePanelPosition,
 	writeScheme,
 	writeScreenTimeEnabled,
@@ -700,5 +708,204 @@ describe('writeMenuSettings', () => {
 		const config: Record<string, unknown> = { menu: { favorites: base.favorites } };
 		writeMenuSettings(config, base);
 		expect(readMenuSettings(config)).toEqual(base);
+	});
+});
+
+describe('readPanelIndicators', () => {
+	test('sin sección panel, todos encendidos', () => {
+		// La clave ausente vale por «mostralo», el mismo criterio que el
+		// escritorio. Vale para los diez indicadores, los de siempre y los nuevos.
+		for (const config of [{}, null, { panel: {} }, { panel: { position: 'top' } }]) {
+			const read = readPanelIndicators(config);
+			for (const key of PANEL_INDICATORS) {
+				expect(read[key]).toBe(true);
+			}
+		}
+	});
+
+	test('las claves nuevas se leen tolerante, como las de siempre', () => {
+		const read = readPanelIndicators({
+			panel: {
+				workspaces: false,
+				windows: false,
+				networkName: false,
+				volumeNumber: false,
+				batteryNumber: false,
+			},
+		});
+		expect(read.workspaces).toBe(false);
+		expect(read.windows).toBe(false);
+		expect(read.networkName).toBe(false);
+		expect(read.volumeNumber).toBe(false);
+		expect(read.batteryNumber).toBe(false);
+		// Las que no se tocaron siguen encendidas.
+		expect(read.weather).toBe(true);
+	});
+
+	test('cualquier cosa que no sea booleano vale por encendido', () => {
+		const read = readPanelIndicators({
+			panel: { workspaces: 'si', batteryNumber: 1 },
+		});
+		expect(read.workspaces).toBe(true);
+		expect(read.batteryNumber).toBe(true);
+	});
+});
+
+describe('writePanelIndicators', () => {
+	test('escribe los diez interruptores conservando el resto de la sección', () => {
+		// En la misma sección viven la posición y los anclados: reemplazarla
+		// entera los perdería.
+		const config: Record<string, unknown> = { panel: { position: 'bottom', pinned: [] } };
+		writePanelIndicators(config, {
+			weather: false,
+			music: true,
+			transfer: true,
+			tray: true,
+			privacy: true,
+			workspaces: false,
+			windows: true,
+			networkName: false,
+			volumeNumber: true,
+			batteryNumber: false,
+		});
+		const panel = config.panel as Record<string, unknown>;
+		expect(panel.position).toBe('bottom');
+		expect(panel.pinned).toEqual([]);
+		expect(panel.weather).toBe(false);
+		expect(panel.workspaces).toBe(false);
+		expect(panel.batteryNumber).toBe(false);
+	});
+});
+
+describe('readPanelPinned', () => {
+	const defaults = (): PinnedApp[] => DEFAULT_PINNED.map((app) => ({ ...app }));
+
+	test('ausente: los dos de siempre', () => {
+		// El escritorio ancla Configuración y Archivos cuando `panel.pinned` no
+		// existe; esta pantalla lee lo mismo.
+		for (const config of [{}, null, { panel: {} }, { panel: { pinned: 'raro' } }]) {
+			expect(readPanelPinned(config)).toEqual(defaults());
+		}
+		expect(DEFAULT_PINNED.map((a) => a.id)).toEqual([
+			'vasak-settings.desktop',
+			'vasak-file-manager.desktop',
+		]);
+	});
+
+	test('presente aunque vacío: exactamente esa lista, no los de fábrica', () => {
+		// La diferencia entre «no personalizado nunca» y «quité todos»: un arreglo
+		// vacío presente no debe hacer reaparecer los dos de siempre.
+		expect(readPanelPinned({ panel: { pinned: [] } })).toEqual([]);
+	});
+
+	test('presente con entradas: se devuelve la lista guardada', () => {
+		const app: PinnedApp = {
+			id: 'firefox.desktop',
+			name: 'Firefox',
+			icon: 'firefox',
+			exec: 'firefox',
+		};
+		expect(readPanelPinned({ panel: { pinned: [app] } })).toEqual([app]);
+	});
+
+	test('las entradas sin la forma correcta se descartan una por una', () => {
+		// El archivo se edita a mano: una entrada rota no debe tirar las buenas.
+		const good: PinnedApp = {
+			id: 'firefox.desktop',
+			name: 'Firefox',
+			icon: 'firefox',
+			exec: 'firefox',
+		};
+		const read = readPanelPinned({
+			panel: {
+				pinned: [
+					good,
+					{ id: 'x.desktop' },
+					null,
+					'basura',
+					{ id: 1, name: 'n', icon: 'i', exec: 'e' },
+				],
+			},
+		});
+		expect(read).toEqual([good]);
+	});
+
+	test('cada lectura devuelve una copia nueva de los defaults', () => {
+		// Mutar lo leído no debe contaminar la constante compartida.
+		const first = readPanelPinned({});
+		first.push({ id: 'z.desktop', name: 'Z', icon: 'z', exec: 'z' });
+		expect(readPanelPinned({})).toEqual(defaults());
+	});
+});
+
+describe('writePanelPinned', () => {
+	test('escribe el arreglo conservando el resto de la sección', () => {
+		const config: Record<string, unknown> = {
+			panel: { position: 'bottom', weather: false },
+		};
+		const list: PinnedApp[] = [
+			{ id: 'firefox.desktop', name: 'Firefox', icon: 'firefox', exec: 'firefox' },
+		];
+		writePanelPinned(config, list);
+		const panel = config.panel as Record<string, unknown>;
+		expect(panel.position).toBe('bottom');
+		expect(panel.weather).toBe(false);
+		expect(panel.pinned).toEqual(list);
+	});
+
+	test('escribir un arreglo vacío deja la clave presente y vacía', () => {
+		// Es lo que distingue «personalizado a ninguno» de «nunca tocado».
+		const config: Record<string, unknown> = {};
+		writePanelPinned(config, []);
+		expect((config.panel as Record<string, unknown>).pinned).toEqual([]);
+	});
+
+	test('lo escrito se vuelve a leer igual (ida y vuelta)', () => {
+		const config: Record<string, unknown> = {};
+		const list: PinnedApp[] = [
+			{ id: 'a.desktop', name: 'A', icon: 'a', exec: 'a' },
+			{ id: 'b.desktop', name: 'B', icon: 'b', exec: 'b --flag' },
+		];
+		writePanelPinned(config, list);
+		expect(readPanelPinned(config)).toEqual(list);
+	});
+
+	test('guarda sólo los cuatro campos del contrato, sin colar otros', () => {
+		const config: Record<string, unknown> = {};
+		writePanelPinned(config, [
+			{ id: 'a.desktop', name: 'A', icon: 'a', exec: 'a', extra: 'no' } as unknown as PinnedApp,
+		]);
+		expect((config.panel as Record<string, unknown>).pinned).toEqual([
+			{ id: 'a.desktop', name: 'A', icon: 'a', exec: 'a' },
+		]);
+	});
+});
+
+describe('hasPanelPinned', () => {
+	// Distingue «nunca personalizó» de «eligió su lista», que es lo que decide si
+	// la pantalla escribe `panel.pinned` al guardar un cambio ajeno.
+	test('sin sección panel, no hay lista propia', () => {
+		expect(hasPanelPinned({})).toBe(false);
+		expect(hasPanelPinned(undefined)).toBe(false);
+	});
+
+	test('con sección panel pero sin la clave, tampoco', () => {
+		expect(hasPanelPinned({ panel: { weather: false } })).toBe(false);
+	});
+
+	test('un arreglo —aunque esté vacío— es una lista propia', () => {
+		expect(hasPanelPinned({ panel: { pinned: [] } })).toBe(true);
+		expect(
+			hasPanelPinned({
+				panel: { pinned: [{ id: 'a.desktop', name: 'A', icon: 'a', exec: 'a' }] },
+			})
+		).toBe(true);
+	});
+
+	test('una clave que no es arreglo no cuenta como lista propia', () => {
+		// El archivo se edita a mano: un valor raro se trata como «ausente», igual
+		// que lo lee `readPanelPinned`.
+		expect(hasPanelPinned({ panel: { pinned: 'firefox.desktop' } })).toBe(false);
+		expect(hasPanelPinned({ panel: { pinned: null } })).toBe(false);
 	});
 });
