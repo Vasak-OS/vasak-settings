@@ -67,17 +67,43 @@ describe('la sección', () => {
 	});
 });
 
+/**
+ * Elegir una opción como lo hace quien usa el desplegable: abrir la lista con
+ * el botón y hacer clic en la opción con esa etiqueta.
+ *
+ * Desde vue-libvasak 2.19.0, `SelectField` no es un `<select>` nativo sino un
+ * botón con una lista `role="listbox"` dibujada por la página, así que ya no hay
+ * `setValue` que valga.
+ */
+async function choose(wrapper: VueWrapper, label: string) {
+	await wrapper.get('button[aria-haspopup="listbox"]').trigger('click');
+	const option = wrapper.findAll('[role="option"]').find((candidate) => candidate.text() === label);
+	if (!option) throw new Error(`no está la opción «${label}»`);
+	await option.trigger('click');
+}
+
 describe('el selector', () => {
 	test('con opciones de texto devuelve texto', async () => {
 		view = mount(SelectField, { props: { modelValue: 'a', options: ['a', 'b'] }, global });
 
-		await view.get('select').setValue('b');
+		await choose(view, 'b');
+
+		expect(view.emitted('update:modelValue')?.[0]).toEqual(['b']);
+	});
+
+	test('con el teclado también se elige: flecha abajo abre, otra baja y Enter elige', async () => {
+		view = mount(SelectField, { props: { modelValue: 'a', options: ['a', 'b'] }, global });
+
+		await view.get('button[aria-haspopup="listbox"]').trigger('keydown', { key: 'ArrowDown' });
+		const list = view.get('[role="listbox"]');
+		await list.trigger('keydown', { key: 'ArrowDown' });
+		await list.trigger('keydown', { key: 'Enter' });
 
 		expect(view.emitted('update:modelValue')?.[0]).toEqual(['b']);
 	});
 
 	test('y con opciones numéricas devuelve un número, no la cadena', async () => {
-		// El `<select>` siempre devuelve una cadena. Emitir `'2'` donde quien
+		// La lista trabaja con cadenas por dentro. Emitir `'2'` donde quien
 		// escucha espera `2` le deja un tipo que miente, y la comparación con
 		// los valores de `options` falla sin decir por qué.
 		view = mount(SelectField, {
@@ -91,7 +117,7 @@ describe('el selector', () => {
 			global,
 		});
 
-		await view.get('select').setValue('2');
+		await choose(view, 'dos');
 
 		expect(view.emitted('update:modelValue')?.[0]).toEqual([2]);
 	});
@@ -105,17 +131,17 @@ describe('el selector', () => {
 		];
 
 		view = mount(SelectField, { props: { modelValue: 5000, options: mixed }, global });
-		await view.get('select').setValue('auto');
+		await choose(view, 'automático');
 		expect(view.emitted('update:modelValue')?.[0]).toEqual(['auto']);
 		view.unmount();
 
 		view = mount(SelectField, { props: { modelValue: 'auto', options: mixed }, global });
-		await view.get('select').setValue('5000');
+		await choose(view, '5 s');
 		expect(view.emitted('update:modelValue')?.[0]).toEqual([5000]);
 	});
 
-	test('el `id` y el `disabled` que llegan por `v-bind` caen en el `<select>`', () => {
-		// `SelectField` no los declara como propiedades, así que las pantallas
+	test('el `id` y el `disabled` que llegan por `v-bind` caen en el botón del desplegable', () => {
+		// `SelectField` no los recibía como propiedades, así que las pantallas
 		// se los pasan en un objeto (ver `form-labels`). Si cayeran en el
 		// contenedor, la etiqueta `for` no apuntaría al control y un selector
 		// sin opciones quedaría habilitado.
@@ -125,8 +151,9 @@ describe('el selector', () => {
 			global,
 		});
 
-		const select = view.get('select');
-		expect(select.attributes('id')).toBe('gtk-theme');
-		expect(select.attributes('disabled')).toBeDefined();
+		const control = view.get('button[aria-haspopup="listbox"]');
+		expect(control.attributes('id')).toBe('gtk-theme');
+		expect(control.attributes('disabled')).toBeDefined();
+		expect(view.findAll('#gtk-theme')).toHaveLength(1);
 	});
 });

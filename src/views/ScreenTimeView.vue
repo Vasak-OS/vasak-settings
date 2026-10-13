@@ -8,12 +8,11 @@
  * resume. El interruptor prende o apaga ese registro: apagado, lo ya guardado se
  * sigue pudiendo mirar, pero no se cuenta nada nuevo.
  *
- * El interruptor hace **dos** cosas: persiste `screen_time.enabled` en
- * `vasak.conf` —de donde el servicio lo lee al arrancar— y llama a `SetEnabled`
- * para que el cambio sea inmediato. Si sólo escribiera el archivo, el registro no
- * cambiaría hasta el próximo arranque del servicio.
+ * El interruptor y el borrado viven en `useScreenTimeSettings`, que comparten
+ * con «Privacidad y seguridad» (vasak-settings#145). Acá se les enganchan las
+ * cargas del informe: se invalidan antes de un cambio y se recargan después.
  */
-import { readConfig, useConfigStore, writeConfig } from '@vasakgroup/plugin-config-manager';
+import { readConfig, useConfigStore } from '@vasakgroup/plugin-config-manager';
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import {
 	AlertMessage,
@@ -31,13 +30,9 @@ import {
 } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
 import AppIcon from '@/components/permissions/AppIcon.vue';
-import {
-	clearScreenTime,
-	type ScreenTimeReport,
-	screenTime,
-	setScreenTimeEnabled,
-} from '@/services/health.service';
-import { readScreenTimeEnabled, writeScreenTimeEnabled } from '@/utils/config-values';
+import { useScreenTimeSettings } from '@/composables/useScreenTimeSettings';
+import { type ScreenTimeReport, screenTime } from '@/services/health.service';
+import { readScreenTimeEnabled } from '@/utils/config-values';
 import {
 	aggregateByApp,
 	aggregateByCategory,
@@ -118,20 +113,9 @@ const range = (): { from: string; to: string } => {
 };
 
 const report = ref<ScreenTimeReport | null>(null);
-const enabled = ref(false);
 const loading = ref(true);
-const error = ref('');
-const successMessage = ref('');
-const busy = ref(false);
-const confirmingClear = ref(false);
-/**
- * Si hay un toggle del interruptor en curso.
- *
- * Mientras dura, el interruptor lo gobierna el usuario: una carga de período que
- * resuelva en ese rato no debe adoptar el `enabled` que trae el servicio, que
- * todavía puede ser el de antes del `SetEnabled`.
- */
-const togglePending = ref(false);
+/** El error de la carga del informe; los del interruptor y el borrado son de `settings`. */
+const loadError = ref('');
 
 const byApp = computed(() => (report.value ? aggregateByApp(report.value) : []));
 const byCategory = computed(() => (report.value ? aggregateByCategory(report.value) : []));
@@ -183,10 +167,38 @@ const relative = (millis: number, max: number) => (max > 0 ? (millis / max) * 10
  */
 const gate = createRequestGate();
 
+/**
+ * El interruptor y el borrado. Mientras un cambio está en curso
+ * (`togglePending`), el interruptor lo gobierna quien lo tocó: una carga que
+ * resuelva en ese rato no adopta el `enabled` que trae el servicio, que todavía
+ * puede ser el de antes del `SetEnabled`.
+ */
+const settings = useScreenTimeSettings(
+	{
+		saved: () => t('views.screenTime.saved'),
+		errorSaving: (reason) => t('views.screenTime.errorSaving').replace('{0}', reason),
+		errorClearing: (reason) => t('views.screenTime.clear.errorClearing').replace('{0}', reason),
+	},
+	{
+		// Una carga en vuelo es de antes del cambio y no debe pisarlo.
+		onBeforeChange: () => gate.invalidate(),
+		// Ya resuelto, reconciliar con el servicio. Sólo tras un cambio aceptado:
+		// si falló, quedan el error y el estado revertido.
+		onAfterChange: async (succeeded) => {
+			if (succeeded) await load();
+		},
+		// Una carga que resuelva después del borrado traería de vuelta lo borrado.
+		onBeforeClear: () => gate.invalidate(),
+		onAfterClear: () => load(),
+	}
+);
+const { enabled, busy, confirmingClear, successMessage } = settings;
+const error = computed(() => settings.error.value || loadError.value);
+
 const load = async () => {
 	const ticket = gate.begin();
 	loading.value = true;
-	error.value = '';
+	loadError.value = '';
 	try {
 		const { from, to } = range();
 		const result = await screenTime(from, to);
@@ -194,7 +206,7 @@ const load = async () => {
 		report.value = result;
 		// El interruptor no se toca si hay un toggle en curso: su estado optimista
 		// manda hasta que el toggle se resuelva.
-		if (canAdoptReportedEnabled(ticket.isCurrent(), togglePending.value)) {
+		if (canAdoptReportedEnabled(ticket.isCurrent(), settings.togglePending.value)) {
 			enabled.value = result.enabled;
 		}
 	} catch (err) {
@@ -202,7 +214,7 @@ const load = async () => {
 			// Soltar lo que hubiera: una carga que falló no deja datos viejos en
 			// pantalla rotulados con el período que se acaba de elegir.
 			report.value = null;
-			error.value = t('views.screenTime.errorLoading').replace('{0}', String(err));
+			loadError.value = t('views.screenTime.errorLoading').replace('{0}', String(err));
 		}
 	} finally {
 		if (ticket.done()) loading.value = false;
@@ -215,80 +227,6 @@ const changePeriod = async (value: Period) => {
 	// totales viejos rotulados con el período nuevo.
 	report.value = null;
 	await load();
-};
-
-const toggleEnabled = async (value: boolean) => {
-	// Invalidar cualquier carga en vuelo: su `enabled` es de antes de este cambio y
-	// no debe pisar el que se acaba de elegir.
-	gate.invalidate();
-	// Y mientras dure el toggle, ninguna carga de período —aunque sea la vigente—
-	// adopta el `enabled` del servicio: lo gobierna este toggle.
-	togglePending.value = true;
-	busy.value = true;
-	error.value = '';
-	successMessage.value = '';
-	const previous = enabled.value;
-	enabled.value = value;
-	let succeeded = false;
-	try {
-		// Persistir en el archivo —de donde el servicio lo lee al arrancar— y
-		// avisarle en el acto. Las dos cosas, o el cambio no sobrevive al próximo
-		// arranque o no se aplica hasta entonces.
-		const config = await readConfig();
-		if (config) {
-			writeScreenTimeEnabled(config as unknown as Record<string, unknown>, value);
-			await writeConfig(config);
-		}
-		await setScreenTimeEnabled(value);
-		succeeded = true;
-		successMessage.value = t('views.screenTime.saved');
-		setTimeout(() => {
-			successMessage.value = '';
-		}, 3000);
-	} catch (err) {
-		// Volver el interruptor a la verdad, y también el archivo: si `writeConfig`
-		// salió bien pero `setEnabled` falló, el archivo quedó cambiado y el switch
-		// diría una cosa mientras el servicio lee otra al arrancar.
-		enabled.value = previous;
-		try {
-			const config = await readConfig();
-			if (config) {
-				writeScreenTimeEnabled(config as unknown as Record<string, unknown>, previous);
-				await writeConfig(config);
-			}
-		} catch {
-			// Si ni siquiera se pudo deshacer la escritura, no hay nada más que hacer
-			// acá: el error de abajo ya avisa que algo quedó a medias.
-		}
-		error.value = t('views.screenTime.errorSaving').replace('{0}', String(err));
-	} finally {
-		togglePending.value = false;
-		busy.value = false;
-	}
-
-	// Ya resuelto el toggle, reconciliar con el servicio: refresca el informe del
-	// período vigente —que pudo quedar sin cargar si una carga de período fue
-	// invalidada por este toggle— y, con `togglePending` ya en falso, adopta el
-	// `enabled` real. Sólo tras un cambio aceptado: si falló, se conserva el
-	// mensaje de error y el estado revertido.
-	if (succeeded) await load();
-};
-
-const doClear = async () => {
-	// Invalidar las cargas en vuelo: una que resuelva después del borrado traería
-	// de vuelta lo que se acaba de borrar.
-	gate.invalidate();
-	busy.value = true;
-	error.value = '';
-	try {
-		await clearScreenTime();
-		confirmingClear.value = false;
-		await load();
-	} catch (err) {
-		error.value = t('views.screenTime.clear.errorClearing').replace('{0}', String(err));
-	} finally {
-		busy.value = false;
-	}
 };
 
 onMounted(async () => {
@@ -338,7 +276,7 @@ onMounted(async () => {
 					:label="t('views.screenTime.record')"
 					:model-value="enabled"
 					:disabled="busy"
-					@update:model-value="(value) => toggleEnabled(value)"
+					@update:model-value="(value) => settings.toggle(value)"
 				/>
 			</div>
 		</ConfigSection>
@@ -445,7 +383,7 @@ onMounted(async () => {
 						type="button"
 						:disabled="busy"
 						class="rounded-corner-m bg-status-error px-4 py-2 text-sm font-medium text-tx-on-error disabled:opacity-50"
-						@click="doClear"
+						@click="settings.clear()"
 					>
 						{{ t('views.screenTime.clear.confirmButton') }}
 					</button>

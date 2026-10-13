@@ -374,6 +374,13 @@ views:
       errorClearing: "Could not clear the history: {0}"
   privacySecurity:
     title: Privacy and security
+    screenTime:
+      title: Screen time
+      description: >-
+        This computer can keep track of how long you use each app. The health
+        service stores it in your data folder, one file per day, and none of it
+        leaves this machine.
+      open: View screen time
     description: >-
       Which applications may use this computer's camera and microphone, and
       which may read your keys.
