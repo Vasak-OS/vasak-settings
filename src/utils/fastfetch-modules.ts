@@ -14,6 +14,21 @@ export interface ModuleEntry {
 	options: Record<string, unknown>;
 }
 
+/** Los módulos que tiene sentido repetir: estructura de la lectura, no un dato.
+ *  fastfetch corre cada aparición, así que varios separadores o saltos de línea
+ *  son válidos; el selector de «agregar» los ofrece aunque ya estén. */
+export const REPEATABLE_MODULES = new Set(['separator', 'break', 'custom', 'command']);
+
+/** Qué módulos ofrecer para agregar: los que no están, más los repetibles aunque
+ *  estén. */
+export function availableModules<T extends { name: string }>(
+	variants: readonly T[],
+	enabled: ReadonlySet<string>,
+	repeatable: ReadonlySet<string> = REPEATABLE_MODULES
+): T[] {
+	return variants.filter((v) => !enabled.has(v.name) || repeatable.has(v.name));
+}
+
 /** Lee el arreglo `modules` del config a la lista editable, en orden. Descarta lo
  *  que no sea ni cadena ni objeto con `type`. */
 export function parseModules(configModules: unknown): ModuleEntry[] {

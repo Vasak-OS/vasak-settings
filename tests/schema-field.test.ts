@@ -4,9 +4,23 @@ import {
 	blankFor,
 	branchLabel,
 	humanizeKey,
+	isNullSchema,
 	matchingBranch,
 	schemaKind,
 } from '../src/utils/schema-field';
+
+describe('isNullSchema', () => {
+	test('reconoce el tipo null', () => {
+		expect(isNullSchema({ type: 'null' })).toBe(true);
+		expect(isNullSchema({ type: ['null'] })).toBe(true);
+	});
+
+	test('lo que no es sólo null, no', () => {
+		expect(isNullSchema({ type: 'string' })).toBe(false);
+		expect(isNullSchema({ type: ['string', 'null'] })).toBe(false);
+		expect(isNullSchema({})).toBe(false);
+	});
+});
 
 describe('humanizeKey', () => {
 	test('separa camelCase y deja legible', () => {

@@ -1,5 +1,33 @@
 import { describe, expect, test } from 'bun:test';
-import { moveEntry, parseModules, serializeModules } from '../src/utils/fastfetch-modules';
+import {
+	availableModules,
+	moveEntry,
+	parseModules,
+	serializeModules,
+} from '../src/utils/fastfetch-modules';
+
+describe('availableModules', () => {
+	const variants = [{ name: 'os' }, { name: 'cpu' }, { name: 'separator' }, { name: 'break' }];
+
+	test('excluye los normales ya activos', () => {
+		const enabled = new Set(['os']);
+		expect(availableModules(variants, enabled).map((v) => v.name)).toEqual([
+			'cpu',
+			'separator',
+			'break',
+		]);
+	});
+
+	test('los repetibles siguen disponibles aunque estén activos', () => {
+		const enabled = new Set(['separator', 'break', 'cpu']);
+		// separator y break siguen (repetibles); cpu no (ya está).
+		expect(availableModules(variants, enabled).map((v) => v.name)).toEqual([
+			'os',
+			'separator',
+			'break',
+		]);
+	});
+});
 
 describe('parseModules', () => {
 	test('cadenas y objetos con type, en orden', () => {

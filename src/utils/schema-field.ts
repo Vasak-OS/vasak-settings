@@ -8,6 +8,15 @@ import type { SchemaNode } from './fastfetch-schema';
 
 export type FieldKind = 'union' | 'boolean' | 'number' | 'object' | 'array' | 'string';
 
+/** Si un nodo es el tipo `null` del schema. Una unión `[T, null]` significa «T o
+ *  nada», y se colapsa a un campo de T (vacío = sin definir) en vez de un
+ *  selector de variante con una rama inútil. */
+export function isNullSchema(node: SchemaNode): boolean {
+	const t = node.type;
+	if (Array.isArray(t)) return t.length > 0 && t.every((x) => x === 'null');
+	return t === 'null';
+}
+
 /** El primer `type` que no sea `null` (el schema a veces da `["string","null"]`). */
 function primaryType(schema: SchemaNode): string | undefined {
 	if (Array.isArray(schema.type)) return schema.type.find((t) => t !== 'null');
