@@ -10,6 +10,7 @@ import {
 	usarLaVersionDelTema,
 } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
+import OnlineAccountDavModal from '@/components/onlineaccounts/OnlineAccountDavModal.vue';
 import {
 	type AccountInfo,
 	clearProviderCredentials,
@@ -26,6 +27,7 @@ import {
 	setProviderCredentials,
 	testMailConnection,
 } from '@/services/accounts.service';
+import type { DavCapabilities } from '@/utils/dav-account';
 import { canManageCredentials, clearOutcome } from '@/utils/provider-credentials';
 import { CAPABILITY_ICONS, resolveProviderIcons } from '@/utils/provider-icon';
 import {
@@ -460,6 +462,48 @@ const openCustomForm = () => {
 	success.value = '';
 	notice.value = '';
 	showCustomForm.value = true;
+};
+
+/**
+ * El formulario de servidor CalDAV/CardDAV: calendario y contactos con
+ * contraseña, sin exigir correo. El de arriba pide IMAP y SMTP, así que una
+ * cuenta que sólo tiene DAV no entraba por ahí.
+ */
+const showDavForm = ref(false);
+
+const openDavForm = () => {
+	errors.value = '';
+	success.value = '';
+	notice.value = '';
+	showDavForm.value = true;
+};
+
+const submitDavProvider = async (payload: {
+	providerType: string;
+	displayName: string;
+	capabilities: DavCapabilities;
+	password: string;
+}) => {
+	loading.value = true;
+	errors.value = '';
+	success.value = '';
+	notice.value = '';
+
+	try {
+		await registerPasswordAccount(
+			payload.providerType,
+			payload.displayName,
+			payload.capabilities,
+			payload.password
+		);
+		showDavForm.value = false;
+		success.value = t('views.onlineAccounts.dav.added');
+		await fetchAccounts();
+	} catch (err) {
+		errors.value = t('views.onlineAccounts.errors.registerCustom').replace('{0}', String(err));
+	} finally {
+		loading.value = false;
+	}
 };
 
 /**
@@ -1005,9 +1049,30 @@ onMounted(async () => {
 					</span>
 					<span class="text-xs text-tx-muted">IMAP / SMTP / CardDAV / CalDAV</span>
 				</button>
+
+				<!-- Sólo calendario y contactos, sin exigir correo: iCloud,
+				     Fastmail, Yahoo, Zimbra, Baïkal y cualquier servidor DAV. -->
+				<button
+					:disabled="loading"
+					class="flex flex-col items-center gap-3 rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-5 text-center transition-colors"
+					:class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'"
+					@click="openDavForm"
+				>
+					<ThemeIcon
+						name="x-office-calendar-symbolic"
+						type="symbol"
+						:size="40"
+						:alt="t('views.onlineAccounts.dav.openButton')" />
+					<span class="text-sm font-medium text-tx-main">
+						{{ t('views.onlineAccounts.dav.openButton') }}
+					</span>
+					<span class="text-xs text-tx-muted">{{ t('views.onlineAccounts.dav.openButtonHint') }}</span>
+				</button>
 			</div>
 
 		</ConfigSection>
+
+		<OnlineAccountDavModal v-model:open="showDavForm" @submit="submitDavProvider" />
 
 		<div
 			v-if="showCustomForm"
