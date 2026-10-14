@@ -1531,6 +1531,36 @@ views:
       nothingFoundHint: >-
         Podés guardar igual: hay servidores que no publican esa información y
         funcionan perfecto para el correo. La dirección se puede agregar después.
+      openButton: Otro servidor (CalDAV/CardDAV)
+      openButtonHint: iCloud, Fastmail, Yahoo, Zimbra, Baïkal…
+      title: Conectar un servidor CalDAV/CardDAV
+      description: >-
+        Para calendario y contactos de iCloud, Fastmail, Yahoo o cualquier
+        servidor que hable el estándar. El correo se conecta aparte.
+      provider: Proveedor
+      calendarUrl: Dirección del calendario (CalDAV)
+      contactsUrl: Dirección de contactos (CardDAV)
+      calendarUrlPlaceholder: https://caldav.ejemplo.com/
+      contactsUrlPlaceholder: https://carddav.ejemplo.com/
+      appPasswordNote: >-
+        iCloud, Yahoo y Fastmail no aceptan la contraseña principal: hay que
+        generar una contraseña específica de aplicación en la web del proveedor
+        y pegarla acá.
+      urlHelp: >-
+        Escribí la dirección a mano, o buscala automáticamente con el usuario y
+        la contraseña.
+      discover: Buscar automáticamente
+      connect: Conectar
+      added: Cuenta conectada.
+      presets:
+        other: Otro servidor
+        icloud: iCloud
+        yahoo: Yahoo
+        fastmail: Fastmail
+      errors:
+        urlRequired: Escribí al menos una dirección, de calendario o de contactos
+        insecureUrl: La dirección tiene que ser HTTPS
+        credentialsFirst: Escribí el usuario y la contraseña para poder buscar
     credentials:
       own: "Con credenciales propias:"
       needed: Falta configurarlo — tocá para hacerlo
