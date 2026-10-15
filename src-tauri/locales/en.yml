@@ -1553,6 +1553,53 @@ views:
         urlRequired: Enter at least one address, calendar or contacts
         insecureUrl: The address must be HTTPS
         credentialsFirst: Enter the username and password to search
+    ldap:
+      openButton: LDAP / Active Directory
+      openButtonHint: Your organization's contact directory
+      title: Connect an LDAP / Active Directory server
+      description: >-
+        Your organization's contact directory, read-only. Works with OpenLDAP,
+        389 Directory Server, Active Directory, Samba AD and any server that
+        speaks LDAPv3.
+      displayNamePlaceholder: Company directory
+      url: Server address
+      urlPlaceholder: ldaps://ldap.example.com
+      urlHelp: >-
+        With the scheme in front. "ldaps://" encrypts the connection; "ldap://"
+        upgrades to encryption with StartTLS before sending the password;
+        "ldapi://" is a local socket with no network.
+      bindDn: Bind DN
+      bindDnPlaceholder: cn=reader,ou=services,dc=example,dc=com
+      bindDnHelp: >-
+        The user the searches run as. On Active Directory it is usually
+        reader@example.com.
+      passwordPlaceholder: Bind DN password
+      searchBase: Search base
+      searchBasePlaceholder: dc=example,dc=com
+      searchBaseHelp: Which branch of the directory tree to search people under.
+      searchFilter: Search filter (optional)
+      searchFilterPlaceholder: (objectClass=person)
+      searchFilterHelp: >-
+        Which entries to fetch. Leave it empty to use people
+        ("objectClass=person").
+      attributes: Attributes (optional)
+      attributesPlaceholder: cn, sn, givenName, mail, telephoneNumber
+      attributesHelp: >-
+        Which fields to read from each person, separated by commas. Leave it
+        empty to use the standard list.
+      allowInsecure: Allow unencrypted connection
+      allowInsecureHelp: >-
+        Only for a lab server on "ldap://" that does not support StartTLS. Do not
+        check it against a real server.
+      allowInsecureWarning: >-
+        The password will travel in the clear over the network. Only use this on
+        a trusted network and against a server with no encryption support.
+      connect: Connect
+      added: LDAP directory connected.
+      errors:
+        invalidUrl: The address must start with ldaps://, ldap:// or ldapi://
+        bindDnRequired: Enter the bind DN
+        searchBaseRequired: Enter the search base
     credentials:
       own: "With your own credentials:"
       needed: Not configured yet — tap to set it up

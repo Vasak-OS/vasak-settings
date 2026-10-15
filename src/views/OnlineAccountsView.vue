@@ -11,6 +11,7 @@ import {
 } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import OnlineAccountDavModal from '@/components/onlineaccounts/OnlineAccountDavModal.vue';
+import OnlineAccountLdapModal from '@/components/onlineaccounts/OnlineAccountLdapModal.vue';
 import {
 	type AccountInfo,
 	clearProviderCredentials,
@@ -28,6 +29,7 @@ import {
 	testMailConnection,
 } from '@/services/accounts.service';
 import type { DavCapabilities } from '@/utils/dav-account';
+import type { LdapCapabilities } from '@/utils/ldap-account';
 import { canManageCredentials, clearOutcome } from '@/utils/provider-credentials';
 import { CAPABILITY_ICONS, resolveProviderIcons } from '@/utils/provider-icon';
 import {
@@ -498,6 +500,50 @@ const submitDavProvider = async (payload: {
 		);
 		showDavForm.value = false;
 		success.value = t('views.onlineAccounts.dav.added');
+		await fetchAccounts();
+	} catch (err) {
+		errors.value = t('views.onlineAccounts.errors.registerCustom').replace('{0}', String(err));
+	} finally {
+		loading.value = false;
+	}
+};
+
+/**
+ * El formulario de directorio LDAP / Active Directory: la libreta de contactos
+ * de la empresa, de sólo lectura. Como el de DAV, es un alta manual con
+ * contraseña que se registra por el mismo camino.
+ */
+const showLdapForm = ref(false);
+
+const openLdapForm = () => {
+	errors.value = '';
+	success.value = '';
+	notice.value = '';
+	showLdapForm.value = true;
+};
+
+const submitLdapProvider = async (payload: {
+	providerType: string;
+	displayName: string;
+	capabilities: LdapCapabilities;
+	password: string;
+}) => {
+	loading.value = true;
+	errors.value = '';
+	success.value = '';
+	notice.value = '';
+
+	try {
+		// La contraseña va aparte, como argumento, nunca dentro de las capacidades:
+		// el servicio la cifra en el llavero bajo la clave `access`.
+		await registerPasswordAccount(
+			payload.providerType,
+			payload.displayName,
+			payload.capabilities,
+			payload.password
+		);
+		showLdapForm.value = false;
+		success.value = t('views.onlineAccounts.ldap.added');
 		await fetchAccounts();
 	} catch (err) {
 		errors.value = t('views.onlineAccounts.errors.registerCustom').replace('{0}', String(err));
@@ -1068,11 +1114,31 @@ onMounted(async () => {
 					</span>
 					<span class="text-xs text-tx-muted">{{ t('views.onlineAccounts.dav.openButtonHint') }}</span>
 				</button>
+
+				<!-- La libreta de contactos de la empresa: LDAP / Active Directory,
+				     de sólo lectura. Un alta manual con contraseña, como la de DAV. -->
+				<button
+					:disabled="loading"
+					class="flex flex-col items-center gap-3 rounded-corner-m border border-ui-border bg-ui-surface/70 px-4 py-5 text-center transition-colors"
+					:class="loading ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary/40 hover:bg-ui-surface cursor-pointer'"
+					@click="openLdapForm"
+				>
+					<ThemeIcon
+						name="x-office-address-book-symbolic"
+						type="symbol"
+						:size="40"
+						:alt="t('views.onlineAccounts.ldap.openButton')" />
+					<span class="text-sm font-medium text-tx-main">
+						{{ t('views.onlineAccounts.ldap.openButton') }}
+					</span>
+					<span class="text-xs text-tx-muted">{{ t('views.onlineAccounts.ldap.openButtonHint') }}</span>
+				</button>
 			</div>
 
 		</ConfigSection>
 
 		<OnlineAccountDavModal v-model:open="showDavForm" @submit="submitDavProvider" />
+		<OnlineAccountLdapModal v-model:open="showLdapForm" @submit="submitLdapProvider" />
 
 		<div
 			v-if="showCustomForm"
