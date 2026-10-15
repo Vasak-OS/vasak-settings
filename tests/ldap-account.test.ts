@@ -161,11 +161,114 @@ describe('buildLdapCapabilities', () => {
 		expect(sinMarcar.contacts.ldap_allow_insecure).toBeUndefined();
 	});
 
+	test('unos atributos de puro hueco quedan omitidos, no en una lista vacía', () => {
+		// El sincronizador lee `ldap_attributes` con `as_array()` y pide cada
+		// atributo tal cual: una lista con una cadena vacía le haría pedir el
+		// atributo «», y el servidor rechaza la búsqueda. Comas y espacios sueltos
+		// no son atributos, así que la clave no se declara —el sincronizador cae en
+		// su lista estándar— en vez de declararse como `['']`.
+		for (const hueco of ['', '   ', ' , , ', ',,', '  ,  ']) {
+			expect(parseLdapAttributes(hueco)).toEqual([]);
+			const caps = buildLdapCapabilities(baseForm({ attributes: hueco }));
+			expect(caps.contacts.ldap_attributes).toBeUndefined();
+			expect(caps.contacts.ldap_attributes).not.toEqual(['']);
+		}
+	});
+
 	test('el provider_type casa con el id del catálogo del daemon (ldap.toml)', () => {
 		// buildLdapCapabilities arma sólo la capacidad; el provider_type lo pone el
 		// modal, pero se deja escrito acá que la capacidad es `contacts`, que es la
 		// única que ese catálogo declara.
 		const caps = buildLdapCapabilities(baseForm());
 		expect(Object.keys(caps)).toEqual(['contacts']);
+	});
+});
+
+/**
+ * La invariante de seguridad del alta LDAP.
+ *
+ * El bind simple manda la contraseña al servidor, así que es un secreto de
+ * verdad y tiene que viajar como viaja el de IMAP/SMTP y DAV: por el campo
+ * `password` aparte del evento `submit`, que el servicio envuelve en
+ * `secrets_json={access: password}` y cifra en el llavero. **Jamás** dentro de
+ * las capacidades, que el servicio guarda en claro en su base de datos.
+ *
+ * `buildLdapCapabilities` recibe en producción el `reactive` del modal, que sí
+ * tiene `password` (y `displayName`) encima de los campos de `LdapForm`. Que su
+ * tipo no declare `password` no alcanza como garantía: una edición futura que
+ * lea `form.password` para «completar» el config compilaría igual. Por eso la
+ * prueba le pasa un formulario con la contraseña puesta —como el modal— y mira
+ * el objeto que sale, no el tipo.
+ */
+describe('la contraseña nunca entra en las capacidades', () => {
+	/** El `reactive` del modal: `LdapForm` más lo que el `.vue` tiene encima. */
+	type ModalForm = LdapForm & { displayName: string; password: string };
+
+	const SECRET = 'correcta-caballo-bateria-grapa-42';
+
+	/** Un formulario completo con contraseña, igual que el que arma el modal. */
+	const modalForm = (overrides: Partial<ModalForm> = {}): ModalForm => ({
+		...baseForm(),
+		displayName: 'Directorio de la empresa',
+		password: SECRET,
+		...overrides,
+	});
+
+	test('la contraseña no aparece en el JSON de las capacidades', () => {
+		// Se prueban las dos ramas que más tocan el config: con y sin opcionales, y
+		// con «permitir sin cifrar» marcada —el camino que escribe más claves—.
+		const formularios = [
+			modalForm(),
+			modalForm({
+				url: 'ldap://ldap.ejemplo.com',
+				allowInsecure: true,
+				searchFilter: '(objectClass=person)',
+				attributes: 'cn, mail',
+			}),
+		];
+
+		for (const form of formularios) {
+			const json = JSON.stringify(buildLdapCapabilities(form));
+			expect(json).not.toContain(SECRET);
+		}
+	});
+
+	test('no hay ninguna clave con pinta de contraseña en «contacts»', () => {
+		// No alcanza con que el valor no esté: una clave vacía o renombrada
+		// (`ldap_password`, `password`, `secret`, `access`…) también sería una fuga
+		// en cuanto alguien le pusiera algo. El config sólo puede llevar las claves
+		// que el sincronizador espera.
+		const permitidas = new Set([
+			'ldap_url',
+			'ldap_bind_dn',
+			'ldap_search_base',
+			'ldap_search_filter',
+			'ldap_attributes',
+			'ldap_allow_insecure',
+		]);
+
+		const { contacts } = buildLdapCapabilities(
+			modalForm({
+				url: 'ldap://ldap.ejemplo.com',
+				allowInsecure: true,
+				searchFilter: '(objectClass=person)',
+				attributes: 'cn, mail',
+			})
+		);
+
+		for (const clave of Object.keys(contacts)) {
+			expect(permitidas.has(clave)).toBe(true);
+			expect(clave.toLowerCase()).not.toMatch(/pass|pwd|secret|credential|access|token/);
+		}
+	});
+
+	test('aunque la contraseña se repita en otro campo, no se filtra por el config', () => {
+		// Si alguien reusara la contraseña como DN de enlace o como base —error de
+		// la persona, no del formulario—, ahí sí viajaría: pero porque es el valor
+		// de ese campo, no porque el armado la copie. Esta prueba fija que el armado
+		// no la agrega por su cuenta: con la contraseña sólo en `password`, no está.
+		const caps = buildLdapCapabilities(modalForm());
+		const valores = Object.values(caps.contacts);
+		expect(valores).not.toContain(SECRET);
 	});
 });
