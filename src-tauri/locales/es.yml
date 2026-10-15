@@ -1561,6 +1561,53 @@ views:
         urlRequired: Escribí al menos una dirección, de calendario o de contactos
         insecureUrl: La dirección tiene que ser HTTPS
         credentialsFirst: Escribí el usuario y la contraseña para poder buscar
+    ldap:
+      openButton: LDAP / Active Directory
+      openButtonHint: La libreta de contactos de la empresa
+      title: Conectar un directorio LDAP / Active Directory
+      description: >-
+        La libreta de contactos de tu organización, de sólo lectura. Sirve para
+        OpenLDAP, 389 Directory Server, Active Directory, Samba AD y cualquier
+        servidor que hable LDAPv3.
+      displayNamePlaceholder: Directorio de la empresa
+      url: Dirección del servidor
+      urlPlaceholder: ldaps://ldap.ejemplo.com
+      urlHelp: >-
+        Con el esquema adelante. «ldaps://» cifra la conexión; «ldap://» la sube a
+        cifrado con StartTLS antes de mandar la contraseña; «ldapi://» es un
+        socket local sin red.
+      bindDn: DN de enlace
+      bindDnPlaceholder: cn=lector,ou=servicios,dc=ejemplo,dc=com
+      bindDnHelp: >-
+        El usuario con el que se busca en el directorio. En Active Directory suele
+        ser lector@ejemplo.com.
+      passwordPlaceholder: Contraseña del DN de enlace
+      searchBase: Base de búsqueda
+      searchBasePlaceholder: dc=ejemplo,dc=com
+      searchBaseHelp: Desde qué rama del directorio buscar las personas.
+      searchFilter: Filtro de búsqueda (opcional)
+      searchFilterPlaceholder: (objectClass=person)
+      searchFilterHelp: >-
+        Qué entradas traer. Si lo dejás vacío, se usan las personas
+        («objectClass=person»).
+      attributes: Atributos (opcional)
+      attributesPlaceholder: cn, sn, givenName, mail, telephoneNumber
+      attributesHelp: >-
+        Qué campos leer de cada persona, separados por comas. Si lo dejás vacío,
+        se usa la lista estándar.
+      allowInsecure: Permitir conexión sin cifrar
+      allowInsecureHelp: >-
+        Sólo para un servidor de laboratorio con «ldap://» que no sabe StartTLS.
+        No la marques contra un servidor real.
+      allowInsecureWarning: >-
+        La contraseña va a viajar en claro por la red. Usalo sólo en una red de
+        confianza y contra un servidor que no soporte cifrado.
+      connect: Conectar
+      added: Directorio LDAP conectado.
+      errors:
+        invalidUrl: La dirección tiene que empezar con ldaps://, ldap:// o ldapi://
+        bindDnRequired: Escribí el DN de enlace
+        searchBaseRequired: Escribí la base de búsqueda
     credentials:
       own: "Con credenciales propias:"
       needed: Falta configurarlo — tocá para hacerlo
