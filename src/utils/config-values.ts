@@ -127,6 +127,7 @@ export const PANEL_INDICATORS = [
 	'transfer',
 	'tray',
 	'privacy',
+	'keyboard',
 	'workspaces',
 	'windows',
 	'networkName',

@@ -67,6 +67,7 @@ const music = ref(true);
 const transfer = ref(true);
 const tray = ref(true);
 const privacy = ref(true);
+const keyboard = ref(true);
 
 /**
  * Los indicadores que se sumaron con el panel configurable. `workspaces` y
@@ -224,6 +225,7 @@ onMounted(async () => {
 		networkName.value = indicators.networkName;
 		volumeNumber.value = indicators.volumeNumber;
 		batteryNumber.value = indicators.batteryNumber;
+		keyboard.value = indicators.keyboard;
 		position.value = readPanelPosition(vskConfig.value);
 		style.value = readPanelStyle(vskConfig.value);
 		layout.value = readPanelLayout(vskConfig.value);
@@ -262,6 +264,7 @@ const saveConfig = async () => {
 			transfer: transfer.value,
 			tray: tray.value,
 			privacy: privacy.value,
+			keyboard: keyboard.value,
 			workspaces: workspaces.value,
 			windows: windows.value,
 			networkName: networkName.value,
@@ -532,6 +535,18 @@ const saveConfig = async () => {
 							</span>
 						</div>
 						<SwitchToggle :label="t('views.appearancePanel.privacy')" :model-value="privacy" @update:model-value="(val) => (privacy = val)" />
+					</div>
+
+					<div class="flex items-start justify-between gap-4">
+						<div class="flex flex-col">
+							<span class="text-sm font-medium text-tx-main">
+								{{ t('views.appearancePanel.keyboard') }}
+							</span>
+							<span class="text-xs text-tx-muted">
+								{{ t('views.appearancePanel.keyboardHint') }}
+							</span>
+						</div>
+						<SwitchToggle :label="t('views.appearancePanel.keyboard')" :model-value="keyboard" @update:model-value="(val) => (keyboard = val)" />
 					</div>
 				</div>
 			</ConfigSection>
