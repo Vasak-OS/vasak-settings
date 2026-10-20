@@ -377,3 +377,391 @@ pub async fn set_assistant_provider_key(url: String, key: String) -> Result<(), 
         Err(e) => Err(describe(&e).replace(key, "…")),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use zbus::zvariant::{serialized::Context, to_bytes, LE};
+
+    fn firma<T: Type>() -> String {
+        T::signature().to_string()
+    }
+
+    fn ida_y_vuelta<T>(valor: &T) -> T
+    where
+        T: Serialize + serde::de::DeserializeOwned + Type,
+    {
+        let bytes = to_bytes(Context::new_dbus(LE, 0), valor).expect("serializa");
+        let (vuelta, _): (T, usize) = bytes.deserialize().expect("deserializa");
+        vuelta
+    }
+
+    fn modelo() -> AssistantModel {
+        AssistantModel {
+            provider: "openai".into(),
+            name: "gpt-x".into(),
+            local: false,
+            host: "api.ejemplo.com".into(),
+        }
+    }
+
+    // ── Contrato del cable ────────────────────────────────────────────────────
+
+    #[test]
+    fn la_firma_de_cada_tipo_es_la_del_contrato() {
+        assert_eq!(firma::<AssistantModel>(), "(ssbs)");
+        assert_eq!(firma::<AssistantStatus>(), "(bs(ssbs)u)");
+        assert_eq!(firma::<AssistantCapability>(), "(sbs)");
+        assert_eq!(firma::<Vec<AssistantCapability>>(), "a(sbs)");
+    }
+
+    #[test]
+    fn los_tipos_sobreviven_a_la_ida_y_vuelta_por_el_cable() {
+        let status = AssistantStatus {
+            backend_available: true,
+            reason: "ok".into(),
+            model: modelo(),
+            conversations: 7,
+        };
+        assert_eq!(ida_y_vuelta(&modelo()), modelo());
+        assert_eq!(ida_y_vuelta(&status), status);
+        let caps = vec![
+            AssistantCapability {
+                domain: "mail".into(),
+                available: false,
+                reason: "todavía no".into(),
+            },
+            AssistantCapability {
+                domain: "memory".into(),
+                available: true,
+                reason: String::new(),
+            },
+        ];
+        assert_eq!(ida_y_vuelta(&caps), caps);
+    }
+
+    #[test]
+    fn hacia_la_ventana_los_campos_van_en_camel_case() {
+        let status = AssistantStatus {
+            backend_available: true,
+            reason: String::new(),
+            model: modelo(),
+            conversations: 2,
+        };
+        let json = serde_json::to_value(&status).unwrap();
+        assert_eq!(json["backendAvailable"], true);
+        assert_eq!(json["conversations"], 2);
+        assert_eq!(json["model"]["local"], false);
+        assert_eq!(json["model"]["host"], "api.ejemplo.com");
+        assert!(json.get("backend_available").is_none());
+
+        let unit = serde_json::to_value(AssistantUnitState {
+            installed: true,
+            enabled: true,
+            active: false,
+            masked: false,
+        })
+        .unwrap();
+        assert_eq!(
+            unit,
+            serde_json::json!({"installed": true, "enabled": true, "active": false, "masked": false})
+        );
+    }
+
+    // ── parse_unit_state ──────────────────────────────────────────────────────
+
+    #[test]
+    fn una_unidad_habilitada_y_activa_se_lee_completa() {
+        let s = parse_unit_state("LoadState=loaded\nActiveState=active\nUnitFileState=enabled\n");
+        assert_eq!(
+            s,
+            AssistantUnitState {
+                installed: true,
+                enabled: true,
+                active: true,
+                masked: false
+            }
+        );
+    }
+
+    #[test]
+    fn una_unidad_inexistente_no_esta_instalada() {
+        let s = parse_unit_state("LoadState=not-found\nActiveState=inactive\nUnitFileState=\n");
+        assert_eq!(s, AssistantUnitState::default());
+        assert_eq!(parse_unit_state(""), AssistantUnitState::default());
+    }
+
+    #[test]
+    fn una_unidad_enmascarada_no_cuenta_como_habilitada() {
+        let por_carga =
+            parse_unit_state("LoadState=masked\nActiveState=inactive\nUnitFileState=masked");
+        assert!(por_carga.masked && por_carga.installed && !por_carga.enabled);
+        // `enabled-runtime` empieza con «enabled», pero enmascarada manda.
+        let por_archivo =
+            parse_unit_state("LoadState=loaded\nActiveState=inactive\nUnitFileState=masked");
+        assert!(por_archivo.masked && !por_archivo.enabled);
+        let ambas = parse_unit_state("LoadState=masked\nUnitFileState=enabled");
+        assert!(ambas.masked && !ambas.enabled);
+    }
+
+    #[test]
+    fn enabled_runtime_cuenta_como_habilitada() {
+        let s = parse_unit_state(
+            "LoadState=loaded\nActiveState=inactive\nUnitFileState=enabled-runtime",
+        );
+        assert!(s.enabled && !s.active);
+        let d = parse_unit_state("LoadState=loaded\nActiveState=inactive\nUnitFileState=disabled");
+        assert!(!d.enabled && d.installed);
+    }
+
+    #[test]
+    fn solo_activa_recargando_o_activandose_cuentan_como_activa() {
+        for (estado, activa) in [
+            ("active", true),
+            ("reloading", true),
+            ("activating", true),
+            ("inactive", false),
+            ("failed", false),
+            ("deactivating", false),
+        ] {
+            let s = parse_unit_state(&format!("LoadState=loaded\nActiveState={estado}"));
+            assert_eq!(s.active, activa, "ActiveState={estado}");
+        }
+    }
+
+    #[test]
+    fn las_lineas_ajenas_o_con_espacios_no_confunden_la_lectura() {
+        let s = parse_unit_state("  LoadState=loaded  \nruido\nOtra=cosa\n ActiveState=active\n");
+        assert!(s.installed && s.active);
+    }
+
+    // ── service_steps ─────────────────────────────────────────────────────────
+
+    #[test]
+    fn encender_desenmascara_y_habilita_con_now() {
+        assert_eq!(
+            service_steps(true),
+            vec![
+                vec!["unmask", "vasak-assistant.service"],
+                vec!["enable", "--now", "vasak-assistant.service"]
+            ]
+        );
+    }
+
+    #[test]
+    fn apagar_deshabilita_con_now_y_termina_enmascarando() {
+        let pasos = service_steps(false);
+        assert_eq!(
+            pasos,
+            vec![
+                vec!["disable", "--now", "vasak-assistant.service"],
+                vec!["mask", "vasak-assistant.service"]
+            ]
+        );
+        // Sin `mask` la activación por D-Bus lo resucita.
+        assert_eq!(pasos.last().unwrap()[0], "mask");
+    }
+
+    // ── cgroup_is_assistant_unit ──────────────────────────────────────────────
+
+    #[test]
+    fn el_cgroup_de_la_unidad_del_asistente_se_reconoce() {
+        let cg =
+            "0::/user.slice/user-1000.slice/user@1000.service/app.slice/vasak-assistant.service\n";
+        assert!(cgroup_is_assistant_unit(cg));
+        assert!(cgroup_is_assistant_unit(
+            "0::/user.slice/user@1000.service/app.slice/vasak-assistant.service"
+        ));
+    }
+
+    #[test]
+    fn otra_unidad_o_un_nombre_parecido_no_es_el_asistente() {
+        for cg in [
+            "",
+            "0::/user.slice/user@1000.service/app.slice/otro.service\n",
+            "0::/user.slice/user@1000.service/app.slice/evil-vasak-assistant.service\n",
+            "0::/user.slice/user@1000.service/app.slice/vasak-assistant.service.d/x\n",
+            "0::/user.slice/user@1000.service/app.slice/vasak-assistant.socket\n",
+            "0::/user.slice/vasak-assistant.service/hijo/otra.scope\n",
+            "0::/user.slice/session-3.scope\n",
+        ] {
+            assert!(!cgroup_is_assistant_unit(cg), "{cg:?}");
+        }
+    }
+
+    // ── validate_provider_url ─────────────────────────────────────────────────
+
+    #[test]
+    fn una_direccion_valida_vuelve_recortada() {
+        assert_eq!(
+            validate_provider_url("  https://api.ejemplo.com/v1 \n"),
+            Ok("https://api.ejemplo.com/v1")
+        );
+        assert_eq!(
+            validate_provider_url("http://127.0.0.1:11434"),
+            Ok("http://127.0.0.1:11434")
+        );
+    }
+
+    #[test]
+    fn una_direccion_vacia_o_ilegible_se_rechaza() {
+        assert!(validate_provider_url("").unwrap_err().contains("Falta"));
+        assert!(validate_provider_url("   ").unwrap_err().contains("Falta"));
+        assert!(validate_provider_url("no es una url")
+            .unwrap_err()
+            .contains("no es válida"));
+    }
+
+    #[test]
+    fn solo_http_y_https_valen() {
+        for url in [
+            "ftp://x.com/",
+            "file:///etc/passwd",
+            "javascript:alert(1)",
+            "ssh://h",
+        ] {
+            assert!(
+                validate_provider_url(url).unwrap_err().contains("http"),
+                "{url}"
+            );
+        }
+    }
+
+    #[test]
+    fn la_direccion_no_puede_llevar_usuario_ni_contrasena() {
+        for url in [
+            "https://usuario@api.ejemplo.com",
+            "https://usuario:secreta@api.ejemplo.com",
+            "https://:secreta@api.ejemplo.com",
+        ] {
+            let error = validate_provider_url(url).unwrap_err();
+            assert!(error.contains("usuario"), "{url}");
+            assert!(!error.contains("secreta"));
+        }
+    }
+
+    #[test]
+    fn el_largo_de_la_direccion_tiene_tope() {
+        let relleno =
+            |n: usize| format!("https://a.com/{}", "x".repeat(n - "https://a.com/".len()));
+        let justo = relleno(MAX_PROVIDER_URL_BYTES);
+        assert_eq!(justo.len(), MAX_PROVIDER_URL_BYTES);
+        assert!(validate_provider_url(&justo).is_ok());
+        let largo = relleno(MAX_PROVIDER_URL_BYTES + 1);
+        assert!(validate_provider_url(&largo).unwrap_err().contains("2048"));
+    }
+
+    // ── validate_provider_key ─────────────────────────────────────────────────
+
+    #[test]
+    fn una_clave_valida_vuelve_recortada() {
+        assert_eq!(validate_provider_key("  sk-abc123 \n"), Ok("sk-abc123"));
+    }
+
+    #[test]
+    fn una_clave_vacia_se_rechaza() {
+        assert!(validate_provider_key("").unwrap_err().contains("Falta"));
+        assert!(validate_provider_key(" \t\n")
+            .unwrap_err()
+            .contains("Falta"));
+    }
+
+    #[test]
+    fn el_largo_de_la_clave_tiene_tope() {
+        assert!(validate_provider_key(&"k".repeat(MAX_PROVIDER_KEY_BYTES)).is_ok());
+        let error = validate_provider_key(&"k".repeat(MAX_PROVIDER_KEY_BYTES + 1)).unwrap_err();
+        assert!(error.contains("4096"));
+    }
+
+    #[test]
+    fn una_clave_con_caracteres_de_control_se_rechaza() {
+        for key in ["sk-a\nb", "sk-a\0b", "sk-a\u{7f}b", "sk-a\tb", "sk-\u{85}b"] {
+            assert!(
+                validate_provider_key(key)
+                    .unwrap_err()
+                    .contains("no válidos"),
+                "{key:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn ningun_error_de_validacion_incluye_la_clave() {
+        let secreta = "sk-SECRETISIMA";
+        let con_control = format!("{secreta}\n{secreta}");
+        let larga = format!("{secreta}{}", "k".repeat(MAX_PROVIDER_KEY_BYTES));
+        for key in [con_control.as_str(), larga.as_str()] {
+            let error = validate_provider_key(key).unwrap_err();
+            assert!(!error.contains("SECRETISIMA"), "{error}");
+        }
+    }
+
+    // ── describe_service_error ────────────────────────────────────────────────
+
+    #[test]
+    fn un_error_del_asistente_usa_su_descripcion() {
+        let nombre = "ar.net.vasak.os.Assistant.Error.InvalidArgument";
+        assert_eq!(
+            describe_service_error(nombre, Some("  la URL no vale ")),
+            "la URL no vale"
+        );
+    }
+
+    #[test]
+    fn un_error_del_asistente_sin_descripcion_dice_de_que_clase_es() {
+        let nombre = "ar.net.vasak.os.Assistant.Error.Backend";
+        for d in [None, Some(""), Some("   ")] {
+            assert_eq!(
+                describe_service_error(nombre, d),
+                "El asistente devolvió un error (Backend)."
+            );
+        }
+    }
+
+    #[test]
+    fn sin_dueno_del_nombre_el_asistente_no_esta_en_ejecucion() {
+        for nombre in [
+            "org.freedesktop.DBus.Error.NameHasNoOwner",
+            "org.freedesktop.DBus.Error.ServiceUnknown",
+        ] {
+            assert_eq!(
+                describe_service_error(nombre, Some("detalle del bus")),
+                "El asistente no está en ejecución."
+            );
+        }
+    }
+
+    #[test]
+    fn cualquier_otro_error_de_dbus_conserva_el_nombre_o_la_descripcion() {
+        assert_eq!(
+            describe_service_error("org.freedesktop.DBus.Error.NoReply", Some("tardó")),
+            "No se pudo hablar con el asistente: tardó"
+        );
+        assert_eq!(
+            describe_service_error("org.freedesktop.DBus.Error.NoReply", None),
+            "No se pudo hablar con el asistente (org.freedesktop.DBus.Error.NoReply)."
+        );
+    }
+
+    // ── Pegamento sin bus ─────────────────────────────────────────────────────
+
+    #[test]
+    fn un_error_de_metodo_se_traduce_con_su_nombre_y_el_desconocido_se_detecta() {
+        use zbus::names::ErrorName;
+        // Sin cuerpo real: `MethodError` sólo necesita el mensaje, y la
+        // construcción se prueba por el camino que usa el pegamento.
+        let nombre = ErrorName::try_from(UNKNOWN_METHOD).unwrap();
+        let mensaje = zbus::message::Message::method("/", "X")
+            .unwrap()
+            .build(&())
+            .unwrap();
+        let error = zbus::Error::MethodError(nombre.into(), Some("no existe".into()), mensaje);
+        assert!(is_unknown_method(&error));
+        assert_eq!(
+            describe(&error),
+            "No se pudo hablar con el asistente: no existe"
+        );
+        assert!(!is_unknown_method(&zbus::Error::InvalidReply));
+        assert!(describe(&zbus::Error::InvalidReply).starts_with("No se pudo hablar"));
+    }
+}
