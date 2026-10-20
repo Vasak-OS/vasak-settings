@@ -45,8 +45,8 @@ describe('serviceView', () => {
 		expect(serviceView(unit({ installed: false }), null)).toBe('notInstalled');
 	});
 
-	test('enmascarada: apagado (es el apagado desde la pantalla), aunque figure activa', () => {
-		expect(serviceView(unit({ masked: true }), status())).toBe('off');
+	test('enmascarada: apagado (es el apagado desde la pantalla)', () => {
+		expect(serviceView(unit({ masked: true, active: false }), status())).toBe('off');
 		expect(serviceView(unit({ masked: true, active: false, enabled: false }), null)).toBe('off');
 	});
 

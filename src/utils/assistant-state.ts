@@ -21,9 +21,8 @@ export function serviceView(
 	status: AssistantStatus | null
 ): ServiceView {
 	if (!unit?.installed) return 'notInstalled';
-	// Apagar desde la pantalla enmascara la unidad (service_steps(false)): es el apagado normal.
-	if (unit.masked) return 'off';
-	if (!unit.active) return unit.enabled ? 'unavailable' : 'off';
+	// Apagar desde la pantalla enmascara la unidad: es el apagado normal. Si aún corre, sigue su estado.
+	if (!unit.active) return unit.enabled && !unit.masked ? 'unavailable' : 'off';
 	if (!status) return 'starting';
 	return status.backendAvailable ? 'ready' : 'unavailable';
 }
