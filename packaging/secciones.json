@@ -501,6 +501,27 @@
 		}
 	},
 	{
+		"id": "assistant",
+		"icono": "internet-chat",
+		"nombres": {
+			"es": "Asistente",
+			"en": "Assistant"
+		},
+		"palabras": {
+			"es": [
+				"lince",
+				"ia",
+				"inteligencia artificial",
+				"chat"
+			],
+			"en": [
+				"lince",
+				"ai",
+				"chat"
+			]
+		}
+	},
+	{
 		"id": "screen-time",
 		"icono": "preferences-system-time",
 		"nombres": {

@@ -193,6 +193,10 @@ export const PALABRAS: Record<string, Record<(typeof IDIOMAS)[number], string[]>
 		es: ['permisos', 'cortafuegos'],
 		en: ['permissions', 'firewall'],
 	},
+	assistant: {
+		es: ['lince', 'ia', 'inteligencia artificial', 'chat'],
+		en: ['lince', 'ai', 'chat'],
+	},
 	'screen-time': {
 		es: ['uso', 'bienestar digital', 'hábitos', 'estadísticas'],
 		en: ['usage', 'digital wellbeing', 'habits', 'statistics'],

@@ -166,6 +166,11 @@ export function categoriasDelMenu(t: Traductor): SidebarCategory[] {
 					icon: 'security-high',
 				},
 				{
+					id: 'assistant',
+					label: t('sidebar.items.assistant'),
+					icon: 'internet-chat',
+				},
+				{
 					id: 'screen-time',
 					label: t('sidebar.items.screenTime'),
 					icon: 'preferences-system-time',

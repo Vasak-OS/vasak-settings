@@ -165,6 +165,11 @@ const routes = [
 		component: () => import('@/views/PrivacySecurityView.vue'),
 	},
 	{
+		path: '/assistant',
+		name: 'assistant',
+		component: () => import('@/views/AssistantView.vue'),
+	},
+	{
 		path: '/screen-time',
 		name: 'screen-time',
 		component: () => import('@/views/ScreenTimeView.vue'),
