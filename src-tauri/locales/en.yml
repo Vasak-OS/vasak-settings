@@ -211,7 +211,7 @@ views:
         starting: Starting
         ready: Ready
         unavailable: Unavailable
-      notInstalledHint: To use it, install the vasak-assistance package. It does not come preinstalled.
+      notInstalledHint: To use it, install the vasak-assistant package. It does not come preinstalled.
     name:
       title: Name
       label: What it is called
