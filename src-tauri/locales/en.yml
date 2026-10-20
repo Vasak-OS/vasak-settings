@@ -239,7 +239,7 @@ views:
       empty: Type the key before saving it.
       save: Save the key
       needsService: Turn the assistant on to save the key
-      needsSaveModel: "Save the model first: the address changed"
+      needsSaveModel: "Save the model first"
       boundTo: "Stored for {0}"
     consent:
       title: What it can look at

@@ -187,7 +187,7 @@ onMounted(settings.refresh);
 					</FormGroup>
 
 					<FormGroup
-						v-if="config.backend === 'openai'"
+						v-if="draft.backend === 'openai'"
 						:label="t('views.assistant.key.label')"
 						:help="keyState"
 						v-slot="{ id, describedBy }"
