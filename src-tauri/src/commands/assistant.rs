@@ -12,11 +12,15 @@
 //! tiene que cambiar con él.
 //!
 //! **Sobre el dueño del nombre.** Antes de cada llamada se comprueba que quien
-//! tiene `ar.net.vasak.os.Assistant` sea un proceso de `vasak-assistant.service`
-//! (vasak-assistant#5), y la llamada va a su nombre único, no al conocido: así
+//! tiene `ar.net.vasak.os.Assistant` sea el proceso principal (`MainPID`) de
+//! `vasak-assistant.service`, que corra `/usr/bin/vasak-assistant` y que esté en
+//! el cgroup exacto de esa unidad (vasak-assistant#5), y la llamada va a su
+//! nombre único, no al conocido: así
 //! un impostor que tome el nombre después de la comprobación no recibe nada —
 //! sobre todo, no recibe la clave.
 
+use std::os::unix::fs::MetadataExt;
+use std::path::Path;
 use std::process::Command;
 
 use serde::{Deserialize, Serialize};
@@ -29,6 +33,7 @@ use crate::commands::night_light_service::is_missing_unit;
 const SERVICE: &str = "ar.net.vasak.os.Assistant";
 const PATH: &str = "/ar/net/vasak/os/Assistant";
 const UNIT: &str = "vasak-assistant.service";
+const ASSISTANT_EXE: &str = "/usr/bin/vasak-assistant";
 const ERROR_PREFIX: &str = "ar.net.vasak.os.Assistant.Error.";
 const UNKNOWN_METHOD: &str = "org.freedesktop.DBus.Error.UnknownMethod";
 const NAME_HAS_NO_OWNER: &str = "org.freedesktop.DBus.Error.NameHasNoOwner";
@@ -115,11 +120,29 @@ pub fn service_steps(enabled: bool) -> Vec<Vec<&'static str>> {
     }
 }
 
-/// Si el `/proc/<pid>/cgroup` es el de un proceso de `vasak-assistant.service`.
-pub fn cgroup_is_assistant_unit(cgroup: &str) -> bool {
+/// Si el `/proc/<pid>/cgroup` tiene la línea `0::` exacta de la unidad del
+/// asistente en el gestor de usuario de `uid`. Comparar el sufijo no alcanza:
+/// `app.slice` es del usuario y cualquiera crea ahí un subcgroup con ese nombre.
+fn cgroup_is_assistant_unit(cgroup: &str, uid: u32) -> bool {
+    let expected = format!("/user.slice/user-{uid}.slice/user@{uid}.service/app.slice/{UNIT}");
     cgroup
         .lines()
-        .any(|line| line.trim_end().ends_with("/vasak-assistant.service"))
+        .any(|line| line.strip_prefix("0::") == Some(expected.as_str()))
+}
+
+/// Si el proceso `pid`, dueño del nombre, es el asistente: el `MainPID` de la
+/// unidad (0 si está detenida o enmascarada), corriendo `/usr/bin/vasak-assistant`
+/// y en el cgroup exacto de la unidad del usuario `uid`.
+///
+/// Tras actualizar el paquete, `/proc/<pid>/exe` dice
+/// `/usr/bin/vasak-assistant (deleted)`: se rechaza a propósito (no hay forma
+/// de distinguir ese binario viejo de otro cualquiera) y la persona reinicia el
+/// servicio.
+pub fn owner_is_assistant(pid: u32, main_pid: u32, exe: &Path, cgroup: &str, uid: u32) -> bool {
+    main_pid != 0
+        && pid == main_pid
+        && exe == Path::new(ASSISTANT_EXE)
+        && cgroup_is_assistant_unit(cgroup, uid)
 }
 
 /// Valida la dirección de un proveedor y la devuelve recortada.
@@ -138,6 +161,14 @@ pub fn validate_provider_url(url: &str) -> Result<&str, String> {
     if !matches!(parsed.scheme(), "http" | "https") {
         return Err("La dirección del proveedor tiene que empezar con http:// o https://.".into());
     }
+    // La misma regla que el demonio (`config::is_local`): en claro, sólo a la
+    // propia máquina; un nombre que resuelva a loopback igual cuenta como remoto.
+    if parsed.scheme() == "http" && !is_loopback_host(&parsed) {
+        return Err(
+            "Un proveedor remoto tiene que usar https://; http:// sólo vale para esta computadora (localhost)."
+                .into(),
+        );
+    }
     if !parsed.username().is_empty() || parsed.password().is_some() {
         return Err(
             "La dirección del proveedor no puede llevar usuario ni contraseña: la clave va aparte."
@@ -145,6 +176,15 @@ pub fn validate_provider_url(url: &str) -> Result<&str, String> {
         );
     }
     Ok(url)
+}
+
+fn is_loopback_host(url: &url::Url) -> bool {
+    match url.host() {
+        Some(url::Host::Domain(domain)) => domain.eq_ignore_ascii_case("localhost"),
+        Some(url::Host::Ipv4(ip)) => ip.is_loopback(),
+        Some(url::Host::Ipv6(ip)) => ip.is_loopback(),
+        None => false,
+    }
 }
 
 /// Valida la clave del proveedor y la devuelve recortada. Ningún mensaje de
@@ -182,17 +222,28 @@ pub fn describe_service_error(name: &str, description: Option<&str>) -> String {
     }
 }
 
+/// El error de `SetProviderKey` en una frase fija, sólo por su nombre. La
+/// descripción del servicio no se reenvía: podría traer la clave escapada,
+/// truncada o partida, y tacharla no alcanza.
+pub fn describe_set_key_error(name: &str) -> String {
+    match name.strip_prefix(ERROR_PREFIX) {
+        Some("Unavailable") => {
+            "El asistente no puede guardar la clave ahora (llavero bloqueado o no disponible)."
+                .into()
+        }
+        Some("InvalidArgs") => "La dirección o la clave no son válidas.".into(),
+        Some(_) => "El asistente no pudo guardar la clave.".into(),
+        None => describe_service_error(name, None),
+    }
+}
+
 // ── Pegamento: systemctl ──────────────────────────────────────────────────────
 
-fn read_unit_state() -> Result<AssistantUnitState, String> {
+/// `systemctl --user show <unidad> <args>`, con la salida.
+fn show_unit(args: &[&str]) -> Result<String, String> {
     let output = Command::new("systemctl")
-        .args([
-            "--user",
-            "show",
-            UNIT,
-            "-p",
-            "LoadState,ActiveState,UnitFileState",
-        ])
+        .args(["--user", "show", UNIT])
+        .args(args)
         .output()
         .map_err(|e| format!("No se pudo ejecutar systemctl: {e}"))?;
     if !output.status.success() {
@@ -201,7 +252,16 @@ fn read_unit_state() -> Result<AssistantUnitState, String> {
             String::from_utf8_lossy(&output.stderr).trim()
         ));
     }
-    Ok(parse_unit_state(&String::from_utf8_lossy(&output.stdout)))
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
+fn read_unit_state() -> Result<AssistantUnitState, String> {
+    show_unit(&["-p", "LoadState,ActiveState,UnitFileState"]).map(|out| parse_unit_state(&out))
+}
+
+/// El `MainPID` de la unidad; 0 si está detenida, enmascarada o no se entiende.
+fn read_main_pid() -> Result<u32, String> {
+    show_unit(&["-p", "MainPID", "--value"]).map(|out| out.trim().parse().unwrap_or(0))
 }
 
 fn apply_service_steps(enabled: bool) -> Result<AssistantUnitState, String> {
@@ -284,9 +344,11 @@ where
     .deserialize()
 }
 
-/// El nombre único del dueño de `ar.net.vasak.os.Assistant`, sólo si es un
-/// proceso de `vasak-assistant.service`. Si nadie lo tiene, lo arranca por
-/// activación (que pasa por la misma unidad de systemd).
+/// El nombre único del dueño de `ar.net.vasak.os.Assistant`, sólo si es el
+/// proceso principal de `vasak-assistant.service` (ver `owner_is_assistant`).
+/// Si nadie lo tiene, lo arranca por activación (que pasa por la misma unidad
+/// de systemd); el `MainPID` se lee después, así que el recién arrancado
+/// también tiene que coincidir.
 async fn verify_owner(conn: &Connection) -> Result<String, String> {
     let owner: String = match bus_call(conn, "GetNameOwner", &(SERVICE,)).await {
         Ok(owner) => owner,
@@ -303,10 +365,17 @@ async fn verify_owner(conn: &Connection) -> Result<String, String> {
     let pid: u32 = bus_call(conn, "GetConnectionUnixProcessID", &(owner.as_str(),))
         .await
         .map_err(|e| describe(&e))?;
+    let main_pid = blocking(read_main_pid).await?;
+    // Cualquier lectura que falle cuenta como «no es el asistente».
+    let exe = tokio::fs::read_link(format!("/proc/{pid}/exe"))
+        .await
+        .unwrap_or_default();
     let cgroup = tokio::fs::read_to_string(format!("/proc/{pid}/cgroup"))
         .await
         .unwrap_or_default();
-    if !cgroup_is_assistant_unit(&cgroup) {
+    let uid = tokio::fs::metadata("/proc/self").await.map(|m| m.uid());
+    let is_assistant = uid.is_ok_and(|uid| owner_is_assistant(pid, main_pid, &exe, &cgroup, uid));
+    if !is_assistant {
         crate::logger::log_error(&format!(
             "vasak-assistant: el nombre {SERVICE} lo tiene el pid {pid}, que no es de {UNIT}"
         ));
@@ -364,7 +433,7 @@ pub async fn assistant_has_provider_key(url: String) -> Result<Option<bool>, Str
 }
 
 /// Guarda la clave en el llavero, a través del servicio. La clave no va a
-/// ningún log ni mensaje: si el servicio la repite en su error, se tacha.
+/// ningún log ni mensaje: del error del servicio sólo se usa el nombre.
 #[tauri::command]
 pub async fn set_assistant_provider_key(url: String, key: String) -> Result<(), String> {
     let url = validate_provider_url(&url)?;
@@ -374,7 +443,10 @@ pub async fn set_assistant_provider_key(url: String, key: String) -> Result<(), 
         Err(e) if is_unknown_method(&e) => Err(
             "El servicio instalado no permite guardar la clave: actualizá vasak-assistant.".into(),
         ),
-        Err(e) => Err(describe(&e).replace(key, "…")),
+        Err(e) => Err(match error_parts(&e) {
+            Some((name, _)) => describe_set_key_error(name),
+            None => "No se pudo hablar con el asistente para guardar la clave.".into(),
+        }),
     }
 }
 
@@ -568,10 +640,7 @@ mod tests {
     fn el_cgroup_de_la_unidad_del_asistente_se_reconoce() {
         let cg =
             "0::/user.slice/user-1000.slice/user@1000.service/app.slice/vasak-assistant.service\n";
-        assert!(cgroup_is_assistant_unit(cg));
-        assert!(cgroup_is_assistant_unit(
-            "0::/user.slice/user@1000.service/app.slice/vasak-assistant.service"
-        ));
+        assert!(cgroup_is_assistant_unit(cg, 1000));
     }
 
     #[test]
@@ -584,8 +653,9 @@ mod tests {
             "0::/user.slice/user@1000.service/app.slice/vasak-assistant.socket\n",
             "0::/user.slice/vasak-assistant.service/hijo/otra.scope\n",
             "0::/user.slice/session-3.scope\n",
+            "0::/user.slice/user@1000.service/app.slice/vasak-assistant.service\n",
         ] {
-            assert!(!cgroup_is_assistant_unit(cg), "{cg:?}");
+            assert!(!cgroup_is_assistant_unit(cg, 1000), "{cg:?}");
         }
     }
 
