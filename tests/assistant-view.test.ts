@@ -98,6 +98,26 @@ describe('la pantalla del asistente', () => {
 		}
 	});
 
+	test('con la unidad enmascarada (apagada desde acá) el interruptor está habilitado y al encender pide encenderla', async () => {
+		const masked = { installed: true, enabled: false, active: false, masked: true };
+		const wrapper = await mountView({ unit: masked });
+		backend.handlers.set_assistant_service_enabled = () => ACTIVE;
+		const toggle = wrapper.findAll('[role="switch"]')[0];
+		expect(toggle.attributes('aria-checked')).toBe('false');
+		expect(toggle.attributes('disabled')).toBeUndefined();
+		// Se ve apagado, no «No disponible».
+		expect(
+			textsOf('views.assistant.service.state.off').some((t) => wrapper.text().includes(t))
+		).toBe(true);
+
+		await toggle.trigger('click');
+		await flushPromises();
+
+		const call = backend.calls.find((c) => c.command === 'set_assistant_service_enabled');
+		expect(call?.args).toEqual({ enabled: true });
+		expect(wrapper.findAll('[role="switch"]')[0].attributes('aria-checked')).toBe('true');
+	});
+
 	test('el aviso de proveedor remoto sale del estado del demonio y no del borrador', async () => {
 		// Lo guardado es remoto, pero el demonio corre con un modelo local: sin aviso.
 		const local = await mountView({
