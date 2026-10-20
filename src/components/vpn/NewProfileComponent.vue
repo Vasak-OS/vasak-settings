@@ -210,7 +210,7 @@ const handleCancel = () => {
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
 					{{ t('views.networkVpn.dialog.password') }}
-					<PasswordField v-model="profilePassword" autocomplete="new-password" class="mt-1" />
+					<PasswordField v-model="profilePassword" class="mt-1" />
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
@@ -232,7 +232,6 @@ const handleCancel = () => {
 					{{ t('views.networkVpn.dialog.privateKeyPassword') }}
 					<PasswordField
 						v-model="profilePrivateKeyPassword"
-						autocomplete="new-password"
 						class="mt-1"
 					/>
 				</label>

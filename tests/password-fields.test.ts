@@ -13,6 +13,7 @@
 
 import { afterEach, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
+import { PasswordField } from '@vasakgroup/vue-libvasak';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { Glob } from 'bun';
 import NewProfileComponent from '@/components/vpn/NewProfileComponent.vue';
@@ -34,7 +35,9 @@ describe('el perfil de VPN nuevo', () => {
 		const toggles = view.findAll('button[aria-pressed]');
 		expect(toggles).toHaveLength(2);
 
-		const fields = () => view?.findAll('input[autocomplete="new-password"]') ?? [];
+		const fields = () =>
+			view?.findAllComponents(PasswordField).map((field) => field.get('input')) ?? [];
+		expect(fields()).toHaveLength(2);
 		expect(fields().map((field) => field.attributes('type'))).toEqual(['password', 'password']);
 
 		await toggles[0].trigger('click');

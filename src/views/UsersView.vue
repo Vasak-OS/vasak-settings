@@ -266,13 +266,11 @@ function canDemote(user: UserAccount): boolean {
 				<FormGroup :label="t('views.users.passwordMin').replace('{0}', String(MIN_PASSWORD))">
 					<PasswordField
 						v-model="newUser.password"
-						autocomplete="new-password"
 					/>
 				</FormGroup>
 				<FormGroup :label="t('views.users.repeatPassword')">
 					<PasswordField
 						v-model="newUser.confirm"
-						autocomplete="new-password"
 						:invalid="Boolean(newUser.confirm && newUser.confirm !== newUser.password)"
 					/>
 				</FormGroup>
@@ -412,13 +410,11 @@ function canDemote(user: UserAccount): boolean {
 						<FormGroup :label="t('views.users.newPasswordMin').replace('{0}', String(MIN_PASSWORD))">
 							<PasswordField
 								v-model="draftFor(user.uid).password"
-								autocomplete="new-password"
 							/>
 						</FormGroup>
 						<FormGroup :label="t('views.users.repeat')">
 							<PasswordField
 								v-model="draftFor(user.uid).confirm"
-								autocomplete="new-password"
 							/>
 						</FormGroup>
 					</div>

@@ -878,13 +878,13 @@ onMounted(async () => {
 					/>
 				</label>
 
-				<label class="flex flex-col gap-1">
-					<span class="text-sm text-tx-main">
+				<div class="flex flex-col gap-1">
+					<label for="credentials-client-secret" class="text-sm text-tx-main">
 						{{ t('views.onlineAccounts.credentials.clientSecret') }}
-					</span>
+					</label>
 					<PasswordField
+						id="credentials-client-secret"
 						v-model="credentialsForm.clientSecret"
-						autocomplete="off"
 						:disabled="savingCredentials"
 						:placeholder="t('views.onlineAccounts.credentials.clientSecretPlaceholder')"
 						@keyup.enter="saveCredentials"
@@ -895,7 +895,7 @@ onMounted(async () => {
 					<span class="text-xs text-tx-muted">
 						{{ t('views.onlineAccounts.credentials.secretNote') }}
 					</span>
-				</label>
+				</div>
 
 				<div class="flex gap-2">
 					<button
@@ -1254,7 +1254,6 @@ onMounted(async () => {
 						<PasswordField
 							id="custom-password"
 							v-model="customForm.password"
-							autocomplete="current-password"
 							:invalid="Boolean(customFormErrors.password)"
 							:placeholder="t('views.onlineAccounts.passwordPlaceholder')"
 							class="mt-1"
