@@ -65,6 +65,7 @@ sidebar:
     monitors: Displays
     actualizaciones: Updates
     privacySecurity: Privacy and security
+    assistant: Assistant
     screenTime: Screen time
     networkWifi: Wi-Fi
     networkBluetooth: Bluetooth
@@ -192,6 +193,78 @@ wayfire:
       description: Rotates a window with the mouse.
 
 views:
+  assistant:
+    title: Assistant
+    description: >-
+      Lince is the desktop assistant. Turn it on, name it and choose the model it
+      uses.
+    saved: Changes saved
+    errorService: "Could not change the service: {0}"
+    errorSaving: "Could not save: {0}"
+    service:
+      title: Service
+      label: Use the assistant
+      hint: Turns the assistant service on or off in your session.
+      state:
+        notInstalled: Not installed
+        off: Off
+        starting: Starting
+        ready: Ready
+        unavailable: Unavailable
+      notInstalledHint: To use it, install the vasak-assistant package. It does not come preinstalled.
+    name:
+      title: Name
+      label: What it is called
+      hint: If left empty it is called "Lince". Changing it does not restart the service.
+      invalid: "The name must be 1 to 32 characters long, with no control characters."
+      save: Save the name
+    model:
+      title: Model
+      mode: Where it runs
+      local: On this computer
+      remote: Remote provider
+      backend: Provider
+      url: Address
+      name: Model
+      noModelList: The model list could not be fetched; type the name.
+      restartNotice: Saving restarts the service and closes open conversations.
+      save: Save the model
+    remoteNotice: "Conversations leave this computer for {0}"
+    key:
+      label: Provider key
+      stored: Saved
+      missing: No key
+      unavailable: "Unavailable: update vasak-assistant"
+      placeholder: Paste the new key
+      empty: Type the key before saving it.
+      save: Save the key
+      needsService: Turn the assistant on to save the key
+      needsSaveModel: "Save the model first"
+      boundTo: "Stored for {0}"
+    consent:
+      title: What it can look at
+      description: The assistant can only look at what is listed here as available.
+      disabledNote: "It cannot be changed from here yet: the permission is missing in Permissions."
+      available: Available
+      unavailable: Unavailable
+      domains:
+        mail: Mail
+        calendar: Calendar
+        contacts: Contacts
+        files: Files
+        web: Web
+    memory:
+      title: Memory
+      label: Remember between conversations
+      hint: Not available yet.
+      clear: Clear memory
+    errors:
+      backend: The provider must be Ollama or OpenAI.
+      url: The address must be an http or https URL.
+      urlUser: The address cannot carry a user name or password.
+      remoteHttps: A remote provider requires https.
+      remoteModel: A remote provider requires choosing a model.
+      localHost: '"On this computer" requires a local address; for another one, choose "Remote provider".'
   fastfetch:
     title: Fastfetch
     description: The emblem and size of the terminal read-out, previewed live.

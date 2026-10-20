@@ -65,6 +65,7 @@ sidebar:
     monitors: Pantallas
     actualizaciones: Actualizaciones
     privacySecurity: Privacidad y seguridad
+    assistant: Asistente
     screenTime: Tiempo de pantalla
     networkWifi: Wi-Fi
     networkBluetooth: Bluetooth
@@ -192,6 +193,78 @@ wayfire:
       description: Gira una ventana con el ratón.
 
 views:
+  assistant:
+    title: Asistente
+    description: >-
+      Lince es el asistente del escritorio. Acá se prende, se le pone nombre y se
+      elige el modelo que usa.
+    saved: Cambios guardados
+    errorService: "No se pudo cambiar el servicio: {0}"
+    errorSaving: "No se pudo guardar: {0}"
+    service:
+      title: Servicio
+      label: Usar el asistente
+      hint: Prende o apaga el servicio del asistente en tu sesión.
+      state:
+        notInstalled: No instalado
+        off: Apagado
+        starting: Iniciando
+        ready: Listo
+        unavailable: No disponible
+      notInstalledHint: Para usarlo, instalá el paquete vasak-assistant. No viene instalado de fábrica.
+    name:
+      title: Nombre
+      label: Cómo se llama
+      hint: Si lo dejás vacío, se llama «Lince». Cambiarlo no reinicia el servicio.
+      invalid: "El nombre tiene que tener entre 1 y 32 caracteres, sin caracteres de control."
+      save: Guardar el nombre
+    model:
+      title: Modelo
+      mode: Dónde corre
+      local: En este equipo
+      remote: Proveedor remoto
+      backend: Proveedor
+      url: Dirección
+      name: Modelo
+      noModelList: No se pudo pedir la lista de modelos; escribí el nombre.
+      restartNotice: Guardar reinicia el servicio y cierra las conversaciones abiertas.
+      save: Guardar el modelo
+    remoteNotice: "Las conversaciones salen de este equipo hacia {0}"
+    key:
+      label: Clave del proveedor
+      stored: Guardada
+      missing: Sin clave
+      unavailable: "No disponible: actualizá vasak-assistant"
+      placeholder: Pegá la clave nueva
+      empty: Escribí la clave antes de guardarla.
+      save: Guardar la clave
+      needsService: Encendé el asistente para guardar la clave
+      needsSaveModel: "Guardá el modelo antes"
+      boundTo: "Se guarda para {0}"
+    consent:
+      title: Qué puede consultar
+      description: El asistente sólo puede mirar lo que acá figure como disponible.
+      disabledNote: "Todavía no se puede cambiar desde acá: falta el permiso en Permisos."
+      available: Disponible
+      unavailable: No disponible
+      domains:
+        mail: Correo
+        calendar: Calendario
+        contacts: Contactos
+        files: Archivos
+        web: Web
+    memory:
+      title: Memoria
+      label: Recordar entre conversaciones
+      hint: Todavía no está disponible.
+      clear: Borrar memoria
+    errors:
+      backend: El proveedor tiene que ser Ollama u OpenAI.
+      url: La dirección tiene que ser una URL http o https.
+      urlUser: La dirección no puede llevar usuario ni contraseña.
+      remoteHttps: Un proveedor remoto exige https.
+      remoteModel: Un proveedor remoto exige elegir un modelo.
+      localHost: «En este equipo» exige una dirección local; para otra, elegí «Proveedor remoto».
   fastfetch:
     title: Fastfetch
     description: El emblema y el tamaño de la lectura del terminal, con la vista previa en vivo.
