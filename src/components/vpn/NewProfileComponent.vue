@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
-import { TextInput } from '@vasakgroup/vue-libvasak';
+import { PasswordField, TextInput } from '@vasakgroup/vue-libvasak';
 import { computed, ref } from 'vue';
 import type { VpnCreateInput, VpnType, VpnUpdateInput } from '@/services/network.service';
 
@@ -210,7 +210,7 @@ const handleCancel = () => {
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
 					{{ t('views.networkVpn.dialog.password') }}
-					<TextInput v-model="profilePassword" type="password" class="mt-1" />
+					<PasswordField v-model="profilePassword" autocomplete="new-password" class="mt-1" />
 				</label>
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
@@ -230,7 +230,11 @@ const handleCancel = () => {
 
 				<label class="text-xs uppercase tracking-[0.16em] text-tx-muted">
 					{{ t('views.networkVpn.dialog.privateKeyPassword') }}
-					<TextInput v-model="profilePrivateKeyPassword" type="password" class="mt-1" />
+					<PasswordField
+						v-model="profilePrivateKeyPassword"
+						autocomplete="new-password"
+						class="mt-1"
+					/>
 				</label>
 			</div>
 

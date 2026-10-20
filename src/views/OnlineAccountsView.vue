@@ -6,6 +6,7 @@ import {
 	ConfigSection,
 	PageHeader,
 	Panel,
+	PasswordField,
 	ThemeIcon,
 	usarLaVersionDelTema,
 } from '@vasakgroup/vue-libvasak';
@@ -881,12 +882,11 @@ onMounted(async () => {
 					<span class="text-sm text-tx-main">
 						{{ t('views.onlineAccounts.credentials.clientSecret') }}
 					</span>
-					<input
+					<PasswordField
 						v-model="credentialsForm.clientSecret"
-						type="password"
+						autocomplete="off"
 						:disabled="savingCredentials"
 						:placeholder="t('views.onlineAccounts.credentials.clientSecretPlaceholder')"
-						class="rounded-corner-m border border-ui-border bg-ui-surface px-3 py-2 text-sm text-tx-main disabled:opacity-50"
 						@keyup.enter="saveCredentials"
 					/>
 					<!-- Google lo llama secreto y no lo es: viaja dentro de cualquier
@@ -1251,14 +1251,14 @@ onMounted(async () => {
 
 					<div>
 						<label for="custom-password" class="block text-xs font-medium text-tx-muted">{{ t('views.onlineAccounts.password') }}</label>
-						<input
+						<PasswordField
 							id="custom-password"
 							v-model="customForm.password"
-							@input="forgetProbe"
-							type="password"
+							autocomplete="current-password"
+							:invalid="Boolean(customFormErrors.password)"
 							:placeholder="t('views.onlineAccounts.passwordPlaceholder')"
-							class="mt-1 w-full rounded-corner-m border bg-ui-surface/50 px-3 py-2 text-sm"
-							:class="customFormErrors.password ? 'border-status-error' : 'border-ui-border focus:border-primary'"
+							class="mt-1"
+							@update:model-value="forgetProbe"
 						/>
 						<span v-if="customFormErrors.password" class="mt-0.5 block text-xs text-status-error">
 							{{ customFormErrors.password }}

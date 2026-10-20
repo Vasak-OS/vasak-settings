@@ -7,9 +7,9 @@ import {
 	EmptyState,
 	PageHeader,
 	Panel,
+	PasswordField,
 	StatTile,
 	SwitchToggle,
-	TextInput,
 	ThemeIcon,
 } from '@vasakgroup/vue-libvasak';
 import { computed, nextTick, onMounted, onUnmounted, type Ref, ref } from 'vue';
@@ -410,9 +410,9 @@ onUnmounted(() => {
 				</h2>
 				<p class="mt-1 text-sm text-tx-muted">{{ t('views.networkWifi.dialog.description') }}</p>
 
-				<TextInput
+				<PasswordField
 					v-model="wifiPassword"
-					type="password"
+					autocomplete="current-password"
 					:placeholder="t('views.networkWifi.dialog.passwordPlaceholder')"
 					class="mt-4"
 					@keyup.enter="confirmConnect"

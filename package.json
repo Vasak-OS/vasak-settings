@@ -1,7 +1,7 @@
 {
 	"name": "vasak-settings",
 	"private": true,
-	"version": "0.54.0",
+	"version": "0.54.1",
 	"type": "module",
 	"scripts": {
 		"dev": "bunx --bun vite",
@@ -44,7 +44,7 @@
 		"@vitejs/plugin-vue": "^6.0.10",
 		"@vue/test-utils": "^2.5.1",
 		"happy-dom": "^20.14.6",
-		"postcss": "^8.5.30",
+		"postcss": "^8.5.31",
 		"tailwindcss": "^4.3.3",
 		"typescript": "^5.9.3",
 		"vite": "^7.3.7",
