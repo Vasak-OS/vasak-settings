@@ -3,11 +3,13 @@
 import { describe, expect, test } from 'bun:test';
 import {
 	ASSISTANT_NAME_MAX,
+	canSaveKey,
 	DEFAULT_ASSISTANT_NAME,
 	DEFAULT_URLS,
 	isLoopbackHost,
 	type ModelDraft,
 	normalizeAssistantName,
+	normalizedDraftUrl,
 	readAssistantConfig,
 	validateModelDraft,
 	writeAssistantConfig,
@@ -227,5 +229,34 @@ describe('validateModelDraft', () => {
 
 	test('modo remoto sobre loopback no exige https ni modelo', () => {
 		expect(validateModelDraft({ ...ok, remote: true })).toEqual([]);
+	});
+});
+
+describe('normalizedDraftUrl y canSaveKey', () => {
+	const draft: ModelDraft = {
+		backend: 'openai',
+		url: ' https://api.ejemplo.com/v1 ',
+		model: '',
+		remote: true,
+	};
+	const saved = readAssistantConfig({
+		assistant: { backend: 'openai', url: 'https://api.ejemplo.com/v1' },
+	});
+
+	test('la URL del borrador se recorta y, vacía, vale la de fábrica del proveedor', () => {
+		expect(normalizedDraftUrl(draft)).toBe('https://api.ejemplo.com/v1');
+		expect(normalizedDraftUrl({ ...draft, url: '  ' })).toBe(DEFAULT_URLS.openai);
+		expect(normalizedDraftUrl({ ...draft, backend: 'ollama', url: '' })).toBe(DEFAULT_URLS.ollama);
+		expect(normalizedDraftUrl({ ...draft, backend: 'otro', url: '' })).toBe('');
+	});
+
+	test('la clave sólo sale con el servicio encendido y la URL del borrador igual a la guardada', () => {
+		expect(canSaveKey({ active: true }, saved, draft)).toBe(true);
+		expect(canSaveKey({ active: false }, saved, draft)).toBe(false);
+		expect(canSaveKey(null, saved, draft)).toBe(false);
+		expect(canSaveKey(undefined, saved, draft)).toBe(false);
+		expect(canSaveKey({ active: true }, saved, { ...draft, url: 'https://otra.com/v1' })).toBe(
+			false
+		);
 	});
 });

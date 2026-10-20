@@ -122,6 +122,27 @@ describe('la pantalla del asistente', () => {
 		expect(openai.find('input[type="password"]').exists()).toBe(true);
 	});
 
+	test('el campo de la clave se deshabilita con el servicio apagado', async () => {
+		const wrapper = await mountView({
+			config: { assistant: { backend: 'openai' } },
+			unit: { ...ACTIVE, active: false },
+		});
+		expect(wrapper.get('input[type="password"]').attributes('disabled')).toBeDefined();
+	});
+
+	test('con el servicio encendido y la URL guardada el campo de la clave se puede usar', async () => {
+		const wrapper = await mountView({ config: { assistant: { backend: 'openai' } } });
+		expect(wrapper.get('input[type="password"]').attributes('disabled')).toBeUndefined();
+	});
+
+	test('si la dirección del borrador se aparta de la guardada, la clave se bloquea', async () => {
+		const wrapper = await mountView({ config: { assistant: { backend: 'openai' } } });
+		const url = wrapper.get('input[type="url"]');
+		await url.setValue('https://otra.com/v1');
+		await flushPromises();
+		expect(wrapper.get('input[type="password"]').attributes('disabled')).toBeDefined();
+	});
+
 	test('con el servicio apagado no se le habla al demonio', async () => {
 		await mountView({ unit: { ...ACTIVE, active: false, enabled: false } });
 		const dbus = backend

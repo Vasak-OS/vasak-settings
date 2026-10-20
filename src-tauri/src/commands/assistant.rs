@@ -834,4 +834,253 @@ mod tests {
         assert!(!is_unknown_method(&zbus::Error::InvalidReply));
         assert!(describe(&zbus::Error::InvalidReply).starts_with("No se pudo hablar"));
     }
+    // ── Dueño del nombre ──────────────────────────────────────────────────────
+
+    const CG: &str =
+        "0::/user.slice/user-1000.slice/user@1000.service/app.slice/vasak-assistant.service\n";
+
+    #[test]
+    fn el_cgroup_tiene_que_ser_el_exacto_del_usuario() {
+        assert!(cgroup_is_assistant_unit(CG, 1000));
+        // Otro uid, otra jerarquía o un prefijo distinto de `0::`.
+        assert!(!cgroup_is_assistant_unit(CG, 1001));
+        for cg in [
+            "1:name=systemd:/user.slice/user-1000.slice/user@1000.service/app.slice/vasak-assistant.service\n",
+            "0::/user.slice/user-1000.slice/user@1000.service/app.slice/vasak-assistant.service/hijo\n",
+            "0::/x/user.slice/user-1000.slice/user@1000.service/app.slice/vasak-assistant.service\n",
+            "0::/user.slice/user-1000.slice/user@1000.service/app.slice/app-x.slice/vasak-assistant.service\n",
+        ] {
+            assert!(!cgroup_is_assistant_unit(cg, 1000), "{cg:?}");
+        }
+    }
+
+    #[test]
+    fn el_dueno_es_el_asistente_solo_si_cumple_las_cuatro_condiciones() {
+        let exe = Path::new("/usr/bin/vasak-assistant");
+        assert!(owner_is_assistant(42, 42, exe, CG, 1000));
+        // El MainPID de una unidad detenida o enmascarada es 0: nadie lo es.
+        assert!(!owner_is_assistant(0, 0, exe, CG, 1000));
+        assert!(!owner_is_assistant(42, 0, exe, CG, 1000));
+        // Otro proceso, aunque esté en el cgroup y corra el binario.
+        assert!(!owner_is_assistant(43, 42, exe, CG, 1000));
+        // Otro binario, o el reemplazado por una actualización.
+        assert!(!owner_is_assistant(
+            42,
+            42,
+            Path::new("/usr/bin/python3"),
+            CG,
+            1000
+        ));
+        assert!(!owner_is_assistant(
+            42,
+            42,
+            Path::new("/usr/bin/vasak-assistant (deleted)"),
+            CG,
+            1000
+        ));
+        assert!(!owner_is_assistant(42, 42, Path::new(""), CG, 1000));
+        // Otro cgroup o el de otro usuario.
+        assert!(!owner_is_assistant(
+            42,
+            42,
+            exe,
+            "0::/user.slice/session-3.scope\n",
+            1000
+        ));
+        assert!(!owner_is_assistant(42, 42, exe, CG, 1001));
+    }
+
+    // ── Direcciones: http sólo a la propia máquina ────────────────────────────
+
+    #[test]
+    fn http_vale_solo_hacia_loopback() {
+        for url in [
+            "http://localhost:11434",
+            "http://LOCALHOST/v1",
+            "http://127.0.0.1:8080/v1",
+            "http://127.5.5.5",
+            "http://[::1]:11434",
+        ] {
+            assert_eq!(validate_provider_url(url), Ok(url), "{url}");
+        }
+        for url in [
+            "http://api.ejemplo.com/v1",
+            "http://10.0.0.5:11434",
+            "http://192.168.1.2",
+            "http://localhost.evil.com",
+            "http://ia.localhost",
+            "http://[::2]",
+            "http://128.0.0.1",
+        ] {
+            let error = validate_provider_url(url).unwrap_err();
+            assert!(error.contains("https://"), "{url}: {error}");
+        }
+        assert!(validate_provider_url("https://api.ejemplo.com/v1").is_ok());
+    }
+
+    #[test]
+    fn is_loopback_host_distingue_dominios_y_direcciones() {
+        let host = |u: &str| is_loopback_host(&url::Url::parse(u).unwrap());
+        assert!(host("http://localhost"));
+        assert!(host("http://127.0.0.1"));
+        assert!(host("http://[::1]"));
+        assert!(!host("http://example.com"));
+        assert!(!host("http://8.8.8.8"));
+        // Sin host (p. ej. `mailto:`) no es loopback.
+        assert!(!host("mailto:alguien@ejemplo.com"));
+    }
+
+    // ── Errores de SetProviderKey ─────────────────────────────────────────────
+
+    #[test]
+    fn el_error_de_guardar_la_clave_es_una_frase_fija_por_nombre() {
+        let nombre = |kind: &str| format!("{ERROR_PREFIX}{kind}");
+        assert!(describe_set_key_error(&nombre("Unavailable")).contains("llavero"));
+        assert_eq!(
+            describe_set_key_error(&nombre("InvalidArgs")),
+            "La dirección o la clave no son válidas."
+        );
+        assert_eq!(
+            describe_set_key_error(&nombre("Otro")),
+            "El asistente no pudo guardar la clave."
+        );
+        // Fuera del espacio de nombres del asistente cae al mensaje general.
+        assert_eq!(
+            describe_set_key_error("org.freedesktop.DBus.Error.NameHasNoOwner"),
+            "El asistente no está en ejecución."
+        );
+        assert!(describe_set_key_error("org.freedesktop.DBus.Error.NoReply")
+            .starts_with("No se pudo hablar con el asistente"));
+    }
+
+    // ── Pegamento con un bus de sesión propio ─────────────────────────────────
+
+    use std::io::{BufRead, BufReader};
+    use std::process::{Child, Stdio};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    /// Un `dbus-daemon` de sesión sin servicios de activación, para no despertar
+    /// el asistente real de quien corre las pruebas.
+    struct BusPrivado {
+        child: Child,
+        address: String,
+    }
+
+    impl BusPrivado {
+        fn arrancar() -> Option<Self> {
+            let config =
+                std::env::temp_dir().join(format!("vasak-asistente-{}.conf", std::process::id()));
+            std::fs::write(
+                &config,
+                "<busconfig><type>session</type><listen>unix:tmpdir=/tmp</listen>\
+                 <auth>EXTERNAL</auth><policy context=\"default\"><allow send_destination=\"*\" eavesdrop=\"true\"/>\
+                 <allow receive_sender=\"*\"/><allow own=\"*\"/></policy></busconfig>",
+            )
+            .ok()?;
+            let mut child = Command::new("dbus-daemon")
+                .arg("--nofork")
+                .arg("--print-address=1")
+                .arg(format!("--config-file={}", config.display()))
+                .stdout(Stdio::piped())
+                .spawn()
+                .ok()?;
+            let mut address = String::new();
+            BufReader::new(child.stdout.take()?)
+                .read_line(&mut address)
+                .ok()?;
+            let _ = std::fs::remove_file(&config);
+            Some(Self {
+                child,
+                address: address.trim().to_string(),
+            })
+        }
+    }
+
+    impl Drop for BusPrivado {
+        fn drop(&mut self) {
+            let _ = self.child.kill();
+            let _ = self.child.wait();
+        }
+    }
+
+    /// Alguien que toma el nombre del asistente sin ser `vasak-assistant.service`.
+    struct Impostor(Arc<AtomicUsize>);
+
+    #[zbus::interface(name = "ar.net.vasak.os.Assistant")]
+    impl Impostor {
+        fn set_provider_key(&self, _url: String, _key: String) {
+            self.0.fetch_add(1, Ordering::SeqCst);
+        }
+        fn has_provider_key(&self, _url: String) -> bool {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            true
+        }
+        fn models(&self) -> Vec<String> {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            vec![]
+        }
+        fn capabilities(&self) -> Vec<AssistantCapability> {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            vec![]
+        }
+    }
+
+    #[test]
+    fn sin_dueno_no_hay_asistente_y_un_impostor_no_recibe_nada() {
+        let Some(bus) = BusPrivado::arrancar() else {
+            eprintln!("sin dbus-daemon: no se prueba el pegamento de D-Bus");
+            return;
+        };
+        std::env::set_var("DBUS_SESSION_BUS_ADDRESS", &bus.address);
+        tauri::async_runtime::block_on(async {
+            // Nadie tiene el nombre y no hay quién lo active.
+            assert_eq!(
+                assistant_status().await.unwrap_err(),
+                "El asistente no está en ejecución."
+            );
+
+            let llamadas = Arc::new(AtomicUsize::new(0));
+            let _impostor = zbus::connection::Builder::session()
+                .unwrap()
+                .name(SERVICE)
+                .unwrap()
+                .serve_at(PATH, Impostor(llamadas.clone()))
+                .unwrap()
+                .build()
+                .await
+                .unwrap();
+
+            let url = "https://api.ejemplo.com/v1".to_string();
+            // Sin `systemd --user` (CI) la comprobación falla antes, por otro
+            // lado («No se pudo leer el estado…»): igual se niega, y eso es lo
+            // que importa.
+            let rechazado = |e: &str| {
+                e.contains("no es vasak-assistant.service") || e.starts_with("No se pudo")
+            };
+            let clave = set_assistant_provider_key(url.clone(), "sk-SECRETISIMA".into())
+                .await
+                .unwrap_err();
+            assert!(rechazado(&clave), "{clave}");
+            assert!(!clave.contains("SECRETISIMA"));
+            assert!(rechazado(
+                &assistant_has_provider_key(url).await.unwrap_err()
+            ));
+            assert!(rechazado(&assistant_models().await.unwrap_err()));
+            assert!(rechazado(&assistant_capabilities().await.unwrap_err()));
+            assert!(rechazado(&assistant_status().await.unwrap_err()));
+            // La clave, ni ninguna otra llamada, llegó al impostor.
+            assert_eq!(llamadas.load(Ordering::SeqCst), 0);
+        });
+    }
+
+    #[test]
+    fn el_estado_de_la_unidad_es_coherente_con_o_sin_systemd_de_usuario() {
+        // En una máquina de CI puede no haber `systemd --user`: cualquiera de los
+        // dos resultados sirve, pero uno enmascarado nunca figura habilitado.
+        if let Ok(unit) = tauri::async_runtime::block_on(assistant_unit_state()) {
+            assert!(!(unit.masked && unit.enabled));
+            assert!(unit.installed || !unit.active);
+        }
+    }
 }

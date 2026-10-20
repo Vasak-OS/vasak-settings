@@ -400,6 +400,37 @@ describe('useAssistantSettings: saveKey', () => {
 		expect(f.log.join('\n')).not.toContain('SECRETISIMA');
 	});
 
+	test('con el servicio apagado la clave no sale y el campo queda como estaba', async () => {
+		let llamadas = 0;
+		const f = fake({ assistant: { backend: 'openai' } }, INACTIVE, {
+			setKey: async () => {
+				llamadas++;
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		s.keyDraft.value = SECRET;
+		await s.saveKey();
+		expect(llamadas).toBe(0);
+		expect(s.error.value).toBe('');
+		expect(s.keyDraft.value).toBe(SECRET);
+	});
+
+	test('con la URL del borrador sin guardar la clave no sale', async () => {
+		let llamadas = 0;
+		const f = fake({ assistant: { backend: 'openai', url: 'https://guardada.com/v1' } }, ACTIVE, {
+			setKey: async () => {
+				llamadas++;
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		s.draft.value = { ...s.draft.value, url: 'https://otra.com/v1' };
+		s.keyDraft.value = SECRET;
+		await s.saveKey();
+		expect(llamadas).toBe(0);
+	});
+
 	test('si la consulta posterior falla, queda lo que se sabía y el guardado cuenta como hecho', async () => {
 		const f = fake({}, ACTIVE, {
 			hasKey: async () => {
