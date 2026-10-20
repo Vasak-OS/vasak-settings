@@ -5,6 +5,7 @@
 
 import { afterEach, describe, expect, type Mock, spyOn, test } from 'bun:test';
 import * as plugin from '@vasakgroup/plugin-config-manager';
+import * as i18n from '@vasakgroup/tauri-plugin-i18n';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import type { AssistantStatus, AssistantUnitState } from '../src/services/assistant.service';
 import AssistantView from '../src/views/AssistantView.vue';
@@ -19,11 +20,22 @@ const status = (local: boolean, host: string): AssistantStatus => ({
 	conversations: 0,
 });
 
+/** Un `t` que devuelve la plantilla en español (con su `{0}`), para probar el reemplazo. */
+function withCatalog() {
+	catalogSpy = spyOn(i18n, 'useI18n').mockImplementation(
+		() =>
+			({ t: (key: string) => textsOf(key)[1] ?? key }) as unknown as ReturnType<typeof i18n.useI18n>
+	);
+}
+
+let catalogSpy: Mock<typeof i18n.useI18n> | null = null;
 let backend: FakeBackend;
 let storeSpy: Mock<typeof plugin.useConfigStore>;
 let view: VueWrapper | null = null;
 
 afterEach(() => {
+	catalogSpy?.mockRestore();
+	catalogSpy = null;
 	view?.unmount();
 	view = null;
 	backend.restore();
@@ -55,7 +67,7 @@ async function mountView(opts: {
 /** Si el aviso de proveedor remoto está en pantalla, con el host puesto (la clave cruda si no hay catálogo). */
 const noticeShown = (wrapper: VueWrapper, host: string) =>
 	textsOf('views.assistant.remoteNotice').some((text) =>
-		wrapper.text().includes(text.replace('{0}', host))
+		wrapper.text().includes(text.replace('{0}', () => host))
 	);
 
 describe('la pantalla del asistente', () => {
@@ -141,6 +153,79 @@ describe('la pantalla del asistente', () => {
 		await url.setValue('https://otra.com/v1');
 		await flushPromises();
 		expect(wrapper.get('input[type="password"]').attributes('disabled')).toBeDefined();
+	});
+
+	test('elegir OpenAI en el borrador muestra el campo de la clave aunque lo guardado sea ollama', async () => {
+		const wrapper = await mountView({ config: { assistant: { backend: 'ollama' } } });
+		expect(wrapper.find('input[type="password"]').exists()).toBe(false);
+		const openai = wrapper.findAll('[role="radio"]').find((r) => r.text().trim() === 'OpenAI');
+		if (!openai) throw new Error('no está la opción OpenAI');
+		await openai.trigger('click');
+		await flushPromises();
+		expect(wrapper.find('input[type="password"]').exists()).toBe(true);
+		// Y la dirección de fábrica acompañó el cambio, así que difiere de la guardada.
+		expect(wrapper.get('input[type="password"]').attributes('disabled')).toBeDefined();
+	});
+
+	test('con la dirección sin guardar el botón «Guardar clave» está deshabilitado y la ayuda lo explica', async () => {
+		const wrapper = await mountView({ config: { assistant: { backend: 'openai' } } });
+		const save = () =>
+			wrapper
+				.findAll('button')
+				.find((b) => textsOf('views.assistant.key.save').includes(b.text().trim()));
+		expect(save()?.attributes('disabled')).toBeUndefined();
+		expect(
+			textsOf('views.assistant.key.needsSaveModel').some((t) => wrapper.text().includes(t))
+		).toBe(false);
+		await wrapper.get('input[type="url"]').setValue('https://otra.com/v1');
+		await flushPromises();
+		expect(save()?.attributes('disabled')).toBeDefined();
+		expect(
+			textsOf('views.assistant.key.needsSaveModel').some((t) => wrapper.text().includes(t))
+		).toBe(true);
+	});
+
+	test('con el servicio apagado el botón de la clave está deshabilitado y la ayuda pide encenderlo', async () => {
+		const wrapper = await mountView({
+			config: { assistant: { backend: 'openai' } },
+			unit: { ...ACTIVE, active: false },
+		});
+		const save = wrapper
+			.findAll('button')
+			.find((b) => textsOf('views.assistant.key.save').includes(b.text().trim()));
+		expect(save?.attributes('disabled')).toBeDefined();
+		expect(
+			textsOf('views.assistant.key.needsService').some((t) => wrapper.text().includes(t))
+		).toBe(true);
+	});
+
+	test('un host con «$&» se muestra tal cual en el aviso de remoto y en «se guarda para»', async () => {
+		withCatalog();
+		const host = 'a$&b$`c.ejemplo.com';
+		const wrapper = await mountView({
+			config: { assistant: { backend: 'openai', url: `https://${host}/v1` } },
+			status: status(false, host),
+		});
+		expect(noticeShown(wrapper, host)).toBe(true);
+		expect(
+			textsOf('views.assistant.key.boundTo').some((t) =>
+				wrapper.text().includes(t.replace('{0}', () => `https://${host}/v1`))
+			)
+		).toBe(true);
+	});
+
+	test('un motivo de error con «$&» se muestra tal cual', async () => {
+		withCatalog();
+		backend = fakeBackend({});
+		backend.handlers.assistant_unit_state = () => {
+			throw new Error('falló $& y $1');
+		};
+		storeSpy = spyOn(plugin, 'useConfigStore').mockImplementation(
+			() => ({ loadConfig: async () => {} }) as unknown as ReturnType<typeof plugin.useConfigStore>
+		);
+		view = mount(AssistantView, { global: { stubs: { ThemeIcon: true, AppIcon: true } } });
+		await flushPromises();
+		expect(view.text()).toContain('falló $& y $1');
 	});
 
 	test('con el servicio apagado no se le habla al demonio', async () => {
