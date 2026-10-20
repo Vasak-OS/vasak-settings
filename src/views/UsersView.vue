@@ -7,6 +7,7 @@ import {
 	FormGroup,
 	PageHeader,
 	Panel,
+	PasswordField,
 	SwitchToggle,
 	TextInput,
 } from '@vasakgroup/vue-libvasak';
@@ -263,17 +264,13 @@ function canDemote(user: UserAccount): boolean {
 					/>
 				</FormGroup>
 				<FormGroup :label="t('views.users.passwordMin').replace('{0}', String(MIN_PASSWORD))">
-					<TextInput
+					<PasswordField
 						v-model="newUser.password"
-						type="password"
-						autocomplete="new-password"
 					/>
 				</FormGroup>
 				<FormGroup :label="t('views.users.repeatPassword')">
-					<TextInput
+					<PasswordField
 						v-model="newUser.confirm"
-						type="password"
-						autocomplete="new-password"
 						:invalid="Boolean(newUser.confirm && newUser.confirm !== newUser.password)"
 					/>
 				</FormGroup>
@@ -411,17 +408,13 @@ function canDemote(user: UserAccount): boolean {
 					<h4 class="text-sm font-medium">{{ t('views.users.changePassword') }}</h4>
 					<div class="mt-2 grid gap-4 sm:grid-cols-2">
 						<FormGroup :label="t('views.users.newPasswordMin').replace('{0}', String(MIN_PASSWORD))">
-							<TextInput
+							<PasswordField
 								v-model="draftFor(user.uid).password"
-								type="password"
-								autocomplete="new-password"
 							/>
 						</FormGroup>
 						<FormGroup :label="t('views.users.repeat')">
-							<TextInput
+							<PasswordField
 								v-model="draftFor(user.uid).confirm"
-								type="password"
-								autocomplete="new-password"
 							/>
 						</FormGroup>
 					</div>
