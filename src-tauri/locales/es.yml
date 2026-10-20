@@ -211,7 +211,7 @@ views:
         starting: Iniciando
         ready: Listo
         unavailable: No disponible
-      notInstalledHint: Instalá vasak-assistant para poder usarlo.
+      notInstalledHint: Para usarlo, instalá el paquete vasak-assistance. No viene instalado de fábrica.
     name:
       title: Nombre
       label: Cómo se llama
