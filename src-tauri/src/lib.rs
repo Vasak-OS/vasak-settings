@@ -278,6 +278,7 @@ pub fn run() {
             commands::assistant::assistant_models,
             commands::assistant::assistant_has_provider_key,
             commands::assistant::set_assistant_provider_key,
+            commands::webkit::tune_webview,
         ])
         // One setup hook, not two: `Builder::setup` replaces whatever was
         // registered before it, so a second call silently threw the first away.

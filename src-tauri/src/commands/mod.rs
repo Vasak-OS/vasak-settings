@@ -31,3 +31,4 @@ pub mod wallpaper_video;
 pub mod wayfire_config;
 pub mod wayfire_ini;
 pub mod wayfire_plugins;
+pub mod webkit;

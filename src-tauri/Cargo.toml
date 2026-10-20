@@ -1,6 +1,6 @@
 [package]
 name = "vasak-settings"
-version = "0.55.0"
+version = "0.55.1"
 description = "A Vasak Application (template)"
 authors = ["Vasak Group", "Joaquin (Pato) Decima"]
 edition = "2021"
@@ -34,6 +34,8 @@ tauri-plugin-system-fonts = "2"
 tauri-plugin-i18n-vsk = "2.3.0"
 gtk = "0.18"
 glib = "0.18"
+# Para bajar al `WebKitWebView` de la ventana y afinarlo (ver `commands/webkit.rs`).
+webkit2gtk = "2.0"
 base64 = "0.23"
 chrono = "0.4"
 uuid = { version = "1", features = ["v4"] }

@@ -5238,7 +5238,7 @@ checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 
 [[package]]
 name = "vasak-settings"
-version = "0.55.0"
+version = "0.55.1"
 dependencies = [
  "base64 0.23.1",
  "chrono",
@@ -5273,6 +5273,7 @@ dependencies = [
  "tokio-rustls",
  "url",
  "uuid",
+ "webkit2gtk",
  "zbus 4.4.0",
 ]
 
