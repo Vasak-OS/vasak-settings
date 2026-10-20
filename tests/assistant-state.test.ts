@@ -50,6 +50,13 @@ describe('serviceView', () => {
 		expect(serviceView(unit({ masked: true, active: false, enabled: false }), null)).toBe('off');
 	});
 
+	test('enmascarada pero activa (sigue corriendo): sigue el camino normal', () => {
+		const running = unit({ masked: true, enabled: false });
+		expect(serviceView(running, null)).toBe('starting');
+		expect(serviceView(running, status())).toBe('ready');
+		expect(serviceView(running, status({ backendAvailable: false }))).toBe('unavailable');
+	});
+
 	test('apagada y no habilitada: apagado', () => {
 		expect(serviceView(unit({ active: false, enabled: false }), null)).toBe('off');
 	});

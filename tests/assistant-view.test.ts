@@ -118,6 +118,18 @@ describe('la pantalla del asistente', () => {
 		expect(wrapper.findAll('[role="switch"]')[0].attributes('aria-checked')).toBe('true');
 	});
 
+	test('enmascarada pero activa y con un modelo remoto: el aviso de remoto se muestra', async () => {
+		const wrapper = await mountView({
+			unit: { installed: true, enabled: false, active: true, masked: true },
+			status: status(false, 'api.ejemplo.com'),
+		});
+		expect(noticeShown(wrapper, 'api.ejemplo.com')).toBe(true);
+		// Y el estado dice «Listo», no «Apagado».
+		const shown = (key: string) => textsOf(key).some((t) => wrapper.text().includes(t));
+		expect(shown('views.assistant.service.state.ready')).toBe(true);
+		expect(shown('views.assistant.service.state.off')).toBe(false);
+	});
+
 	test('el aviso de proveedor remoto sale del estado del demonio y no del borrador', async () => {
 		// Lo guardado es remoto, pero el demonio corre con un modelo local: sin aviso.
 		const local = await mountView({
