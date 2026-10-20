@@ -21,15 +21,15 @@ import {
 } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted } from 'vue';
 import { useAssistantSettings } from '@/composables/useAssistantSettings';
-import { ASSISTANT_PROVIDERS, DEFAULT_URLS } from '@/utils/assistant-config';
+import { ASSISTANT_PROVIDERS, canSaveKey, DEFAULT_URLS } from '@/utils/assistant-config';
 import { consentRows, memoryRow, remoteNotice, serviceView } from '@/utils/assistant-state';
 
 const { t } = useI18n();
 
 const settings = useAssistantSettings({
 	saved: () => t('views.assistant.saved'),
-	errorSaving: (reason) => t('views.assistant.errorSaving').replace('{0}', reason),
-	errorService: (reason) => t('views.assistant.errorService').replace('{0}', reason),
+	errorSaving: (reason) => t('views.assistant.errorSaving').replace('{0}', () => reason),
+	errorService: (reason) => t('views.assistant.errorService').replace('{0}', () => reason),
 	invalidName: () => t('views.assistant.name.invalid'),
 	emptyKey: () => t('views.assistant.key.empty'),
 });
@@ -67,10 +67,23 @@ const changeBackend = (backend: string | null) => {
 	draft.value.backend = backend;
 };
 
+const keyAllowed = computed(() => canSaveKey(unit.value, config.value, draft.value));
 const keyState = computed(() => {
-	if (hasKey.value === null) return t('views.assistant.key.unavailable');
-	if (hasKey.value === undefined) return '';
-	return hasKey.value ? t('views.assistant.key.stored') : t('views.assistant.key.missing');
+	const state =
+		hasKey.value === null
+			? t('views.assistant.key.unavailable')
+			: hasKey.value === undefined
+				? ''
+				: hasKey.value
+					? t('views.assistant.key.stored')
+					: t('views.assistant.key.missing');
+	const why = !unit.value?.active
+		? t('views.assistant.key.needsService')
+		: !keyAllowed.value
+			? t('views.assistant.key.needsSaveModel')
+			: '';
+	const bound = t('views.assistant.key.boundTo').replace('{0}', () => config.value.url);
+	return [state, why, bound].filter(Boolean).join(' · ');
 });
 
 onMounted(settings.refresh);
@@ -91,7 +104,7 @@ onMounted(settings.refresh);
 			{{ settings.successMessage.value }}
 		</AlertMessage>
 		<AlertMessage v-if="notice" tone="warning">
-			{{ t('views.assistant.remoteNotice').replace('{0}', notice.host) }}
+			{{ t('views.assistant.remoteNotice').replace('{0}', () => notice?.host ?? '') }}
 		</AlertMessage>
 
 		<div class="grid grid-cols-1 items-start gap-4 @lg:grid-cols-2">
@@ -185,13 +198,13 @@ onMounted(settings.refresh);
 							:described-by="describedBy"
 							:placeholder="t('views.assistant.key.placeholder')"
 							autocomplete="new-password"
-							:disabled="busy || hasKey === null"
+							:disabled="busy || hasKey === null || !keyAllowed"
 						/>
 						<div class="mt-2">
 							<ActionButton
 								:label="t('views.assistant.key.save')"
 								variant="secondary"
-								:disabled="busy || hasKey === null"
+								:disabled="busy || hasKey === null || !keyAllowed"
 								@click="settings.saveKey()"
 							/>
 						</div>

@@ -109,7 +109,7 @@ export function writeAssistantConfig(
 	return config;
 }
 
-/** `localhost` o loopback (127/8, `::1`). Una URL ilegible no es local. */
+/** `localhost` o loopback (127/8, `::1`), como `is_local` del demonio; `*.localhost` no. Una URL ilegible no es local. */
 export function isLoopbackHost(url: string): boolean {
 	let host: string;
 	try {
@@ -117,7 +117,7 @@ export function isLoopbackHost(url: string): boolean {
 	} catch {
 		return false;
 	}
-	if (host === 'localhost' || host.endsWith('.localhost')) return true;
+	if (host === 'localhost') return true;
 	if (host === '[::1]') return true;
 	const octets = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
 	return !!octets && Number(octets[1]) === 127 && octets.slice(1).every((o) => Number(o) <= 255);
@@ -146,4 +146,22 @@ export function validateModelDraft(draft: ModelDraft): string[] {
 	}
 	if (!draft.remote && !loopback) errors.push(key('localHost'));
 	return errors;
+}
+
+/** La URL del borrador tal como quedaría guardada (sin espacios; vacía vale la de omisión). */
+export function normalizedDraftUrl(draft: ModelDraft): string {
+	const fallback = isBackend(draft.backend) ? DEFAULT_URLS[draft.backend] : '';
+	return draft.url.trim() || fallback;
+}
+
+/**
+ * La clave se asocia a `config.url` (la guardada): sólo se puede guardar con el
+ * servicio encendido y si el borrador de la URL no se apartó de la guardada.
+ */
+export function canSaveKey(
+	unit: { active: boolean } | null | undefined,
+	config: AssistantConfig,
+	draft: ModelDraft
+): boolean {
+	return !!unit?.active && normalizedDraftUrl(draft) === config.url;
 }

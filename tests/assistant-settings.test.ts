@@ -332,6 +332,7 @@ describe('useAssistantSettings: saveKey', () => {
 	test('una clave vacía no llama al servicio', async () => {
 		const f = fake({}, ACTIVE);
 		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
 		s.keyDraft.value = '   ';
 		await s.saveKey();
 		expect(s.error.value).toBe('falta la clave');
@@ -348,8 +349,12 @@ describe('useAssistantSettings: saveKey', () => {
 		});
 		const s = useAssistantSettings(MESSAGES, f.deps);
 		await s.refresh();
+		// Con el borrador de la URL sin guardar la clave no sale (ver canSaveKey).
 		s.draft.value = { ...s.draft.value, url: 'https://sin-guardar.com/v1' };
 		s.keyDraft.value = `  ${SECRET} `;
+		await s.saveKey();
+		expect(enviada).toBeNull();
+		s.draft.value = { ...s.draft.value, url: 'https://guardada.com/v1' };
 		await s.saveKey();
 		expect(enviada).toEqual(['https://guardada.com/v1', SECRET]);
 		expect(s.keyDraft.value).toBe('');

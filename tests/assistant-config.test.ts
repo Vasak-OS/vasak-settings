@@ -139,11 +139,10 @@ describe('writeAssistantConfig', () => {
 });
 
 describe('isLoopbackHost', () => {
-	test('localhost, sus subdominios, 127/8 y ::1 son locales', () => {
+	test('localhost, 127/8 y ::1 son locales', () => {
 		for (const url of [
 			'http://localhost:11434',
 			'http://LOCALHOST',
-			'http://ia.localhost/v1',
 			'http://127.0.0.1:8080/v1',
 			'http://127.9.8.7',
 			'http://[::1]:11434',
@@ -158,6 +157,7 @@ describe('isLoopbackHost', () => {
 			'http://10.0.0.5',
 			'http://192.168.1.2',
 			'http://128.0.0.1',
+			'http://ia.localhost/v1',
 			'http://localhost.evil.com',
 			'http://127.0.0.1.evil.com',
 			'http://notlocalhost',

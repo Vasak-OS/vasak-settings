@@ -238,6 +238,9 @@ views:
       placeholder: Pegá la clave nueva
       empty: Escribí la clave antes de guardarla.
       save: Guardar la clave
+      needsService: Encendé el asistente para guardar la clave
+      needsSaveModel: "Guardá el modelo antes: la dirección cambió"
+      boundTo: "Se guarda para {0}"
     consent:
       title: Qué puede consultar
       description: El asistente sólo puede mirar lo que acá figure como disponible.

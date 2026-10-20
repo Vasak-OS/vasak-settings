@@ -26,6 +26,7 @@ import {
 import {
 	type AssistantBackend,
 	type AssistantConfig,
+	canSaveKey as keyAllowed,
 	type ModelDraft,
 	normalizeAssistantName,
 	readAssistantConfig,
@@ -225,6 +226,8 @@ export function useAssistantSettings(
 	};
 
 	const saveKey = async () => {
+		// Con la unidad inactiva o la URL sin guardar la clave iría a otro lado: no sale.
+		if (!keyAllowed(unit.value, config.value, draft.value)) return;
 		const key = keyDraft.value.trim();
 		if (!key) {
 			error.value = messages.emptyKey();
