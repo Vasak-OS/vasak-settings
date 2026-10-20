@@ -113,7 +113,7 @@ onMounted(settings.refresh);
 					:label="t('views.assistant.service.label')"
 					:description="installed ? t('views.assistant.service.hint') : t('views.assistant.service.notInstalledHint')"
 					:model-value="!!unit?.enabled"
-					:disabled="busy || !installed || !!unit?.masked"
+					:disabled="busy || !installed"
 					@update:model-value="(value) => settings.toggleService(value)"
 				/>
 				<div class="mt-3 flex min-w-0 flex-wrap items-center gap-2">

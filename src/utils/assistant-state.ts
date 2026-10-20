@@ -13,7 +13,7 @@ export type ServiceView = 'notInstalled' | 'off' | 'starting' | 'ready' | 'unava
  * El estado del servicio para quien usa el sistema.
  *
  * `status` es `null` mientras el demonio no contesta por D-Bus. Una unidad
- * enmascarada o que debería correr y no corre es «No disponible»: no va a
+ * que debería correr y no corre es «No disponible»: no va a
  * arrancar sola.
  */
 export function serviceView(
@@ -21,7 +21,8 @@ export function serviceView(
 	status: AssistantStatus | null
 ): ServiceView {
 	if (!unit?.installed) return 'notInstalled';
-	if (unit.masked) return 'unavailable';
+	// Apagar desde la pantalla enmascara la unidad (service_steps(false)): es el apagado normal.
+	if (unit.masked) return 'off';
 	if (!unit.active) return unit.enabled ? 'unavailable' : 'off';
 	if (!status) return 'starting';
 	return status.backendAvailable ? 'ready' : 'unavailable';

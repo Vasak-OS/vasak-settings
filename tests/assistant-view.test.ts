@@ -88,11 +88,8 @@ describe('la pantalla del asistente', () => {
 		expect(first.attributes('disabled')).toBeUndefined();
 	});
 
-	test('no instalado o enmascarado: el interruptor del servicio no se puede tocar', async () => {
-		for (const unit of [
-			{ ...ACTIVE, installed: false, enabled: false, active: false },
-			{ ...ACTIVE, masked: true, enabled: false },
-		]) {
+	test('no instalado: el interruptor del servicio no se puede tocar', async () => {
+		for (const unit of [{ ...ACTIVE, installed: false, enabled: false, active: false }]) {
 			const wrapper = await mountView({ unit });
 			expect(wrapper.findAll('[role="switch"]')[0].attributes('disabled')).toBeDefined();
 			view?.unmount();
