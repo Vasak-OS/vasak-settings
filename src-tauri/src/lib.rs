@@ -270,6 +270,14 @@ pub fn run() {
             commands::screen_time::clear_screen_time,
             commands::screen_time::screen_time_set_enabled,
             commands::screen_time::screen_time_enabled,
+            commands::assistant::assistant_unit_state,
+            commands::assistant::set_assistant_service_enabled,
+            commands::assistant::restart_assistant_service,
+            commands::assistant::assistant_status,
+            commands::assistant::assistant_capabilities,
+            commands::assistant::assistant_models,
+            commands::assistant::assistant_has_provider_key,
+            commands::assistant::set_assistant_provider_key,
         ])
         // One setup hook, not two: `Builder::setup` replaces whatever was
         // registered before it, so a second call silently threw the first away.

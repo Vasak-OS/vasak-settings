@@ -1,5 +1,6 @@
 pub mod actualizaciones;
 pub mod aplicaciones_por_defecto;
+pub mod assistant;
 pub mod audio;
 pub mod battery;
 pub mod clipboard;
