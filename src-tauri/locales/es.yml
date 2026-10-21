@@ -802,6 +802,14 @@ views:
     bar: Barra del escritorio
     position: Posición
     positionHint: Arriba, abajo o de costado. Se mueve en el acto.
+    menuIcon: Icono del botón de menú
+    menuIconHint: El icono que muestra el botón de menú del panel.
+    menuIcons:
+      start-here: Inicio
+      view-app-grid: Cuadrícula de aplicaciones
+      application-menu: Menú de aplicaciones
+      open-menu: Menú
+      view-list-icons: Lista de iconos
     lados:
       top: Arriba
       bottom: Abajo
