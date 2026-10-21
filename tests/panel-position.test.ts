@@ -59,3 +59,12 @@ describe('la pantalla del panel', () => {
 		}
 	});
 });
+
+describe('el icono del botón de menú en la pantalla', () => {
+	test('está cableado a su lectura y su escritura, con textos en los dos idiomas', () => {
+		expect(viewSource).toContain('readMenuIcon');
+		expect(viewSource).toContain('writeMenuIcon');
+		expect(es).toContain('menuIconHint:');
+		expect(en).toContain('menuIconHint:');
+	});
+});

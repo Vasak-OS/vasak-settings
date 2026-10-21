@@ -798,6 +798,14 @@ views:
     bar: Desktop bar
     position: Position
     positionHint: Top, bottom or on a side. It moves right away.
+    menuIcon: Menu button icon
+    menuIconHint: The icon shown on the panel menu button.
+    menuIcons:
+      start-here: Start
+      view-app-grid: App grid
+      application-menu: Application menu
+      open-menu: Menu
+      view-list-icons: Icon list
     lados:
       top: Top
       bottom: Bottom

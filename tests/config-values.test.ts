@@ -909,3 +909,23 @@ describe('hasPanelPinned', () => {
 		expect(hasPanelPinned({ panel: { pinned: null } })).toBe(false);
 	});
 });
+
+describe('el icono del botón de menú', () => {
+	test('sin la clave, o con un valor ajeno, es el de siempre', async () => {
+		const { readMenuIcon, DEFAULT_MENU_ICON } = await import('@/utils/config-values');
+		expect(readMenuIcon({})).toBe(DEFAULT_MENU_ICON);
+		expect(readMenuIcon({ panel: { menuIcon: 'no-existe' } })).toBe(DEFAULT_MENU_ICON);
+	});
+
+	test('lee uno de los ofrecidos', async () => {
+		const { readMenuIcon } = await import('@/utils/config-values');
+		expect(readMenuIcon({ panel: { menuIcon: 'view-app-grid' } })).toBe('view-app-grid');
+	});
+
+	test('al escribir conserva el resto de la sección panel', async () => {
+		const { writeMenuIcon } = await import('@/utils/config-values');
+		const config: Record<string, unknown> = { panel: { position: 'left', weather: false } };
+		writeMenuIcon(config, 'open-menu');
+		expect(config.panel).toEqual({ position: 'left', weather: false, menuIcon: 'open-menu' });
+	});
+});
