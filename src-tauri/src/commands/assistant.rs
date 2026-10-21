@@ -38,6 +38,7 @@ const ERROR_PREFIX: &str = "ar.net.vasak.os.Assistant.Error.";
 const UNKNOWN_METHOD: &str = "org.freedesktop.DBus.Error.UnknownMethod";
 const NAME_HAS_NO_OWNER: &str = "org.freedesktop.DBus.Error.NameHasNoOwner";
 const SERVICE_UNKNOWN: &str = "org.freedesktop.DBus.Error.ServiceUnknown";
+const ACCESS_DENIED: &str = "AccessDenied";
 
 pub const MAX_PROVIDER_URL_BYTES: usize = 2048;
 pub const MAX_PROVIDER_KEY_BYTES: usize = 4096;
@@ -82,6 +83,17 @@ pub struct AssistantCapability {
     pub domain: String,
     pub available: bool,
     pub reason: String,
+}
+
+/// `MemoryStatus` del contrato: `(bbst)`. `bytes` va a la ventana como número:
+/// el tamaño de una base en disco no se acerca a 2^53.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AssistantMemoryStatus {
+    pub enabled: bool,
+    pub available: bool,
+    pub reason: String,
+    pub bytes: u64,
 }
 
 // ── Funciones puras ───────────────────────────────────────────────────────────
@@ -209,6 +221,9 @@ pub fn validate_provider_key(key: &str) -> Result<&str, String> {
 pub fn describe_service_error(name: &str, description: Option<&str>) -> String {
     let description = description.map(str::trim).filter(|d| !d.is_empty());
     if let Some(kind) = name.strip_prefix(ERROR_PREFIX) {
+        if kind == ACCESS_DENIED {
+            return "El asistente no le permite esta operación a esta aplicación.".into();
+        }
         return description
             .map(str::to_owned)
             .unwrap_or_else(|| format!("El asistente devolvió un error ({kind})."));
@@ -447,6 +462,39 @@ pub async fn set_assistant_provider_key(url: String, key: String) -> Result<(), 
             Some((name, _)) => describe_set_key_error(name),
             None => "No se pudo hablar con el asistente para guardar la clave.".into(),
         }),
+    }
+}
+
+/// `None` si el servicio instalado todavía no tiene memoria (`MemoryStatus`).
+#[tauri::command]
+pub async fn assistant_memory_status() -> Result<Option<AssistantMemoryStatus>, String> {
+    match assistant_call("MemoryStatus", &()).await? {
+        Ok(status) => Ok(Some(status)),
+        Err(e) if is_unknown_method(&e) => Ok(None),
+        Err(e) => Err(describe(&e)),
+    }
+}
+
+const MEMORY_UNSUPPORTED: &str =
+    "El servicio instalado no tiene memoria: actualizá vasak-assistant.";
+
+/// Apagar no borra: los archivos y la llave quedan.
+#[tauri::command]
+pub async fn set_assistant_memory_enabled(enabled: bool) -> Result<(), String> {
+    match assistant_call::<_, ()>("SetMemoryEnabled", &(enabled,)).await? {
+        Ok(()) => Ok(()),
+        Err(e) if is_unknown_method(&e) => Err(MEMORY_UNSUPPORTED.into()),
+        Err(e) => Err(describe(&e)),
+    }
+}
+
+/// Borra la memoria; si estaba encendida, el servicio la recrea vacía.
+#[tauri::command]
+pub async fn clear_assistant_memory() -> Result<(), String> {
+    match assistant_call::<_, ()>("ClearMemory", &()).await? {
+        Ok(()) => Ok(()),
+        Err(e) if is_unknown_method(&e) => Err(MEMORY_UNSUPPORTED.into()),
+        Err(e) => Err(describe(&e)),
     }
 }
 
