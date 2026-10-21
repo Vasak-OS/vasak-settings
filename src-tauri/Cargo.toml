@@ -1,6 +1,6 @@
 [package]
 name = "vasak-settings"
-version = "0.56.0"
+version = "0.57.0"
 description = "A Vasak Application (template)"
 authors = ["Vasak Group", "Joaquin (Pato) Decima"]
 edition = "2021"
@@ -55,6 +55,10 @@ dirs = "7"
 futures-util = "0.3"
 notify = "8"
 zbus = { version = "4", default-features = false, features = ["tokio"] }
+# Sólo para `pidfd_send_signal` (señal 0): confirmar que el pidfd del dueño del
+# nombre del asistente sigue vivo, y así su pid no se recicló mientras se leía
+# `/proc/<pid>` (#196). Rust puro, no suma ninguna biblioteca compartida.
+libc = "0.2"
 # 2.3.2 como piso. Dos razones: desde 2.2.0 el evento `bluetooth-change` trae
 # `changeType`, que es lo único que lee «Red y Bluetooth»
 # (`src/utils/bluetooth-change.ts`); y desde 2.2.2 el escaneo reusa la conexión
