@@ -63,7 +63,11 @@ onMounted(async () => {
 		if (!themes.value.includes(state.theme)) {
 			themes.value.unshift(state.theme);
 		}
-		await Promise.all(themes.value.map(loadPreview));
+		// Sin esperarlas: la pantalla se muestra ya y cada tarjeta dibuja sus cursores
+		// cuando le llegan.
+		for (const theme of themes.value) {
+			void loadPreview(theme);
+		}
 	} catch (err) {
 		error.value = t('views.appearanceCursor.errorLoading').replace('{0}', String(err));
 	} finally {

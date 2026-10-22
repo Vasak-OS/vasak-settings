@@ -13,7 +13,7 @@ import { afterEach, describe, expect, type Mock, spyOn, test } from 'bun:test';
 import * as i18n from '@vasakgroup/tauri-plugin-i18n';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import CursorsView from '../src/views/CursorsView.vue';
-import { type FakeBackend, fakeBackend, textsOf } from './screen-time-backend';
+import { deferred, type FakeBackend, fakeBackend, textsOf } from './screen-time-backend';
 
 const PNG = 'data:image/png;base64,AAAA';
 
@@ -102,6 +102,31 @@ describe('la pantalla del cursor', () => {
 
 		expect(wrapper.text()).toContain('sin gsettings');
 		expect(applyButton(wrapper)?.attributes('disabled')).toBeUndefined();
+	});
+});
+
+describe('la carga de la pantalla', () => {
+	test('las tarjetas aparecen sin esperar las vistas previas', async () => {
+		const lenta = deferred<{ name: string; images: string[] }>();
+		backend = fakeBackend({});
+		backend.handlers.get_cursor_state = () => ({ theme: 'Adwaita', size: 24 });
+		backend.handlers.get_cursor_themes = () => ['Adwaita', 'Bibata'];
+		backend.handlers.get_cursor_theme_preview = () => lenta.promise;
+		catalogSpy = spyOn(i18n, 'useI18n').mockImplementation(
+			() =>
+				({ t: (key: string) => textsOf(key)[1] ?? key }) as unknown as ReturnType<
+					typeof i18n.useI18n
+				>
+		);
+		view = mount(CursorsView, { global: { stubs: { ThemeIcon: true, AppIcon: true } } });
+		await flushPromises();
+
+		expect(view.findAll('[role="radio"]')).toHaveLength(2);
+		expect(applyButton(view)).toBeDefined();
+
+		lenta.resolve({ name: 'Adwaita', images: [PNG] });
+		await flushPromises();
+		expect(card(view, 'Adwaita').findAll('img').length).toBeGreaterThan(0);
 	});
 });
 

@@ -10,12 +10,12 @@
 //! el formato (cabecera, tabla de contenidos y un cuadro ARGB premultiplicado) y
 //! se vuelve a escribir como PNG.
 
-use crate::commands::system_config::{get_cursor_themes, set_cursor_theme};
+use crate::commands::system_config::set_cursor_theme;
 use crate::commands::wayfire_config::WayfireConfig;
 use crate::commands::wayfire_ini::update_section;
 use base64::Engine;
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -37,6 +37,10 @@ const SIZES: [u32; 6] = [16, 24, 32, 48, 64, 96];
 
 /// Más grande que esto no es un cursor, es un archivo mal hecho.
 const MAX_SIDE: u32 = 512;
+
+/// Lo más que se lee de un archivo de cursor. Los temas de usuario no son de
+/// fiar: un cursor suele ser un enlace, y puede apuntar a un archivo enorme.
+const MAX_FILE_BYTES: u64 = 8 * 1024 * 1024;
 
 const XCURSOR_MAGIC: &[u8; 4] = b"Xcur";
 const XCURSOR_IMAGE: u32 = 0xfffd0002;
@@ -198,6 +202,49 @@ fn cursors_dir(roots: &[PathBuf], theme: &str, depth: u32) -> Option<PathBuf> {
     None
 }
 
+/// Los nombres de los temas que traen cursores —propios o heredados—, para
+/// ofrecerlos y para validar el que se pide aplicar con la misma lista.
+fn theme_names_in(roots: &[PathBuf]) -> Vec<String> {
+    let mut themes = HashSet::from(["Adwaita".to_string()]);
+    for root in roots {
+        let Ok(entries) = std::fs::read_dir(root) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let Ok(name) = entry.file_name().into_string() else {
+                continue;
+            };
+            if cursors_dir(roots, &name, 0).is_some() {
+                themes.insert(name);
+            }
+        }
+    }
+    let mut names: Vec<String> = themes.into_iter().collect();
+    names.sort();
+    names
+}
+
+pub(crate) fn cursor_theme_names() -> Vec<String> {
+    theme_names_in(&icon_roots())
+}
+
+/// El contenido de un archivo de cursor, o `None` si no es un archivo común o
+/// pasa del tope: una tubería se quedaría esperando y `/dev/zero` no termina.
+fn read_capped(path: &Path) -> Option<Vec<u8>> {
+    use std::io::Read;
+    let metadata = std::fs::metadata(path).ok()?;
+    if !metadata.is_file() || metadata.len() > MAX_FILE_BYTES {
+        return None;
+    }
+    let mut bytes = Vec::new();
+    std::fs::File::open(path)
+        .ok()?
+        .take(MAX_FILE_BYTES)
+        .read_to_end(&mut bytes)
+        .ok()?;
+    Some(bytes)
+}
+
 /// Los cuadros de la vista previa de un tema, ya como PNG en `data:`.
 fn preview_images(roots: &[PathBuf], theme: &str) -> Vec<String> {
     let Some(dir) = cursors_dir(roots, theme, 0) else {
@@ -207,7 +254,7 @@ fn preview_images(roots: &[PathBuf], theme: &str) -> Vec<String> {
         .iter()
         .filter_map(|names| {
             names.iter().find_map(|name| {
-                let bytes = std::fs::read(dir.join(name)).ok()?;
+                let bytes = read_capped(&dir.join(name))?;
                 let png = encode_png(&decode_xcursor(&bytes, PREVIEW_SIZE)?)?;
                 Some(format!(
                     "data:image/png;base64,{}",
@@ -223,8 +270,14 @@ pub async fn get_cursor_theme_preview(theme: String) -> Result<CursorThemePrevie
     if !is_plain_name(&theme) {
         return Err(format!("Tema de cursor inválido: «{theme}»"));
     }
+    // Lee archivos y decodifica: va en un hilo aparte, no en el ejecutor asíncrono.
+    let roots = icon_roots();
+    let name = theme.clone();
+    let images = tauri::async_runtime::spawn_blocking(move || preview_images(&roots, &name))
+        .await
+        .map_err(|e| format!("No se pudo leer el tema {theme}: {e}"))?;
     Ok(CursorThemePreview {
-        images: preview_images(&icon_roots(), &theme),
+        images,
         name: theme,
     })
 }
@@ -294,7 +347,10 @@ pub async fn apply_cursor(theme: String, size: u32) -> Result<(), String> {
     if !SIZES.contains(&size) {
         return Err(format!("Tamaño de cursor no ofrecido: {size}"));
     }
-    if !get_cursor_themes().await?.contains(&theme) {
+    let known = tauri::async_runtime::spawn_blocking(cursor_theme_names)
+        .await
+        .map_err(|e| format!("No se pudo listar los temas de cursor: {e}"))?;
+    if !known.contains(&theme) {
         return Err(format!("Tema de cursor no encontrado: «{theme}»"));
     }
 
@@ -524,6 +580,40 @@ mod tests {
             "lo que la pantalla no maneja se conserva"
         );
         assert!(despues.contains("plugins = a b"));
+    }
+
+    #[test]
+    fn se_ofrecen_los_temas_propios_y_los_que_heredan_cursores() {
+        let dir = Dir::new("ofrecidos");
+        let otra = Dir::new("ofrecidos-otra-raiz");
+        tema(&dir.0, "Padre", &["left_ptr"], None);
+        tema(&dir.0, "Hijo", &[], Some("Padre"));
+        tema(&dir.0, "SoloIconos", &[], None);
+        tema(&otra.0, "EnOtraRaiz", &["left_ptr"], None);
+
+        let nombres = theme_names_in(&[dir.0.clone(), otra.0.clone()]);
+
+        assert_eq!(nombres, vec!["Adwaita", "EnOtraRaiz", "Hijo", "Padre"]);
+    }
+
+    #[test]
+    fn un_archivo_de_cursor_enorme_o_que_no_es_comun_no_se_lee() {
+        let dir = Dir::new("tope");
+        let grande = dir.0.join("grande");
+        std::fs::File::create(&grande)
+            .unwrap()
+            .set_len(MAX_FILE_BYTES + 1)
+            .unwrap();
+        let chico = dir.0.join("chico");
+        std::fs::write(&chico, b"abc").unwrap();
+
+        assert!(read_capped(&grande).is_none(), "pasa del tope");
+        assert_eq!(read_capped(&chico).unwrap(), b"abc");
+        assert!(
+            read_capped(&dir.0).is_none(),
+            "una carpeta no es un archivo"
+        );
+        assert!(read_capped(&dir.0.join("no-existe")).is_none());
     }
 
     #[test]
