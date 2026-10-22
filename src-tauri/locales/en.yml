@@ -703,6 +703,10 @@ views:
       resetConfirm: Replace my colors
 
   appearanceFonts:
+    scale: Text size
+    scaleHint: The size of the text across the whole desktop, for VasakOS applications and for GTK and Qt ones.
+    scaleDefault: (the usual one)
+    scaleReopen: Applications that are already open pick up the change when they are reopened.
     sharpness: Thicker strokes
     sharpnessHint: Thickens letter strokes according to the size they are drawn at. Text reads fuller and less washed out, especially at small sizes.
     sharpnessRelogin: "Takes effect on your next login: anything already open keeps drawing as before."
