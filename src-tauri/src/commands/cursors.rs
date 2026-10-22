@@ -244,7 +244,9 @@ fn gsettings_get(key: &str) -> Option<String> {
 
 #[tauri::command]
 pub async fn get_cursor_state() -> Result<CursorState, String> {
-    Ok(CursorState {
+    // `gsettings` es un proceso que se espera: va en un hilo aparte para no
+    // trabar el ejecutor asíncrono.
+    tauri::async_runtime::spawn_blocking(|| CursorState {
         theme: gsettings_get("cursor-theme")
             .filter(|theme| !theme.is_empty())
             .unwrap_or_else(|| "Adwaita".to_string()),
@@ -253,6 +255,28 @@ pub async fn get_cursor_state() -> Result<CursorState, String> {
             .filter(|size| SIZES.contains(size))
             .unwrap_or(24),
     })
+    .await
+    .map_err(|e| format!("No se pudo leer el cursor: {e}"))
+}
+
+fn set_cursor_size(size: u32) -> Result<(), String> {
+    let output = Command::new("gsettings")
+        .args([
+            "set",
+            "org.gnome.desktop.interface",
+            "cursor-size",
+            &size.to_string(),
+        ])
+        .output()
+        .map_err(|e| format!("Error ejecutando gsettings para el tamaño del cursor: {e}"))?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(format!(
+            "Error al aplicar el tamaño del cursor: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ))
+    }
 }
 
 /// Lo que se escribe en la sección `[input]` de `wayfire.ini`.
@@ -275,21 +299,9 @@ pub async fn apply_cursor(theme: String, size: u32) -> Result<(), String> {
     }
 
     set_cursor_theme(&theme).await?;
-    let output = Command::new("gsettings")
-        .args([
-            "set",
-            "org.gnome.desktop.interface",
-            "cursor-size",
-            &size.to_string(),
-        ])
-        .output()
-        .map_err(|e| format!("Error ejecutando gsettings para el tamaño del cursor: {e}"))?;
-    if !output.status.success() {
-        return Err(format!(
-            "Error al aplicar el tamaño del cursor: {}",
-            String::from_utf8_lossy(&output.stderr)
-        ));
-    }
+    tauri::async_runtime::spawn_blocking(move || set_cursor_size(size))
+        .await
+        .map_err(|e| format!("No se pudo aplicar el tamaño del cursor: {e}"))??;
 
     let values = wayfire_values(&theme, size);
     WayfireConfig::global()
