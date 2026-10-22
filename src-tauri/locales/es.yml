@@ -707,6 +707,10 @@ views:
       resetConfirm: Reemplazar mis colores
 
   appearanceFonts:
+    scale: Tamaño del texto
+    scaleHint: El tamaño de la letra de todo el escritorio, para las aplicaciones de VasakOS y para las GTK y Qt.
+    scaleDefault: (el de siempre)
+    scaleReopen: Las aplicaciones que ya están abiertas toman el cambio al volver a abrirse.
     sharpness: Trazos más gruesos
     sharpnessHint: Engrosa los trazos de la letra según el tamaño en que se dibujan. El texto se lee más lleno y menos desvaído, sobre todo en cuerpos chicos.
     sharpnessRelogin: "Toma efecto al volver a iniciar sesión: lo que ya está abierto sigue dibujando como antes."
