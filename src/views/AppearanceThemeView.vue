@@ -30,7 +30,6 @@ import WallpaperColorsPanel from '@/components/scheme/WallpaperColorsPanel.vue';
 import { onCustomSchemeSaved, useWallpaperColors } from '@/composables/useWallpaperColors';
 import {
 	getCurrentSystemState,
-	getCursorThemes,
 	getGtkThemes,
 	getSchemeById,
 	getSchemes,
@@ -55,7 +54,6 @@ const { t } = useI18n();
 
 const configStore = ref<any>(null);
 const gtkThemes = ref<string[]>([]);
-const cursorThemes = ref<string[]>([]);
 const schemes = ref<SchemeEntry[]>([]);
 const loading = ref(true);
 const saving = ref(false);
@@ -64,6 +62,7 @@ const successMessage = ref('');
 
 const vskConfig: Ref<VSKConfig | null> = ref(null);
 const selectedGtkTheme = ref('Adwaita');
+// El cursor no se elige acá —es de «Cursor»—; se lee para no tocarlo al aplicar.
 const selectedCursorTheme = ref('Adwaita');
 const selectedSchemeId = ref('');
 
@@ -343,14 +342,9 @@ onMounted(async () => {
 			selectedCursorTheme.value = 'Adwaita';
 		}
 
-		const [themes, cursors, loadedSchemes] = await Promise.all([
-			getGtkThemes(),
-			getCursorThemes(),
-			getSchemes(),
-		]);
+		const [themes, loadedSchemes] = await Promise.all([getGtkThemes(), getSchemes()]);
 
 		gtkThemes.value = Array.isArray(themes) && themes.length ? themes : ['Adwaita'];
-		cursorThemes.value = Array.isArray(cursors) && cursors.length ? cursors : ['Adwaita'];
 		schemes.value = Array.isArray(loadedSchemes) ? loadedSchemes : [];
 
 		// Antes esto caía a `style.color_scheme` cuando la clave con guión no
@@ -363,9 +357,6 @@ onMounted(async () => {
 
 		if (selectedGtkTheme.value && !gtkThemes.value.includes(selectedGtkTheme.value)) {
 			gtkThemes.value.unshift(selectedGtkTheme.value);
-		}
-		if (selectedCursorTheme.value && !cursorThemes.value.includes(selectedCursorTheme.value)) {
-			cursorThemes.value.unshift(selectedCursorTheme.value);
 		}
 
 		if (selectedSchemeId.value) {
@@ -515,10 +506,6 @@ const isFormValid = computed(() => {
 					<div class="flex flex-col gap-5">
 						<FormGroup :label="t('views.appearanceTheme.gtkTheme')" html-for="gtk-theme">
 							<SelectField v-bind="{ id: 'gtk-theme' }" v-model="selectedGtkTheme" :options="gtkThemes" />
-						</FormGroup>
-
-						<FormGroup :label="t('views.appearanceTheme.cursorTheme')" html-for="cursor-theme">
-							<SelectField v-bind="{ id: 'cursor-theme' }" v-model="selectedCursorTheme" :options="cursorThemes" />
 						</FormGroup>
 					</div>
 				</ConfigSection>

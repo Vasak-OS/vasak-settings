@@ -1,6 +1,6 @@
 [package]
 name = "vasak-settings"
-version = "0.57.0"
+version = "0.58.0"
 description = "A Vasak Application (template)"
 authors = ["Vasak Group", "Joaquin (Pato) Decima"]
 edition = "2021"
@@ -37,6 +37,9 @@ glib = "0.18"
 # Para bajar al `WebKitWebView` de la ventana y afinarlo (ver `commands/webkit.rs`).
 webkit2gtk = "2.0"
 base64 = "0.23"
+# Ya está en el árbol por tauri (ico); acá se usa para volver a escribir como PNG los
+# cursores Xcursor de la vista previa.
+png = "0.18"
 chrono = "0.4"
 uuid = { version = "1", features = ["v4"] }
 open = "5"

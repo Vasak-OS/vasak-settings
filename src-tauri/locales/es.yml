@@ -40,6 +40,7 @@ sidebar:
     defaultApps: Aplicaciones por defecto
     appearanceTheme: Tema
     appearanceFonts: Fuentes
+    appearanceCursor: Cursor
     appearanceIconPacks: Iconos
     appearanceWallpaper: Fondos
     appearanceDesktop: Escritorio
@@ -621,7 +622,6 @@ views:
     disabled: Desactivado
     systemThemes: Temas del Sistema
     gtkTheme: Tema GTK
-    cursorTheme: Tema de Cursor
     schemeSection: Scheme de VasakOS
     schemeHintPrefix: Selecciona el
     schemeHintSuffix: que define la paleta clara y oscura del sistema.
@@ -735,6 +735,23 @@ views:
     preview: Vista previa
     previewText: The quick brown fox jumps over the lazy dog
     weight: peso {0}
+
+  appearanceCursor:
+    title: Cursor
+    description: El tema y el tamaño del cursor, para las aplicaciones y para el escritorio a la vez.
+    apply: Aplicar
+    loading: Cargando temas de cursor...
+    errorLoading: 'Error cargando los cursores: {0}'
+    errorSaving: 'Error aplicando el cursor: {0}'
+    saved: Cursor aplicado
+    theme: Tema
+    size: Tamaño
+    selected: Seleccionado
+    noPreview: Sin vista previa
+    info: Información
+    infoApply: Se aplica a las aplicaciones y al escritorio a la vez. Las aplicaciones ya abiertas toman el cambio al volver a abrirse.
+    infoPaths: Los temas de cursor se cargan de
+    infoPathsSeparator: y
 
   appearanceIconPacks:
     title: Packs de Iconos
@@ -1017,7 +1034,6 @@ views:
     keyboard: Teclado
     mouse: Ratón
     touchpad: Touchpad
-    cursor: Cursor
     repeatDelay: Delay de repetición (ms)
     repeatRate: Velocidad de repetición (car/s)
     numlock: NumLock al inicio
@@ -1033,8 +1049,6 @@ views:
     disableWhileTyping: Desactivar al escribir
     disableWithMouse: Desactivar con ratón conectado
     tapAndDrag: Tocar y arrastrar
-    cursorTheme: Tema de cursor
-    cursorSize: Tamaño del cursor
     accelProfiles:
       default: Por defecto
       none: Ninguno
