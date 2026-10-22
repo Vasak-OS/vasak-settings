@@ -94,6 +94,14 @@
 		}
 	},
 	{
+		"id": "appearance-cursor",
+		"icono": "input-mouse",
+		"nombres": {
+			"es": "Cursor",
+			"en": "Cursor"
+		}
+	},
+	{
 		"id": "appearance-wallpaper",
 		"icono": "preferences-wallpaper",
 		"nombres": {

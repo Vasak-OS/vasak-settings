@@ -40,6 +40,7 @@ sidebar:
     defaultApps: Default applications
     appearanceTheme: Theme
     appearanceFonts: Fonts
+    appearanceCursor: Cursor
     appearanceIconPacks: Icons
     appearanceWallpaper: Wallpapers
     appearanceDesktop: Desktop
@@ -617,7 +618,6 @@ views:
     disabled: Disabled
     systemThemes: System Themes
     gtkTheme: GTK Theme
-    cursorTheme: Cursor Theme
     schemeSection: VasakOS Scheme
     schemeHintPrefix: Select the
     schemeHintSuffix: that defines the light and dark palette of the system.
@@ -731,6 +731,23 @@ views:
     preview: Preview
     previewText: The quick brown fox jumps over the lazy dog
     weight: weight {0}
+
+  appearanceCursor:
+    title: Cursor
+    description: The cursor theme and size, for applications and the desktop at once.
+    apply: Apply
+    loading: Loading cursor themes...
+    errorLoading: 'Error loading cursors: {0}'
+    errorSaving: 'Error applying the cursor: {0}'
+    saved: Cursor applied
+    theme: Theme
+    size: Size
+    selected: Selected
+    noPreview: No preview
+    info: Information
+    infoApply: It applies to applications and the desktop at once. Applications that are already open pick it up when they are reopened.
+    infoPaths: Cursor themes are loaded from
+    infoPathsSeparator: and
 
   appearanceIconPacks:
     title: Icon Packs
@@ -1012,7 +1029,6 @@ views:
     keyboard: Keyboard
     mouse: Mouse
     touchpad: Touchpad
-    cursor: Cursor
     repeatDelay: Repeat delay (ms)
     repeatRate: Repeat rate (char/s)
     numlock: NumLock at startup
@@ -1028,8 +1044,6 @@ views:
     disableWhileTyping: Disable while typing
     disableWithMouse: Disable with mouse connected
     tapAndDrag: Tap and drag
-    cursorTheme: Cursor theme
-    cursorSize: Cursor size
     accelProfiles:
       default: Default
       none: None

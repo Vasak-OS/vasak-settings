@@ -20,6 +20,11 @@ const routes = [
 		component: () => import('@/views/AppearanceThemeView.vue'),
 	},
 	{
+		path: '/appearance-cursor',
+		name: 'appearance-cursor',
+		component: () => import('@/views/CursorsView.vue'),
+	},
+	{
 		path: '/appearance-icon-packs',
 		name: 'appearance-icon-packs',
 		component: () => import('@/views/IconPacksView.vue'),
