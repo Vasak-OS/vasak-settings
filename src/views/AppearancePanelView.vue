@@ -22,6 +22,8 @@ import AppIcon from '@/components/permissions/AppIcon.vue';
 import { listInstalledApps } from '@/services/installed-apps.service';
 import {
 	hasPanelPinned,
+	MENU_ICONS,
+	type MenuIcon,
 	PANEL_ANIMATIONS,
 	PANEL_LAYOUTS,
 	PANEL_POSITIONS,
@@ -31,6 +33,7 @@ import {
 	type PanelPosition,
 	type PanelStyle,
 	type PinnedApp,
+	readMenuIcon,
 	readPanelAnimation,
 	readPanelAutohide,
 	readPanelIndicators,
@@ -38,6 +41,7 @@ import {
 	readPanelPinned,
 	readPanelPosition,
 	readPanelStyle,
+	writeMenuIcon,
 	writePanelAppearance,
 	writePanelIndicators,
 	writePanelPinned,
@@ -88,6 +92,9 @@ const batteryNumber = ref(true);
  * reiniciar la sesión.
  */
 const position = ref<PanelPosition>('top');
+
+/** El icono del botón de menú (`panel.menuIcon`). */
+const menuIcon = ref<MenuIcon>('start-here');
 
 /**
  * El aspecto de la barra: su tipo, su densidad y su animación. Son las claves
@@ -158,6 +165,9 @@ const addOptions = computed(() =>
 const positionOptions = computed(() =>
 	PANEL_POSITIONS.map((side) => ({ value: side, label: t(`views.appearancePanel.lados.${side}`) }))
 );
+const menuIconOptions = computed(() =>
+	MENU_ICONS.map((name) => ({ value: name, label: t(`views.appearancePanel.menuIcons.${name}`) }))
+);
 const styleOptions = computed(() =>
 	PANEL_STYLES.map((name) => ({ value: name, label: t(`views.appearancePanel.styles.${name}`) }))
 );
@@ -225,6 +235,7 @@ onMounted(async () => {
 		volumeNumber.value = indicators.volumeNumber;
 		batteryNumber.value = indicators.batteryNumber;
 		position.value = readPanelPosition(vskConfig.value);
+		menuIcon.value = readMenuIcon(vskConfig.value);
 		style.value = readPanelStyle(vskConfig.value);
 		layout.value = readPanelLayout(vskConfig.value);
 		animation.value = readPanelAnimation(vskConfig.value);
@@ -270,6 +281,7 @@ const saveConfig = async () => {
 		});
 
 		writePanelPosition(vskConfig.value as unknown as Record<string, unknown>, position.value);
+		writeMenuIcon(vskConfig.value as unknown as Record<string, unknown>, menuIcon.value);
 
 		writePanelAppearance(vskConfig.value as unknown as Record<string, unknown>, {
 			style: style.value,
@@ -350,6 +362,17 @@ const saveConfig = async () => {
 						v-model="position"
 						:label="t('views.appearancePanel.position')"
 						:options="positionOptions"
+						class="w-60 shrink-0"
+					/>
+				</div>
+				<div class="flex items-start justify-between gap-4">
+					<p class="text-xs text-tx-muted">
+						{{ t('views.appearancePanel.menuIconHint') }}
+					</p>
+					<SelectField
+						v-model="menuIcon"
+						:label="t('views.appearancePanel.menuIcon')"
+						:options="menuIconOptions"
 						class="w-60 shrink-0"
 					/>
 				</div>

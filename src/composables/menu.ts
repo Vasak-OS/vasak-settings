@@ -56,6 +56,11 @@ export function categoriasDelMenu(t: Traductor): SidebarCategory[] {
 					icon: 'preferences-desktop-icons',
 				},
 				{
+					id: 'appearance-cursor',
+					label: t('sidebar.items.appearanceCursor'),
+					icon: 'input-mouse',
+				},
+				{
 					id: 'appearance-wallpaper',
 					label: t('sidebar.items.appearanceWallpaper'),
 					icon: 'preferences-wallpaper',

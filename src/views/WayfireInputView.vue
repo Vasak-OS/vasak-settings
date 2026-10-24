@@ -8,7 +8,6 @@ import {
 	PageHeader,
 	SelectField,
 	SwitchToggle,
-	TextInput,
 } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted } from 'vue';
 import { useWayfireSection } from '@/composables/useWayfireSection';
@@ -58,8 +57,6 @@ onMounted(async () => {
 		tap_and_drag: 'true',
 		touchpad_accel_profile: 'default',
 		touchpad_cursor_speed: '0',
-		cursor_theme: 'default',
-		cursor_size: '24',
 	});
 });
 </script>
@@ -208,24 +205,6 @@ onMounted(async () => {
 							class="w-full"
 						/>
 						<span class="text-xs text-tx-muted">{{ input.getFloat('touchpad_cursor_speed', 0).toFixed(2) }}</span>
-					</FormGroup>
-				</div>
-			</ConfigSection>
-
-			<ConfigSection :title="t('views.wayfireInput.cursor')">
-				<div class="grid gap-4 sm:grid-cols-2">
-					<FormGroup :label="t('views.wayfireInput.cursorTheme')">
-						<TextInput
-							:model-value="input.getVal('cursor_theme', 'default')"
-							@update:model-value="input.setVal('cursor_theme', $event)"
-						/>
-					</FormGroup>
-					<FormGroup :label="t('views.wayfireInput.cursorSize')">
-						<NumberField
-							:model-value="input.getInt('cursor_size', 24)"
-							:min="16" :max="96" :step="4"
-							@update:model-value="input.setVal('cursor_size', $event)"
-						/>
 					</FormGroup>
 				</div>
 			</ConfigSection>

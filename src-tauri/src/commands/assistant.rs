@@ -19,12 +19,13 @@
 //! un impostor que tome el nombre después de la comprobación no recibe nada —
 //! sobre todo, no recibe la clave.
 
+use std::os::fd::{AsFd, AsRawFd, BorrowedFd};
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::process::Command;
 
 use serde::{Deserialize, Serialize};
-use zbus::zvariant::Type;
+use zbus::zvariant::{DeserializeDict, OwnedFd, Type};
 use zbus::Connection;
 
 use crate::commands::idle::systemctl;
@@ -151,8 +152,21 @@ fn cgroup_is_assistant_unit(cgroup: &str, uid: u32) -> bool {
 /// `/usr/bin/vasak-assistant (deleted)`: se rechaza a propósito (no hay forma
 /// de distinguir ese binario viejo de otro cualquiera) y la persona reinicia el
 /// servicio.
-pub fn owner_is_assistant(pid: u32, main_pid: u32, exe: &Path, cgroup: &str, uid: u32) -> bool {
-    main_pid != 0
+///
+/// `owner_alive` es la última guarda: el pidfd del dueño confirma que su `pid`
+/// no se recicló mientras se leía `/proc/<pid>`. Sin eso, un proceso que muere
+/// y cuyo `pid` hereda el demonio legítimo haría pasar el chequeo contra el
+/// proceso equivocado (#196).
+pub fn owner_is_assistant(
+    pid: u32,
+    main_pid: u32,
+    exe: &Path,
+    cgroup: &str,
+    uid: u32,
+    owner_alive: bool,
+) -> bool {
+    owner_alive
+        && main_pid != 0
         && pid == main_pid
         && exe == Path::new(ASSISTANT_EXE)
         && cgroup_is_assistant_unit(cgroup, uid)
@@ -360,6 +374,37 @@ where
     .deserialize()
 }
 
+/// Las credenciales del dueño de un nombre (`GetConnectionCredentials`). Las
+/// claves que no se nombran acá se ignoran. `ProcessFD` lo entrega dbus-broker;
+/// con un `dbus-daemon` viejo puede faltar y entonces se cae al `pid` solo.
+#[derive(DeserializeDict, Type)]
+#[zvariant(signature = "a{sv}")]
+struct OwnerCredentials {
+    #[zvariant(rename = "ProcessID")]
+    process_id: Option<u32>,
+    #[zvariant(rename = "ProcessFD")]
+    process_fd: Option<OwnedFd>,
+}
+
+/// `true` si el pidfd todavía apunta a un proceso sin cosechar: su `pid` no se
+/// pudo reciclar entre que el bus lo anotó y ahora, así que lo que se leyó de
+/// `/proc/<pid>` es de ese proceso y no de otro que heredó el `pid`. Se
+/// comprueba **después** de esas lecturas. `pidfd_send_signal` con la señal 0
+/// devuelve `ESRCH` recién cuando el proceso fue cosechado.
+fn pidfd_still_alive(fd: BorrowedFd<'_>) -> bool {
+    // SAFETY: syscall sin punteros de salida; `fd` sigue prestado durante la llamada.
+    let rc = unsafe {
+        libc::syscall(
+            libc::SYS_pidfd_send_signal,
+            fd.as_raw_fd(),
+            0,
+            std::ptr::null::<libc::siginfo_t>(),
+            0u32,
+        )
+    };
+    rc == 0
+}
+
 /// El nombre único del dueño de `ar.net.vasak.os.Assistant`, sólo si es el
 /// proceso principal de `vasak-assistant.service` (ver `owner_is_assistant`).
 /// Si nadie lo tiene, lo arranca por activación (que pasa por la misma unidad
@@ -378,9 +423,12 @@ async fn verify_owner(conn: &Connection) -> Result<String, String> {
         }
         Err(e) => return Err(describe(&e)),
     };
-    let pid: u32 = bus_call(conn, "GetConnectionUnixProcessID", &(owner.as_str(),))
+    let creds: OwnerCredentials = bus_call(conn, "GetConnectionCredentials", &(owner.as_str(),))
         .await
         .map_err(|e| describe(&e))?;
+    let Some(pid) = creds.process_id else {
+        return Err(format!("El bus no informó el pid del dueño de {SERVICE}."));
+    };
     let main_pid = blocking(read_main_pid).await?;
     // Cualquier lectura que falle cuenta como «no es el asistente».
     let exe = tokio::fs::read_link(format!("/proc/{pid}/exe"))
@@ -390,7 +438,14 @@ async fn verify_owner(conn: &Connection) -> Result<String, String> {
         .await
         .unwrap_or_default();
     let uid = tokio::fs::metadata("/proc/self").await.map(|m| m.uid());
-    let is_assistant = uid.is_ok_and(|uid| owner_is_assistant(pid, main_pid, &exe, &cgroup, uid));
+    // El pidfd del bus (si lo dio) cierra la carrera del pid reciclado; sin él,
+    // el comportamiento es el de antes.
+    let owner_alive = creds
+        .process_fd
+        .as_ref()
+        .map_or(true, |fd| pidfd_still_alive(fd.as_fd()));
+    let is_assistant =
+        uid.is_ok_and(|uid| owner_is_assistant(pid, main_pid, &exe, &cgroup, uid, owner_alive));
     if !is_assistant {
         crate::logger::log_error(&format!(
             "vasak-assistant: el nombre {SERVICE} lo tiene el pid {pid}, que no es de {UNIT}"
@@ -906,37 +961,79 @@ mod tests {
     #[test]
     fn el_dueno_es_el_asistente_solo_si_cumple_las_cuatro_condiciones() {
         let exe = Path::new("/usr/bin/vasak-assistant");
-        assert!(owner_is_assistant(42, 42, exe, CG, 1000));
+        assert!(owner_is_assistant(42, 42, exe, CG, 1000, true));
         // El MainPID de una unidad detenida o enmascarada es 0: nadie lo es.
-        assert!(!owner_is_assistant(0, 0, exe, CG, 1000));
-        assert!(!owner_is_assistant(42, 0, exe, CG, 1000));
+        assert!(!owner_is_assistant(0, 0, exe, CG, 1000, true));
+        assert!(!owner_is_assistant(42, 0, exe, CG, 1000, true));
         // Otro proceso, aunque esté en el cgroup y corra el binario.
-        assert!(!owner_is_assistant(43, 42, exe, CG, 1000));
+        assert!(!owner_is_assistant(43, 42, exe, CG, 1000, true));
         // Otro binario, o el reemplazado por una actualización.
         assert!(!owner_is_assistant(
             42,
             42,
             Path::new("/usr/bin/python3"),
             CG,
-            1000
+            1000,
+            true
         ));
         assert!(!owner_is_assistant(
             42,
             42,
             Path::new("/usr/bin/vasak-assistant (deleted)"),
             CG,
-            1000
+            1000,
+            true
         ));
-        assert!(!owner_is_assistant(42, 42, Path::new(""), CG, 1000));
+        assert!(!owner_is_assistant(42, 42, Path::new(""), CG, 1000, true));
         // Otro cgroup o el de otro usuario.
         assert!(!owner_is_assistant(
             42,
             42,
             exe,
             "0::/user.slice/session-3.scope\n",
-            1000
+            1000,
+            true
         ));
-        assert!(!owner_is_assistant(42, 42, exe, CG, 1001));
+        assert!(!owner_is_assistant(42, 42, exe, CG, 1001, true));
+    }
+
+    #[test]
+    fn un_pidfd_que_ya_no_esta_vivo_rechaza_al_dueno() {
+        let exe = Path::new("/usr/bin/vasak-assistant");
+        // #196: aunque las cuatro condiciones de `/proc` coincidan, si el pidfd
+        // del bus ya no apunta a un proceso vivo el pid se pudo reciclar entre
+        // la lectura y el uso —y el demonio legítimo pudo heredarlo—, así que el
+        // dueño se rechaza.
+        assert!(!owner_is_assistant(42, 42, exe, CG, 1000, false));
+        // Con el pidfd vivo y todo lo demás en verde, sí es el asistente.
+        assert!(owner_is_assistant(42, 42, exe, CG, 1000, true));
+    }
+
+    #[test]
+    fn pidfd_still_alive_sigue_al_proceso_no_al_pid() {
+        use std::os::fd::{FromRawFd, OwnedFd};
+        // Un hijo vivo: su pidfd está vivo.
+        let mut child = Command::new("sleep")
+            .arg("30")
+            .spawn()
+            .expect("se pudo arrancar el hijo");
+        // SAFETY: pidfd_open sobre un pid recién arrancado que todavía no cosechamos.
+        let raw = unsafe { libc::syscall(libc::SYS_pidfd_open, child.id() as libc::pid_t, 0) };
+        assert!(raw >= 0, "pidfd_open falló: {raw}");
+        // SAFETY: `raw` es un fd recién abierto y válido; lo tomamos en propiedad.
+        let fd = unsafe { OwnedFd::from_raw_fd(raw as i32) };
+        assert!(
+            pidfd_still_alive(fd.as_fd()),
+            "el hijo vivo debería estar vivo"
+        );
+        // Al cosecharlo, su pid queda libre para reciclar y el pidfd da ESRCH:
+        // es justo la señal que #196 necesita para no mirar un pid heredado.
+        child.kill().expect("se pudo matar al hijo");
+        child.wait().expect("se pudo cosechar al hijo");
+        assert!(
+            !pidfd_still_alive(fd.as_fd()),
+            "tras cosechar al hijo el pidfd ya no está vivo"
+        );
     }
 
     // ── Direcciones: http sólo a la propia máquina ────────────────────────────

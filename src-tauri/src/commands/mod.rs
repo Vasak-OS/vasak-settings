@@ -5,6 +5,7 @@ pub mod audio;
 pub mod battery;
 pub mod clipboard;
 pub mod connect;
+pub mod cursors;
 pub mod datetime;
 pub mod dav_discover;
 pub mod fastfetch;
