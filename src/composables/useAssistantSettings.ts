@@ -275,14 +275,16 @@ export function useAssistantSettings(
 		memoryStatus.value = await deps.memoryStatus().catch(() => null);
 	};
 
-	const toggleMemory = (enabled: boolean) =>
-		run(messages.errorMemory, async () => {
+	const toggleMemory = async (enabled: boolean) => {
+		if (busy.value) return;
+		await run(messages.errorMemory, async () => {
 			try {
 				await deps.setMemoryEnabled(enabled);
 			} finally {
 				await refreshMemory();
 			}
 		});
+	};
 
 	const clearMemory = () => {
 		confirmingClear.value = true;
@@ -291,6 +293,7 @@ export function useAssistantSettings(
 		confirmingClear.value = false;
 	};
 	const confirmClear = async () => {
+		if (busy.value) return;
 		confirmingClear.value = false;
 		await run(messages.errorMemory, async () => {
 			try {
