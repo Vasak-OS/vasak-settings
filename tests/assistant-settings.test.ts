@@ -606,4 +606,46 @@ describe('useAssistantSettings: memoria', () => {
 		await s.confirmClear();
 		expect(s.memoryStatus.value).toBeNull();
 	});
+
+	test('dos «confirmar borrar» seguidos, sin esperar, borran una sola vez', async () => {
+		const pendientes: Array<() => void> = [];
+		let llamadas = 0;
+		const f = fake({}, ACTIVE, {
+			clearMemory: () => {
+				llamadas++;
+				return new Promise<void>((ok) => {
+					pendientes.push(ok);
+				});
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		const primera = s.confirmClear();
+		const segunda = s.confirmClear();
+		for (const ok of pendientes) ok();
+		await Promise.all([primera, segunda]);
+		expect(llamadas).toBe(1);
+		expect(s.busy.value).toBe(false);
+	});
+
+	test('dos cambios de la memoria seguidos, sin esperar, se piden una sola vez', async () => {
+		const pendientes: Array<() => void> = [];
+		let llamadas = 0;
+		const f = fake({}, ACTIVE, {
+			setMemoryEnabled: () => {
+				llamadas++;
+				return new Promise<void>((ok) => {
+					pendientes.push(ok);
+				});
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		const primera = s.toggleMemory(true);
+		const segunda = s.toggleMemory(true);
+		for (const ok of pendientes) ok();
+		await Promise.all([primera, segunda]);
+		expect(llamadas).toBe(1);
+		expect(s.busy.value).toBe(false);
+	});
 });
