@@ -53,8 +53,12 @@ const view = computed(() => serviceView(unit.value, status.value));
 const installed = computed(() => !!unit.value?.installed);
 const notice = computed(() => remoteNotice(status.value?.model ?? null));
 const rows = computed(() => consentRows(capabilities.value));
-const memory = computed(() => memoryRow(unit.value, settings.memoryStatus.value));
+const memory = computed(() =>
+	memoryRow(unit.value, settings.memoryStatus.value, settings.memoryError.value)
+);
 const memoryHint = computed(() => {
+	if (memory.value.state === 'error')
+		return t('views.assistant.memory.readError').replace('{0}', () => memory.value.reason);
 	if (memory.value.state === 'unsupported') return t('views.assistant.memory.unsupported');
 	if (memory.value.state !== 'ready') return t('views.assistant.memory.needsService');
 	return (!memory.value.available && memory.value.reason) || t('views.assistant.memory.hint');

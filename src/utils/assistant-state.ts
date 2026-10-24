@@ -44,7 +44,7 @@ export function consentRows(capabilities: AssistantCapability[] | null): Assista
 	);
 }
 
-export type MemoryState = 'unsupported' | 'notInstalled' | 'off' | 'ready';
+export type MemoryState = 'unsupported' | 'error' | 'notInstalled' | 'off' | 'ready';
 
 export interface MemoryRow {
 	state: MemoryState;
@@ -56,15 +56,18 @@ export interface MemoryRow {
 
 /**
  * La fila de memoria. `memory` es `null` si el demonio es viejo y no tiene el
- * método, y `undefined` mientras no se pidió.
+ * método, y `undefined` mientras no se pidió. `readError` es el motivo de una
+ * llamada rechazada: es `error` y va en `reason`, distinto de `unsupported`.
  */
 export function memoryRow(
 	unit: AssistantUnitState | null,
-	memory: AssistantMemoryStatus | null | undefined
+	memory: AssistantMemoryStatus | null | undefined,
+	readError = ''
 ): MemoryRow {
 	const empty = { enabled: false, available: false, reason: '', bytes: 0 };
 	if (!unit?.installed) return { state: 'notInstalled', ...empty };
 	if (!unit.active) return { state: 'off', ...empty };
+	if (readError) return { state: 'error', ...empty, reason: readError };
 	if (!memory) return { state: 'unsupported', ...empty };
 	return { state: 'ready', ...memory };
 }

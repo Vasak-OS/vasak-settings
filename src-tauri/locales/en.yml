@@ -258,6 +258,7 @@ views:
       title: Memory
       label: Remember between conversations
       hint: Turning it off keeps what was learned; clearing is separate and asks for confirmation.
+      readError: "Could not read the memory status: {0}"
       unsupported: "Not available: update vasak-assistant"
       needsService: Turn the assistant on to use memory.
       size: "Uses {0}"

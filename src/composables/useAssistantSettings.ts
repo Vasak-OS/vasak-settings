@@ -88,6 +88,8 @@ export interface AssistantSettings {
 	models: Ref<string[] | null>;
 	/** `null`: el demonio es viejo y no tiene memoria; `undefined`: no se preguntó. */
 	memoryStatus: Ref<AssistantMemoryStatus | null | undefined>;
+	/** Por qué no se pudo leer el estado de la memoria (la llamada se rechazó); vacío si se pudo. */
+	memoryError: Ref<string>;
 	/** La confirmación de borrar la memoria está abierta. */
 	confirmingClear: Ref<boolean>;
 	/** `true`/`false`: hay o no clave; `null`: el demonio es viejo y no sabe contestar; `undefined`: no se preguntó. */
@@ -133,6 +135,7 @@ export function useAssistantSettings(
 	const models = ref<string[] | null>(null);
 	const hasKey = ref<boolean | null | undefined>(undefined);
 	const memoryStatus = ref<AssistantMemoryStatus | null | undefined>(undefined);
+	const memoryError = ref('');
 	const confirmingClear = ref(false);
 	const config = ref<AssistantConfig>(readAssistantConfig(null));
 	const nameDraft = ref(config.value.name);
@@ -166,6 +169,7 @@ export function useAssistantSettings(
 		models.value = null;
 		hasKey.value = undefined;
 		memoryStatus.value = undefined;
+		memoryError.value = '';
 		if (!unit.value?.active) return;
 		const url = config.value.url;
 		const [st, caps, list, key, mem] = await Promise.allSettled([
@@ -179,8 +183,9 @@ export function useAssistantSettings(
 		if (caps.status === 'fulfilled') capabilities.value = caps.value;
 		if (list.status === 'fulfilled') models.value = list.value;
 		if (key.status === 'fulfilled') hasKey.value = key.value;
-		// Si falla la llamada, la fila queda como «no disponible».
-		memoryStatus.value = mem.status === 'fulfilled' ? mem.value : null;
+		// `null` es un demonio viejo; un rechazo es otra cosa y no se disfraza de eso.
+		if (mem.status === 'fulfilled') memoryStatus.value = mem.value;
+		else memoryError.value = String(mem.reason);
 	};
 
 	const refresh = async () => {
@@ -272,7 +277,14 @@ export function useAssistantSettings(
 	};
 
 	const refreshMemory = async () => {
-		memoryStatus.value = await deps.memoryStatus().catch(() => null);
+		try {
+			memoryStatus.value = await deps.memoryStatus();
+			memoryError.value = '';
+		} catch (err) {
+			// Sin pisar `error`: puede ser el de la operación que acaba de fallar.
+			memoryStatus.value = undefined;
+			memoryError.value = String(err);
+		}
 	};
 
 	const toggleMemory = async (enabled: boolean) => {
@@ -311,6 +323,7 @@ export function useAssistantSettings(
 		models,
 		hasKey,
 		memoryStatus,
+		memoryError,
 		confirmingClear,
 		config,
 		nameDraft,

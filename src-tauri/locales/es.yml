@@ -258,6 +258,7 @@ views:
       title: Memoria
       label: Recordar entre conversaciones
       hint: Apagar conserva lo aprendido; borrar es aparte y pide confirmación.
+      readError: "No se pudo leer el estado de la memoria: {0}"
       unsupported: "No disponible: actualizá vasak-assistant"
       needsService: Encendé el asistente para usar la memoria.
       size: "Ocupa {0}"
