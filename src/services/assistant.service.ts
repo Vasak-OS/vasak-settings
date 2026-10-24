@@ -55,3 +55,22 @@ export const assistantHasProviderKey = (url: string): Promise<boolean | null> =>
 
 export const setAssistantProviderKey = (url: string, key: string): Promise<void> =>
 	invoke<void>('set_assistant_provider_key', { url, key });
+
+/** Cómo está la memoria del asistente; `bytes` es lo que ocupa en disco. */
+export interface AssistantMemoryStatus {
+	enabled: boolean;
+	available: boolean;
+	reason: string;
+	bytes: number;
+}
+
+/** El estado de la memoria; `null` si el demonio es viejo y no tiene el método. */
+export const assistantMemoryStatus = (): Promise<AssistantMemoryStatus | null> =>
+	invoke<AssistantMemoryStatus | null>('assistant_memory_status');
+
+/** Enciende o apaga la memoria. Apagar no borra lo aprendido. */
+export const setAssistantMemoryEnabled = (enabled: boolean): Promise<void> =>
+	invoke<void>('set_assistant_memory_enabled', { enabled });
+
+/** Borra lo aprendido. Con el llavero bloqueado falla y no toca nada. */
+export const clearAssistantMemory = (): Promise<void> => invoke<void>('clear_assistant_memory');

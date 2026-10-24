@@ -256,7 +256,13 @@ views:
     memory:
       title: Memoria
       label: Recordar entre conversaciones
-      hint: Todavía no está disponible.
+      hint: Apagar conserva lo aprendido; borrar es aparte y pide confirmación.
+      unsupported: "No disponible: actualizá vasak-assistant"
+      needsService: Encendé el asistente para usar la memoria.
+      size: "Ocupa {0}"
+      error: "No se pudo cambiar la memoria: {0}"
+      confirmTitle: ¿Borrar la memoria?
+      confirmBody: Se borra todo lo que el asistente aprendió. No se puede deshacer.
       clear: Borrar memoria
     errors:
       backend: El proveedor tiene que ser Ollama u OpenAI.

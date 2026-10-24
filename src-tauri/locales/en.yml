@@ -256,7 +256,13 @@ views:
     memory:
       title: Memory
       label: Remember between conversations
-      hint: Not available yet.
+      hint: Turning it off keeps what was learned; clearing is separate and asks for confirmation.
+      unsupported: "Not available: update vasak-assistant"
+      needsService: Turn the assistant on to use memory.
+      size: "Uses {0}"
+      error: "Could not change memory: {0}"
+      confirmTitle: Clear memory?
+      confirmBody: Everything the assistant learned is deleted. This cannot be undone.
       clear: Clear memory
     errors:
       backend: The provider must be Ollama or OpenAI.
