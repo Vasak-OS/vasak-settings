@@ -38,7 +38,8 @@ const ERROR_PREFIX: &str = "ar.net.vasak.os.Assistant.Error.";
 const UNKNOWN_METHOD: &str = "org.freedesktop.DBus.Error.UnknownMethod";
 const NAME_HAS_NO_OWNER: &str = "org.freedesktop.DBus.Error.NameHasNoOwner";
 const SERVICE_UNKNOWN: &str = "org.freedesktop.DBus.Error.ServiceUnknown";
-const ACCESS_DENIED: &str = "AccessDenied";
+// Sufijo de `ERROR_PREFIX`; no es `org.freedesktop.DBus.Error.AccessDenied`.
+const ASSISTANT_ACCESS_DENIED: &str = "AccessDenied";
 
 pub const MAX_PROVIDER_URL_BYTES: usize = 2048;
 pub const MAX_PROVIDER_KEY_BYTES: usize = 4096;
@@ -221,7 +222,7 @@ pub fn validate_provider_key(key: &str) -> Result<&str, String> {
 pub fn describe_service_error(name: &str, description: Option<&str>) -> String {
     let description = description.map(str::trim).filter(|d| !d.is_empty());
     if let Some(kind) = name.strip_prefix(ERROR_PREFIX) {
-        if kind == ACCESS_DENIED {
+        if kind == ASSISTANT_ACCESS_DENIED {
             return "El asistente no le permite esta operación a esta aplicación.".into();
         }
         return description
