@@ -4,10 +4,13 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
 	assistantCapabilities,
 	assistantHasProviderKey,
+	assistantMemoryStatus,
 	assistantModels,
 	assistantStatus,
 	assistantUnitState,
+	clearAssistantMemory,
 	restartAssistantService,
+	setAssistantMemoryEnabled,
 	setAssistantProviderKey,
 	setAssistantServiceEnabled,
 } from '../src/services/assistant.service';
@@ -29,6 +32,9 @@ describe('assistant.service', () => {
 		await assistantModels();
 		await assistantHasProviderKey('https://api.ejemplo.com/v1');
 		await setAssistantProviderKey('https://api.ejemplo.com/v1', 'sk-x');
+		await assistantMemoryStatus();
+		await setAssistantMemoryEnabled(false);
+		await clearAssistantMemory();
 
 		expect(backend.calls).toEqual([
 			{ command: 'assistant_unit_state', args: undefined },
@@ -42,6 +48,9 @@ describe('assistant.service', () => {
 				command: 'set_assistant_provider_key',
 				args: { url: 'https://api.ejemplo.com/v1', key: 'sk-x' },
 			},
+			{ command: 'assistant_memory_status', args: undefined },
+			{ command: 'set_assistant_memory_enabled', args: { enabled: false } },
+			{ command: 'clear_assistant_memory', args: undefined },
 		]);
 	});
 

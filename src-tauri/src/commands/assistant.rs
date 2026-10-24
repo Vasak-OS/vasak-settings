@@ -1001,6 +1001,89 @@ mod tests {
             .starts_with("No se pudo hablar con el asistente"));
     }
 
+    // ── Memoria ───────────────────────────────────────────────────────────────
+
+    fn memoria() -> AssistantMemoryStatus {
+        AssistantMemoryStatus {
+            enabled: true,
+            available: false,
+            reason: "llavero bloqueado".into(),
+            bytes: 1_572_864,
+        }
+    }
+
+    #[test]
+    fn la_firma_de_la_memoria_es_la_del_contrato() {
+        assert_eq!(firma::<AssistantMemoryStatus>(), "(bbst)");
+    }
+
+    #[test]
+    fn la_memoria_sobrevive_a_la_ida_y_vuelta_por_el_cable() {
+        assert_eq!(ida_y_vuelta(&memoria()), memoria());
+        let grande = AssistantMemoryStatus {
+            bytes: u64::MAX,
+            ..memoria()
+        };
+        assert_eq!(ida_y_vuelta(&grande), grande);
+    }
+
+    #[test]
+    fn la_memoria_va_a_la_ventana_en_camel_case_con_bytes_como_numero() {
+        let json = serde_json::to_value(memoria()).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!({
+                "enabled": true,
+                "available": false,
+                "reason": "llavero bloqueado",
+                "bytes": 1_572_864u64
+            })
+        );
+    }
+
+    #[test]
+    fn acceso_denegado_dice_que_la_aplicacion_no_tiene_permiso() {
+        let nombre = format!("{ERROR_PREFIX}AccessDenied");
+        let esperado = "El asistente no le permite esta operación a esta aplicación.";
+        // Con o sin descripción del servicio, la frase es la misma.
+        assert_eq!(describe_service_error(&nombre, None), esperado);
+        assert_eq!(
+            describe_service_error(&nombre, Some("uid 1000 no autorizado")),
+            esperado
+        );
+    }
+
+    #[test]
+    fn un_metodo_desconocido_se_detecta_y_no_se_confunde_con_acceso_denegado() {
+        use zbus::names::ErrorName;
+        let mensaje = || {
+            zbus::message::Message::method("/", "X")
+                .unwrap()
+                .build(&())
+                .unwrap()
+        };
+        let con = |nombre: &str| {
+            zbus::Error::MethodError(
+                ErrorName::try_from(nombre.to_string()).unwrap().into(),
+                None,
+                mensaje(),
+            )
+        };
+        assert!(is_unknown_method(&con(UNKNOWN_METHOD)));
+        assert!(!is_unknown_method(&con(&format!(
+            "{ERROR_PREFIX}AccessDenied"
+        ))));
+        assert_eq!(
+            describe(&con(&format!("{ERROR_PREFIX}AccessDenied"))),
+            "El asistente no le permite esta operación a esta aplicación."
+        );
+    }
+
+    #[test]
+    fn el_mensaje_de_servicio_sin_memoria_pide_actualizar() {
+        assert!(MEMORY_UNSUPPORTED.contains("actualizá vasak-assistant"));
+    }
+
     // ── Pegamento con un bus de sesión propio ─────────────────────────────────
 
     use std::io::{BufRead, BufReader};
@@ -1064,6 +1147,16 @@ mod tests {
             self.0.fetch_add(1, Ordering::SeqCst);
             true
         }
+        fn memory_status(&self) -> (bool, bool, String, u64) {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            (true, true, String::new(), 0)
+        }
+        fn set_memory_enabled(&self, _enabled: bool) {
+            self.0.fetch_add(1, Ordering::SeqCst);
+        }
+        fn clear_memory(&self) {
+            self.0.fetch_add(1, Ordering::SeqCst);
+        }
         fn models(&self) -> Vec<String> {
             self.0.fetch_add(1, Ordering::SeqCst);
             vec![]
@@ -1117,6 +1210,12 @@ mod tests {
             assert!(rechazado(&assistant_models().await.unwrap_err()));
             assert!(rechazado(&assistant_capabilities().await.unwrap_err()));
             assert!(rechazado(&assistant_status().await.unwrap_err()));
+            // Ni la memoria: ni el estado, ni encenderla, ni borrarla.
+            assert!(rechazado(&assistant_memory_status().await.unwrap_err()));
+            assert!(rechazado(
+                &set_assistant_memory_enabled(true).await.unwrap_err()
+            ));
+            assert!(rechazado(&clear_assistant_memory().await.unwrap_err()));
             // La clave, ni ninguna otra llamada, llegó al impostor.
             assert_eq!(llamadas.load(Ordering::SeqCst), 0);
         });
