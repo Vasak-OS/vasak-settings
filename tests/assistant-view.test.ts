@@ -58,6 +58,8 @@ async function mountView(opts: {
 	status?: AssistantStatus;
 	/** `null`: demonio viejo sin memoria. */
 	memory?: AssistantMemoryStatus | null;
+	/** Hace que `assistant_memory_status` se rechace con este motivo. */
+	memoryError?: string;
 }) {
 	backend = fakeBackend(opts.config ?? {});
 	backend.handlers.assistant_unit_state = () => opts.unit ?? ACTIVE;
@@ -68,8 +70,10 @@ async function mountView(opts: {
 	];
 	backend.handlers.assistant_models = () => ['llama3'];
 	backend.handlers.assistant_has_provider_key = () => false;
-	backend.handlers.assistant_memory_status = () =>
-		opts.memory === undefined ? MEMORY : opts.memory;
+	backend.handlers.assistant_memory_status = () => {
+		if (opts.memoryError) throw new Error(opts.memoryError);
+		return opts.memory === undefined ? MEMORY : opts.memory;
+	};
 	storeSpy = spyOn(plugin, 'useConfigStore').mockImplementation(
 		() => ({ loadConfig: async () => {} }) as unknown as ReturnType<typeof plugin.useConfigStore>
 	);
@@ -356,6 +360,16 @@ describe('la memoria del asistente en la pantalla', () => {
 		expect(shown(wrapper, 'views.assistant.memory.unsupported')).toBe(true);
 		expect(memorySwitch(wrapper).attributes('disabled')).toBeDefined();
 		expect(wrapper.text()).not.toContain('1.5 KB');
+	});
+
+	test('si la lectura de la memoria se rechaza, muestra el motivo y bloquea interruptor y borrado', async () => {
+		withCatalog();
+		const wrapper = await mountView({ memoryError: 'llavero bloqueado' });
+		const readError = textsOf('views.assistant.memory.readError')[1] ?? '';
+		expect(wrapper.text()).toContain(readError.replace('{0}', () => 'Error: llavero bloqueado'));
+		expect(wrapper.text()).not.toContain(textsOf('views.assistant.memory.unsupported')[1]);
+		expect(memorySwitch(wrapper).attributes('disabled')).toBeDefined();
+		expect(buttonByLabel('views.assistant.memory.clear')[0].disabled).toBe(true);
 	});
 
 	test('con el servicio apagado pide encenderlo y no consulta la memoria', async () => {

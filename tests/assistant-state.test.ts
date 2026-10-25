@@ -147,6 +147,28 @@ describe('memoryRow', () => {
 		});
 		expect(memoryRow(unit(), status)).toEqual({ state: 'ready', ...status });
 	});
+
+	test('con un error de lectura: estado «error» con el motivo, y manda sobre «no soportado»', () => {
+		const row = memoryRow(unit(), undefined, 'llavero bloqueado');
+		expect(row).toEqual({
+			state: 'error',
+			enabled: false,
+			available: false,
+			reason: 'llavero bloqueado',
+			bytes: 0,
+		});
+		expect(memoryRow(unit(), null, 'llavero bloqueado').state).toBe('error');
+	});
+
+	test('con el servicio apagado o sin instalar no se muestra el error', () => {
+		expect(memoryRow(unit({ active: false }), undefined, 'x').state).toBe('off');
+		expect(memoryRow(unit({ installed: false }), undefined, 'x').state).toBe('notInstalled');
+	});
+
+	test('sin error de lectura (vacío) sigue el camino de siempre', () => {
+		expect(memoryRow(unit(), null, '').state).toBe('unsupported');
+		expect(memoryRow(unit(), memory(), '').state).toBe('ready');
+	});
 });
 
 describe('canToggleMemory', () => {
@@ -173,7 +195,7 @@ describe('canToggleMemory', () => {
 	});
 
 	test('fuera de «listo» nunca', () => {
-		for (const state of ['unsupported', 'notInstalled', 'off'] as const) {
+		for (const state of ['unsupported', 'error', 'notInstalled', 'off'] as const) {
 			expect(canToggleMemory(row({ state, enabled: true, available: true }))).toBe(false);
 		}
 	});
@@ -199,7 +221,7 @@ describe('canClearMemory', () => {
 	});
 
 	test('fuera de «listo» nunca', () => {
-		for (const state of ['unsupported', 'notInstalled', 'off'] as const) {
+		for (const state of ['unsupported', 'error', 'notInstalled', 'off'] as const) {
 			expect(canClearMemory(row({ state, bytes: 100, enabled: true }))).toBe(false);
 		}
 	});

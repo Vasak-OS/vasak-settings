@@ -484,22 +484,50 @@ describe('useAssistantSettings: memoria', () => {
 		expect(s.memoryStatus.value).toBeUndefined();
 	});
 
-	test('un demonio viejo (null) o una llamada que falla dejan la fila en «no disponible»', async () => {
-		const viejo = fake({}, ACTIVE, { memoryStatus: async () => null });
-		const a = useAssistantSettings(MESSAGES, viejo.deps);
-		await a.refresh();
-		expect(a.memoryStatus.value).toBeNull();
+	test('un demonio viejo (null) deja la fila en «no soportado», sin error', async () => {
+		const f = fake({}, ACTIVE, { memoryStatus: async () => null });
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		expect(s.memoryStatus.value).toBeNull();
+		expect(s.memoryError.value).toBe('');
+	});
 
-		const roto = fake({}, ACTIVE, {
+	test('una llamada rechazada guarda el motivo y no se disfraza de demonio viejo', async () => {
+		const f = fake({}, ACTIVE, {
 			memoryStatus: () => {
-				throw new Error('sin memoria');
+				throw new Error('llavero bloqueado');
 			},
 		});
-		const b = useAssistantSettings(MESSAGES, roto.deps);
-		await b.refresh();
-		expect(b.memoryStatus.value).toBeNull();
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		expect(s.memoryStatus.value).toBeUndefined();
+		expect(s.memoryError.value).toContain('llavero bloqueado');
 		// Lo demás se cargó igual.
-		expect(b.status.value).toEqual(STATUS);
+		expect(s.status.value).toEqual(STATUS);
+	});
+
+	test('el motivo se limpia con una lectura exitosa', async () => {
+		let falla = true;
+		const f = fake({}, ACTIVE, {
+			memoryStatus: async () => {
+				if (falla) throw new Error('sin respuesta');
+				return MEMORY;
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		expect(s.memoryError.value).toContain('sin respuesta');
+		falla = false;
+		await s.refresh();
+		expect(s.memoryError.value).toBe('');
+		expect(s.memoryStatus.value).toEqual(MEMORY);
+	});
+
+	test('con la unidad inactiva no queda ningún error de lectura', async () => {
+		const f = fake({}, INACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		expect(s.memoryError.value).toBe('');
 	});
 
 	test('encender la memoria la pide, refresca el estado y no borra nada', async () => {
@@ -590,7 +618,7 @@ describe('useAssistantSettings: memoria', () => {
 		expect(s.busy.value).toBe(false);
 	});
 
-	test('si la lectura posterior también falla, la fila pasa a «no disponible»', async () => {
+	test('si la lectura posterior falla, queda el motivo y no «demonio viejo»', async () => {
 		let borrada = false;
 		const f = fake({}, ACTIVE, {
 			clearMemory: async () => {
@@ -604,7 +632,8 @@ describe('useAssistantSettings: memoria', () => {
 		const s = useAssistantSettings(MESSAGES, f.deps);
 		await s.refresh();
 		await s.confirmClear();
-		expect(s.memoryStatus.value).toBeNull();
+		expect(s.memoryStatus.value).toBeUndefined();
+		expect(s.memoryError.value).toContain('sin respuesta');
 	});
 
 	test('dos «confirmar borrar» seguidos, sin esperar, borran una sola vez', async () => {
