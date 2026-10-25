@@ -631,9 +631,42 @@ describe('useAssistantSettings: memoria', () => {
 		});
 		const s = useAssistantSettings(MESSAGES, f.deps);
 		await s.refresh();
+		s.clearMemory();
 		await s.confirmClear();
 		expect(s.memoryStatus.value).toBeUndefined();
 		expect(s.memoryError.value).toContain('sin respuesta');
+	});
+
+	test('confirmar sin haber abierto la confirmación no borra', async () => {
+		const f = fake({}, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		f.log.length = 0;
+		await s.confirmClear();
+		expect(f.log).toEqual([]);
+		expect(s.busy.value).toBe(false);
+	});
+
+	test('confirmar después de cancelar no borra', async () => {
+		const f = fake({}, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		s.clearMemory();
+		s.cancelClear();
+		f.log.length = 0;
+		await s.confirmClear();
+		expect(f.log).not.toContain('clearMemory');
+	});
+
+	test('con la confirmación abierta borra una sola vez, y una segunda confirmación ya no borra', async () => {
+		const f = fake({}, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		s.clearMemory();
+		f.log.length = 0;
+		await s.confirmClear();
+		await s.confirmClear();
+		expect(f.log.filter((c) => c === 'clearMemory')).toHaveLength(1);
 	});
 
 	test('dos «confirmar borrar» seguidos, sin esperar, borran una sola vez', async () => {
@@ -649,6 +682,7 @@ describe('useAssistantSettings: memoria', () => {
 		});
 		const s = useAssistantSettings(MESSAGES, f.deps);
 		await s.refresh();
+		s.clearMemory();
 		const primera = s.confirmClear();
 		const segunda = s.confirmClear();
 		for (const ok of pendientes) ok();
