@@ -305,7 +305,7 @@ export function useAssistantSettings(
 		confirmingClear.value = false;
 	};
 	const confirmClear = async () => {
-		if (busy.value) return;
+		if (busy.value || !confirmingClear.value) return;
 		confirmingClear.value = false;
 		await run(messages.errorMemory, async () => {
 			try {
