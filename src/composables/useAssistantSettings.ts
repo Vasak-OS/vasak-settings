@@ -12,14 +12,18 @@ import { readConfig, type VSKConfig, writeConfig } from '@vasakgroup/plugin-conf
 import { type Ref, ref } from 'vue';
 import {
 	type AssistantCapability,
+	type AssistantMemoryStatus,
 	type AssistantStatus,
 	type AssistantUnitState,
 	assistantCapabilities,
 	assistantHasProviderKey,
+	assistantMemoryStatus,
 	assistantModels,
 	assistantStatus,
 	assistantUnitState,
+	clearAssistantMemory,
 	restartAssistantService,
+	setAssistantMemoryEnabled,
 	setAssistantProviderKey,
 	setAssistantServiceEnabled,
 } from '@/services/assistant.service';
@@ -45,6 +49,9 @@ export interface AssistantDeps {
 	models: () => Promise<string[]>;
 	hasKey: (url: string) => Promise<boolean | null>;
 	setKey: (url: string, key: string) => Promise<void>;
+	memoryStatus: () => Promise<AssistantMemoryStatus | null>;
+	setMemoryEnabled: (enabled: boolean) => Promise<void>;
+	clearMemory: () => Promise<void>;
 }
 
 const defaultDeps: AssistantDeps = {
@@ -58,6 +65,9 @@ const defaultDeps: AssistantDeps = {
 	models: assistantModels,
 	hasKey: assistantHasProviderKey,
 	setKey: setAssistantProviderKey,
+	memoryStatus: assistantMemoryStatus,
+	setMemoryEnabled: setAssistantMemoryEnabled,
+	clearMemory: clearAssistantMemory,
 };
 
 /** Los textos de los mensajes, ya traducidos. */
@@ -67,6 +77,7 @@ export interface AssistantMessages {
 	errorService: (reason: string) => string;
 	invalidName: () => string;
 	emptyKey: () => string;
+	errorMemory: (reason: string) => string;
 }
 
 export interface AssistantSettings {
@@ -75,6 +86,12 @@ export interface AssistantSettings {
 	capabilities: Ref<AssistantCapability[] | null>;
 	/** Los modelos que ofrece el proveedor; `null` si no se pudo pedir (la vista cae a texto). */
 	models: Ref<string[] | null>;
+	/** `null`: el demonio es viejo y no tiene memoria; `undefined`: no se preguntó. */
+	memoryStatus: Ref<AssistantMemoryStatus | null | undefined>;
+	/** Por qué no se pudo leer el estado de la memoria (la llamada se rechazó); vacío si se pudo. */
+	memoryError: Ref<string>;
+	/** La confirmación de borrar la memoria está abierta. */
+	confirmingClear: Ref<boolean>;
 	/** `true`/`false`: hay o no clave; `null`: el demonio es viejo y no sabe contestar; `undefined`: no se preguntó. */
 	hasKey: Ref<boolean | null | undefined>;
 	config: Ref<AssistantConfig>;
@@ -91,6 +108,12 @@ export interface AssistantSettings {
 	saveName: () => Promise<void>;
 	saveModel: () => Promise<void>;
 	saveKey: () => Promise<void>;
+	toggleMemory: (enabled: boolean) => Promise<void>;
+	/** Pide confirmación; no borra. */
+	clearMemory: () => void;
+	cancelClear: () => void;
+	/** Borra de verdad, tras la confirmación. */
+	confirmClear: () => Promise<void>;
 }
 
 const SAVED_MS = 3000;
@@ -111,6 +134,9 @@ export function useAssistantSettings(
 	const capabilities = ref<AssistantCapability[] | null>(null);
 	const models = ref<string[] | null>(null);
 	const hasKey = ref<boolean | null | undefined>(undefined);
+	const memoryStatus = ref<AssistantMemoryStatus | null | undefined>(undefined);
+	const memoryError = ref('');
+	const confirmingClear = ref(false);
 	const config = ref<AssistantConfig>(readAssistantConfig(null));
 	const nameDraft = ref(config.value.name);
 	const draft = ref<ModelDraft>(draftOf(config.value));
@@ -142,18 +168,24 @@ export function useAssistantSettings(
 		capabilities.value = null;
 		models.value = null;
 		hasKey.value = undefined;
+		memoryStatus.value = undefined;
+		memoryError.value = '';
 		if (!unit.value?.active) return;
 		const url = config.value.url;
-		const [st, caps, list, key] = await Promise.allSettled([
+		const [st, caps, list, key, mem] = await Promise.allSettled([
 			deps.status(),
 			deps.capabilities(),
 			deps.models(),
 			deps.hasKey(url),
+			Promise.resolve().then(() => deps.memoryStatus()),
 		]);
 		if (st.status === 'fulfilled') status.value = st.value;
 		if (caps.status === 'fulfilled') capabilities.value = caps.value;
 		if (list.status === 'fulfilled') models.value = list.value;
 		if (key.status === 'fulfilled') hasKey.value = key.value;
+		// `null` es un demonio viejo; un rechazo es otra cosa y no se disfraza de eso.
+		if (mem.status === 'fulfilled') memoryStatus.value = mem.value;
+		else memoryError.value = String(mem.reason);
 	};
 
 	const refresh = async () => {
@@ -244,12 +276,55 @@ export function useAssistantSettings(
 		});
 	};
 
+	const refreshMemory = async () => {
+		try {
+			memoryStatus.value = await deps.memoryStatus();
+			memoryError.value = '';
+		} catch (err) {
+			// Sin pisar `error`: puede ser el de la operación que acaba de fallar.
+			memoryStatus.value = undefined;
+			memoryError.value = String(err);
+		}
+	};
+
+	const toggleMemory = async (enabled: boolean) => {
+		if (busy.value) return;
+		await run(messages.errorMemory, async () => {
+			try {
+				await deps.setMemoryEnabled(enabled);
+			} finally {
+				await refreshMemory();
+			}
+		});
+	};
+
+	const clearMemory = () => {
+		confirmingClear.value = true;
+	};
+	const cancelClear = () => {
+		confirmingClear.value = false;
+	};
+	const confirmClear = async () => {
+		if (busy.value || !confirmingClear.value) return;
+		confirmingClear.value = false;
+		await run(messages.errorMemory, async () => {
+			try {
+				await deps.clearMemory();
+			} finally {
+				await refreshMemory();
+			}
+		});
+	};
+
 	return {
 		unit,
 		status,
 		capabilities,
 		models,
 		hasKey,
+		memoryStatus,
+		memoryError,
+		confirmingClear,
 		config,
 		nameDraft,
 		draft,
@@ -263,5 +338,9 @@ export function useAssistantSettings(
 		saveName,
 		saveModel,
 		saveKey,
+		toggleMemory,
+		clearMemory,
+		cancelClear,
+		confirmClear,
 	};
 }

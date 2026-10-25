@@ -10,6 +10,11 @@ import {
 	AlertMessage,
 	Badge,
 	ConfigSection,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
 	FormGroup,
 	PageHeader,
 	PasswordField,
@@ -22,7 +27,15 @@ import {
 import { computed, onMounted } from 'vue';
 import { useAssistantSettings } from '@/composables/useAssistantSettings';
 import { ASSISTANT_PROVIDERS, canSaveKey, DEFAULT_URLS } from '@/utils/assistant-config';
-import { consentRows, memoryRow, remoteNotice, serviceView } from '@/utils/assistant-state';
+import {
+	canClearMemory,
+	canToggleMemory,
+	consentRows,
+	formatBytes,
+	memoryRow,
+	remoteNotice,
+	serviceView,
+} from '@/utils/assistant-state';
 
 const { t } = useI18n();
 
@@ -32,6 +45,7 @@ const settings = useAssistantSettings({
 	errorService: (reason) => t('views.assistant.errorService').replace('{0}', () => reason),
 	invalidName: () => t('views.assistant.name.invalid'),
 	emptyKey: () => t('views.assistant.key.empty'),
+	errorMemory: (reason) => t('views.assistant.memory.error').replace('{0}', () => reason),
 });
 const { unit, status, capabilities, models, hasKey, config, draft, busy } = settings;
 
@@ -39,7 +53,16 @@ const view = computed(() => serviceView(unit.value, status.value));
 const installed = computed(() => !!unit.value?.installed);
 const notice = computed(() => remoteNotice(status.value?.model ?? null));
 const rows = computed(() => consentRows(capabilities.value));
-const memory = computed(() => memoryRow(capabilities.value));
+const memory = computed(() =>
+	memoryRow(unit.value, settings.memoryStatus.value, settings.memoryError.value)
+);
+const memoryHint = computed(() => {
+	if (memory.value.state === 'error')
+		return t('views.assistant.memory.readError').replace('{0}', () => memory.value.reason);
+	if (memory.value.state === 'unsupported') return t('views.assistant.memory.unsupported');
+	if (memory.value.state !== 'ready') return t('views.assistant.memory.needsService');
+	return (!memory.value.available && memory.value.reason) || t('views.assistant.memory.hint');
+});
 
 const modeOptions = computed(() => [
 	{ value: 'local', label: t('views.assistant.model.local') },
@@ -239,14 +262,41 @@ onMounted(settings.refresh);
 			<ConfigSection :title="t('views.assistant.memory.title')">
 				<SwitchRow
 					:label="t('views.assistant.memory.label')"
-					:description="memory.reason || t('views.assistant.memory.hint')"
-					:model-value="false"
-					disabled
+					:description="memoryHint"
+					:model-value="memory.enabled"
+					:disabled="busy || !canToggleMemory(memory)"
+					@update:model-value="(value) => settings.toggleMemory(value)"
 				/>
+				<p v-if="memory.state === 'ready'" class="mt-3 min-w-0 text-sm text-tx-muted">
+					{{ t('views.assistant.memory.size').replace('{0}', () => formatBytes(memory.bytes)) }}
+				</p>
 				<div class="mt-3">
-					<ActionButton :label="t('views.assistant.memory.clear')" variant="danger" disabled />
+					<ActionButton
+						:label="t('views.assistant.memory.clear')"
+						variant="danger"
+						:disabled="busy || !canClearMemory(memory)"
+						@click="settings.clearMemory()"
+					/>
 				</div>
 			</ConfigSection>
+
+			<Dialog :open="settings.confirmingClear.value" @update:open="(open: boolean) => { if (!open) settings.cancelClear(); }">
+				<DialogContent size="md">
+					<DialogHeader close-style="label" :close-label="t('common.close')">
+						<DialogTitle>{{ t('views.assistant.memory.confirmTitle') }}</DialogTitle>
+						<DialogDescription>{{ t('views.assistant.memory.confirmBody') }}</DialogDescription>
+					</DialogHeader>
+					<div class="mt-4 flex flex-wrap justify-end gap-2">
+						<ActionButton :label="t('common.cancel')" variant="secondary" @click="settings.cancelClear()" />
+						<ActionButton
+							:label="t('views.assistant.memory.clear')"
+							variant="danger"
+							:disabled="busy"
+							@click="settings.confirmClear()"
+						/>
+					</div>
+				</DialogContent>
+			</Dialog>
 		</div>
 	</div>
 </template>

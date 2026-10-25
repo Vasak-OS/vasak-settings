@@ -1,7 +1,7 @@
 {
 	"name": "vasak-settings",
 	"private": true,
-	"version": "0.59.1",
+	"version": "0.60.0",
 	"type": "module",
 	"scripts": {
 		"dev": "bunx --bun vite",
@@ -36,7 +36,7 @@
 		"vue-router": "^5.4.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.6.2",
+		"@biomejs/biome": "^2.6.3",
 		"@happy-dom/global-registrator": "^20.14.6",
 		"@tailwindcss/postcss": "^4.3.3",
 		"@tauri-apps/cli": "^2.12.4",

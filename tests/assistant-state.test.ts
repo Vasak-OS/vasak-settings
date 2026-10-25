@@ -3,13 +3,18 @@
 import { describe, expect, test } from 'bun:test';
 import type {
 	AssistantCapability,
+	AssistantMemoryStatus,
 	AssistantModel,
 	AssistantStatus,
 	AssistantUnitState,
 } from '../src/services/assistant.service';
 import {
 	CONSENT_DOMAINS,
+	canClearMemory,
+	canToggleMemory,
 	consentRows,
+	formatBytes,
+	type MemoryRow,
 	memoryRow,
 	remoteNotice,
 	serviceView,
@@ -105,14 +110,138 @@ describe('consentRows', () => {
 });
 
 describe('memoryRow', () => {
-	test('sin la capacidad, memoria no disponible', () => {
-		expect(memoryRow(null)).toEqual({ domain: 'memory', available: false, reason: '' });
-		expect(memoryRow([{ domain: 'mail', available: true, reason: '' }]).available).toBe(false);
+	const memory = (patch: Partial<AssistantMemoryStatus> = {}): AssistantMemoryStatus => ({
+		enabled: true,
+		available: true,
+		reason: '',
+		bytes: 2048,
+		...patch,
 	});
 
-	test('con la capacidad, la del demonio', () => {
-		const cap = { domain: 'memory', available: true, reason: 'ok' };
-		expect(memoryRow([cap])).toEqual(cap);
+	test('sin unidad o no instalada: no instalado', () => {
+		expect(memoryRow(null, undefined).state).toBe('notInstalled');
+		expect(memoryRow(unit({ installed: false }), memory()).state).toBe('notInstalled');
+	});
+
+	test('con el servicio apagado: apagado, sin tamaño ni encendida', () => {
+		expect(memoryRow(unit({ active: false }), memory())).toEqual({
+			state: 'off',
+			enabled: false,
+			available: false,
+			reason: '',
+			bytes: 0,
+		});
+	});
+
+	test('activo pero el demonio no tiene memoria (null) o no se pidió todavía: no soportado', () => {
+		expect(memoryRow(unit(), null).state).toBe('unsupported');
+		expect(memoryRow(unit(), undefined).state).toBe('unsupported');
+	});
+
+	test('activo con memoria: listo, con lo que dijo el demonio', () => {
+		const status = memory({
+			enabled: false,
+			available: false,
+			reason: 'llavero bloqueado',
+			bytes: 9,
+		});
+		expect(memoryRow(unit(), status)).toEqual({ state: 'ready', ...status });
+	});
+
+	test('con un error de lectura: estado «error» con el motivo, y manda sobre «no soportado»', () => {
+		const row = memoryRow(unit(), undefined, 'llavero bloqueado');
+		expect(row).toEqual({
+			state: 'error',
+			enabled: false,
+			available: false,
+			reason: 'llavero bloqueado',
+			bytes: 0,
+		});
+		expect(memoryRow(unit(), null, 'llavero bloqueado').state).toBe('error');
+	});
+
+	test('con el servicio apagado o sin instalar no se muestra el error', () => {
+		expect(memoryRow(unit({ active: false }), undefined, 'x').state).toBe('off');
+		expect(memoryRow(unit({ installed: false }), undefined, 'x').state).toBe('notInstalled');
+	});
+
+	test('sin error de lectura (vacío) sigue el camino de siempre', () => {
+		expect(memoryRow(unit(), null, '').state).toBe('unsupported');
+		expect(memoryRow(unit(), memory(), '').state).toBe('ready');
+	});
+});
+
+describe('canToggleMemory', () => {
+	const row = (patch: Partial<MemoryRow>): MemoryRow => ({
+		state: 'ready',
+		enabled: false,
+		available: true,
+		reason: '',
+		bytes: 0,
+		...patch,
+	});
+
+	test('listo y disponible: se puede encender y apagar', () => {
+		expect(canToggleMemory(row({}))).toBe(true);
+		expect(canToggleMemory(row({ enabled: true }))).toBe(true);
+	});
+
+	test('encendida pero no disponible: se tiene que poder apagar', () => {
+		expect(canToggleMemory(row({ enabled: true, available: false }))).toBe(true);
+	});
+
+	test('apagada y no disponible: no se puede encender', () => {
+		expect(canToggleMemory(row({ enabled: false, available: false }))).toBe(false);
+	});
+
+	test('fuera de «listo» nunca', () => {
+		for (const state of ['unsupported', 'error', 'notInstalled', 'off'] as const) {
+			expect(canToggleMemory(row({ state, enabled: true, available: true }))).toBe(false);
+		}
+	});
+});
+
+describe('canClearMemory', () => {
+	const row = (patch: Partial<MemoryRow>): MemoryRow => ({
+		state: 'ready',
+		enabled: false,
+		available: true,
+		reason: '',
+		bytes: 0,
+		...patch,
+	});
+
+	test('hay algo para borrar si ocupa lugar o está encendida', () => {
+		expect(canClearMemory(row({ bytes: 1 }))).toBe(true);
+		expect(canClearMemory(row({ enabled: true }))).toBe(true);
+	});
+
+	test('apagada y vacía: nada para borrar', () => {
+		expect(canClearMemory(row({}))).toBe(false);
+	});
+
+	test('fuera de «listo» nunca', () => {
+		for (const state of ['unsupported', 'error', 'notInstalled', 'off'] as const) {
+			expect(canClearMemory(row({ state, bytes: 100, enabled: true }))).toBe(false);
+		}
+	});
+});
+
+describe('formatBytes', () => {
+	test('los bordes de cada unidad', () => {
+		expect(formatBytes(0)).toBe('0 B');
+		expect(formatBytes(1023)).toBe('1023 B');
+		expect(formatBytes(1024)).toBe('1.0 KB');
+		expect(formatBytes(1536)).toBe('1.5 KB');
+		expect(formatBytes(10 * 1024)).toBe('10 KB');
+		expect(formatBytes(1024 * 1024)).toBe('1.0 MB');
+		expect(formatBytes(12 * 1024 * 1024)).toBe('12 MB');
+		expect(formatBytes(1024 ** 3)).toBe('1.0 GB');
+	});
+
+	test('un negativo cuenta como cero y lo enorme no se pasa de TB', () => {
+		expect(formatBytes(-5)).toBe('0 B');
+		expect(formatBytes(1024 ** 5)).toBe('1024 TB');
 	});
 });
 

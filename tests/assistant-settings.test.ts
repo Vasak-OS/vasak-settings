@@ -12,7 +12,11 @@ import {
 	type AssistantMessages,
 	useAssistantSettings,
 } from '../src/composables/useAssistantSettings';
-import type { AssistantStatus, AssistantUnitState } from '../src/services/assistant.service';
+import type {
+	AssistantMemoryStatus,
+	AssistantStatus,
+	AssistantUnitState,
+} from '../src/services/assistant.service';
 
 const MESSAGES: AssistantMessages = {
 	saved: () => 'guardado',
@@ -20,6 +24,7 @@ const MESSAGES: AssistantMessages = {
 	errorService: (reason) => `servicio: ${reason}`,
 	invalidName: () => 'nombre inválido',
 	emptyKey: () => 'falta la clave',
+	errorMemory: (reason) => `memoria: ${reason}`,
 };
 
 const ACTIVE: AssistantUnitState = { installed: true, enabled: true, active: true, masked: false };
@@ -31,6 +36,8 @@ const STATUS: AssistantStatus = {
 	model: { provider: 'ollama', name: 'llama3', local: true, host: '127.0.0.1' },
 	conversations: 1,
 };
+
+const MEMORY: AssistantMemoryStatus = { enabled: false, available: true, reason: '', bytes: 4096 };
 
 interface Fake {
 	deps: AssistantDeps;
@@ -45,6 +52,7 @@ function fake(
 	overrides: Partial<AssistantDeps> = {}
 ): Fake {
 	let file = initial;
+	let memory = MEMORY;
 	const log: string[] = [];
 	const deps: AssistantDeps = {
 		read: async () => {
@@ -86,12 +94,24 @@ function fake(
 		setKey: async (url) => {
 			log.push(`setKey:${url}`);
 		},
+		memoryStatus: async () => {
+			log.push('memoryStatus');
+			return memory;
+		},
+		setMemoryEnabled: async (enabled) => {
+			log.push(`setMemoryEnabled:${enabled}`);
+			memory = { ...memory, enabled };
+		},
+		clearMemory: async () => {
+			log.push('clearMemory');
+			memory = { ...memory, bytes: 0 };
+		},
 		...overrides,
 	};
 	return { deps, log, file: () => file };
 }
 
-const DBUS = ['status', 'capabilities', 'models'];
+const DBUS = ['status', 'capabilities', 'models', 'memoryStatus'];
 const dbusCalls = (log: string[]) => log.filter((c) => DBUS.includes(c) || c.startsWith('hasKey'));
 
 // `succeed` deja un temporizador de 3 s; se anula para que no cuelgue la corrida.
@@ -444,5 +464,251 @@ describe('useAssistantSettings: saveKey', () => {
 		await s.saveKey();
 		expect(s.hasKey.value).toBe(false);
 		expect(s.successMessage.value).toBe('guardado');
+	});
+});
+
+describe('useAssistantSettings: memoria', () => {
+	test('con la unidad activa pide el estado de la memoria al refrescar', async () => {
+		const f = fake({}, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		expect(f.log).toContain('memoryStatus');
+		expect(s.memoryStatus.value).toEqual(MEMORY);
+	});
+
+	test('con la unidad inactiva no se pide y queda sin preguntar', async () => {
+		const f = fake({}, INACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		expect(f.log).not.toContain('memoryStatus');
+		expect(s.memoryStatus.value).toBeUndefined();
+	});
+
+	test('un demonio viejo (null) deja la fila en «no soportado», sin error', async () => {
+		const f = fake({}, ACTIVE, { memoryStatus: async () => null });
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		expect(s.memoryStatus.value).toBeNull();
+		expect(s.memoryError.value).toBe('');
+	});
+
+	test('una llamada rechazada guarda el motivo y no se disfraza de demonio viejo', async () => {
+		const f = fake({}, ACTIVE, {
+			memoryStatus: () => {
+				throw new Error('llavero bloqueado');
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		expect(s.memoryStatus.value).toBeUndefined();
+		expect(s.memoryError.value).toContain('llavero bloqueado');
+		// Lo demás se cargó igual.
+		expect(s.status.value).toEqual(STATUS);
+	});
+
+	test('el motivo se limpia con una lectura exitosa', async () => {
+		let falla = true;
+		const f = fake({}, ACTIVE, {
+			memoryStatus: async () => {
+				if (falla) throw new Error('sin respuesta');
+				return MEMORY;
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		expect(s.memoryError.value).toContain('sin respuesta');
+		falla = false;
+		await s.refresh();
+		expect(s.memoryError.value).toBe('');
+		expect(s.memoryStatus.value).toEqual(MEMORY);
+	});
+
+	test('con la unidad inactiva no queda ningún error de lectura', async () => {
+		const f = fake({}, INACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		expect(s.memoryError.value).toBe('');
+	});
+
+	test('encender la memoria la pide, refresca el estado y no borra nada', async () => {
+		const f = fake({}, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		f.log.length = 0;
+		await s.toggleMemory(true);
+		expect(f.log).toEqual(['setMemoryEnabled:true', 'memoryStatus']);
+		expect(s.memoryStatus.value?.enabled).toBe(true);
+		expect(s.busy.value).toBe(false);
+	});
+
+	test('apagar la memoria conserva lo aprendido: no llama a borrar', async () => {
+		const f = fake({}, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		await s.toggleMemory(true);
+		f.log.length = 0;
+		await s.toggleMemory(false);
+		expect(f.log).toEqual(['setMemoryEnabled:false', 'memoryStatus']);
+		expect(f.log).not.toContain('clearMemory');
+		expect(s.memoryStatus.value?.bytes).toBe(4096);
+	});
+
+	test('si el servicio rechaza el cambio, avisa y vuelve a leer el estado real', async () => {
+		const f = fake({}, ACTIVE, {
+			setMemoryEnabled: async () => {
+				throw new Error('llavero bloqueado');
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		f.log.length = 0;
+		await s.toggleMemory(true);
+		expect(s.error.value).toContain('memoria: ');
+		expect(s.error.value).toContain('llavero bloqueado');
+		expect(f.log).toContain('memoryStatus');
+		expect(s.busy.value).toBe(false);
+	});
+
+	test('«borrar» sólo abre la confirmación: no llama al demonio', async () => {
+		const f = fake({}, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		f.log.length = 0;
+		s.clearMemory();
+		expect(s.confirmingClear.value).toBe(true);
+		expect(f.log).toEqual([]);
+	});
+
+	test('cancelar cierra la confirmación y no borra', async () => {
+		const f = fake({}, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		s.clearMemory();
+		s.cancelClear();
+		expect(s.confirmingClear.value).toBe(false);
+		expect(f.log).not.toContain('clearMemory');
+	});
+
+	test('confirmar cierra el diálogo, borra y refresca el tamaño', async () => {
+		const f = fake({}, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		s.clearMemory();
+		f.log.length = 0;
+		await s.confirmClear();
+		expect(s.confirmingClear.value).toBe(false);
+		expect(f.log).toEqual(['clearMemory', 'memoryStatus']);
+		expect(s.memoryStatus.value?.bytes).toBe(0);
+	});
+
+	test('si borrar falla, el diálogo se cierra, avisa y vuelve a leer el estado', async () => {
+		const f = fake({}, ACTIVE, {
+			clearMemory: async () => {
+				throw new Error('AccessDenied');
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		s.clearMemory();
+		f.log.length = 0;
+		await s.confirmClear();
+		expect(s.confirmingClear.value).toBe(false);
+		expect(s.error.value).toContain('memoria: ');
+		expect(f.log).toContain('memoryStatus');
+		expect(s.busy.value).toBe(false);
+	});
+
+	test('si la lectura posterior falla, queda el motivo y no «demonio viejo»', async () => {
+		let borrada = false;
+		const f = fake({}, ACTIVE, {
+			clearMemory: async () => {
+				borrada = true;
+			},
+			memoryStatus: async () => {
+				if (borrada) throw new Error('sin respuesta');
+				return MEMORY;
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		s.clearMemory();
+		await s.confirmClear();
+		expect(s.memoryStatus.value).toBeUndefined();
+		expect(s.memoryError.value).toContain('sin respuesta');
+	});
+
+	test('confirmar sin haber abierto la confirmación no borra', async () => {
+		const f = fake({}, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		f.log.length = 0;
+		await s.confirmClear();
+		expect(f.log).toEqual([]);
+		expect(s.busy.value).toBe(false);
+	});
+
+	test('confirmar después de cancelar no borra', async () => {
+		const f = fake({}, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		s.clearMemory();
+		s.cancelClear();
+		f.log.length = 0;
+		await s.confirmClear();
+		expect(f.log).not.toContain('clearMemory');
+	});
+
+	test('con la confirmación abierta borra una sola vez, y una segunda confirmación ya no borra', async () => {
+		const f = fake({}, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		s.clearMemory();
+		f.log.length = 0;
+		await s.confirmClear();
+		await s.confirmClear();
+		expect(f.log.filter((c) => c === 'clearMemory')).toHaveLength(1);
+	});
+
+	test('dos «confirmar borrar» seguidos, sin esperar, borran una sola vez', async () => {
+		const pendientes: Array<() => void> = [];
+		let llamadas = 0;
+		const f = fake({}, ACTIVE, {
+			clearMemory: () => {
+				llamadas++;
+				return new Promise<void>((ok) => {
+					pendientes.push(ok);
+				});
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		s.clearMemory();
+		const primera = s.confirmClear();
+		const segunda = s.confirmClear();
+		for (const ok of pendientes) ok();
+		await Promise.all([primera, segunda]);
+		expect(llamadas).toBe(1);
+		expect(s.busy.value).toBe(false);
+	});
+
+	test('dos cambios de la memoria seguidos, sin esperar, se piden una sola vez', async () => {
+		const pendientes: Array<() => void> = [];
+		let llamadas = 0;
+		const f = fake({}, ACTIVE, {
+			setMemoryEnabled: () => {
+				llamadas++;
+				return new Promise<void>((ok) => {
+					pendientes.push(ok);
+				});
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		const primera = s.toggleMemory(true);
+		const segunda = s.toggleMemory(true);
+		for (const ok of pendientes) ok();
+		await Promise.all([primera, segunda]);
+		expect(llamadas).toBe(1);
+		expect(s.busy.value).toBe(false);
 	});
 });

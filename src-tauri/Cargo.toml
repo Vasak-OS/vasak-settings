@@ -1,6 +1,6 @@
 [package]
 name = "vasak-settings"
-version = "0.59.1"
+version = "0.60.0"
 description = "A Vasak Application (template)"
 authors = ["Vasak Group", "Joaquin (Pato) Decima"]
 edition = "2021"
