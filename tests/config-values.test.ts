@@ -752,7 +752,7 @@ describe('readPanelIndicators', () => {
 });
 
 describe('writePanelIndicators', () => {
-	test('escribe los diez interruptores conservando el resto de la sección', () => {
+	test('escribe los once interruptores conservando el resto de la sección', () => {
 		// En la misma sección viven la posición y los anclados: reemplazarla
 		// entera los perdería.
 		const config: Record<string, unknown> = { panel: { position: 'bottom', pinned: [] } };
@@ -762,6 +762,7 @@ describe('writePanelIndicators', () => {
 			transfer: true,
 			tray: true,
 			privacy: true,
+			keyboard: true,
 			workspaces: false,
 			windows: true,
 			networkName: false,

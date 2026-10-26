@@ -31,6 +31,7 @@ describe('leer los indicadores del panel', () => {
 			transfer: true,
 			tray: true,
 			privacy: true,
+			keyboard: true,
 			workspaces: true,
 			windows: true,
 			networkName: true,
