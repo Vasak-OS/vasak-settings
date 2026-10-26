@@ -26,6 +26,30 @@ export const getCursorThemes = <T = any>(args?: any): Promise<T> => {
 	return invoke<T>('get_cursor_themes', args);
 };
 
+export interface CursorThemePreview {
+	name: string;
+	/** PNG en `data:`, uno por cada cursor que el tema trae. */
+	images: string[];
+}
+
+export interface CursorState {
+	theme: string;
+	size: number;
+}
+
+export const getCursorThemePreview = (theme: string): Promise<CursorThemePreview> => {
+	return invoke<CursorThemePreview>('get_cursor_theme_preview', { theme });
+};
+
+export const getCursorState = (): Promise<CursorState> => {
+	return invoke<CursorState>('get_cursor_state');
+};
+
+/** Aplica tema y tamaño al escritorio (Wayfire) y a las aplicaciones (gsettings) a la vez. */
+export const applyCursor = (theme: string, size: number): Promise<void> => {
+	return invoke<void>('apply_cursor', { theme, size });
+};
+
 export const getIconPacks = <T = any>(args?: any): Promise<T> => {
 	return invoke<T>('get_icon_packs', args);
 };

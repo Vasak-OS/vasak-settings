@@ -1,9 +1,11 @@
 pub mod actualizaciones;
 pub mod aplicaciones_por_defecto;
+pub mod assistant;
 pub mod audio;
 pub mod battery;
 pub mod clipboard;
 pub mod connect;
+pub mod cursors;
 pub mod datetime;
 pub mod dav_discover;
 pub mod fastfetch;
@@ -30,3 +32,4 @@ pub mod wallpaper_video;
 pub mod wayfire_config;
 pub mod wayfire_ini;
 pub mod wayfire_plugins;
+pub mod webkit;

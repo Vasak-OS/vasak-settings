@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { useConfigStore } from '@vasakgroup/plugin-config-manager';
 import { nextTick, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import TextContextMenu from '@/components/ui/TextContextMenu.vue';
 import { useWallpaperColors } from '@/composables/useWallpaperColors';
 import WindowAppLayout from '@/layouts/WindowAppLayout.vue';
+import { saveTheme } from '@/utils/theme-cache';
 
 let unListenConfig: Ref<UnlistenFn | null> = ref(null);
 
@@ -26,13 +28,17 @@ const refreshCustomScheme = () => {
 };
 
 onMounted(async () => {
+	// Afina el WebKit de la ventana para bajar su consumo de memoria; sin bloquear.
+	invoke('tune_webview').catch(() => {});
+
 	// Que el layout se pinte primero, antes de cualquier lectura.
 	await nextTick();
 
 	const configStore = useConfigStore();
 
 	try {
-		await configStore.loadConfig();
+		// Se guarda el tema ya aplicado, para que el próximo arranque no parpadee.
+		await configStore.loadConfig().then(() => saveTheme());
 		configLoading.value = false;
 	} catch (error: any) {
 		configLoading.value = false;
@@ -47,7 +53,7 @@ onMounted(async () => {
 	try {
 		unListenConfig.value = await listen('config-changed', async () => {
 			document.startViewTransition(() => {
-				configStore.loadConfig();
+				configStore.loadConfig().then(() => saveTheme());
 			});
 			refreshCustomScheme();
 		});

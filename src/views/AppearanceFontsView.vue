@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import {
+	escalaDeFuente,
 	pilaDeFuente,
 	readConfig,
 	useConfigStore,
@@ -21,6 +22,9 @@ import { fijarNitidez, nitidezActiva } from '@/services/nitidez.service';
 import { getSystemFonts, type SystemFontItem } from '@/services/style.service';
 
 type FontTarget = 'terminal' | 'title' | 'apps';
+
+/** Los tamaños que se ofrecen, como factor: 1 es el de siempre. Dentro de los límites del plugin. */
+const SCALES = [0.75, 0.9, 1, 1.15, 1.25, 1.5, 1.75, 2];
 
 const { t } = useI18n();
 
@@ -46,6 +50,15 @@ const activeTarget = ref<FontTarget>('terminal');
 const nitidez = ref(false);
 const guardandoNitidez = ref(false);
 
+/**
+ * El tamaño del texto de todo el escritorio.
+ *
+ * Va con las familias en «Aplicar cambios»: es la misma sección de `vasak.conf`
+ * (`fonts`), y el plugin se ocupa de las dos mitades —las aplicaciones propias
+ * lo leen de ahí y las GTK y Qt lo reciben por `gsettings`—.
+ */
+const selectedScale = ref(1);
+
 const selectedFonts = ref<Record<FontTarget, string>>({
 	terminal: '',
 	title: '',
@@ -57,6 +70,20 @@ const targetOptions = computed(() => [
 	{ label: t('views.appearanceFonts.targets.title'), value: 'title' as const },
 	{ label: t('views.appearanceFonts.targets.apps'), value: 'apps' as const },
 ]);
+
+const percent = (scale: number) => `${Math.round(scale * 100)} %`;
+
+/** Los tamaños ofrecidos, más el que ya tenga el archivo si no es de la lista (editado a mano). */
+const scaleOptions = computed(() => {
+	const scales = SCALES.includes(selectedScale.value)
+		? SCALES
+		: [...SCALES, selectedScale.value].sort((a, b) => a - b);
+	return scales.map((scale) => ({
+		label:
+			scale === 1 ? `${percent(scale)} ${t('views.appearanceFonts.scaleDefault')}` : percent(scale),
+		value: String(scale),
+	}));
+});
 
 const uniqueFonts = computed(() => {
 	const seen = new Set<string>();
@@ -96,6 +123,7 @@ const updateSelectionFromConfig = () => {
 		title: vskConfig.value?.fonts?.title || '',
 		apps: vskConfig.value?.fonts?.apps || '',
 	};
+	selectedScale.value = escalaDeFuente(vskConfig.value?.fonts?.scale);
 };
 
 onMounted(async () => {
@@ -152,6 +180,7 @@ const saveConfig = async () => {
 			terminal: selectedFonts.value.terminal,
 			title: selectedFonts.value.title,
 			apps: selectedFonts.value.apps,
+			scale: selectedScale.value,
 		};
 
 		await writeConfig(vskConfig.value);
@@ -242,6 +271,24 @@ const isFormValid = computed(() => {
 								</div>
 							</div>
 						</div>
+					</div>
+				</Panel>
+
+				<Panel as="article">
+					<div class="flex flex-col gap-3">
+						<div class="min-w-0">
+							<h3 class="text-lg font-medium text-tx-main">{{ t('views.appearanceFonts.scale') }}</h3>
+							<p class="text-sm text-tx-muted">{{ t('views.appearanceFonts.scaleHint') }}</p>
+						</div>
+						<FormGroup :label="t('views.appearanceFonts.scale')" html-for="font-scale">
+							<SelectField
+								v-bind="{ id: 'font-scale' }"
+								:model-value="String(selectedScale)"
+								:options="scaleOptions"
+								@update:model-value="selectedScale = escalaDeFuente(Number($event))"
+							/>
+						</FormGroup>
+						<p class="text-xs text-tx-muted">{{ t('views.appearanceFonts.scaleReopen') }}</p>
 					</div>
 				</Panel>
 

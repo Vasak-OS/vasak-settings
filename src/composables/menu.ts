@@ -56,6 +56,11 @@ export function categoriasDelMenu(t: Traductor): SidebarCategory[] {
 					icon: 'preferences-desktop-icons',
 				},
 				{
+					id: 'appearance-cursor',
+					label: t('sidebar.items.appearanceCursor'),
+					icon: 'input-mouse',
+				},
+				{
 					id: 'appearance-wallpaper',
 					label: t('sidebar.items.appearanceWallpaper'),
 					icon: 'preferences-wallpaper',
@@ -164,6 +169,11 @@ export function categoriasDelMenu(t: Traductor): SidebarCategory[] {
 					id: 'privacy-security',
 					label: t('sidebar.items.privacySecurity'),
 					icon: 'security-high',
+				},
+				{
+					id: 'assistant',
+					label: t('sidebar.items.assistant'),
+					icon: 'internet-chat',
 				},
 				{
 					id: 'screen-time',

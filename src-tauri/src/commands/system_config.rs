@@ -312,32 +312,14 @@ pub async fn get_gtk_themes() -> Result<Vec<String>, String> {
     Ok(themes)
 }
 
+/// Los temas de cursor que se ofrecen. La lista es de `cursors`, que es quien
+/// también valida el que se pide aplicar: una sola, para que nada se ofrezca sin
+/// poder aplicarse ni se pueda aplicar sin haberse ofrecido.
 #[tauri::command]
 pub async fn get_cursor_themes() -> Result<Vec<String>, String> {
-    let home = std::env::var("HOME").unwrap_or_default();
-    let local_icons = PathBuf::from(&home).join(".local/share/icons");
-
-    let cursor_paths = vec![PathBuf::from("/usr/share/icons"), local_icons];
-
-    let mut cursors = std::collections::HashSet::new();
-    cursors.insert("Adwaita".to_string());
-
-    for path in cursor_paths {
-        if let Ok(entries) = std::fs::read_dir(&path) {
-            for entry in entries.flatten() {
-                let cursors_dir = entry.path().join("cursors");
-                if cursors_dir.exists() && cursors_dir.is_dir() {
-                    if let Ok(file_name) = entry.file_name().into_string() {
-                        cursors.insert(file_name);
-                    }
-                }
-            }
-        }
-    }
-
-    let mut result: Vec<String> = cursors.into_iter().collect();
-    result.sort();
-    Ok(result)
+    tauri::async_runtime::spawn_blocking(crate::commands::cursors::cursor_theme_names)
+        .await
+        .map_err(|e| format!("No se pudo listar los temas de cursor: {e}"))
 }
 
 #[tauri::command]

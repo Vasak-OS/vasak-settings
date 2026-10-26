@@ -479,6 +479,40 @@ export function writePanelPosition(config: Record<string, unknown>, position: Pa
 }
 
 /**
+ * El icono del botón de menú, según `panel.menuIcon` (vasak-desktop#263).
+ *
+ * Son nombres del tema de iconos del sistema. El escritorio acepta cualquier
+ * nombre y cae a `start-here` si falta; esta pantalla ofrece estos.
+ */
+export const MENU_ICONS = [
+	'start-here',
+	'view-app-grid',
+	'application-menu',
+	'open-menu',
+	'view-list-icons',
+] as const;
+
+export type MenuIcon = (typeof MENU_ICONS)[number];
+
+export const DEFAULT_MENU_ICON: MenuIcon = 'start-here';
+
+export function readMenuIcon(config: unknown): MenuIcon {
+	const section =
+		config && typeof config === 'object'
+			? ((config as Record<string, unknown>).panel as Record<string, unknown> | undefined)
+			: undefined;
+	return MENU_ICONS.includes(section?.menuIcon as MenuIcon)
+		? (section?.menuIcon as MenuIcon)
+		: DEFAULT_MENU_ICON;
+}
+
+/** Conserva el resto de la sección `panel`, como `writePanelPosition`. */
+export function writeMenuIcon(config: Record<string, unknown>, menuIcon: MenuIcon): void {
+	const previous = (config.panel as Record<string, unknown> | undefined) ?? {};
+	config.panel = { ...previous, menuIcon };
+}
+
+/**
  * El aspecto del panel: su tipo, su densidad y su animación.
  *
  * Son las claves que el escritorio lee en `panel-appearance.ts` (vasak-desktop):

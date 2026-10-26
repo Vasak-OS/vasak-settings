@@ -178,6 +178,9 @@ pub fn run() {
             commands::system_config::set_system_config,
             commands::system_config::get_gtk_themes,
             commands::system_config::get_cursor_themes,
+            commands::cursors::get_cursor_theme_preview,
+            commands::cursors::get_cursor_state,
+            commands::cursors::apply_cursor,
             commands::system_config::get_icon_packs,
             commands::system_config::get_icon_pack_icons,
             commands::system_config::get_official_wallpapers,
@@ -270,6 +273,18 @@ pub fn run() {
             commands::screen_time::clear_screen_time,
             commands::screen_time::screen_time_set_enabled,
             commands::screen_time::screen_time_enabled,
+            commands::assistant::assistant_unit_state,
+            commands::assistant::set_assistant_service_enabled,
+            commands::assistant::restart_assistant_service,
+            commands::assistant::assistant_status,
+            commands::assistant::assistant_capabilities,
+            commands::assistant::assistant_models,
+            commands::assistant::assistant_has_provider_key,
+            commands::assistant::set_assistant_provider_key,
+            commands::assistant::assistant_memory_status,
+            commands::assistant::set_assistant_memory_enabled,
+            commands::assistant::clear_assistant_memory,
+            commands::webkit::tune_webview,
         ])
         // One setup hook, not two: `Builder::setup` replaces whatever was
         // registered before it, so a second call silently threw the first away.

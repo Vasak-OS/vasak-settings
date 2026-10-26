@@ -94,6 +94,14 @@
 		}
 	},
 	{
+		"id": "appearance-cursor",
+		"icono": "input-mouse",
+		"nombres": {
+			"es": "Cursor",
+			"en": "Cursor"
+		}
+	},
+	{
 		"id": "appearance-wallpaper",
 		"icono": "preferences-wallpaper",
 		"nombres": {
@@ -497,6 +505,27 @@
 			"en": [
 				"permissions",
 				"firewall"
+			]
+		}
+	},
+	{
+		"id": "assistant",
+		"icono": "internet-chat",
+		"nombres": {
+			"es": "Asistente",
+			"en": "Assistant"
+		},
+		"palabras": {
+			"es": [
+				"lince",
+				"ia",
+				"inteligencia artificial",
+				"chat"
+			],
+			"en": [
+				"lince",
+				"ai",
+				"chat"
 			]
 		}
 	},

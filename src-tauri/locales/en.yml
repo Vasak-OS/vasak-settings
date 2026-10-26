@@ -40,6 +40,7 @@ sidebar:
     defaultApps: Default applications
     appearanceTheme: Theme
     appearanceFonts: Fonts
+    appearanceCursor: Cursor
     appearanceIconPacks: Icons
     appearanceWallpaper: Wallpapers
     appearanceDesktop: Desktop
@@ -65,6 +66,7 @@ sidebar:
     monitors: Displays
     actualizaciones: Updates
     privacySecurity: Privacy and security
+    assistant: Assistant
     screenTime: Screen time
     networkWifi: Wi-Fi
     networkBluetooth: Bluetooth
@@ -192,6 +194,85 @@ wayfire:
       description: Rotates a window with the mouse.
 
 views:
+  assistant:
+    title: Assistant
+    description: >-
+      Lince is the desktop assistant. Turn it on, name it and choose the model it
+      uses.
+    saved: Changes saved
+    errorService: "Could not change the service: {0}"
+    errorSaving: "Could not save: {0}"
+    service:
+      title: Service
+      label: Use the assistant
+      hint: Turns the assistant service on or off in your session.
+      state:
+        notInstalled: Not installed
+        off: Off
+        starting: Starting
+        ready: Ready
+        unavailable: Unavailable
+      notInstalledHint: To use it, install the vasak-assistant package. It does not come preinstalled.
+    name:
+      title: Name
+      label: What it is called
+      hint: If left empty it is called "Lince". Changing it does not restart the service.
+      invalid: "The name must be 1 to 32 characters long, with no control characters."
+      save: Save the name
+    model:
+      title: Model
+      mode: Where it runs
+      local: On this computer
+      remote: Remote provider
+      backend: Provider
+      url: Address
+      name: Model
+      noModelList: The model list could not be fetched; type the name.
+      restartNotice: Saving restarts the service and closes open conversations.
+      save: Save the model
+    remoteNotice: "Conversations leave this computer for {0}"
+    key:
+      label: Provider key
+      stored: Saved
+      missing: No key
+      unavailable: "Unavailable: update vasak-assistant"
+      placeholder: Paste the new key
+      empty: Type the key before saving it.
+      save: Save the key
+      needsService: Turn the assistant on to save the key
+      needsSaveModel: "Save the model first"
+      boundTo: "Stored for {0}"
+    consent:
+      title: What it can look at
+      description: The assistant can only look at what is listed here as available.
+      disabledNote: "It cannot be changed from here yet: the permission is missing in Permissions."
+      available: Available
+      unavailable: Unavailable
+      domains:
+        mail: Mail
+        calendar: Calendar
+        contacts: Contacts
+        files: Files
+        web: Web
+    memory:
+      title: Memory
+      label: Remember between conversations
+      hint: Turning it off keeps what was learned; clearing is separate and asks for confirmation.
+      readError: "Could not read the memory status: {0}"
+      unsupported: "Not available: update vasak-assistant"
+      needsService: Turn the assistant on to use memory.
+      size: "Uses {0}"
+      error: "Could not change memory: {0}"
+      confirmTitle: Clear memory?
+      confirmBody: Everything the assistant learned is deleted. This cannot be undone.
+      clear: Clear memory
+    errors:
+      backend: The provider must be Ollama or OpenAI.
+      url: The address must be an http or https URL.
+      urlUser: The address cannot carry a user name or password.
+      remoteHttps: A remote provider requires https.
+      remoteModel: A remote provider requires choosing a model.
+      localHost: '"On this computer" requires a local address; for another one, choose "Remote provider".'
   fastfetch:
     title: Fastfetch
     description: The emblem and size of the terminal read-out, previewed live.
@@ -544,7 +625,6 @@ views:
     disabled: Disabled
     systemThemes: System Themes
     gtkTheme: GTK Theme
-    cursorTheme: Cursor Theme
     schemeSection: VasakOS Scheme
     schemeHintPrefix: Select the
     schemeHintSuffix: that defines the light and dark palette of the system.
@@ -630,6 +710,10 @@ views:
       resetConfirm: Replace my colors
 
   appearanceFonts:
+    scale: Text size
+    scaleHint: The size of the text across the whole desktop, for VasakOS applications and for GTK and Qt ones.
+    scaleDefault: (the usual one)
+    scaleReopen: Applications that are already open pick up the change when they are reopened.
     sharpness: Thicker strokes
     sharpnessHint: Thickens letter strokes according to the size they are drawn at. Text reads fuller and less washed out, especially at small sizes.
     sharpnessRelogin: "Takes effect on your next login: anything already open keeps drawing as before."
@@ -658,6 +742,23 @@ views:
     preview: Preview
     previewText: The quick brown fox jumps over the lazy dog
     weight: weight {0}
+
+  appearanceCursor:
+    title: Cursor
+    description: The cursor theme and size, for applications and the desktop at once.
+    apply: Apply
+    loading: Loading cursor themes...
+    errorLoading: 'Error loading cursors: {0}'
+    errorSaving: 'Error applying the cursor: {0}'
+    saved: Cursor applied
+    theme: Theme
+    size: Size
+    selected: Selected
+    noPreview: No preview
+    info: Information
+    infoApply: It applies to applications and the desktop at once. Applications that are already open pick it up when they are reopened.
+    infoPaths: Cursor themes are loaded from
+    infoPathsSeparator: and
 
   appearanceIconPacks:
     title: Icon Packs
@@ -725,6 +826,14 @@ views:
     bar: Desktop bar
     position: Position
     positionHint: Top, bottom or on a side. It moves right away.
+    menuIcon: Menu button icon
+    menuIconHint: The icon shown on the panel menu button.
+    menuIcons:
+      start-here: Start
+      view-app-grid: App grid
+      application-menu: Application menu
+      open-menu: Menu
+      view-list-icons: Icon list
     lados:
       top: Top
       bottom: Bottom
@@ -931,7 +1040,6 @@ views:
     keyboard: Keyboard
     mouse: Mouse
     touchpad: Touchpad
-    cursor: Cursor
     repeatDelay: Repeat delay (ms)
     repeatRate: Repeat rate (char/s)
     numlock: NumLock at startup
@@ -947,8 +1055,6 @@ views:
     disableWhileTyping: Disable while typing
     disableWithMouse: Disable with mouse connected
     tapAndDrag: Tap and drag
-    cursorTheme: Cursor theme
-    cursorSize: Cursor size
     accelProfiles:
       default: Default
       none: None

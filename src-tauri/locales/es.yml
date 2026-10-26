@@ -40,6 +40,7 @@ sidebar:
     defaultApps: Aplicaciones por defecto
     appearanceTheme: Tema
     appearanceFonts: Fuentes
+    appearanceCursor: Cursor
     appearanceIconPacks: Iconos
     appearanceWallpaper: Fondos
     appearanceDesktop: Escritorio
@@ -65,6 +66,7 @@ sidebar:
     monitors: Pantallas
     actualizaciones: Actualizaciones
     privacySecurity: Privacidad y seguridad
+    assistant: Asistente
     screenTime: Tiempo de pantalla
     networkWifi: Wi-Fi
     networkBluetooth: Bluetooth
@@ -192,6 +194,85 @@ wayfire:
       description: Gira una ventana con el ratón.
 
 views:
+  assistant:
+    title: Asistente
+    description: >-
+      Lince es el asistente del escritorio. Acá se prende, se le pone nombre y se
+      elige el modelo que usa.
+    saved: Cambios guardados
+    errorService: "No se pudo cambiar el servicio: {0}"
+    errorSaving: "No se pudo guardar: {0}"
+    service:
+      title: Servicio
+      label: Usar el asistente
+      hint: Prende o apaga el servicio del asistente en tu sesión.
+      state:
+        notInstalled: No instalado
+        off: Apagado
+        starting: Iniciando
+        ready: Listo
+        unavailable: No disponible
+      notInstalledHint: Para usarlo, instalá el paquete vasak-assistant. No viene instalado de fábrica.
+    name:
+      title: Nombre
+      label: Cómo se llama
+      hint: Si lo dejás vacío, se llama «Lince». Cambiarlo no reinicia el servicio.
+      invalid: "El nombre tiene que tener entre 1 y 32 caracteres, sin caracteres de control."
+      save: Guardar el nombre
+    model:
+      title: Modelo
+      mode: Dónde corre
+      local: En este equipo
+      remote: Proveedor remoto
+      backend: Proveedor
+      url: Dirección
+      name: Modelo
+      noModelList: No se pudo pedir la lista de modelos; escribí el nombre.
+      restartNotice: Guardar reinicia el servicio y cierra las conversaciones abiertas.
+      save: Guardar el modelo
+    remoteNotice: "Las conversaciones salen de este equipo hacia {0}"
+    key:
+      label: Clave del proveedor
+      stored: Guardada
+      missing: Sin clave
+      unavailable: "No disponible: actualizá vasak-assistant"
+      placeholder: Pegá la clave nueva
+      empty: Escribí la clave antes de guardarla.
+      save: Guardar la clave
+      needsService: Encendé el asistente para guardar la clave
+      needsSaveModel: "Guardá el modelo antes"
+      boundTo: "Se guarda para {0}"
+    consent:
+      title: Qué puede consultar
+      description: El asistente sólo puede mirar lo que acá figure como disponible.
+      disabledNote: "Todavía no se puede cambiar desde acá: falta el permiso en Permisos."
+      available: Disponible
+      unavailable: No disponible
+      domains:
+        mail: Correo
+        calendar: Calendario
+        contacts: Contactos
+        files: Archivos
+        web: Web
+    memory:
+      title: Memoria
+      label: Recordar entre conversaciones
+      hint: Apagar conserva lo aprendido; borrar es aparte y pide confirmación.
+      readError: "No se pudo leer el estado de la memoria: {0}"
+      unsupported: "No disponible: actualizá vasak-assistant"
+      needsService: Encendé el asistente para usar la memoria.
+      size: "Ocupa {0}"
+      error: "No se pudo cambiar la memoria: {0}"
+      confirmTitle: ¿Borrar la memoria?
+      confirmBody: Se borra todo lo que el asistente aprendió. No se puede deshacer.
+      clear: Borrar memoria
+    errors:
+      backend: El proveedor tiene que ser Ollama u OpenAI.
+      url: La dirección tiene que ser una URL http o https.
+      urlUser: La dirección no puede llevar usuario ni contraseña.
+      remoteHttps: Un proveedor remoto exige https.
+      remoteModel: Un proveedor remoto exige elegir un modelo.
+      localHost: «En este equipo» exige una dirección local; para otra, elegí «Proveedor remoto».
   fastfetch:
     title: Fastfetch
     description: El emblema y el tamaño de la lectura del terminal, con la vista previa en vivo.
@@ -548,7 +629,6 @@ views:
     disabled: Desactivado
     systemThemes: Temas del Sistema
     gtkTheme: Tema GTK
-    cursorTheme: Tema de Cursor
     schemeSection: Scheme de VasakOS
     schemeHintPrefix: Selecciona el
     schemeHintSuffix: que define la paleta clara y oscura del sistema.
@@ -634,6 +714,10 @@ views:
       resetConfirm: Reemplazar mis colores
 
   appearanceFonts:
+    scale: Tamaño del texto
+    scaleHint: El tamaño de la letra de todo el escritorio, para las aplicaciones de VasakOS y para las GTK y Qt.
+    scaleDefault: (el de siempre)
+    scaleReopen: Las aplicaciones que ya están abiertas toman el cambio al volver a abrirse.
     sharpness: Trazos más gruesos
     sharpnessHint: Engrosa los trazos de la letra según el tamaño en que se dibujan. El texto se lee más lleno y menos desvaído, sobre todo en cuerpos chicos.
     sharpnessRelogin: "Toma efecto al volver a iniciar sesión: lo que ya está abierto sigue dibujando como antes."
@@ -662,6 +746,23 @@ views:
     preview: Vista previa
     previewText: The quick brown fox jumps over the lazy dog
     weight: peso {0}
+
+  appearanceCursor:
+    title: Cursor
+    description: El tema y el tamaño del cursor, para las aplicaciones y para el escritorio a la vez.
+    apply: Aplicar
+    loading: Cargando temas de cursor...
+    errorLoading: 'Error cargando los cursores: {0}'
+    errorSaving: 'Error aplicando el cursor: {0}'
+    saved: Cursor aplicado
+    theme: Tema
+    size: Tamaño
+    selected: Seleccionado
+    noPreview: Sin vista previa
+    info: Información
+    infoApply: Se aplica a las aplicaciones y al escritorio a la vez. Las aplicaciones ya abiertas toman el cambio al volver a abrirse.
+    infoPaths: Los temas de cursor se cargan de
+    infoPathsSeparator: y
 
   appearanceIconPacks:
     title: Packs de Iconos
@@ -729,6 +830,14 @@ views:
     bar: Barra del escritorio
     position: Posición
     positionHint: Arriba, abajo o de costado. Se mueve en el acto.
+    menuIcon: Icono del botón de menú
+    menuIconHint: El icono que muestra el botón de menú del panel.
+    menuIcons:
+      start-here: Inicio
+      view-app-grid: Cuadrícula de aplicaciones
+      application-menu: Menú de aplicaciones
+      open-menu: Menú
+      view-list-icons: Lista de iconos
     lados:
       top: Arriba
       bottom: Abajo
@@ -936,7 +1045,6 @@ views:
     keyboard: Teclado
     mouse: Ratón
     touchpad: Touchpad
-    cursor: Cursor
     repeatDelay: Delay de repetición (ms)
     repeatRate: Velocidad de repetición (car/s)
     numlock: NumLock al inicio
@@ -952,8 +1060,6 @@ views:
     disableWhileTyping: Desactivar al escribir
     disableWithMouse: Desactivar con ratón conectado
     tapAndDrag: Tocar y arrastrar
-    cursorTheme: Tema de cursor
-    cursorSize: Tamaño del cursor
     accelProfiles:
       default: Por defecto
       none: Ninguno
