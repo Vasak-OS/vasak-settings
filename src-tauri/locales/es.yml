@@ -888,6 +888,8 @@ views:
     trayHint: Los iconos que las aplicaciones ponen en la bandeja del sistema.
     privacy: Cámara y micrófono
     privacyHint: Avisa mientras una aplicación está usando la cámara o el micrófono.
+    keyboard: Distribución del teclado
+    keyboardHint: Muestra la distribución activa y permite cambiarla desde el panel.
     workspaces: Espacios de trabajo
     workspacesHint: La píldora que muestra en qué escritorio estás y deja cambiar.
     windows: Aplicaciones abiertas

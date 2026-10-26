@@ -884,6 +884,8 @@ views:
     trayHint: The icons applications put in the system tray.
     privacy: Camera and microphone
     privacyHint: Warns while an application is using the camera or the microphone.
+    keyboard: Keyboard layout
+    keyboardHint: Shows the active layout and lets you switch it from the panel.
     workspaces: Workspaces
     workspacesHint: The pill that shows which desktop you are on and lets you switch.
     windows: Open applications
