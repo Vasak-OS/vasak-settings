@@ -2,6 +2,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { useConfigStore } from '@vasakgroup/plugin-config-manager';
+import { RevealTransition } from '@vasakgroup/vue-libvasak';
 import { nextTick, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import TextContextMenu from '@/components/ui/TextContextMenu.vue';
 import { useWallpaperColors } from '@/composables/useWallpaperColors';
@@ -71,7 +72,13 @@ onUnmounted(() => {
 
 <template>
 	<WindowAppLayout>
-		<RouterView />
+		<!-- Cada sección es una ruta distinta: sale la vieja y recién entonces entra
+		     la nueva (`out-in`), así nunca hay dos secciones apiladas en el panel. -->
+		<RouterView v-slot="{ Component }">
+			<RevealTransition mode="out-in">
+				<component :is="Component" />
+			</RevealTransition>
+		</RouterView>
 	</WindowAppLayout>
 
 	<!-- Una sola vez, en el marco: escucha en el documento, así ninguna pantalla
