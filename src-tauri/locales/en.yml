@@ -73,6 +73,7 @@ sidebar:
     networkVpn: VPN
     phoneDevices: Phones
     loginScreen: Login Screen
+    lockScreen: Lock Screen
     fastfetch: Fastfetch
 
 wayfire:
@@ -1839,6 +1840,49 @@ views:
     dragHint: You can also drag the file onto the window to load its path.
     copyNote: A file inside your home folder is copied into the system when you save, because the login screen cannot read your folder.
     invalidFile: The file you dropped is not an image or a video the login screen can use.
+  lockScreen:
+    title: Lock Screen
+    description: How the screen that covers your session looks when it is locked. It is yours, so saving does not ask for an administrator password.
+    applyChanges: Apply changes
+    loading: Reading the lock screen settings...
+    errorLoading: 'Error reading the lock screen settings: {0}'
+    errorSaving: '{0}'
+    saved: Lock screen settings saved
+    clock: Clock
+    clockHint: The clock's format and size.
+    clockFormat: Time format
+    clockFormats:
+      auto: Follow the language
+      '12': 12 hours
+      '24': 24 hours
+    clockSize: Size
+    clockSizes:
+      md: Medium
+      lg: Large
+    showDate: Show the date
+    showDateHint: The date below the time.
+    background: Background
+    backgroundHint: Where the lock screen background comes from.
+    backgroundSource: Source
+    backgroundSources:
+      desktop: The desktop one
+      image: An image
+      color: Scheme colour
+    backgroundImage: Image
+    backgroundImageHint: A picture of your own for the background. It is referenced by path, not copied.
+    backgroundImageNone: No image chosen
+    backgroundImageChoose: Choose image
+    backgroundImagePick: Pick the background image
+    backgroundImageError: 'Error choosing the image: {0}'
+    imageFilter: Images
+    dimBackground: Dim the image
+    dimBackgroundHint: Darkens your own image so the text reads better.
+    elements: Elements
+    elementsHint: What the lock screen shows, besides the clock and background.
+    showMedia: Show the media player
+    showMediaHint: The card with what is playing and its controls.
+    showNotifications: Show notifications
+    showNotificationsHint: Unread notifications, just the icon and the count.
 
 shortcutKeys:
   KEY_VOLUMEUP:

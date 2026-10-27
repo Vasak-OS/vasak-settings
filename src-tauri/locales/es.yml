@@ -73,6 +73,7 @@ sidebar:
     networkVpn: VPN
     phoneDevices: Teléfonos
     loginScreen: Inicio de sesión
+    lockScreen: Pantalla de bloqueo
     fastfetch: Fastfetch
 
 wayfire:
@@ -1850,6 +1851,49 @@ views:
     dragHint: También podés arrastrar el archivo a la ventana para cargar su ruta.
     copyNote: Si el archivo está en tu carpeta personal se copia al sistema al guardar, porque la pantalla de inicio de sesión no puede leer tu carpeta.
     invalidFile: El archivo que arrastraste no es una imagen ni un video que la pantalla de inicio de sesión pueda usar.
+  lockScreen:
+    title: Pantalla de bloqueo
+    description: El aspecto de la pantalla que cubre la sesión cuando se bloquea. Es tuya, así que no pide contraseña de administrador.
+    applyChanges: Aplicar cambios
+    loading: Leyendo la configuración de la pantalla de bloqueo...
+    errorLoading: 'Error leyendo la configuración de la pantalla de bloqueo: {0}'
+    errorSaving: '{0}'
+    saved: Configuración de la pantalla de bloqueo guardada
+    clock: Reloj
+    clockHint: El formato y el tamaño del reloj.
+    clockFormat: Formato de la hora
+    clockFormats:
+      auto: Según el idioma
+      '12': 12 horas
+      '24': 24 horas
+    clockSize: Tamaño
+    clockSizes:
+      md: Mediano
+      lg: Grande
+    showDate: Mostrar la fecha
+    showDateHint: La fecha debajo de la hora.
+    background: Fondo
+    backgroundHint: De dónde sale el fondo de la pantalla de bloqueo.
+    backgroundSource: Origen
+    backgroundSources:
+      desktop: El del escritorio
+      image: Una imagen
+      color: Color del esquema
+    backgroundImage: Imagen
+    backgroundImageHint: Una imagen propia para el fondo. Se referencia por su ruta, no se copia.
+    backgroundImageNone: Ninguna imagen elegida
+    backgroundImageChoose: Elegir imagen
+    backgroundImagePick: Elegí la imagen del fondo
+    backgroundImageError: 'Error al elegir la imagen: {0}'
+    imageFilter: Imágenes
+    dimBackground: Atenuar la imagen
+    dimBackgroundHint: Oscurece la imagen propia para que el texto se lea mejor.
+    elements: Elementos
+    elementsHint: Qué muestra el bloqueo, además del reloj y el fondo.
+    showMedia: Mostrar el reproductor
+    showMediaHint: La tarjeta con lo que está sonando y sus controles.
+    showNotifications: Mostrar los avisos
+    showNotificationsHint: Los avisos sin leer, sólo el icono y la cantidad.
 
 shortcutKeys:
   KEY_VOLUMEUP:

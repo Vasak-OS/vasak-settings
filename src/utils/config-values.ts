@@ -792,3 +792,126 @@ export function writeMenuSettings(config: Record<string, unknown>, settings: Men
 		showWeather: settings.showWeather,
 	};
 }
+
+/**
+ * La pantalla de bloqueo (sección `lock` de `vasak.conf`, vasak-session-manager#43).
+ *
+ * `vasak-session-manager` lee estas mismas claves con el mismo criterio tolerante
+ * para armar el bloqueo; los valores por omisión reproducen la pantalla de hoy, y
+ * la escritura conserva el resto de la sección por si en el futuro se suman
+ * claves que esta pantalla no edita. El archivo se puede editar a mano, así que el
+ * tipo se comprueba en lugar de afirmarlo.
+ */
+export const LOCK_CLOCK_FORMATS = ['auto', '12', '24'] as const;
+
+export type LockClockFormat = (typeof LOCK_CLOCK_FORMATS)[number];
+
+/** Según el idioma: el formato que el reloj mostró siempre. */
+export const DEFAULT_LOCK_CLOCK_FORMAT: LockClockFormat = 'auto';
+
+export const LOCK_CLOCK_SIZES = ['md', 'lg'] as const;
+
+export type LockClockSize = (typeof LOCK_CLOCK_SIZES)[number];
+
+/** Grande: el tamaño con que el reloj del bloqueo abrió siempre. */
+export const DEFAULT_LOCK_CLOCK_SIZE: LockClockSize = 'lg';
+
+export const LOCK_BACKGROUND_SOURCES = ['desktop', 'image', 'color'] as const;
+
+export type LockBackgroundSource = (typeof LOCK_BACKGROUND_SOURCES)[number];
+
+/** El fondo del escritorio, como hasta ahora. */
+export const DEFAULT_LOCK_BACKGROUND_SOURCE: LockBackgroundSource = 'desktop';
+
+/** Todo lo que esta pantalla lee y escribe del bloqueo, de una vez. */
+export interface LockSettings {
+	clockFormat: LockClockFormat;
+	showDate: boolean;
+	clockSize: LockClockSize;
+	backgroundSource: LockBackgroundSource;
+	backgroundImage: string;
+	dimBackground: boolean;
+	showMedia: boolean;
+	showNotifications: boolean;
+}
+
+function lockSection(config: unknown): Record<string, unknown> | undefined {
+	return config && typeof config === 'object'
+		? ((config as Record<string, unknown>).lock as Record<string, unknown> | undefined)
+		: undefined;
+}
+
+/** Un objeto anidado de la sección (`clock`, `background`), o vacío. */
+function nested(
+	section: Record<string, unknown> | undefined,
+	key: string
+): Record<string, unknown> {
+	const value = section?.[key];
+	return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+/**
+ * Todo el aspecto del bloqueo, leído tolerante.
+ *
+ * El bloqueo lee cada clave con este mismo criterio (`useLockConfig`). Leerlas
+ * distinto acá haría que esta pantalla diga una cosa y el bloqueo muestre otra.
+ */
+export function readLockSettings(config: unknown): LockSettings {
+	const section = lockSection(config);
+	const clock = nested(section, 'clock');
+	const background = nested(section, 'background');
+	const size = clock.size;
+	const source = background.source;
+	const image = background.image;
+
+	return {
+		// La ausencia es "según el idioma"; sólo un booleano fuerza 12 o 24 h.
+		clockFormat:
+			typeof clock.hour12 === 'boolean' ? (clock.hour12 ? '12' : '24') : DEFAULT_LOCK_CLOCK_FORMAT,
+		showDate: configBoolean(clock.date, true),
+		clockSize: LOCK_CLOCK_SIZES.includes(size as LockClockSize)
+			? (size as LockClockSize)
+			: DEFAULT_LOCK_CLOCK_SIZE,
+		backgroundSource: LOCK_BACKGROUND_SOURCES.includes(source as LockBackgroundSource)
+			? (source as LockBackgroundSource)
+			: DEFAULT_LOCK_BACKGROUND_SOURCE,
+		backgroundImage: typeof image === 'string' ? image : '',
+		dimBackground: configBoolean(background.dim, true),
+		showMedia: configBoolean(section?.media, true),
+		showNotifications: configBoolean(section?.notifications, true),
+	};
+}
+
+/**
+ * Deja la sección `lock` con el aspecto elegido, conservando el resto con
+ * `...previous` en cada nivel. El formato "auto" borra `clock.hour12`: su
+ * ausencia es justamente "según el idioma", y dejar un booleano forzaría un
+ * formato. Quien guarda debe pasar una configuración recién leída, porque
+ * `writeConfig` escribe el objeto tal cual, sin releer ni fusionar el archivo.
+ */
+export function writeLockSettings(config: Record<string, unknown>, settings: LockSettings): void {
+	const previous = (config.lock as Record<string, unknown> | undefined) ?? {};
+	const prevClock = (previous.clock as Record<string, unknown> | undefined) ?? {};
+	const prevBackground = (previous.background as Record<string, unknown> | undefined) ?? {};
+
+	const clock: Record<string, unknown> = {
+		...prevClock,
+		date: settings.showDate,
+		size: settings.clockSize,
+	};
+	if (settings.clockFormat === 'auto') delete clock.hour12;
+	else clock.hour12 = settings.clockFormat === '12';
+
+	config.lock = {
+		...previous,
+		clock,
+		background: {
+			...prevBackground,
+			source: settings.backgroundSource,
+			image: settings.backgroundImage,
+			dim: settings.dimBackground,
+		},
+		media: settings.showMedia,
+		notifications: settings.showNotifications,
+	};
+}
