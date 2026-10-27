@@ -190,6 +190,11 @@ const routes = [
 		component: () => import('@/views/LoginScreenView.vue'),
 	},
 	{
+		path: '/lock-screen',
+		name: 'lock-screen',
+		component: () => import('@/views/LockScreenView.vue'),
+	},
+	{
 		path: '/fastfetch',
 		name: 'fastfetch',
 		component: () => import('@/views/FastfetchView.vue'),

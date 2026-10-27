@@ -570,6 +570,14 @@
 		}
 	},
 	{
+		"id": "lock-screen",
+		"icono": "system-lock-screen",
+		"nombres": {
+			"es": "Pantalla de bloqueo",
+			"en": "Lock Screen"
+		}
+	},
+	{
 		"id": "fastfetch",
 		"icono": "utilities-terminal",
 		"nombres": {

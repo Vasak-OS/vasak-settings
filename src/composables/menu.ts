@@ -186,6 +186,11 @@ export function categoriasDelMenu(t: Traductor): SidebarCategory[] {
 					icon: 'preferences-system-login',
 				},
 				{
+					id: 'lock-screen',
+					label: t('sidebar.items.lockScreen'),
+					icon: 'system-lock-screen',
+				},
+				{
 					id: 'fastfetch',
 					label: t('sidebar.items.fastfetch'),
 					icon: 'utilities-terminal',
