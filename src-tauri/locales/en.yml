@@ -876,8 +876,8 @@ views:
     indicators: Indicators
     weather: Weather
     weatherHint: The icon and the temperature for your city, next to the player.
-    music: Music player
-    musicHint: The controls and the cover of what is playing.
+    music: Activity
+    musicHint: What is playing and the app with a task in progress.
     transfer: Network transfer
     transferHint: How much comes down and goes up per second.
     tray: Application icons

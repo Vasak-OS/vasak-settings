@@ -880,8 +880,8 @@ views:
     indicators: Indicadores
     weather: Clima
     weatherHint: El icono y la temperatura de tu ciudad, al lado del reproductor.
-    music: Reproductor
-    musicHint: Los controles y la tapa de lo que está sonando.
+    music: Actividad
+    musicHint: Lo que está sonando y la aplicación que tiene una tarea en curso.
     transfer: Transferencia de red
     transferHint: Cuánto baja y cuánto sube por segundo.
     tray: Iconos de aplicaciones
