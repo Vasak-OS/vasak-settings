@@ -109,11 +109,22 @@ pub(crate) fn systemctl(args: &[&str]) -> Result<(), String> {
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let msg = format!("systemctl {:?} falló: {}", args, stderr.trim());
-        log_error(&msg);
+        log_error(&systemctl_failure_line(
+            args,
+            output.status.code(),
+            stderr.trim(),
+        ));
         return Err(msg);
     }
 
     Ok(())
+}
+
+/// La línea del registro para un `systemctl --user` que falló: los argumentos,
+/// el código de salida (`None` si lo terminó una señal) y lo que dijo.
+pub(crate) fn systemctl_failure_line(args: &[&str], code: Option<i32>, stderr: &str) -> String {
+    let code = code.map_or_else(|| "sin código (señal)".to_string(), |c| c.to_string());
+    format!("systemctl --user {args:?} falló (código {code}): {stderr}")
 }
 
 /// Splits a command line the way systemd and swayidle see it: single-quoted

@@ -28,8 +28,9 @@ use serde::{Deserialize, Serialize};
 use zbus::zvariant::{DeserializeDict, OwnedFd, Type};
 use zbus::Connection;
 
-use crate::commands::idle::systemctl;
+use crate::commands::idle::{systemctl, systemctl_failure_line};
 use crate::commands::night_light_service::is_missing_unit;
+use crate::logger::{log_debug, log_error, log_warning};
 
 const SERVICE: &str = "ar.net.vasak.os.Assistant";
 const PATH: &str = "/ar/net/vasak/os/Assistant";
@@ -157,6 +158,7 @@ fn cgroup_is_assistant_unit(cgroup: &str, uid: u32) -> bool {
 /// no se recicló mientras se leía `/proc/<pid>`. Sin eso, un proceso que muere
 /// y cuyo `pid` hereda el demonio legítimo haría pasar el chequeo contra el
 /// proceso equivocado (#196).
+#[cfg(test)]
 pub fn owner_is_assistant(
     pid: u32,
     main_pid: u32,
@@ -165,11 +167,32 @@ pub fn owner_is_assistant(
     uid: u32,
     owner_alive: bool,
 ) -> bool {
-    owner_alive
-        && main_pid != 0
-        && pid == main_pid
-        && exe == Path::new(ASSISTANT_EXE)
-        && cgroup_is_assistant_unit(cgroup, uid)
+    owner_rejection(pid, main_pid, exe, cgroup, uid, owner_alive).is_none()
+}
+
+/// Por qué el dueño `pid` no es el asistente (ver `owner_is_assistant`), o
+/// `None` si lo es. Frases fijas: ni el cgroup ni el ejecutable van al registro.
+pub fn owner_rejection(
+    pid: u32,
+    main_pid: u32,
+    exe: &Path,
+    cgroup: &str,
+    uid: u32,
+    owner_alive: bool,
+) -> Option<&'static str> {
+    if main_pid == 0 {
+        Some("la unidad no tiene MainPID (detenida o enmascarada)")
+    } else if pid != main_pid {
+        Some("el pid no es el MainPID de la unidad")
+    } else if exe != Path::new(ASSISTANT_EXE) {
+        Some("el ejecutable no es /usr/bin/vasak-assistant")
+    } else if !cgroup_is_assistant_unit(cgroup, uid) {
+        Some("el proceso no está en el cgroup de la unidad")
+    } else if !owner_alive {
+        Some("el pidfd del dueño ya no apunta a un proceso vivo")
+    } else {
+        None
+    }
 }
 
 /// Valida la dirección de un proveedor y la devuelve recortada.
@@ -267,6 +290,59 @@ pub fn describe_set_key_error(name: &str) -> String {
     }
 }
 
+// ── Líneas del registro ───────────────────────────────────────────────────────
+//
+// Todo lo que va al registro sale de acá. Ninguna recibe la clave, la
+// descripción de un error del servicio (podría traerla) ni una dirección
+// entera: de una dirección, sólo su origen.
+
+/// El origen de una dirección (`https://host:puerto`), sin usuario, clave,
+/// ruta, consulta ni fragmento.
+pub fn url_origin(url: &str) -> String {
+    match url::Url::parse(url.trim()) {
+        Ok(parsed) if parsed.has_host() => parsed.origin().ascii_serialization(),
+        _ => "<dirección no válida>".into(),
+    }
+}
+
+/// El método, con el origen de la dirección si la llamada lleva una.
+pub fn call_label(method: &str, url: Option<&str>) -> String {
+    match url {
+        Some(url) => format!("{method} ({})", url_origin(url)),
+        None => method.to_string(),
+    }
+}
+
+/// Una llamada que salió bien (nivel debug).
+pub fn call_ok_line(label: &str) -> String {
+    format!("vasak-assistant: {label}: bien")
+}
+
+/// Un error de D-Bus. `name` es el nombre del error; `None` si zbus falló sin
+/// respuesta del bus (de ese error no se copia el texto).
+pub fn dbus_error_line(label: &str, name: Option<&str>) -> String {
+    let name = name.unwrap_or("error de zbus sin respuesta del bus");
+    format!("vasak-assistant: {label} falló: {name}")
+}
+
+/// `UnknownMethod` (servicio viejo) o `AccessDenied` (llamador confinado).
+pub fn dbus_notice_line(label: &str, name: &str) -> String {
+    format!("vasak-assistant: {label}: el servicio respondió {name}")
+}
+
+/// `verify_owner` rechazó al dueño del nombre.
+pub fn owner_rejected_line(pid: u32, reason: &str) -> String {
+    format!(
+        "vasak-assistant: el nombre {SERVICE} lo tiene el pid {pid}, que no es de {UNIT}: {reason}"
+    )
+}
+
+/// Si el error de D-Bus es un aviso y no un error: `UnknownMethod` o
+/// `AccessDenied` del asistente.
+pub fn is_notice_error(name: &str) -> bool {
+    name == UNKNOWN_METHOD || name.strip_prefix(ERROR_PREFIX) == Some(ASSISTANT_ACCESS_DENIED)
+}
+
 // ── Pegamento: systemctl ──────────────────────────────────────────────────────
 
 /// `systemctl --user show <unidad> <args>`, con la salida.
@@ -277,9 +353,17 @@ fn show_unit(args: &[&str]) -> Result<String, String> {
         .output()
         .map_err(|e| format!("No se pudo ejecutar systemctl: {e}"))?;
     if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let mut full = vec!["show", UNIT];
+        full.extend_from_slice(args);
+        log_error(&systemctl_failure_line(
+            &full,
+            output.status.code(),
+            stderr.trim(),
+        ));
         return Err(format!(
             "No se pudo leer el estado del asistente: {}",
-            String::from_utf8_lossy(&output.stderr).trim()
+            stderr.trim()
         ));
     }
     Ok(String::from_utf8_lossy(&output.stdout).into_owned())
@@ -347,14 +431,36 @@ fn describe(error: &zbus::Error) -> String {
     }
 }
 
+/// Deja en el registro el resultado de una llamada.
+fn log_result<R>(label: &str, result: &zbus::Result<R>) {
+    match result {
+        Ok(_) => log_debug(&call_ok_line(label)),
+        Err(error) => log_failure(label, error),
+    }
+}
+
+fn log_failure(label: &str, error: &zbus::Error) {
+    match error_parts(error) {
+        Some((name, _)) if is_notice_error(name) => log_warning(&dbus_notice_line(label, name)),
+        parts => log_error(&dbus_error_line(label, parts.map(|(name, _)| name))),
+    }
+}
+
+/// `describe`, dejando antes el error en el registro.
+fn logged(label: &str, error: zbus::Error) -> String {
+    log_failure(label, &error);
+    describe(&error)
+}
+
 fn is_unknown_method(error: &zbus::Error) -> bool {
     error_parts(error).is_some_and(|(name, _)| name == UNKNOWN_METHOD)
 }
 
 async fn session() -> Result<Connection, String> {
-    Connection::session()
-        .await
-        .map_err(|e| format!("No se pudo abrir el bus de sesión: {e}"))
+    Connection::session().await.map_err(|e| {
+        log_error(&dbus_error_line("abrir el bus de sesión", None));
+        format!("No se pudo abrir el bus de sesión: {e}")
+    })
 }
 
 async fn bus_call<B, R>(conn: &Connection, method: &str, body: &B) -> zbus::Result<R>
@@ -416,17 +522,21 @@ async fn verify_owner(conn: &Connection) -> Result<String, String> {
         Err(e) if error_parts(&e).is_some_and(|(name, _)| name == NAME_HAS_NO_OWNER) => {
             let _: u32 = bus_call(conn, "StartServiceByName", &(SERVICE, 0u32))
                 .await
-                .map_err(|e| describe(&e))?;
+                .map_err(|e| logged("StartServiceByName", e))?;
             bus_call(conn, "GetNameOwner", &(SERVICE,))
                 .await
-                .map_err(|e| describe(&e))?
+                .map_err(|e| logged("GetNameOwner", e))?
         }
-        Err(e) => return Err(describe(&e)),
+        Err(e) => return Err(logged("GetNameOwner", e)),
     };
     let creds: OwnerCredentials = bus_call(conn, "GetConnectionCredentials", &(owner.as_str(),))
         .await
-        .map_err(|e| describe(&e))?;
+        .map_err(|e| logged("GetConnectionCredentials", e))?;
     let Some(pid) = creds.process_id else {
+        log_error(&dbus_error_line(
+            "GetConnectionCredentials",
+            Some("sin ProcessID"),
+        ));
         return Err(format!("El bus no informó el pid del dueño de {SERVICE}."));
     };
     let main_pid = blocking(read_main_pid).await?;
@@ -443,13 +553,13 @@ async fn verify_owner(conn: &Connection) -> Result<String, String> {
     let owner_alive = creds
         .process_fd
         .as_ref()
-        .map_or(true, |fd| pidfd_still_alive(fd.as_fd()));
-    let is_assistant =
-        uid.is_ok_and(|uid| owner_is_assistant(pid, main_pid, &exe, &cgroup, uid, owner_alive));
-    if !is_assistant {
-        crate::logger::log_error(&format!(
-            "vasak-assistant: el nombre {SERVICE} lo tiene el pid {pid}, que no es de {UNIT}"
-        ));
+        .is_none_or(|fd| pidfd_still_alive(fd.as_fd()));
+    let rejection = match uid {
+        Ok(uid) => owner_rejection(pid, main_pid, &exe, &cgroup, uid, owner_alive),
+        Err(_) => Some("no se pudo leer el uid propio"),
+    };
+    if let Some(reason) = rejection {
+        log_error(&owner_rejected_line(pid, reason));
         return Err(format!(
             "El servicio que responde como asistente no es {UNIT}: no se le habla."
         ));
@@ -458,7 +568,13 @@ async fn verify_owner(conn: &Connection) -> Result<String, String> {
 }
 
 /// Comprueba el dueño y llama al método en su nombre único.
-async fn assistant_call<B, R>(method: &str, body: &B) -> Result<zbus::Result<R>, String>
+/// `url` es la dirección que lleva la llamada, si lleva: al registro va sólo su
+/// origen.
+async fn assistant_call<B, R>(
+    method: &str,
+    url: Option<&str>,
+    body: &B,
+) -> Result<zbus::Result<R>, String>
 where
     B: Serialize + zbus::zvariant::DynamicType,
     R: serde::de::DeserializeOwned + Type,
@@ -467,27 +583,29 @@ where
     let owner = verify_owner(&conn).await?;
     let reply = conn
         .call_method(Some(owner.as_str()), PATH, Some(SERVICE), method, body)
-        .await;
-    Ok(reply.and_then(|message| message.body().deserialize()))
+        .await
+        .and_then(|message| message.body().deserialize());
+    log_result(&call_label(method, url), &reply);
+    Ok(reply)
 }
 
 #[tauri::command]
 pub async fn assistant_status() -> Result<AssistantStatus, String> {
-    assistant_call("Status", &())
+    assistant_call("Status", None, &())
         .await?
         .map_err(|e| describe(&e))
 }
 
 #[tauri::command]
 pub async fn assistant_capabilities() -> Result<Vec<AssistantCapability>, String> {
-    assistant_call("Capabilities", &())
+    assistant_call("Capabilities", None, &())
         .await?
         .map_err(|e| describe(&e))
 }
 
 #[tauri::command]
 pub async fn assistant_models() -> Result<Vec<String>, String> {
-    assistant_call("Models", &())
+    assistant_call("Models", None, &())
         .await?
         .map_err(|e| describe(&e))
 }
@@ -496,7 +614,7 @@ pub async fn assistant_models() -> Result<Vec<String>, String> {
 #[tauri::command]
 pub async fn assistant_has_provider_key(url: String) -> Result<Option<bool>, String> {
     let url = validate_provider_url(&url)?;
-    match assistant_call::<_, bool>("HasProviderKey", &(url,)).await? {
+    match assistant_call::<_, bool>("HasProviderKey", Some(url), &(url,)).await? {
         Ok(has) => Ok(Some(has)),
         Err(e) if is_unknown_method(&e) => Ok(None),
         Err(e) => Err(describe(&e)),
@@ -509,7 +627,7 @@ pub async fn assistant_has_provider_key(url: String) -> Result<Option<bool>, Str
 pub async fn set_assistant_provider_key(url: String, key: String) -> Result<(), String> {
     let url = validate_provider_url(&url)?;
     let key = validate_provider_key(&key)?;
-    match assistant_call::<_, ()>("SetProviderKey", &(url, key)).await? {
+    match assistant_call::<_, ()>("SetProviderKey", Some(url), &(url, key)).await? {
         Ok(()) => Ok(()),
         Err(e) if is_unknown_method(&e) => Err(
             "El servicio instalado no permite guardar la clave: actualizá vasak-assistant.".into(),
@@ -524,7 +642,7 @@ pub async fn set_assistant_provider_key(url: String, key: String) -> Result<(), 
 /// `None` si el servicio instalado todavía no tiene memoria (`MemoryStatus`).
 #[tauri::command]
 pub async fn assistant_memory_status() -> Result<Option<AssistantMemoryStatus>, String> {
-    match assistant_call("MemoryStatus", &()).await? {
+    match assistant_call("MemoryStatus", None, &()).await? {
         Ok(status) => Ok(Some(status)),
         Err(e) if is_unknown_method(&e) => Ok(None),
         Err(e) => Err(describe(&e)),
@@ -537,7 +655,7 @@ const MEMORY_UNSUPPORTED: &str =
 /// Apagar no borra: los archivos y la llave quedan.
 #[tauri::command]
 pub async fn set_assistant_memory_enabled(enabled: bool) -> Result<(), String> {
-    match assistant_call::<_, ()>("SetMemoryEnabled", &(enabled,)).await? {
+    match assistant_call::<_, ()>("SetMemoryEnabled", None, &(enabled,)).await? {
         Ok(()) => Ok(()),
         Err(e) if is_unknown_method(&e) => Err(MEMORY_UNSUPPORTED.into()),
         Err(e) => Err(describe(&e)),
@@ -547,7 +665,7 @@ pub async fn set_assistant_memory_enabled(enabled: bool) -> Result<(), String> {
 /// Borra la memoria; si estaba encendida, el servicio la recrea vacía.
 #[tauri::command]
 pub async fn clear_assistant_memory() -> Result<(), String> {
-    match assistant_call::<_, ()>("ClearMemory", &()).await? {
+    match assistant_call::<_, ()>("ClearMemory", None, &()).await? {
         Ok(()) => Ok(()),
         Err(e) if is_unknown_method(&e) => Err(MEMORY_UNSUPPORTED.into()),
         Err(e) => Err(describe(&e)),
