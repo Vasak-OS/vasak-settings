@@ -1300,6 +1300,229 @@ mod tests {
         assert!(MEMORY_UNSUPPORTED.contains("actualizá vasak-assistant"));
     }
 
+    // ── Líneas del registro: nada sensible ────────────────────────────────────
+
+    const CANARIO: &str = "CANARIO-sk-9f8e7d";
+
+    #[test]
+    fn el_origen_de_una_direccion_deja_solo_esquema_host_y_puerto() {
+        for (url, origen) in [
+            ("https://api.ejemplo.com/v1/chat", "https://api.ejemplo.com"),
+            ("http://127.0.0.1:11434", "http://127.0.0.1:11434"),
+            (
+                "  https://api.ejemplo.com:8443/x  ",
+                "https://api.ejemplo.com:8443",
+            ),
+            ("http://[::1]:8080/v1", "http://[::1]:8080"),
+            ("https://[2001:db8::1]/v1", "https://[2001:db8::1]"),
+            // El puerto por omisión del esquema no se escribe.
+            ("https://api.ejemplo.com:443/v1", "https://api.ejemplo.com"),
+        ] {
+            assert_eq!(url_origin(url), origen, "{url}");
+        }
+    }
+
+    #[test]
+    fn el_origen_no_lleva_credenciales_ruta_consulta_ni_fragmento() {
+        let url = format!(
+            "https://usuario:{CANARIO}@api.ejemplo.com:8443/ruta/{CANARIO}?token={CANARIO}#frag-{CANARIO}"
+        );
+        let origen = url_origin(&url);
+        assert_eq!(origen, "https://api.ejemplo.com:8443");
+        assert!(!origen.contains("CANARIO"));
+        assert!(!origen.contains("usuario"));
+    }
+
+    #[test]
+    fn una_direccion_invalida_o_sin_host_no_se_copia_al_registro() {
+        for url in [
+            format!("no es una url {CANARIO}"),
+            format!("data:text/plain,{CANARIO}"),
+            format!("file:///etc/{CANARIO}"),
+            format!("mailto:{CANARIO}@ejemplo.com"),
+            String::new(),
+        ] {
+            let origen = url_origin(&url);
+            assert_eq!(origen, "<dirección no válida>", "{url}");
+        }
+    }
+
+    #[test]
+    fn un_esquema_raro_con_host_no_filtra_nada_aunque_su_origen_sea_opaco() {
+        let origen = url_origin(&format!("foo://usuario:{CANARIO}@host/{CANARIO}"));
+        assert!(!origen.contains("CANARIO"), "{origen}");
+        assert!(!origen.contains("usuario"), "{origen}");
+    }
+
+    #[test]
+    fn las_lineas_de_has_y_set_provider_key_llevan_el_origen_y_nunca_la_clave() {
+        let url = format!("https://api.ejemplo.com:8443/v1?key={CANARIO}");
+        for metodo in ["HasProviderKey", "SetProviderKey"] {
+            let label = call_label(metodo, Some(&url));
+            assert_eq!(label, format!("{metodo} (https://api.ejemplo.com:8443)"));
+            let lineas = [
+                call_ok_line(&label),
+                dbus_error_line(&label, Some(&format!("{ERROR_PREFIX}Unavailable"))),
+                dbus_error_line(&label, None),
+                dbus_notice_line(&label, UNKNOWN_METHOD),
+            ];
+            for linea in lineas {
+                assert!(linea.contains("https://api.ejemplo.com:8443"), "{linea}");
+                assert!(linea.contains(metodo), "{linea}");
+                assert!(!linea.contains("CANARIO"), "{linea}");
+                assert!(!linea.contains("/v1"), "{linea}");
+            }
+        }
+    }
+
+    #[test]
+    fn una_llamada_sin_direccion_lleva_solo_el_metodo() {
+        assert_eq!(call_label("Status", None), "Status");
+        assert_eq!(call_ok_line("Status"), "vasak-assistant: Status: bien");
+    }
+
+    #[test]
+    fn la_linea_de_error_de_dbus_no_copia_la_descripcion_del_servicio() {
+        use zbus::names::ErrorName;
+        let mensaje = zbus::message::Message::method("/", "X")
+            .unwrap()
+            .build(&())
+            .unwrap();
+        let nombre = format!("{ERROR_PREFIX}Unavailable");
+        let error = zbus::Error::MethodError(
+            ErrorName::try_from(nombre.clone()).unwrap().into(),
+            Some(format!("no se pudo guardar {CANARIO}")),
+            mensaje,
+        );
+        // Como en `log_failure`: del error sólo sale el nombre.
+        let linea = dbus_error_line(
+            "SetProviderKey (https://a.com)",
+            error_parts(&error).map(|(n, _)| n),
+        );
+        assert_eq!(
+            linea,
+            format!("vasak-assistant: SetProviderKey (https://a.com) falló: {nombre}")
+        );
+        assert!(!linea.contains("CANARIO"));
+    }
+
+    #[test]
+    fn un_error_de_zbus_sin_respuesta_del_bus_no_copia_su_texto() {
+        let error = zbus::Error::Failure(format!("falló con {CANARIO}"));
+        assert!(error_parts(&error).is_none());
+        let linea = dbus_error_line(
+            "abrir el bus de sesión",
+            error_parts(&error).map(|(n, _)| n),
+        );
+        assert_eq!(
+            linea,
+            "vasak-assistant: abrir el bus de sesión falló: error de zbus sin respuesta del bus"
+        );
+        assert!(!linea.contains("CANARIO"));
+    }
+
+    #[test]
+    fn la_linea_de_aviso_lleva_el_nombre_que_respondio_el_servicio() {
+        assert_eq!(
+            dbus_notice_line("MemoryStatus", UNKNOWN_METHOD),
+            format!("vasak-assistant: MemoryStatus: el servicio respondió {UNKNOWN_METHOD}")
+        );
+    }
+
+    #[test]
+    fn unknown_method_y_access_denied_del_asistente_son_aviso_y_lo_demas_error() {
+        assert!(is_notice_error(UNKNOWN_METHOD));
+        assert!(is_notice_error(&format!("{ERROR_PREFIX}AccessDenied")));
+        for nombre in [
+            format!("{ERROR_PREFIX}Unavailable"),
+            format!("{ERROR_PREFIX}InvalidArgs"),
+            // El AccessDenied del bus no es el del asistente.
+            "org.freedesktop.DBus.Error.AccessDenied".to_string(),
+            "AccessDenied".to_string(),
+            NAME_HAS_NO_OWNER.to_string(),
+            SERVICE_UNKNOWN.to_string(),
+            "org.freedesktop.DBus.Error.NoReply".to_string(),
+            String::new(),
+        ] {
+            assert!(!is_notice_error(&nombre), "{nombre}");
+        }
+    }
+
+    // ── Rechazo del dueño: frases fijas ───────────────────────────────────────
+
+    #[test]
+    fn el_rechazo_del_dueno_da_una_frase_fija_por_condicion_y_nada_si_es_el_asistente() {
+        let exe = Path::new(ASSISTANT_EXE);
+        assert_eq!(owner_rejection(42, 42, exe, CG, 1000, true), None);
+        let casos = [
+            (owner_rejection(0, 0, exe, CG, 1000, true), "MainPID"),
+            (
+                owner_rejection(43, 42, exe, CG, 1000, true),
+                "no es el MainPID",
+            ),
+            (
+                owner_rejection(42, 42, Path::new("/usr/bin/python3"), CG, 1000, true),
+                "ejecutable",
+            ),
+            (
+                owner_rejection(42, 42, exe, "0::/user.slice/session-3.scope\n", 1000, true),
+                "cgroup",
+            ),
+            (owner_rejection(42, 42, exe, CG, 1001, true), "cgroup"),
+            (owner_rejection(42, 42, exe, CG, 1000, false), "pidfd"),
+        ];
+        for (razon, contiene) in casos {
+            let razon = razon.expect("tiene que rechazar");
+            assert!(razon.contains(contiene), "{razon} no menciona {contiene}");
+        }
+    }
+
+    #[test]
+    fn el_rechazo_no_copia_el_cgroup_ni_el_ejecutable_leidos() {
+        let cgroup = format!("0::/user.slice/{CANARIO}.scope\n");
+        let exe = format!("/home/x/{CANARIO}");
+        let razones = [
+            owner_rejection(42, 42, Path::new(&exe), CG, 1000, true),
+            owner_rejection(42, 42, Path::new(ASSISTANT_EXE), &cgroup, 1000, true),
+            owner_rejection(43, 42, Path::new(&exe), &cgroup, 1000, true),
+        ];
+        for razon in razones {
+            let razon = razon.unwrap();
+            assert!(!razon.contains("CANARIO"), "{razon}");
+            let linea = owner_rejected_line(42, razon);
+            assert!(!linea.contains("CANARIO"), "{linea}");
+        }
+    }
+
+    #[test]
+    fn la_linea_del_dueno_rechazado_lleva_el_pid_la_unidad_y_el_motivo() {
+        assert_eq!(
+            owner_rejected_line(4242, "el pid no es el MainPID de la unidad"),
+            "vasak-assistant: el nombre ar.net.vasak.os.Assistant lo tiene el pid 4242, que no es de vasak-assistant.service: el pid no es el MainPID de la unidad"
+        );
+    }
+
+    // ── systemctl ─────────────────────────────────────────────────────────────
+
+    #[test]
+    fn la_linea_de_systemctl_lleva_argumentos_codigo_y_salida() {
+        use crate::commands::idle::systemctl_failure_line;
+        assert_eq!(
+            systemctl_failure_line(&["mask", UNIT], Some(1), "Failed to connect to bus"),
+            "systemctl --user [\"mask\", \"vasak-assistant.service\"] falló (código 1): Failed to connect to bus"
+        );
+    }
+
+    #[test]
+    fn la_linea_de_systemctl_sin_codigo_dice_que_fue_una_senal() {
+        use crate::commands::idle::systemctl_failure_line;
+        let linea = systemctl_failure_line(&["enable", "--now", UNIT], None, "");
+        assert!(linea.contains("sin código (señal)"), "{linea}");
+        assert!(linea.contains("enable"), "{linea}");
+        let con_cero = systemctl_failure_line(&["x"], Some(0), "");
+        assert!(con_cero.contains("código 0"), "{con_cero}");
+    }
+
     // ── Pegamento con un bus de sesión propio ─────────────────────────────────
 
     use std::io::{BufRead, BufReader};
