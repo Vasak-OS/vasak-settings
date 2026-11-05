@@ -1,7 +1,7 @@
 {
 	"name": "vasak-settings",
 	"private": true,
-	"version": "0.62.0",
+	"version": "0.63.0",
 	"type": "module",
 	"scripts": {
 		"dev": "bunx --bun vite",
@@ -15,10 +15,10 @@
 		"format": "bunx --bun biome format --write ."
 	},
 	"dependencies": {
-		"@tailwindcss/vite": "^4.3.3",
+		"@tailwindcss/vite": "^4.3.4",
 		"@tauri-apps/api": "^2.12.4",
-		"@tauri-apps/plugin-dialog": "^2.8.3",
-		"@tauri-apps/plugin-shell": "^2.5.0",
+		"@tauri-apps/plugin-dialog": "^2.8.4",
+		"@tauri-apps/plugin-shell": "^2.6.0",
 		"@vasakgroup/plugin-bluetooth-manager": "^2.3.2",
 		"@vasakgroup/plugin-config-manager": "^2.13.0",
 		"@vasakgroup/plugin-display-manager": "^2.0.0",
@@ -36,19 +36,19 @@
 		"vue-router": "^5.4.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.6.3",
+		"@biomejs/biome": "^2.6.5",
 		"@happy-dom/global-registrator": "^20.14.6",
-		"@tailwindcss/postcss": "^4.3.3",
+		"@tailwindcss/postcss": "^4.3.4",
 		"@tauri-apps/cli": "^2.12.4",
-		"@types/node": "^26.6.5",
+		"@types/node": "^26.6.6",
 		"@vitejs/plugin-vue": "^6.0.10",
 		"@vue/test-utils": "^2.5.1",
 		"happy-dom": "^20.14.6",
 		"postcss": "^8.5.32",
-		"tailwindcss": "^4.3.3",
+		"tailwindcss": "^4.3.4",
 		"typescript": "^5.9.3",
 		"vite": "^7.3.7",
-		"vue-tsc": "^3.3.13"
+		"vue-tsc": "^3.3.14"
 	},
 	"vasak": {
 		"bibliotecasAtrasadas": {
