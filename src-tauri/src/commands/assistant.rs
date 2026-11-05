@@ -319,9 +319,9 @@ pub fn call_ok_line(label: &str) -> String {
 }
 
 /// Un error de D-Bus. `name` es el nombre del error; `None` si zbus falló sin
-/// respuesta del bus (de ese error no se copia el texto).
+/// nombre de error de D-Bus (de ese error no se copia el texto).
 pub fn dbus_error_line(label: &str, name: Option<&str>) -> String {
-    let name = name.unwrap_or("error de zbus sin respuesta del bus");
+    let name = name.unwrap_or("error de zbus sin nombre de error de D-Bus");
     format!("vasak-assistant: {label} falló: {name}")
 }
 
@@ -1416,7 +1416,7 @@ mod tests {
         );
         assert_eq!(
             linea,
-            "vasak-assistant: abrir el bus de sesión falló: error de zbus sin respuesta del bus"
+            "vasak-assistant: abrir el bus de sesión falló: error de zbus sin nombre de error de D-Bus"
         );
         assert!(!linea.contains("CANARIO"));
     }
