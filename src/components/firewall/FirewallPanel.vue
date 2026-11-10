@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * «Red por app»: kill-switch, mapa de conexiones en vivo y reglas por dominio.
+ * «Red por app»: kill-switch, mapa de conexiones en vivo, reglas por dominio y registro de bloqueos.
  *
  * El mapa se refresca con `permissions-connection-observed`, que el backend
  * reenvía desde la señal `ConnectionObserved`: la señal no trae el destino
@@ -14,6 +14,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import FirewallConnections from '@/components/firewall/FirewallConnections.vue';
 import FirewallDomainRules from '@/components/firewall/FirewallDomainRules.vue';
 import FirewallKillSwitch from '@/components/firewall/FirewallKillSwitch.vue';
+import FirewallLog from '@/components/firewall/FirewallLog.vue';
 import {
 	type BlockedDomain,
 	listConnections,
@@ -71,5 +72,6 @@ onBeforeUnmount(() => unlisten?.());
 		<FirewallKillSwitch :entries="entries" @changed="load" @failed="fail" />
 		<FirewallConnections :connections="connections" :names="names" />
 		<FirewallDomainRules :entries="entries" :rules="rules" @changed="load" @failed="fail" />
+		<FirewallLog />
 	</Panel>
 </template>

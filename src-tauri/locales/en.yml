@@ -485,6 +485,23 @@ views:
         add: Block
         remove: Remove
         empty: No blocked domains.
+      log:
+        title: Block log
+        description: >-
+          Keeps on this computer the connection attempts the firewall cut, so
+          you can review them later. Off by default.
+        toggle: Log blocked connections
+        empty: No blocks have been logged yet.
+        off: Logging is off.
+        clear: Clear the log
+        clearHint: Turning the log off does not delete what is already saved; use this button for that.
+        clearTitle: Clear the block log?
+        clearDescription: Everything saved is deleted and this cannot be undone.
+        clearConfirm: Clear
+        reasons:
+          killSwitch: Network cut off
+          domainRule: Domain rule
+          forcedResolver: Forced resolver
     title: Privacy and security
     screenTime:
       title: Screen time

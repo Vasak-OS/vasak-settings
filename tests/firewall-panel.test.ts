@@ -11,6 +11,7 @@ import { AlertMessage, SwitchToggle } from '@vasakgroup/vue-libvasak';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import FirewallDomainRules from '../src/components/firewall/FirewallDomainRules.vue';
 import FirewallKillSwitch from '../src/components/firewall/FirewallKillSwitch.vue';
+import FirewallLog from '../src/components/firewall/FirewallLog.vue';
 import FirewallPanel from '../src/components/firewall/FirewallPanel.vue';
 import type { PermissionEntry } from '../src/services/permissions.service';
 import { type FakeBackend, fakeBackend } from './screen-time-backend';
@@ -27,6 +28,9 @@ const stubs = { AppIcon: true, ThemeIcon: true };
 
 beforeEach(() => {
 	backend = fakeBackend({});
+	// El panel monta también el registro de bloqueos.
+	backend.handlers.firewall_logging_enabled = () => false;
+	backend.handlers.read_firewall_log = () => [];
 });
 afterEach(() => {
 	wrapper?.unmount();
@@ -216,8 +220,82 @@ describe('FirewallPanel', () => {
 		backend.handlers.list_domain_rules = () => [{ binary_path: '/usr/bin/curl', domain: 'x' }];
 		wrapper = mount(FirewallPanel, { global: { stubs } });
 		await flushPromises();
-		await wrapper.find('section:last-of-type li button').trigger('click');
+		await wrapper.find('section:nth-of-type(3) li button').trigger('click');
 		await flushPromises();
 		expect(wrapper.findComponent(AlertMessage).text()).toContain('dominio inválido');
+	});
+});
+
+describe('FirewallLog', () => {
+	const logEntry = {
+		timestamp: 1700000000,
+		uid: 1000,
+		binary_path: '/usr/bin/<b>curl</b>',
+		destination: '<img src=x>',
+		port: 443,
+		proto: 'tcp',
+		reason: 'domain-rule',
+	};
+
+	test('apagado y vacío no lista nada; prender llama set_firewall_logging y relee', async () => {
+		let on = false;
+		let log: unknown[] = [];
+		backend.handlers.firewall_logging_enabled = () => on;
+		backend.handlers.read_firewall_log = () => log;
+		backend.handlers.set_firewall_logging = () => {
+			on = true;
+			log = [logEntry];
+		};
+		wrapper = mount(FirewallLog, { global: { stubs } });
+		await flushPromises();
+		expect(wrapper.find('li').exists()).toBe(false);
+		wrapper.findComponent(SwitchToggle).vm.$emit('update:modelValue', true);
+		await flushPromises();
+		expect(backend.calls.find((c) => c.command === 'set_firewall_logging')?.args).toEqual({
+			enabled: true,
+		});
+		expect(wrapper.findComponent(SwitchToggle).props('modelValue')).toBe(true);
+		expect(wrapper.findAll('li')).toHaveLength(1);
+	});
+
+	test('ruta y destino se dibujan como texto, no como HTML', async () => {
+		backend.handlers.firewall_logging_enabled = () => true;
+		backend.handlers.read_firewall_log = () => [logEntry];
+		wrapper = mount(FirewallLog, { global: { stubs } });
+		await flushPromises();
+		expect(wrapper.find('li img').exists()).toBe(false);
+		expect(wrapper.find('li b').exists()).toBe(false);
+		expect(wrapper.find('li').text()).toContain('<img src=x>:443');
+	});
+
+	test('un error de polkit al prender se muestra por AlertMessage', async () => {
+		backend.handlers.firewall_logging_enabled = () => false;
+		backend.handlers.read_firewall_log = () => [];
+		backend.handlers.set_firewall_logging = () => {
+			throw 'autenticación rechazada';
+		};
+		wrapper = mount(FirewallLog, { global: { stubs } });
+		await flushPromises();
+		wrapper.findComponent(SwitchToggle).vm.$emit('update:modelValue', true);
+		await flushPromises();
+		expect(wrapper.findComponent(AlertMessage).text()).toContain('autenticación rechazada');
+	});
+
+	test('borrar pide confirmación y recién al confirmar llama clear_firewall_log', async () => {
+		let log: unknown[] = [logEntry];
+		backend.handlers.firewall_logging_enabled = () => true;
+		backend.handlers.read_firewall_log = () => log;
+		backend.handlers.clear_firewall_log = () => {
+			log = [];
+		};
+		wrapper = mount(FirewallLog, { attachTo: document.body, global: { stubs } });
+		await flushPromises();
+		await wrapper.find('[data-log-clear]').trigger('click');
+		await flushPromises();
+		expect(backend.commands()).not.toContain('clear_firewall_log');
+		(document.body.querySelector('[data-log-confirm]') as HTMLElement).click();
+		await flushPromises();
+		expect(backend.commands()).toContain('clear_firewall_log');
+		expect(wrapper.find('li').exists()).toBe(false);
 	});
 });

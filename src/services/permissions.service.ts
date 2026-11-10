@@ -127,3 +127,32 @@ export const setDomainRule = (
 	domain: string,
 	blocked: boolean
 ): Promise<void> => invoke<void>('set_domain_rule', { binaryPath, domain, blocked });
+
+/**
+ * Un bloqueo del registro persistente (opt-in). `binary_path` y `destination`
+ * los influye la app: se dibujan siempre como texto (`{{ }}`).
+ */
+export interface FirewallLogEntry {
+	/** Segundos Unix. */
+	timestamp: number;
+	uid: number;
+	binary_path: string;
+	destination: string;
+	port: number;
+	proto: string;
+	/** `kill-switch` | `domain-rule` | `forced-resolver` | `''`. */
+	reason: string;
+}
+
+export const firewallLoggingEnabled = (): Promise<boolean> =>
+	invoke<boolean>('firewall_logging_enabled');
+
+/** Pasa por polkit. Apagar NO borra lo guardado: eso es `clearFirewallLog`. */
+export const setFirewallLogging = (enabled: boolean): Promise<void> =>
+	invoke<void>('set_firewall_logging', { enabled });
+
+export const readFirewallLog = (): Promise<FirewallLogEntry[]> =>
+	invoke<FirewallLogEntry[]>('read_firewall_log');
+
+/** Pasa por polkit. */
+export const clearFirewallLog = (): Promise<void> => invoke<void>('clear_firewall_log');
