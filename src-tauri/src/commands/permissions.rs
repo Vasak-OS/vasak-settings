@@ -60,21 +60,32 @@ async fn service() -> Result<zbus::Connection, String> {
 /// `que` nombra lo que se estaba leyendo, para el mensaje de error. Centraliza el
 /// `call_method` + `deserialize` que comparten todas las lecturas de lista, así no
 /// se repite el bloque en cada comando.
-async fn leer_json(metodo: &str, que: &str) -> Result<String, String> {
-    let connection = service().await?;
-
-    let reply = connection
+/// Llama un método del servicio de permisos y devuelve su respuesta cruda.
+///
+/// `accion` nombra lo que se intentaba, para el mensaje de error. Centraliza el
+/// `service()` + `call_method` que comparten todos los comandos; cada uno
+/// deserializa la respuesta como necesita (o la descarta con `.map(|_| ())`).
+async fn llamar<B>(metodo: &str, body: &B, accion: &str) -> Result<zbus::Message, String>
+where
+    B: serde::Serialize + zbus::zvariant::DynamicType,
+{
+    service()
+        .await?
         .call_method(
             Some(SERVICE_NAME),
             SERVICE_PATH,
             Some(SERVICE_INTERFACE),
             metodo,
-            &(),
+            body,
         )
         .await
-        .map_err(|e| format!("No se pudo leer {que}: {e}"))?;
+        .map_err(|e| format!("No se pudo {accion}: {e}"))
+}
 
-    reply
+/// Llama un método sin argumentos que responde un JSON y lo devuelve crudo.
+async fn leer_json(metodo: &str, que: &str) -> Result<String, String> {
+    llamar(metodo, &(), &format!("leer {que}"))
+        .await?
         .body()
         .deserialize::<String>()
         .map_err(|e| format!("Respuesta inválida del servicio de permisos: {e}"))
@@ -116,37 +127,25 @@ pub async fn set_permission(
     resource_id: String,
     allowed: bool,
 ) -> Result<(), String> {
-    let connection = service().await?;
-
-    connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "SetPermission",
-            &(binary_path.as_str(), resource_id.as_str(), allowed),
-        )
-        .await
-        .map(|_| ())
-        .map_err(|e| format!("No se pudo cambiar el permiso: {e}"))
+    llamar(
+        "SetPermission",
+        &(binary_path.as_str(), resource_id.as_str(), allowed),
+        "cambiar el permiso",
+    )
+    .await
+    .map(|_| ())
 }
 
 /// Forgets a program entirely, so the next time it asks the user is asked again.
 #[tauri::command]
 pub async fn forget_permission(binary_path: String) -> Result<(), String> {
-    let connection = service().await?;
-
-    connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "ForgetPermission",
-            &(binary_path.as_str(),),
-        )
-        .await
-        .map(|_| ())
-        .map_err(|e| format!("No se pudo olvidar la aplicación: {e}"))
+    llamar(
+        "ForgetPermission",
+        &(binary_path.as_str(),),
+        "olvidar la aplicación",
+    )
+    .await
+    .map(|_| ())
 }
 
 /// Un destino observado por el cortafuegos, tal como lo manda el servicio.
@@ -202,19 +201,13 @@ pub async fn set_domain_rule(
     domain: String,
     blocked: bool,
 ) -> Result<(), String> {
-    let connection = service().await?;
-
-    connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "SetDomainRule",
-            &(binary_path.as_str(), domain.as_str(), blocked),
-        )
-        .await
-        .map(|_| ())
-        .map_err(|e| format!("No se pudo cambiar la regla: {e}"))
+    llamar(
+        "SetDomainRule",
+        &(binary_path.as_str(), domain.as_str(), blocked),
+        "cambiar la regla",
+    )
+    .await
+    .map(|_| ())
 }
 
 /// Un bloqueo del registro persistente del cortafuegos (opt-in), tal como lo manda el servicio.
@@ -243,18 +236,8 @@ pub async fn read_firewall_log() -> Result<Vec<FirewallLogEntry>, String> {
 /// Si el registro persistente de bloqueos está prendido.
 #[tauri::command]
 pub async fn firewall_logging_enabled() -> Result<bool, String> {
-    let connection = service().await?;
-    let reply = connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "FirewallLoggingEnabled",
-            &(),
-        )
-        .await
-        .map_err(|e| format!("No se pudo leer el estado del registro: {e}"))?;
-    reply
+    llamar("FirewallLoggingEnabled", &(), "leer el estado del registro")
+        .await?
         .body()
         .deserialize::<bool>()
         .map_err(|e| format!("Respuesta inválida del servicio de permisos: {e}"))
@@ -263,37 +246,17 @@ pub async fn firewall_logging_enabled() -> Result<bool, String> {
 /// Prende o apaga el registro de bloqueos. Pasa por polkit; apagar NO borra lo guardado.
 #[tauri::command]
 pub async fn set_firewall_logging(enabled: bool) -> Result<(), String> {
-    let connection = service().await?;
-
-    connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "SetFirewallLogging",
-            &(enabled,),
-        )
+    llamar("SetFirewallLogging", &(enabled,), "cambiar el registro")
         .await
         .map(|_| ())
-        .map_err(|e| format!("No se pudo cambiar el registro: {e}"))
 }
 
 /// Borra el registro de bloqueos. Pasa por polkit.
 #[tauri::command]
 pub async fn clear_firewall_log() -> Result<(), String> {
-    let connection = service().await?;
-
-    connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "ClearFirewallLog",
-            &(),
-        )
+    llamar("ClearFirewallLog", &(), "borrar el registro")
         .await
         .map(|_| ())
-        .map_err(|e| format!("No se pudo borrar el registro: {e}"))
 }
 
 /// Reenvía la señal `ConnectionObserved` a la ventana como evento de Tauri.
