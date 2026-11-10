@@ -266,6 +266,9 @@ pub fn run() {
             commands::permissions::revoke_blocked,
             commands::permissions::set_permission,
             commands::permissions::forget_permission,
+            commands::permissions::list_connections,
+            commands::permissions::list_domain_rules,
+            commands::permissions::set_domain_rule,
             commands::connect::connect_list_known_devices,
             commands::connect::connect_set_alias,
             commands::connect::connect_forget_device,
@@ -299,6 +302,12 @@ pub fn run() {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 commands::connect::watch_signals(handle).await;
+            });
+
+            // The firewall map is live: the daemon signals each new destination.
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                commands::permissions::watch_connection_signals(handle).await;
             });
             Ok(())
         })
