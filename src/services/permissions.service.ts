@@ -85,3 +85,45 @@ export const listAllowed = (profile: string): Promise<string[]> =>
 /** Vuelve a bloquear algo que se había permitido. Pasa por polkit. */
 export const revokeBlocked = (profile: string, rule: string): Promise<void> =>
 	invoke<void>('revoke_blocked', { profile, rule });
+
+/** El recurso de red: apagarlo es el kill-switch de esa aplicación. */
+export const NETWORK_RESOURCE = 'network';
+
+/**
+ * Un destino que el cortafuegos vio abrir a una aplicación.
+ *
+ * `domain` y `binary_path` los influye quien abre la conexión: se dibujan
+ * siempre como texto (`{{ }}`), nunca como HTML.
+ */
+export interface ObservedConnection {
+	uid: number;
+	binary_path: string;
+	ip: string;
+	port: number;
+	proto: string;
+	/** `false` = el cortafuegos la cortó. */
+	allowed: boolean;
+	count: number;
+	last_seen_secs: number;
+	/** El nombre que la app resolvió para esa IP, si el servicio lo vio; si no, `null`. */
+	domain: string | null;
+}
+
+/** «A esta aplicación se le corta este dominio». */
+export interface BlockedDomain {
+	binary_path: string;
+	domain: string;
+}
+
+export const listConnections = (): Promise<ObservedConnection[]> =>
+	invoke<ObservedConnection[]>('list_connections');
+
+export const listDomainRules = (): Promise<BlockedDomain[]> =>
+	invoke<BlockedDomain[]>('list_domain_rules');
+
+/** Pasa por polkit, como `setPermission`: puede pedir autenticación y ser rechazado. */
+export const setDomainRule = (
+	binaryPath: string,
+	domain: string,
+	blocked: boolean
+): Promise<void> => invoke<void>('set_domain_rule', { binaryPath, domain, blocked });
