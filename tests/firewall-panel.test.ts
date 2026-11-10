@@ -228,7 +228,7 @@ describe('FirewallPanel', () => {
 
 describe('FirewallLog', () => {
 	const logEntry = {
-		timestamp: 1700000000,
+		timestamp_secs: 1700000000,
 		uid: 1000,
 		binary_path: '/usr/bin/<b>curl</b>',
 		destination: '<img src=x>',

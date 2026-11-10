@@ -134,7 +134,7 @@ export const setDomainRule = (
  */
 export interface FirewallLogEntry {
 	/** Segundos Unix. */
-	timestamp: number;
+	timestamp_secs: number;
 	uid: number;
 	binary_path: string;
 	destination: string;

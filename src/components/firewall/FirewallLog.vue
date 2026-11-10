@@ -110,7 +110,7 @@ onMounted(async () => {
 		<ul v-else class="flex flex-col gap-2">
 			<li
 				v-for="(e, i) in entries"
-				:key="`${e.timestamp}|${e.binary_path}|${e.destination}|${e.port}|${i}`"
+				:key="`${e.timestamp_secs}|${e.binary_path}|${e.destination}|${e.port}|${i}`"
 				class="flex flex-col gap-1 rounded-corner-m border border-ui-border bg-ui-surface/70 p-3 text-sm"
 			>
 				<p class="min-w-0 truncate font-medium text-tx-main" :title="e.binary_path">{{ e.binary_path }}</p>
@@ -118,7 +118,7 @@ onMounted(async () => {
 					<span class="min-w-0 flex-1 break-all font-mono text-tx-main">{{ e.destination }}:{{ e.port }}</span>
 					<span class="shrink-0 text-xs uppercase text-tx-muted">{{ e.proto }}</span>
 					<span class="shrink-0 rounded-corner-xs bg-status-error/20 px-1.5 text-xs text-status-error">{{ reasonLabel(e.reason) }}</span>
-					<span class="shrink-0 text-xs text-tx-muted">{{ whenLabel(e.timestamp) }}</span>
+					<span class="shrink-0 text-xs text-tx-muted">{{ whenLabel(e.timestamp_secs) }}</span>
 				</div>
 			</li>
 		</ul>

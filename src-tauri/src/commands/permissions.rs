@@ -223,7 +223,7 @@ pub async fn set_domain_rule(
 /// dibuja como texto, nunca como HTML. `reason` viene vacío si el servicio no lo supo.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FirewallLogEntry {
-    pub timestamp: u64,
+    pub timestamp_secs: u64,
     pub uid: u32,
     pub binary_path: String,
     pub destination: String,
@@ -357,7 +357,7 @@ mod tests {
     #[test]
     fn a_log_entry_from_the_service_is_understood_and_reason_may_be_missing() {
         let l: Vec<FirewallLogEntry> = serde_json::from_str(
-            r#"[{"timestamp":1700000000,"uid":1000,"binary_path":"/usr/bin/curl","destination":"example.com","port":443,"proto":"tcp","reason":"domain-rule"},{"timestamp":1,"uid":1000,"binary_path":"/x","destination":"1.2.3.4","port":53,"proto":"udp"}]"#,
+            r#"[{"timestamp_secs":1700000000,"uid":1000,"binary_path":"/usr/bin/curl","destination":"example.com","port":443,"proto":"tcp","reason":"domain-rule"},{"timestamp_secs":1,"uid":1000,"binary_path":"/x","destination":"1.2.3.4","port":53,"proto":"udp"}]"#,
         )
         .unwrap();
         assert_eq!(l[0].reason, "domain-rule");
