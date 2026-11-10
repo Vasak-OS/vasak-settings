@@ -217,6 +217,85 @@ pub async fn set_domain_rule(
         .map_err(|e| format!("No se pudo cambiar la regla: {e}"))
 }
 
+/// Un bloqueo del registro persistente del cortafuegos (opt-in), tal como lo manda el servicio.
+///
+/// `binary_path` y `destination` los influye la aplicación: la interfaz los
+/// dibuja como texto, nunca como HTML. `reason` viene vacío si el servicio no lo supo.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FirewallLogEntry {
+    pub timestamp: u64,
+    pub uid: u32,
+    pub binary_path: String,
+    pub destination: String,
+    pub port: u16,
+    pub proto: String,
+    #[serde(default)]
+    pub reason: String,
+}
+
+/// Los bloqueos registrados del usuario que llama (vacío si el registro está apagado).
+#[tauri::command]
+pub async fn read_firewall_log() -> Result<Vec<FirewallLogEntry>, String> {
+    let raw = leer_json("ReadFirewallLog", "el registro de bloqueos").await?;
+    serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))
+}
+
+/// Si el registro persistente de bloqueos está prendido.
+#[tauri::command]
+pub async fn firewall_logging_enabled() -> Result<bool, String> {
+    let connection = service().await?;
+    let reply = connection
+        .call_method(
+            Some(SERVICE_NAME),
+            SERVICE_PATH,
+            Some(SERVICE_INTERFACE),
+            "FirewallLoggingEnabled",
+            &(),
+        )
+        .await
+        .map_err(|e| format!("No se pudo leer el estado del registro: {e}"))?;
+    reply
+        .body()
+        .deserialize::<bool>()
+        .map_err(|e| format!("Respuesta inválida del servicio de permisos: {e}"))
+}
+
+/// Prende o apaga el registro de bloqueos. Pasa por polkit; apagar NO borra lo guardado.
+#[tauri::command]
+pub async fn set_firewall_logging(enabled: bool) -> Result<(), String> {
+    let connection = service().await?;
+
+    connection
+        .call_method(
+            Some(SERVICE_NAME),
+            SERVICE_PATH,
+            Some(SERVICE_INTERFACE),
+            "SetFirewallLogging",
+            &(enabled,),
+        )
+        .await
+        .map(|_| ())
+        .map_err(|e| format!("No se pudo cambiar el registro: {e}"))
+}
+
+/// Borra el registro de bloqueos. Pasa por polkit.
+#[tauri::command]
+pub async fn clear_firewall_log() -> Result<(), String> {
+    let connection = service().await?;
+
+    connection
+        .call_method(
+            Some(SERVICE_NAME),
+            SERVICE_PATH,
+            Some(SERVICE_INTERFACE),
+            "ClearFirewallLog",
+            &(),
+        )
+        .await
+        .map(|_| ())
+        .map_err(|e| format!("No se pudo borrar el registro: {e}"))
+}
+
 /// Reenvía la señal `ConnectionObserved` a la ventana como evento de Tauri.
 ///
 /// La señal lleva sólo el uid (viaja por el bus del sistema y la oye cualquiera),
@@ -273,6 +352,17 @@ mod tests {
         let r: Vec<BlockedDomain> =
             serde_json::from_str(r#"[{"binary_path":"/usr/bin/curl","domain":"a.com"}]"#).unwrap();
         assert_eq!(r[0].domain, "a.com");
+    }
+
+    #[test]
+    fn a_log_entry_from_the_service_is_understood_and_reason_may_be_missing() {
+        let l: Vec<FirewallLogEntry> = serde_json::from_str(
+            r#"[{"timestamp":1700000000,"uid":1000,"binary_path":"/usr/bin/curl","destination":"example.com","port":443,"proto":"tcp","reason":"domain-rule"},{"timestamp":1,"uid":1000,"binary_path":"/x","destination":"1.2.3.4","port":53,"proto":"udp"}]"#,
+        )
+        .unwrap();
+        assert_eq!(l[0].reason, "domain-rule");
+        assert_eq!(l[0].port, 443);
+        assert_eq!(l[1].reason, "");
     }
 
     const FROM_THE_SERVICE: &str = r#"[{"application":{"binary_path":"/usr/bin/busctl","display_name":"busctl","provenance":"system-installed"},"asks":true,"decisions":{"account.email":"denied","camera":"denied"}}]"#;
