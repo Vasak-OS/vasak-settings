@@ -60,21 +60,32 @@ async fn service() -> Result<zbus::Connection, String> {
 /// `que` nombra lo que se estaba leyendo, para el mensaje de error. Centraliza el
 /// `call_method` + `deserialize` que comparten todas las lecturas de lista, así no
 /// se repite el bloque en cada comando.
-async fn leer_json(metodo: &str, que: &str) -> Result<String, String> {
-    let connection = service().await?;
-
-    let reply = connection
+/// Llama un método del servicio de permisos y devuelve su respuesta cruda.
+///
+/// `accion` nombra lo que se intentaba, para el mensaje de error. Centraliza el
+/// `service()` + `call_method` que comparten todos los comandos; cada uno
+/// deserializa la respuesta como necesita (o la descarta con `.map(|_| ())`).
+async fn llamar<B>(metodo: &str, body: &B, accion: &str) -> Result<zbus::Message, String>
+where
+    B: serde::Serialize + zbus::zvariant::DynamicType,
+{
+    service()
+        .await?
         .call_method(
             Some(SERVICE_NAME),
             SERVICE_PATH,
             Some(SERVICE_INTERFACE),
             metodo,
-            &(),
+            body,
         )
         .await
-        .map_err(|e| format!("No se pudo leer {que}: {e}"))?;
+        .map_err(|e| format!("No se pudo {accion}: {e}"))
+}
 
-    reply
+/// Llama un método sin argumentos que responde un JSON y lo devuelve crudo.
+async fn leer_json(metodo: &str, que: &str) -> Result<String, String> {
+    llamar(metodo, &(), &format!("leer {que}"))
+        .await?
         .body()
         .deserialize::<String>()
         .map_err(|e| format!("Respuesta inválida del servicio de permisos: {e}"))
@@ -116,37 +127,25 @@ pub async fn set_permission(
     resource_id: String,
     allowed: bool,
 ) -> Result<(), String> {
-    let connection = service().await?;
-
-    connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "SetPermission",
-            &(binary_path.as_str(), resource_id.as_str(), allowed),
-        )
-        .await
-        .map(|_| ())
-        .map_err(|e| format!("No se pudo cambiar el permiso: {e}"))
+    llamar(
+        "SetPermission",
+        &(binary_path.as_str(), resource_id.as_str(), allowed),
+        "cambiar el permiso",
+    )
+    .await
+    .map(|_| ())
 }
 
 /// Forgets a program entirely, so the next time it asks the user is asked again.
 #[tauri::command]
 pub async fn forget_permission(binary_path: String) -> Result<(), String> {
-    let connection = service().await?;
-
-    connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "ForgetPermission",
-            &(binary_path.as_str(),),
-        )
-        .await
-        .map(|_| ())
-        .map_err(|e| format!("No se pudo olvidar la aplicación: {e}"))
+    llamar(
+        "ForgetPermission",
+        &(binary_path.as_str(),),
+        "olvidar la aplicación",
+    )
+    .await
+    .map(|_| ())
 }
 
 /// Un destino observado por el cortafuegos, tal como lo manda el servicio.
@@ -202,19 +201,62 @@ pub async fn set_domain_rule(
     domain: String,
     blocked: bool,
 ) -> Result<(), String> {
-    let connection = service().await?;
+    llamar(
+        "SetDomainRule",
+        &(binary_path.as_str(), domain.as_str(), blocked),
+        "cambiar la regla",
+    )
+    .await
+    .map(|_| ())
+}
 
-    connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "SetDomainRule",
-            &(binary_path.as_str(), domain.as_str(), blocked),
-        )
+/// Un bloqueo del registro persistente del cortafuegos (opt-in), tal como lo manda el servicio.
+///
+/// `binary_path` y `destination` los influye la aplicación: la interfaz los
+/// dibuja como texto, nunca como HTML. `reason` viene vacío si el servicio no lo supo.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FirewallLogEntry {
+    pub timestamp_secs: u64,
+    pub uid: u32,
+    pub binary_path: String,
+    pub destination: String,
+    pub port: u16,
+    pub proto: String,
+    #[serde(default)]
+    pub reason: String,
+}
+
+/// Los bloqueos registrados del usuario que llama (vacío si el registro está apagado).
+#[tauri::command]
+pub async fn read_firewall_log() -> Result<Vec<FirewallLogEntry>, String> {
+    let raw = leer_json("ReadFirewallLog", "el registro de bloqueos").await?;
+    serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))
+}
+
+/// Si el registro persistente de bloqueos está prendido.
+#[tauri::command]
+pub async fn firewall_logging_enabled() -> Result<bool, String> {
+    llamar("FirewallLoggingEnabled", &(), "leer el estado del registro")
+        .await?
+        .body()
+        .deserialize::<bool>()
+        .map_err(|e| format!("Respuesta inválida del servicio de permisos: {e}"))
+}
+
+/// Prende o apaga el registro de bloqueos. Pasa por polkit; apagar NO borra lo guardado.
+#[tauri::command]
+pub async fn set_firewall_logging(enabled: bool) -> Result<(), String> {
+    llamar("SetFirewallLogging", &(enabled,), "cambiar el registro")
         .await
         .map(|_| ())
-        .map_err(|e| format!("No se pudo cambiar la regla: {e}"))
+}
+
+/// Borra el registro de bloqueos. Pasa por polkit.
+#[tauri::command]
+pub async fn clear_firewall_log() -> Result<(), String> {
+    llamar("ClearFirewallLog", &(), "borrar el registro")
+        .await
+        .map(|_| ())
 }
 
 /// Reenvía la señal `ConnectionObserved` a la ventana como evento de Tauri.
@@ -273,6 +315,17 @@ mod tests {
         let r: Vec<BlockedDomain> =
             serde_json::from_str(r#"[{"binary_path":"/usr/bin/curl","domain":"a.com"}]"#).unwrap();
         assert_eq!(r[0].domain, "a.com");
+    }
+
+    #[test]
+    fn a_log_entry_from_the_service_is_understood_and_reason_may_be_missing() {
+        let l: Vec<FirewallLogEntry> = serde_json::from_str(
+            r#"[{"timestamp_secs":1700000000,"uid":1000,"binary_path":"/usr/bin/curl","destination":"example.com","port":443,"proto":"tcp","reason":"domain-rule"},{"timestamp_secs":1,"uid":1000,"binary_path":"/x","destination":"1.2.3.4","port":53,"proto":"udp"}]"#,
+        )
+        .unwrap();
+        assert_eq!(l[0].reason, "domain-rule");
+        assert_eq!(l[0].port, 443);
+        assert_eq!(l[1].reason, "");
     }
 
     const FROM_THE_SERVICE: &str = r#"[{"application":{"binary_path":"/usr/bin/busctl","display_name":"busctl","provenance":"system-installed"},"asks":true,"decisions":{"account.email":"denied","camera":"denied"}}]"#;

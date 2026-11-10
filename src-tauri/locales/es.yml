@@ -487,6 +487,23 @@ views:
         add: Bloquear
         remove: Quitar
         empty: No hay dominios bloqueados.
+      log:
+        title: Registro de bloqueos
+        description: >-
+          Guarda en este equipo los intentos de conexión que el cortafuegos
+          cortó, para que los puedas revisar después. Viene apagado.
+        toggle: Registrar los bloqueos
+        empty: Todavía no se registró ningún bloqueo.
+        off: El registro está apagado.
+        clear: Borrar el registro
+        clearHint: Apagar el registro no borra lo ya guardado; para eso usá este botón.
+        clearTitle: ¿Borrar el registro de bloqueos?
+        clearDescription: Se borra todo lo guardado y no se puede deshacer.
+        clearConfirm: Borrar
+        reasons:
+          killSwitch: Red cortada
+          domainRule: Regla de dominio
+          forcedResolver: Resolvedor forzado
     title: Privacidad y seguridad
     screenTime:
       title: Tiempo de pantalla
