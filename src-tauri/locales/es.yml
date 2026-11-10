@@ -456,6 +456,37 @@ views:
       confirmButton: Borrar todo
       errorClearing: "No se pudo borrar el historial: {0}"
   privacySecurity:
+    firewall:
+      title: Red por app
+      description: >-
+        Qué aplicaciones pueden salir a Internet, a dónde se conectan y qué
+        dominios se les cortan.
+      killSwitch:
+        title: Acceso a la red
+        description: >-
+          Apagá el interruptor para cortarle toda la red a una aplicación.
+        empty: Todavía no hay aplicaciones que el sistema conozca.
+        toggle: 'Permitir la red a {0}'
+      connections:
+        title: Conexiones en vivo
+        description: >-
+          Los destinos a los que se conectaron tus aplicaciones desde que
+          arrancó el servicio. Un dominio sólo aparece si se lo vio resolver.
+        empty: Todavía no se vio ninguna conexión.
+        allowed: Permitida
+        blocked: Bloqueada
+      rules:
+        title: Reglas por dominio
+        description: >-
+          Cortale un dominio a una aplicación sin quitarle el resto de la red.
+          Una aplicación que resuelve nombres por su cuenta puede esquivar la regla.
+        app: Aplicación
+        chooseApp: Elegí una aplicación
+        domain: Dominio
+        domainPlaceholder: ejemplo.com
+        add: Bloquear
+        remove: Quitar
+        empty: No hay dominios bloqueados.
     title: Privacidad y seguridad
     screenTime:
       title: Tiempo de pantalla

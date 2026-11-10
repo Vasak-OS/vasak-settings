@@ -55,8 +55,12 @@ async fn service() -> Result<zbus::Connection, String> {
     })
 }
 
-#[tauri::command]
-pub async fn list_permissions() -> Result<Vec<PermissionEntry>, String> {
+/// Llama un método sin argumentos del servicio y devuelve su respuesta JSON cruda.
+///
+/// `que` nombra lo que se estaba leyendo, para el mensaje de error. Centraliza el
+/// `call_method` + `deserialize` que comparten todas las lecturas de lista, así no
+/// se repite el bloque en cada comando.
+async fn leer_json(metodo: &str, que: &str) -> Result<String, String> {
     let connection = service().await?;
 
     let reply = connection
@@ -64,16 +68,21 @@ pub async fn list_permissions() -> Result<Vec<PermissionEntry>, String> {
             Some(SERVICE_NAME),
             SERVICE_PATH,
             Some(SERVICE_INTERFACE),
-            "ListPermissions",
+            metodo,
             &(),
         )
         .await
-        .map_err(|e| format!("No se pudieron leer los permisos: {e}"))?;
+        .map_err(|e| format!("No se pudo leer {que}: {e}"))?;
 
-    let raw: String = reply
+    reply
         .body()
-        .deserialize()
-        .map_err(|e| format!("Respuesta inválida del servicio de permisos: {e}"))?;
+        .deserialize::<String>()
+        .map_err(|e| format!("Respuesta inválida del servicio de permisos: {e}"))
+}
+
+#[tauri::command]
+pub async fn list_permissions() -> Result<Vec<PermissionEntry>, String> {
+    let raw = leer_json("ListPermissions", "los permisos").await?;
 
     let mut entradas: Vec<PermissionEntry> = serde_json::from_str(&raw)
         .map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))?;
@@ -140,6 +149,113 @@ pub async fn forget_permission(binary_path: String) -> Result<(), String> {
         .map_err(|e| format!("No se pudo olvidar la aplicación: {e}"))
 }
 
+/// Un destino observado por el cortafuegos, tal como lo manda el servicio.
+///
+/// Los campos opcionales llevan `default` por la misma razón que `asks` arriba:
+/// un servicio más viejo que no los manda no tiene que romper la lectura.
+/// `domain` y `binary_path` los influye quien abre la conexión: la interfaz los
+/// dibuja como texto, nunca como HTML.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ObservedConnection {
+    pub uid: u32,
+    pub binary_path: String,
+    pub ip: String,
+    pub port: u16,
+    pub proto: String,
+    pub allowed: bool,
+    #[serde(default)]
+    pub count: u32,
+    #[serde(default)]
+    pub last_seen_secs: u64,
+    #[serde(default)]
+    pub domain: Option<String>,
+}
+
+/// Una regla de bloqueo por dominio: a `binary_path` se le corta `domain`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlockedDomain {
+    pub binary_path: String,
+    pub domain: String,
+}
+
+/// El mapa de conexiones en vivo del usuario que llama (sólo en memoria en el servicio).
+#[tauri::command]
+pub async fn list_connections() -> Result<Vec<ObservedConnection>, String> {
+    let raw = leer_json("ListConnections", "las conexiones").await?;
+    serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))
+}
+
+/// Las reglas de bloqueo por dominio del usuario que llama.
+#[tauri::command]
+pub async fn list_domain_rules() -> Result<Vec<BlockedDomain>, String> {
+    let raw = leer_json("ListDomainRules", "las reglas por dominio").await?;
+    serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))
+}
+
+/// Prende o apaga el bloqueo de un dominio para un programa.
+///
+/// Pasa por polkit en el servicio, como `set_permission`: puede mostrar un
+/// diálogo de autenticación y ser rechazado.
+#[tauri::command]
+pub async fn set_domain_rule(
+    binary_path: String,
+    domain: String,
+    blocked: bool,
+) -> Result<(), String> {
+    let connection = service().await?;
+
+    connection
+        .call_method(
+            Some(SERVICE_NAME),
+            SERVICE_PATH,
+            Some(SERVICE_INTERFACE),
+            "SetDomainRule",
+            &(binary_path.as_str(), domain.as_str(), blocked),
+        )
+        .await
+        .map(|_| ())
+        .map_err(|e| format!("No se pudo cambiar la regla: {e}"))
+}
+
+/// Reenvía la señal `ConnectionObserved` a la ventana como evento de Tauri.
+///
+/// La señal lleva sólo el uid (viaja por el bus del sistema y la oye cualquiera),
+/// así que no trae el destino: el evento es un «volvé a leer» y la pantalla llama
+/// a `list_connections`, que filtra por el usuario que llama.
+pub async fn watch_connection_signals(app: tauri::AppHandle) {
+    use futures_util::StreamExt;
+    use tauri::Emitter;
+
+    let Ok(connection) = zbus::Connection::system().await else {
+        crate::logger::log_debug("vasak-permissions: sin bus del sistema, no se escuchan señales");
+        return;
+    };
+    let Ok(proxy) = zbus::fdo::DBusProxy::new(&connection).await else {
+        return;
+    };
+    let rule = format!(
+        "type='signal',sender='{SERVICE_NAME}',path='{SERVICE_PATH}',\
+         interface='{SERVICE_INTERFACE}',member='ConnectionObserved'"
+    );
+    let Ok(parsed) = rule.as_str().try_into() else {
+        return;
+    };
+    if proxy.add_match_rule(parsed).await.is_err() {
+        crate::logger::log_debug("vasak-permissions: no se pudo suscribir a las señales");
+        return;
+    }
+
+    let mut stream = zbus::MessageStream::from(connection);
+    while let Some(Ok(message)) = stream.next().await {
+        let header = message.header();
+        if header.interface().map(|i| i.as_str()) == Some(SERVICE_INTERFACE)
+            && header.member().map(|m| m.as_str()) == Some("ConnectionObserved")
+        {
+            let _ = app.emit("permissions-connection-observed", ());
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -147,6 +263,18 @@ mod tests {
     /// Verbatim from a running service. The two sides are separate programs, so
     /// a field renamed on one of them would otherwise only show up as an empty
     /// screen with no explanation.
+    #[test]
+    fn a_connection_and_a_rule_from_the_service_are_understood() {
+        let c: Vec<ObservedConnection> = serde_json::from_str(
+            r#"[{"uid":1000,"binary_path":"/usr/bin/curl","ip":"1.2.3.4","port":443,"proto":"tcp","allowed":false,"count":2,"last_seen_secs":5,"domain":"example.com"}]"#,
+        )
+        .unwrap();
+        assert_eq!(c[0].domain.as_deref(), Some("example.com"));
+        let r: Vec<BlockedDomain> =
+            serde_json::from_str(r#"[{"binary_path":"/usr/bin/curl","domain":"a.com"}]"#).unwrap();
+        assert_eq!(r[0].domain, "a.com");
+    }
+
     const FROM_THE_SERVICE: &str = r#"[{"application":{"binary_path":"/usr/bin/busctl","display_name":"busctl","provenance":"system-installed"},"asks":true,"decisions":{"account.email":"denied","camera":"denied"}}]"#;
 
     #[test]
@@ -219,24 +347,7 @@ pub struct BlockedItem {
 /// perfil que niega algo deja un programa que falla sin explicación.
 #[tauri::command]
 pub async fn list_blocked() -> Result<Vec<BlockedItem>, String> {
-    let connection = service().await?;
-
-    let reply = connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "ListBlocked",
-            &(),
-        )
-        .await
-        .map_err(|e| format!("No se pudo leer lo bloqueado: {e}"))?;
-
-    let raw: String = reply
-        .body()
-        .deserialize()
-        .map_err(|e| format!("Respuesta inválida del servicio de permisos: {e}"))?;
-
+    let raw = leer_json("ListBlocked", "lo bloqueado").await?;
     serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))
 }
 
