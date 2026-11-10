@@ -14,7 +14,7 @@ import FirewallKillSwitch from '../src/components/firewall/FirewallKillSwitch.vu
 import FirewallLog from '../src/components/firewall/FirewallLog.vue';
 import FirewallPanel from '../src/components/firewall/FirewallPanel.vue';
 import type { PermissionEntry } from '../src/services/permissions.service';
-import { type FakeBackend, fakeBackend } from './screen-time-backend';
+import { type FakeBackend, fakeBackend, textsOf } from './screen-time-backend';
 
 const entry = (path: string, name: string, network?: string): PermissionEntry =>
 	({
@@ -220,7 +220,7 @@ describe('FirewallPanel', () => {
 		backend.handlers.list_domain_rules = () => [{ binary_path: '/usr/bin/curl', domain: 'x' }];
 		wrapper = mount(FirewallPanel, { global: { stubs } });
 		await flushPromises();
-		await wrapper.find('section:nth-of-type(3) li button').trigger('click');
+		await wrapper.findComponent(FirewallDomainRules).find('li button').trigger('click');
 		await flushPromises();
 		expect(wrapper.findComponent(AlertMessage).text()).toContain('dominio inválido');
 	});
@@ -297,5 +297,121 @@ describe('FirewallLog', () => {
 		await flushPromises();
 		expect(backend.commands()).toContain('clear_firewall_log');
 		expect(wrapper.find('li').exists()).toBe(false);
+	});
+});
+
+describe('FirewallLog (comportamiento crítico)', () => {
+	const base = {
+		timestamp_secs: 1700000000,
+		uid: 1000,
+		binary_path: '/usr/bin/curl',
+		destination: 'example.org',
+		port: 443,
+		proto: 'tcp',
+		reason: 'domain-rule',
+	};
+	const mountLog = async (enabled: boolean, log: unknown[]) => {
+		backend.handlers.firewall_logging_enabled = () => enabled;
+		backend.handlers.read_firewall_log = () => log;
+		wrapper = mount(FirewallLog, { attachTo: document.body, global: { stubs } });
+		await flushPromises();
+	};
+
+	test('al montar lee el estado y el registro, y el interruptor refleja el estado real', async () => {
+		await mountLog(true, [base]);
+		expect(backend.commands()).toContain('firewall_logging_enabled');
+		expect(backend.commands()).toContain('read_firewall_log');
+		expect(wrapper?.findComponent(SwitchToggle).props('modelValue')).toBe(true);
+	});
+
+	test('apagar manda set_firewall_logging con enabled=false', async () => {
+		await mountLog(true, []);
+		wrapper?.findComponent(SwitchToggle).vm.$emit('update:modelValue', false);
+		await flushPromises();
+		expect(backend.calls.find((c) => c.command === 'set_firewall_logging')?.args).toEqual({
+			enabled: false,
+		});
+	});
+
+	test('abrir el diálogo de borrado no borra; cancelar tampoco', async () => {
+		await mountLog(true, [base]);
+		await wrapper?.find('[data-log-clear]').trigger('click');
+		await flushPromises();
+		expect(document.body.querySelector('[data-log-confirm]')).not.toBeNull();
+		(document.body.querySelector('[data-log-cancel]') as HTMLElement).click();
+		await flushPromises();
+		expect(backend.commands()).not.toContain('clear_firewall_log');
+		expect(wrapper?.find('li').exists()).toBe(true);
+	});
+
+	test('confirmar el borrado llama clear_firewall_log una vez y relee el registro', async () => {
+		await mountLog(true, [base]);
+		const reads = () => backend.commands().filter((c) => c === 'read_firewall_log').length;
+		const before = reads();
+		await wrapper?.find('[data-log-clear]').trigger('click');
+		await flushPromises();
+		(document.body.querySelector('[data-log-confirm]') as HTMLElement).click();
+		await flushPromises();
+		expect(backend.commands().filter((c) => c === 'clear_firewall_log')).toHaveLength(1);
+		expect(reads()).toBe(before + 1);
+	});
+
+	test('un error al borrar se muestra por AlertMessage', async () => {
+		await mountLog(true, [base]);
+		backend.handlers.clear_firewall_log = () => {
+			throw 'autenticación rechazada';
+		};
+		await wrapper?.find('[data-log-clear]').trigger('click');
+		await flushPromises();
+		(document.body.querySelector('[data-log-confirm]') as HTMLElement).click();
+		await flushPromises();
+		expect(wrapper?.findComponent(AlertMessage).text()).toContain('autenticación rechazada');
+	});
+
+	test('el motivo se muestra traducido y un motivo desconocido o vacío sale como «—»', async () => {
+		const reasons: [string, string[]][] = [
+			['kill-switch', textsOf('views.privacySecurity.firewall.log.reasons.killSwitch')],
+			['domain-rule', textsOf('views.privacySecurity.firewall.log.reasons.domainRule')],
+			['forced-resolver', textsOf('views.privacySecurity.firewall.log.reasons.forcedResolver')],
+			['', ['—']],
+			['algo-nuevo', ['—']],
+		];
+		for (const [reason, accepted] of reasons) {
+			await mountLog(true, [{ ...base, reason }]);
+			const badge = wrapper?.findAll('li span').find((s) => accepted.includes(s.text()));
+			expect(badge, `motivo «${reason}»`).toBeDefined();
+			wrapper?.unmount();
+			wrapper = null;
+		}
+	});
+
+	test('con el registro apagado y con el encendido pero vacío salen EmptyState distintos', async () => {
+		await mountLog(false, []);
+		const off = wrapper?.text() ?? '';
+		expect(textsOf('views.privacySecurity.firewall.log.off').some((t) => off.includes(t))).toBe(
+			true
+		);
+		wrapper?.unmount();
+		await mountLog(true, []);
+		const empty = wrapper?.text() ?? '';
+		expect(textsOf('views.privacySecurity.firewall.log.empty').some((t) => empty.includes(t))).toBe(
+			true
+		);
+		expect(textsOf('views.privacySecurity.firewall.log.off').some((t) => empty.includes(t))).toBe(
+			false
+		);
+	});
+
+	test('la fecha sale de timestamp_secs en segundos, no como época 1970', async () => {
+		await mountLog(true, [base]);
+		const expected = new Date(1700000000 * 1000).toLocaleString();
+		expect(wrapper?.find('li').text()).toContain(expected);
+		expect(wrapper?.find('li').text()).not.toContain('1970');
+	});
+
+	test('binary_path con HTML también se dibuja como texto', async () => {
+		await mountLog(true, [{ ...base, binary_path: '/x/<img src=x onerror=alert(1)>' }]);
+		expect(wrapper?.find('li img').exists()).toBe(false);
+		expect(wrapper?.find('li').text()).toContain('<img src=x onerror=alert(1)>');
 	});
 });
