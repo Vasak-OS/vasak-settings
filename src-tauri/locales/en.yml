@@ -454,6 +454,37 @@ views:
       confirmButton: Clear all
       errorClearing: "Could not clear the history: {0}"
   privacySecurity:
+    firewall:
+      title: Network per app
+      description: >-
+        Which applications may reach the Internet, where they connect and which
+        domains are cut off for them.
+      killSwitch:
+        title: Network access
+        description: >-
+          Turn the switch off to cut all network access for an application.
+        empty: No applications known to the system yet.
+        toggle: 'Allow network for {0}'
+      connections:
+        title: Live connections
+        description: >-
+          The destinations your applications connected to since the service
+          started. A domain only shows when it was seen being resolved.
+        empty: No connections seen yet.
+        allowed: Allowed
+        blocked: Blocked
+      rules:
+        title: Domain rules
+        description: >-
+          Cut one domain for an application without removing the rest of its
+          network. An application that resolves names on its own can evade the rule.
+        app: Application
+        chooseApp: Choose an application
+        domain: Domain
+        domainPlaceholder: example.com
+        add: Block
+        remove: Remove
+        empty: No blocked domains.
     title: Privacy and security
     screenTime:
       title: Screen time

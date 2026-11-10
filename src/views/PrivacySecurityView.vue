@@ -51,6 +51,7 @@
 import { useI18n } from '@vasakgroup/tauri-plugin-i18n';
 import { AlertMessage, EmptyState, PageHeader, Panel, ThemeIcon } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
+import FirewallPanel from '@/components/firewall/FirewallPanel.vue';
 import AppIcon from '@/components/permissions/AppIcon.vue';
 import ScreenTimePrivacyControls from '@/components/screen-time/ScreenTimePrivacyControls.vue';
 import {
@@ -444,6 +445,9 @@ onMounted(load);
 				{{ t('views.privacySecurity.scope') }}
 			</p>
 		</Panel>
+
+		<!-- El cortafuegos por aplicación (vasak-permissions#93): qué apps salen a la red. -->
+		<FirewallPanel />
 
 		<!-- El tiempo de pantalla: es un registro de uso, y esta es la pantalla donde
 		     se buscan los ajustes de privacidad (vasak-settings#145). Va al final:

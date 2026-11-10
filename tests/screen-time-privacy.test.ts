@@ -8,6 +8,9 @@
  * El servicio de salud y `vasak.conf` son los de `screen-time-backend.ts`, que
  * espía `invoke` (ver ahí por qué no es un `mock.module`).
  *
+ * El panel «Red por app» va dentro de la pantalla pero escucha eventos de Tauri;
+ * acá se dobla porque esta prueba es del tiempo de pantalla.
+ *
  * Los botones se buscan por su texto, que es la clave del i18n o su traducción:
  * en la corrida el i18n puede estar doblado por otro archivo o caer a la clave,
  * y la prueba acepta las dos.
@@ -56,7 +59,7 @@ afterEach(() => {
 async function mountView() {
 	await router.push({ name: 'privacy-security' });
 	view = mount(PrivacySecurityView, {
-		global: { plugins: [router], stubs: { ThemeIcon: true, AppIcon: true } },
+		global: { plugins: [router], stubs: { ThemeIcon: true, AppIcon: true, FirewallPanel: true } },
 	});
 	await flushPromises();
 	return view;
