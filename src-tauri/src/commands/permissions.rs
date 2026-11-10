@@ -55,8 +55,12 @@ async fn service() -> Result<zbus::Connection, String> {
     })
 }
 
-#[tauri::command]
-pub async fn list_permissions() -> Result<Vec<PermissionEntry>, String> {
+/// Llama un método sin argumentos del servicio y devuelve su respuesta JSON cruda.
+///
+/// `que` nombra lo que se estaba leyendo, para el mensaje de error. Centraliza el
+/// `call_method` + `deserialize` que comparten todas las lecturas de lista, así no
+/// se repite el bloque en cada comando.
+async fn leer_json(metodo: &str, que: &str) -> Result<String, String> {
     let connection = service().await?;
 
     let reply = connection
@@ -64,16 +68,21 @@ pub async fn list_permissions() -> Result<Vec<PermissionEntry>, String> {
             Some(SERVICE_NAME),
             SERVICE_PATH,
             Some(SERVICE_INTERFACE),
-            "ListPermissions",
+            metodo,
             &(),
         )
         .await
-        .map_err(|e| format!("No se pudieron leer los permisos: {e}"))?;
+        .map_err(|e| format!("No se pudo leer {que}: {e}"))?;
 
-    let raw: String = reply
+    reply
         .body()
-        .deserialize()
-        .map_err(|e| format!("Respuesta inválida del servicio de permisos: {e}"))?;
+        .deserialize::<String>()
+        .map_err(|e| format!("Respuesta inválida del servicio de permisos: {e}"))
+}
+
+#[tauri::command]
+pub async fn list_permissions() -> Result<Vec<PermissionEntry>, String> {
+    let raw = leer_json("ListPermissions", "los permisos").await?;
 
     let mut entradas: Vec<PermissionEntry> = serde_json::from_str(&raw)
         .map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))?;
@@ -172,48 +181,14 @@ pub struct BlockedDomain {
 /// El mapa de conexiones en vivo del usuario que llama (sólo en memoria en el servicio).
 #[tauri::command]
 pub async fn list_connections() -> Result<Vec<ObservedConnection>, String> {
-    let connection = service().await?;
-
-    let reply = connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "ListConnections",
-            &(),
-        )
-        .await
-        .map_err(|e| format!("No se pudieron leer las conexiones: {e}"))?;
-
-    let raw: String = reply
-        .body()
-        .deserialize()
-        .map_err(|e| format!("Respuesta inválida del servicio de permisos: {e}"))?;
-
+    let raw = leer_json("ListConnections", "las conexiones").await?;
     serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))
 }
 
 /// Las reglas de bloqueo por dominio del usuario que llama.
 #[tauri::command]
 pub async fn list_domain_rules() -> Result<Vec<BlockedDomain>, String> {
-    let connection = service().await?;
-
-    let reply = connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "ListDomainRules",
-            &(),
-        )
-        .await
-        .map_err(|e| format!("No se pudieron leer las reglas por dominio: {e}"))?;
-
-    let raw: String = reply
-        .body()
-        .deserialize()
-        .map_err(|e| format!("Respuesta inválida del servicio de permisos: {e}"))?;
-
+    let raw = leer_json("ListDomainRules", "las reglas por dominio").await?;
     serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))
 }
 
@@ -372,24 +347,7 @@ pub struct BlockedItem {
 /// perfil que niega algo deja un programa que falla sin explicación.
 #[tauri::command]
 pub async fn list_blocked() -> Result<Vec<BlockedItem>, String> {
-    let connection = service().await?;
-
-    let reply = connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "ListBlocked",
-            &(),
-        )
-        .await
-        .map_err(|e| format!("No se pudo leer lo bloqueado: {e}"))?;
-
-    let raw: String = reply
-        .body()
-        .deserialize()
-        .map_err(|e| format!("Respuesta inválida del servicio de permisos: {e}"))?;
-
+    let raw = leer_json("ListBlocked", "lo bloqueado").await?;
     serde_json::from_str(&raw).map_err(|e| format!("No se pudo interpretar la respuesta: {e}"))
 }
 
