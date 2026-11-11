@@ -97,3 +97,42 @@ fn la_ventana_del_menu_contextual_no_recibe_comandos_de_la_app() {
         "context-menu.json concede comandos propios: {propios:?}"
     );
 }
+
+/// Ventanas (`"windows": [...]`) de una capability, con el mismo parseo liviano.
+fn ventanas(capability: &str) -> Vec<String> {
+    let json = leer(&format!("capabilities/{capability}.json"));
+    let inicio = json.find("\"windows\"").expect("sin windows");
+    let bloque = &json[inicio..];
+    let bloque = &bloque[..bloque.find(']').expect("windows sin cierre")];
+    bloque
+        .split('"')
+        .skip(3)
+        .step_by(2)
+        .map(str::to_string)
+        .collect()
+}
+
+#[test]
+fn solo_la_ventana_principal_recibe_comandos_de_la_app() {
+    let mut revisadas = 0;
+    for entrada in fs::read_dir(format!("{}/capabilities", env!("CARGO_MANIFEST_DIR"))).unwrap() {
+        let ruta = entrada.unwrap().path();
+        if ruta.extension().is_none_or(|e| e != "json") {
+            continue;
+        }
+        let nombre = ruta.file_stem().unwrap().to_str().unwrap().to_string();
+        let concede_propios = permisos(&nombre)
+            .iter()
+            .any(|p| p.starts_with("allow-") && !p.contains(':'));
+        if concede_propios {
+            revisadas += 1;
+            assert_eq!(
+                ventanas(&nombre),
+                ["main"],
+                "{nombre}.json concede comandos propios y su windows no es exactamente [\"main\"]: \
+                 llegarían a otras ventanas (p. ej. vsk_context_menu)"
+            );
+        }
+    }
+    assert!(revisadas > 0, "ninguna capability concede comandos propios");
+}
