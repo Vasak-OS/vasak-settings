@@ -76,6 +76,11 @@ fn read_u32(bytes: &[u8], at: usize) -> Option<u32> {
 ///
 /// Todo se lee con límites comprobados: es un archivo de otro programa, y uno
 /// roto no puede hacer que se pida memoria de más ni que se lea fuera de él.
+// Lints nuevos de clippy en Rust 1.99 sobre este cálculo de píxeles, que ya es
+// correcto: `chunks_exact(4)` sobre datos que no se sabe múltiplos de 4 en tiempo
+// de compilación, y la división `/ alpha` guardada por el `if alpha == 0`. No se
+// reescribe la aritmética de «unpremultiply» por un cambio de opinión del linter.
+#[allow(clippy::chunks_exact_to_as_chunks, clippy::manual_checked_ops)]
 pub fn decode_xcursor(bytes: &[u8], wanted: u32) -> Option<CursorFrame> {
     if bytes.get(0..4)? != XCURSOR_MAGIC {
         return None;
@@ -532,7 +537,7 @@ mod tests {
         let dir = Dir::new("preview");
         tema(&dir.0, "Mio", &["left_ptr", "hand2", "xterm"], None);
 
-        let imagenes = preview_images(&[dir.0.clone()], "Mio");
+        let imagenes = preview_images(std::slice::from_ref(&dir.0), "Mio");
 
         assert_eq!(imagenes.len(), 3, "sin `watch` ni sus alias hay tres");
         assert!(imagenes
@@ -546,7 +551,10 @@ mod tests {
         tema(&dir.0, "Padre", &["left_ptr"], None);
         tema(&dir.0, "Hijo", &[], Some("Padre"));
 
-        assert_eq!(preview_images(&[dir.0.clone()], "Hijo").len(), 1);
+        assert_eq!(
+            preview_images(std::slice::from_ref(&dir.0), "Hijo").len(),
+            1
+        );
     }
 
     #[test]
@@ -555,15 +563,15 @@ mod tests {
         tema(&dir.0, "A", &[], Some("B"));
         tema(&dir.0, "B", &[], Some("A"));
 
-        assert!(preview_images(&[dir.0.clone()], "A").is_empty());
+        assert!(preview_images(std::slice::from_ref(&dir.0), "A").is_empty());
     }
 
     #[test]
     fn un_tema_que_no_esta_da_una_vista_previa_vacia() {
         let dir = Dir::new("ausente");
 
-        assert!(preview_images(&[dir.0.clone()], "NoExiste").is_empty());
-        assert!(preview_images(&[dir.0.clone()], "../etc").is_empty());
+        assert!(preview_images(std::slice::from_ref(&dir.0), "NoExiste").is_empty());
+        assert!(preview_images(std::slice::from_ref(&dir.0), "../etc").is_empty());
     }
 
     #[test]
