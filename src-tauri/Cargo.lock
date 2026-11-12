@@ -5236,6 +5236,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 
 [[package]]
+name = "vasak-assistant-protocol"
+version = "0.3.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8191f179955144e1b8c2db6fca84450d09ac6674560348ce17663585173d374"
+dependencies = [
+ "serde",
+ "zbus 5.19.0",
+]
+
+[[package]]
 name = "vasak-connect-protocol"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5257,7 +5267,7 @@ dependencies = [
 
 [[package]]
 name = "vasak-settings"
-version = "0.65.2"
+version = "0.65.3"
 dependencies = [
  "base64 0.23.1",
  "chrono",
@@ -5294,6 +5304,7 @@ dependencies = [
  "tokio-rustls",
  "url",
  "uuid",
+ "vasak-assistant-protocol",
  "vasak-connect-protocol",
  "vasak-health-protocol",
  "webkit2gtk",
