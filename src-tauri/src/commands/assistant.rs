@@ -1716,7 +1716,7 @@ mod tests {
     }
 
     #[test]
-    fn sin_dueno_no_hay_asistente_y_un_impostor_no_recibe_nada() {
+    fn sin_dueno_o_con_impostor_cada_comando_falla_sin_filtrar_la_clave() {
         let Some(bus) = BusPrivado::arrancar() else {
             eprintln!("sin dbus-daemon: no se prueba el pegamento de D-Bus");
             return;
@@ -1734,12 +1734,15 @@ mod tests {
             // conexión se mantiene viva —`_impostor`— hasta el final del bloque,
             // así que tiene el nombre tomado durante todas las llamadas de abajo.
             //
-            // La guarda es determinista y NO depende de observar el tráfico del
-            // impostor: cada comando falla con un error `rechazado(...)` porque
-            // `verify_owner` niega al impostor ANTES de llamar, y la clave nunca
-            // aparece en el error. Si alguien rompiera `verify_owner` y aceptara al
-            // impostor, la llamada saldría y la aserción síncrona de ese comando
-            // fallaría acá mismo —sin carreras con una tarea observadora—.
+            // Esto es humo de integración: comprueba que, con un impostor en el
+            // nombre, cada comando falla y la clave nunca aparece en el error. NO
+            // demuestra por sí solo que `verify_owner` haya atrapado al impostor ni
+            // que no se haya enviado la llamada —`rechazado` también aceptaría un
+            // error posterior al envío, y en CI (sin systemd) la negativa viene de
+            // otra rama (fail-closed)—. La decisión del owner-check la prueba, de
+            // forma determinista, el test puro `el_chequeo_de_dueno_...` de más
+            // arriba; que `assistant_call` sólo envía tras `verify_owner(&conn)
+            // .await?` lo garantiza la estructura del código.
             let _impostor = zbus5::connection::Builder::session()
                 .unwrap()
                 .name(SERVICE)
