@@ -1591,6 +1591,60 @@ mod tests {
         );
     }
 
+    /// La decisión del owner-check, directa y sin bus: prueba que acepta al
+    /// demonio real y rechaza cada desvío de un impostor por separado. Es la
+    /// guarda determinista del núcleo —la prueba de bus de más abajo depende de
+    /// systemctl y en CI se niega por otra rama (fail-closed), así que no alcanza
+    /// sola para demostrar que el chequeo de dueño atrapa al impostor—.
+    #[test]
+    fn el_chequeo_de_dueno_acepta_al_demonio_y_rechaza_cada_desvio() {
+        use std::path::Path;
+        let uid = 1000u32;
+        let exe = Path::new("/usr/bin/vasak-assistant");
+        let cgroup =
+            "0::/user.slice/user-1000.slice/user@1000.service/app.slice/vasak-assistant.service";
+
+        // El demonio real: pid == MainPID, el ejecutable y el cgroup de la unidad
+        // del uid propio, y el pidfd vivo. No hay nada que objetar.
+        assert!(owner_is_assistant(42, 42, exe, cgroup, uid, true));
+        assert_eq!(owner_rejection(42, 42, exe, cgroup, uid, true), None);
+
+        // Cada desvío lo rechaza por separado, con su motivo:
+        assert_eq!(
+            owner_rejection(42, 0, exe, cgroup, uid, true),
+            Some("la unidad no tiene MainPID (detenida o enmascarada)")
+        );
+        assert_eq!(
+            owner_rejection(7, 42, exe, cgroup, uid, true),
+            Some("el pid no es el MainPID de la unidad")
+        );
+        assert_eq!(
+            owner_rejection(42, 42, Path::new("/usr/bin/impostor"), cgroup, uid, true),
+            Some("el ejecutable no es /usr/bin/vasak-assistant")
+        );
+        assert_eq!(
+            owner_rejection(
+                42,
+                42,
+                exe,
+                "0::/user.slice/user-1000.slice/user@1000.service/app.slice/otra.service",
+                uid,
+                true
+            ),
+            Some("el proceso no está en el cgroup de la unidad")
+        );
+        // El cgroup correcto pero de OTRO uid tampoco pasa.
+        assert_eq!(
+            owner_rejection(42, 42, exe, cgroup, 1001, true),
+            Some("el proceso no está en el cgroup de la unidad")
+        );
+        // pidfd muerto: el pid pudo reciclarse entre la lectura y ahora (#196).
+        assert_eq!(
+            owner_rejection(42, 42, exe, cgroup, uid, false),
+            Some("el pidfd del dueño ya no apunta a un proceso vivo")
+        );
+    }
+
     // ── systemctl ─────────────────────────────────────────────────────────────
 
     #[test]
