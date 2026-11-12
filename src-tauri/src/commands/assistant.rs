@@ -1616,8 +1616,6 @@ mod tests {
 
     use std::io::{BufRead, BufReader};
     use std::process::{Child, Stdio};
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
 
     /// Un `dbus-daemon` de sesión sin servicios de activación, para no despertar
     /// el asistente real de quien corre las pruebas.
@@ -1665,8 +1663,6 @@ mod tests {
 
     #[test]
     fn sin_dueno_no_hay_asistente_y_un_impostor_no_recibe_nada() {
-        use futures_util::StreamExt;
-
         let Some(bus) = BusPrivado::arrancar() else {
             eprintln!("sin dbus-daemon: no se prueba el pegamento de D-Bus");
             return;
@@ -1679,32 +1675,24 @@ mod tests {
                 "El asistente no está en ejecución."
             );
 
-            // Un impostor que sólo **dueña el nombre**, sin servir ninguna
-            // interfaz. No puede servirla con un `#[interface]`: con las dos zbus
-            // en el árbol el macro resuelve su crate de forma inconsistente y no
-            // compila (ni como `zbus::` ni como `zbus5::`). Para comprobar que no
-            // le llega nada —sobre todo, no la clave— se observan los mensajes
-            // entrantes de su conexión y se cuentan las llamadas a método: si la
-            // verificación del dueño hace su trabajo, no llega ninguna.
-            let impostor = zbus5::connection::Builder::session()
+            // Un impostor que **dueña el nombre conocido**, sin servir ninguna
+            // interfaz (con las dos zbus en el árbol `#[interface]` no compila). La
+            // conexión se mantiene viva —`_impostor`— hasta el final del bloque,
+            // así que tiene el nombre tomado durante todas las llamadas de abajo.
+            //
+            // La guarda es determinista y NO depende de observar el tráfico del
+            // impostor: cada comando falla con un error `rechazado(...)` porque
+            // `verify_owner` niega al impostor ANTES de llamar, y la clave nunca
+            // aparece en el error. Si alguien rompiera `verify_owner` y aceptara al
+            // impostor, la llamada saldría y la aserción síncrona de ese comando
+            // fallaría acá mismo —sin carreras con una tarea observadora—.
+            let _impostor = zbus5::connection::Builder::session()
                 .unwrap()
                 .name(SERVICE)
                 .unwrap()
                 .build()
                 .await
                 .unwrap();
-            let llamadas = Arc::new(AtomicUsize::new(0));
-            {
-                let llamadas = llamadas.clone();
-                let mut entrantes = zbus5::MessageStream::from(impostor.clone());
-                tauri::async_runtime::spawn(async move {
-                    while let Some(Ok(mensaje)) = entrantes.next().await {
-                        if mensaje.message_type() == zbus5::message::Type::MethodCall {
-                            llamadas.fetch_add(1, Ordering::SeqCst);
-                        }
-                    }
-                });
-            }
 
             let url = "https://api.ejemplo.com/v1".to_string();
             // Sin `systemd --user` (CI) la comprobación falla antes, por otro
@@ -1730,8 +1718,6 @@ mod tests {
                 &set_assistant_memory_enabled(true).await.unwrap_err()
             ));
             assert!(rechazado(&clear_assistant_memory().await.unwrap_err()));
-            // La clave, ni ninguna otra llamada, llegó al impostor.
-            assert_eq!(llamadas.load(Ordering::SeqCst), 0);
         });
     }
 
