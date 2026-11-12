@@ -6,10 +6,13 @@
 //! capacidades, los modelos y la clave del proveedor remoto se piden por el bus
 //! de **sesión**.
 //!
-//! **Sobre los tipos escritos a mano.** El contrato vive en el crate `protocol`
-//! de vasak-assistant, que deriva `Type` del zvariant de zbus 5; esta aplicación
-//! está en zbus 4 (igual que `connect.rs`). Si el contrato cambia, este archivo
-//! tiene que cambiar con él.
+//! **Sobre el contrato.** Los tipos del cable vienen del crate
+//! `vasak-assistant-protocol`, que deriva `Type` del zvariant de zbus 5
+//! (vasak-settings#195): un campo renombrado en el servicio deja de compilar acá
+//! en vez de volverse en silencio una respuesta que nadie entiende. Por eso estas
+//! llamadas van por una conexión zbus 5 (`zbus5`), aparte de la zbus 4 del resto
+//! de la app. Hacia la ventana, una función pura `*_from_contract` arma la vista
+//! con los campos en el camelCase que espera el frontend.
 //!
 //! **Sobre el dueño del nombre.** Antes de cada llamada se comprueba que quien
 //! tiene `ar.net.vasak.os.Assistant` sea el proceso principal (`MainPID`) de
@@ -24,9 +27,10 @@ use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 use std::process::Command;
 
-use serde::{Deserialize, Serialize};
-use zbus::zvariant::{DeserializeDict, OwnedFd, Type};
-use zbus::Connection;
+use serde::Serialize;
+use vasak_assistant_protocol::{Capability, MemoryStatus, ModelInfo, ServiceStatus};
+use zbus5::zvariant::{DeserializeDict, OwnedFd, Type};
+use zbus5::Connection;
 
 use crate::commands::idle::{systemctl, systemctl_failure_line};
 use crate::commands::night_light_service::is_missing_unit;
@@ -58,9 +62,10 @@ pub struct AssistantUnitState {
     pub masked: bool,
 }
 
-/// `ModelInfo` del contrato: `(ssbs)`. En el cable los campos van por
-/// posición; los nombres sólo importan hacia la ventana.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+/// La vista del modelo hacia la ventana, armada desde [`ModelInfo`] con
+/// `model_view_from_contract`. Los campos son de una palabra: en camelCase o en
+/// snake_case se serializan igual.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AssistantModel {
     pub provider: String,
@@ -69,8 +74,10 @@ pub struct AssistantModel {
     pub host: String,
 }
 
-/// `ServiceStatus` del contrato: `(bs(ssbs)u)`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+/// La vista del estado hacia la ventana, armada desde [`ServiceStatus`] con
+/// `status_view_from_contract`. El único campo que cambia de forma hacia la
+/// ventana es `backend_available` → `backendAvailable`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AssistantStatus {
     pub backend_available: bool,
@@ -79,8 +86,9 @@ pub struct AssistantStatus {
     pub conversations: u32,
 }
 
-/// `Capability` del contrato: `(sbs)`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+/// La vista de una capacidad hacia la ventana, armada desde [`Capability`] con
+/// `capability_view_from_contract`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AssistantCapability {
     pub domain: String,
@@ -88,15 +96,61 @@ pub struct AssistantCapability {
     pub reason: String,
 }
 
-/// `MemoryStatus` del contrato: `(bbst)`. `bytes` va a la ventana como número:
-/// el tamaño de una base en disco no se acerca a 2^53.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+/// La vista del estado de la memoria hacia la ventana, armada desde
+/// [`MemoryStatus`] con `memory_view_from_contract`. `bytes` va como número: el
+/// tamaño de una base en disco no se acerca a 2^53.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AssistantMemoryStatus {
     pub enabled: bool,
     pub available: bool,
     pub reason: String,
     pub bytes: u64,
+}
+
+// ── Vista desde el contrato ─────────────────────────────────────────────────────
+//
+// Los tipos del cable los fija `vasak-assistant-protocol`; estas funciones puras
+// los pasan a la vista que ve la ventana (camelCase), sin tocar el bus. Es el
+// mismo patrón que `screen_time.rs`: entra el tipo del contrato, sale la vista.
+
+/// La vista del modelo desde el [`ModelInfo`] del contrato.
+pub fn model_view_from_contract(model: ModelInfo) -> AssistantModel {
+    AssistantModel {
+        provider: model.provider,
+        name: model.name,
+        local: model.local,
+        host: model.host,
+    }
+}
+
+/// La vista del estado desde el [`ServiceStatus`] del contrato.
+pub fn status_view_from_contract(status: ServiceStatus) -> AssistantStatus {
+    AssistantStatus {
+        backend_available: status.backend_available,
+        reason: status.reason,
+        model: model_view_from_contract(status.model),
+        conversations: status.conversations,
+    }
+}
+
+/// La vista de una capacidad desde el [`Capability`] del contrato.
+pub fn capability_view_from_contract(capability: Capability) -> AssistantCapability {
+    AssistantCapability {
+        domain: capability.domain,
+        available: capability.available,
+        reason: capability.reason,
+    }
+}
+
+/// La vista del estado de la memoria desde el [`MemoryStatus`] del contrato.
+pub fn memory_view_from_contract(status: MemoryStatus) -> AssistantMemoryStatus {
+    AssistantMemoryStatus {
+        enabled: status.enabled,
+        available: status.available,
+        reason: status.reason,
+        bytes: status.bytes,
+    }
 }
 
 // ── Funciones puras ───────────────────────────────────────────────────────────
@@ -415,16 +469,16 @@ pub async fn restart_assistant_service() -> Result<(), String> {
 
 // ── Pegamento: D-Bus ──────────────────────────────────────────────────────────
 
-fn error_parts(error: &zbus::Error) -> Option<(&str, Option<&str>)> {
+fn error_parts(error: &zbus5::Error) -> Option<(&str, Option<&str>)> {
     match error {
-        zbus::Error::MethodError(name, description, _) => {
+        zbus5::Error::MethodError(name, description, _) => {
             Some((name.as_str(), description.as_deref()))
         }
         _ => None,
     }
 }
 
-fn describe(error: &zbus::Error) -> String {
+fn describe(error: &zbus5::Error) -> String {
     match error_parts(error) {
         Some((name, description)) => describe_service_error(name, description),
         None => format!("No se pudo hablar con el asistente: {error}"),
@@ -432,14 +486,14 @@ fn describe(error: &zbus::Error) -> String {
 }
 
 /// Deja en el registro el resultado de una llamada.
-fn log_result<R>(label: &str, result: &zbus::Result<R>) {
+fn log_result<R>(label: &str, result: &zbus5::Result<R>) {
     match result {
         Ok(_) => log_debug(&call_ok_line(label)),
         Err(error) => log_failure(label, error),
     }
 }
 
-fn log_failure(label: &str, error: &zbus::Error) {
+fn log_failure(label: &str, error: &zbus5::Error) {
     match error_parts(error) {
         Some((name, _)) if is_notice_error(name) => log_warning(&dbus_notice_line(label, name)),
         parts => log_error(&dbus_error_line(label, parts.map(|(name, _)| name))),
@@ -447,12 +501,12 @@ fn log_failure(label: &str, error: &zbus::Error) {
 }
 
 /// `describe`, dejando antes el error en el registro.
-fn logged(label: &str, error: zbus::Error) -> String {
+fn logged(label: &str, error: zbus5::Error) -> String {
     log_failure(label, &error);
     describe(&error)
 }
 
-fn is_unknown_method(error: &zbus::Error) -> bool {
+fn is_unknown_method(error: &zbus5::Error) -> bool {
     error_parts(error).is_some_and(|(name, _)| name == UNKNOWN_METHOD)
 }
 
@@ -463,9 +517,9 @@ async fn session() -> Result<Connection, String> {
     })
 }
 
-async fn bus_call<B, R>(conn: &Connection, method: &str, body: &B) -> zbus::Result<R>
+async fn bus_call<B, R>(conn: &Connection, method: &str, body: &B) -> zbus5::Result<R>
 where
-    B: Serialize + zbus::zvariant::DynamicType,
+    B: Serialize + zbus5::zvariant::DynamicType,
     R: serde::de::DeserializeOwned + Type,
 {
     conn.call_method(
@@ -574,9 +628,9 @@ async fn assistant_call<B, R>(
     method: &str,
     url: Option<&str>,
     body: &B,
-) -> Result<zbus::Result<R>, String>
+) -> Result<zbus5::Result<R>, String>
 where
-    B: Serialize + zbus::zvariant::DynamicType,
+    B: Serialize + zbus5::zvariant::DynamicType,
     R: serde::de::DeserializeOwned + Type,
 {
     let conn = session().await?;
@@ -591,16 +645,21 @@ where
 
 #[tauri::command]
 pub async fn assistant_status() -> Result<AssistantStatus, String> {
-    assistant_call("Status", None, &())
+    let status: ServiceStatus = assistant_call("Status", None, &())
         .await?
-        .map_err(|e| describe(&e))
+        .map_err(|e| describe(&e))?;
+    Ok(status_view_from_contract(status))
 }
 
 #[tauri::command]
 pub async fn assistant_capabilities() -> Result<Vec<AssistantCapability>, String> {
-    assistant_call("Capabilities", None, &())
+    let capabilities: Vec<Capability> = assistant_call("Capabilities", None, &())
         .await?
-        .map_err(|e| describe(&e))
+        .map_err(|e| describe(&e))?;
+    Ok(capabilities
+        .into_iter()
+        .map(capability_view_from_contract)
+        .collect())
 }
 
 #[tauri::command]
@@ -642,8 +701,8 @@ pub async fn set_assistant_provider_key(url: String, key: String) -> Result<(), 
 /// `None` si el servicio instalado todavía no tiene memoria (`MemoryStatus`).
 #[tauri::command]
 pub async fn assistant_memory_status() -> Result<Option<AssistantMemoryStatus>, String> {
-    match assistant_call("MemoryStatus", None, &()).await? {
-        Ok(status) => Ok(Some(status)),
+    match assistant_call::<_, MemoryStatus>("MemoryStatus", None, &()).await? {
+        Ok(status) => Ok(Some(memory_view_from_contract(status))),
         Err(e) if is_unknown_method(&e) => Ok(None),
         Err(e) => Err(describe(&e)),
     }
@@ -675,20 +734,6 @@ pub async fn clear_assistant_memory() -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use zbus::zvariant::{serialized::Context, to_bytes, LE};
-
-    fn firma<T: Type>() -> String {
-        T::signature().to_string()
-    }
-
-    fn ida_y_vuelta<T>(valor: &T) -> T
-    where
-        T: Serialize + serde::de::DeserializeOwned + Type,
-    {
-        let bytes = to_bytes(Context::new_dbus(LE, 0), valor).expect("serializa");
-        let (vuelta, _): (T, usize) = bytes.deserialize().expect("deserializa");
-        vuelta
-    }
 
     fn modelo() -> AssistantModel {
         AssistantModel {
@@ -699,40 +744,99 @@ mod tests {
         }
     }
 
-    // ── Contrato del cable ────────────────────────────────────────────────────
+    // ── Vista desde el contrato ───────────────────────────────────────────────
 
-    #[test]
-    fn la_firma_de_cada_tipo_es_la_del_contrato() {
-        assert_eq!(firma::<AssistantModel>(), "(ssbs)");
-        assert_eq!(firma::<AssistantStatus>(), "(bs(ssbs)u)");
-        assert_eq!(firma::<AssistantCapability>(), "(sbs)");
-        assert_eq!(firma::<Vec<AssistantCapability>>(), "a(sbs)");
+    fn modelo_del_contrato() -> ModelInfo {
+        ModelInfo {
+            provider: "ollama".into(),
+            name: "llama3.2:latest".into(),
+            local: true,
+            host: "127.0.0.1".into(),
+        }
     }
 
     #[test]
-    fn los_tipos_sobreviven_a_la_ida_y_vuelta_por_el_cable() {
-        let status = AssistantStatus {
+    fn el_modelo_del_contrato_se_copia_entero_a_la_vista() {
+        let vista = model_view_from_contract(modelo_del_contrato());
+        assert_eq!(vista.provider, "ollama");
+        assert_eq!(vista.name, "llama3.2:latest");
+        assert!(vista.local);
+        assert_eq!(vista.host, "127.0.0.1");
+        let remoto = model_view_from_contract(ModelInfo {
+            local: false,
+            host: "api.openai.com".into(),
+            ..modelo_del_contrato()
+        });
+        assert!(!remoto.local);
+        assert_eq!(remoto.host, "api.openai.com");
+    }
+
+    #[test]
+    fn el_estado_del_contrato_se_copia_entero_a_la_vista() {
+        let vista = status_view_from_contract(ServiceStatus {
             backend_available: true,
-            reason: "ok".into(),
-            model: modelo(),
+            reason: "sin motivo".into(),
+            model: modelo_del_contrato(),
             conversations: 7,
-        };
-        assert_eq!(ida_y_vuelta(&modelo()), modelo());
-        assert_eq!(ida_y_vuelta(&status), status);
-        let caps = vec![
-            AssistantCapability {
-                domain: "mail".into(),
-                available: false,
-                reason: "todavía no".into(),
-            },
-            AssistantCapability {
-                domain: "memory".into(),
-                available: true,
-                reason: String::new(),
-            },
-        ];
-        assert_eq!(ida_y_vuelta(&caps), caps);
+        });
+        assert!(vista.backend_available);
+        assert_eq!(vista.reason, "sin motivo");
+        assert_eq!(vista.model, model_view_from_contract(modelo_del_contrato()));
+        assert_eq!(vista.conversations, 7);
+        let json = serde_json::to_value(&vista).unwrap();
+        assert_eq!(json["backendAvailable"], true);
+        assert_eq!(json["conversations"], 7);
+        assert_eq!(json["model"]["host"], "127.0.0.1");
+        assert!(json.get("backend_available").is_none());
     }
+
+    #[test]
+    fn la_capacidad_del_contrato_se_copia_entera_a_la_vista() {
+        let vista = capability_view_from_contract(Capability {
+            domain: "mail".into(),
+            available: false,
+            reason: "falta el permiso".into(),
+        });
+        assert_eq!(vista.domain, "mail");
+        assert!(!vista.available);
+        assert_eq!(vista.reason, "falta el permiso");
+        let json = serde_json::to_value(&vista).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!({"domain": "mail", "available": false, "reason": "falta el permiso"})
+        );
+    }
+
+    #[test]
+    fn la_memoria_del_contrato_se_copia_entera_a_la_vista() {
+        let vista = memory_view_from_contract(MemoryStatus {
+            enabled: true,
+            available: false,
+            reason: "El llavero está bloqueado".into(),
+            bytes: 4_294_967_296,
+        });
+        assert!(vista.enabled);
+        assert!(!vista.available);
+        assert_eq!(vista.reason, "El llavero está bloqueado");
+        assert_eq!(vista.bytes, 4_294_967_296);
+        let json = serde_json::to_value(&vista).unwrap();
+        assert_eq!(json["bytes"], 4_294_967_296u64);
+    }
+
+    // Si un bump de `vasak-assistant-protocol` cambia la forma en el cable, esto
+    // rompe acá en vez de desincronizarse en silencio con el demonio.
+    #[test]
+    fn las_firmas_del_cable_son_las_que_espera_el_demonio() {
+        assert_eq!(ModelInfo::SIGNATURE.to_string(), "(ssbs)");
+        assert_eq!(ServiceStatus::SIGNATURE.to_string(), "(bs(ssbs)u)");
+        assert_eq!(Capability::SIGNATURE.to_string(), "(sbs)");
+        assert_eq!(MemoryStatus::SIGNATURE.to_string(), "(bbst)");
+    }
+
+    // ── Vista hacia la ventana ────────────────────────────────────────────────
+    //
+    // El contrato del cable (firmas, ida y vuelta por D-Bus) lo prueba el crate
+    // `vasak-assistant-protocol`; acá sólo se comprueba la vista en camelCase.
 
     #[test]
     fn hacia_la_ventana_los_campos_van_en_camel_case() {
@@ -1039,22 +1143,22 @@ mod tests {
 
     #[test]
     fn un_error_de_metodo_se_traduce_con_su_nombre_y_el_desconocido_se_detecta() {
-        use zbus::names::ErrorName;
+        use zbus5::names::ErrorName;
         // Sin cuerpo real: `MethodError` sólo necesita el mensaje, y la
         // construcción se prueba por el camino que usa el pegamento.
         let nombre = ErrorName::try_from(UNKNOWN_METHOD).unwrap();
-        let mensaje = zbus::message::Message::method("/", "X")
+        let mensaje = zbus5::message::Message::method_call("/", "X")
             .unwrap()
             .build(&())
             .unwrap();
-        let error = zbus::Error::MethodError(nombre.into(), Some("no existe".into()), mensaje);
+        let error = zbus5::Error::MethodError(nombre.into(), Some("no existe".into()), mensaje);
         assert!(is_unknown_method(&error));
         assert_eq!(
             describe(&error),
             "No se pudo hablar con el asistente: no existe"
         );
-        assert!(!is_unknown_method(&zbus::Error::InvalidReply));
-        assert!(describe(&zbus::Error::InvalidReply).starts_with("No se pudo hablar"));
+        assert!(!is_unknown_method(&zbus5::Error::InvalidReply));
+        assert!(describe(&zbus5::Error::InvalidReply).starts_with("No se pudo hablar"));
     }
     // ── Dueño del nombre ──────────────────────────────────────────────────────
 
@@ -1229,21 +1333,6 @@ mod tests {
     }
 
     #[test]
-    fn la_firma_de_la_memoria_es_la_del_contrato() {
-        assert_eq!(firma::<AssistantMemoryStatus>(), "(bbst)");
-    }
-
-    #[test]
-    fn la_memoria_sobrevive_a_la_ida_y_vuelta_por_el_cable() {
-        assert_eq!(ida_y_vuelta(&memoria()), memoria());
-        let grande = AssistantMemoryStatus {
-            bytes: u64::MAX,
-            ..memoria()
-        };
-        assert_eq!(ida_y_vuelta(&grande), grande);
-    }
-
-    #[test]
     fn la_memoria_va_a_la_ventana_en_camel_case_con_bytes_como_numero() {
         let json = serde_json::to_value(memoria()).unwrap();
         assert_eq!(
@@ -1271,15 +1360,15 @@ mod tests {
 
     #[test]
     fn un_metodo_desconocido_se_detecta_y_no_se_confunde_con_acceso_denegado() {
-        use zbus::names::ErrorName;
+        use zbus5::names::ErrorName;
         let mensaje = || {
-            zbus::message::Message::method("/", "X")
+            zbus5::message::Message::method_call("/", "X")
                 .unwrap()
                 .build(&())
                 .unwrap()
         };
         let con = |nombre: &str| {
-            zbus::Error::MethodError(
+            zbus5::Error::MethodError(
                 ErrorName::try_from(nombre.to_string()).unwrap().into(),
                 None,
                 mensaje(),
@@ -1383,13 +1472,13 @@ mod tests {
 
     #[test]
     fn la_linea_de_error_de_dbus_no_copia_la_descripcion_del_servicio() {
-        use zbus::names::ErrorName;
-        let mensaje = zbus::message::Message::method("/", "X")
+        use zbus5::names::ErrorName;
+        let mensaje = zbus5::message::Message::method_call("/", "X")
             .unwrap()
             .build(&())
             .unwrap();
         let nombre = format!("{ERROR_PREFIX}Unavailable");
-        let error = zbus::Error::MethodError(
+        let error = zbus5::Error::MethodError(
             ErrorName::try_from(nombre.clone()).unwrap().into(),
             Some(format!("no se pudo guardar {CANARIO}")),
             mensaje,
@@ -1408,7 +1497,7 @@ mod tests {
 
     #[test]
     fn un_error_de_zbus_sin_respuesta_del_bus_no_copia_su_texto() {
-        let error = zbus::Error::Failure(format!("falló con {CANARIO}"));
+        let error = zbus5::Error::Failure(format!("falló con {CANARIO}"));
         assert!(error_parts(&error).is_none());
         let linea = dbus_error_line(
             "abrir el bus de sesión",
@@ -1502,6 +1591,60 @@ mod tests {
         );
     }
 
+    /// La decisión del owner-check, directa y sin bus: prueba que acepta al
+    /// demonio real y rechaza cada desvío de un impostor por separado. Es la
+    /// guarda determinista del núcleo —la prueba de bus de más abajo depende de
+    /// systemctl y en CI se niega por otra rama (fail-closed), así que no alcanza
+    /// sola para demostrar que el chequeo de dueño atrapa al impostor—.
+    #[test]
+    fn el_chequeo_de_dueno_acepta_al_demonio_y_rechaza_cada_desvio() {
+        use std::path::Path;
+        let uid = 1000u32;
+        let exe = Path::new("/usr/bin/vasak-assistant");
+        let cgroup =
+            "0::/user.slice/user-1000.slice/user@1000.service/app.slice/vasak-assistant.service";
+
+        // El demonio real: pid == MainPID, el ejecutable y el cgroup de la unidad
+        // del uid propio, y el pidfd vivo. No hay nada que objetar.
+        assert!(owner_is_assistant(42, 42, exe, cgroup, uid, true));
+        assert_eq!(owner_rejection(42, 42, exe, cgroup, uid, true), None);
+
+        // Cada desvío lo rechaza por separado, con su motivo:
+        assert_eq!(
+            owner_rejection(42, 0, exe, cgroup, uid, true),
+            Some("la unidad no tiene MainPID (detenida o enmascarada)")
+        );
+        assert_eq!(
+            owner_rejection(7, 42, exe, cgroup, uid, true),
+            Some("el pid no es el MainPID de la unidad")
+        );
+        assert_eq!(
+            owner_rejection(42, 42, Path::new("/usr/bin/impostor"), cgroup, uid, true),
+            Some("el ejecutable no es /usr/bin/vasak-assistant")
+        );
+        assert_eq!(
+            owner_rejection(
+                42,
+                42,
+                exe,
+                "0::/user.slice/user-1000.slice/user@1000.service/app.slice/otra.service",
+                uid,
+                true
+            ),
+            Some("el proceso no está en el cgroup de la unidad")
+        );
+        // El cgroup correcto pero de OTRO uid tampoco pasa.
+        assert_eq!(
+            owner_rejection(42, 42, exe, cgroup, 1001, true),
+            Some("el proceso no está en el cgroup de la unidad")
+        );
+        // pidfd muerto: el pid pudo reciclarse entre la lectura y ahora (#196).
+        assert_eq!(
+            owner_rejection(42, 42, exe, cgroup, uid, false),
+            Some("el pidfd del dueño ya no apunta a un proceso vivo")
+        );
+    }
+
     // ── systemctl ─────────────────────────────────────────────────────────────
 
     #[test]
@@ -1527,8 +1670,6 @@ mod tests {
 
     use std::io::{BufRead, BufReader};
     use std::process::{Child, Stdio};
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
 
     /// Un `dbus-daemon` de sesión sin servicios de activación, para no despertar
     /// el asistente real de quien corre las pruebas.
@@ -1574,40 +1715,8 @@ mod tests {
         }
     }
 
-    /// Alguien que toma el nombre del asistente sin ser `vasak-assistant.service`.
-    struct Impostor(Arc<AtomicUsize>);
-
-    #[zbus::interface(name = "ar.net.vasak.os.Assistant")]
-    impl Impostor {
-        fn set_provider_key(&self, _url: String, _key: String) {
-            self.0.fetch_add(1, Ordering::SeqCst);
-        }
-        fn has_provider_key(&self, _url: String) -> bool {
-            self.0.fetch_add(1, Ordering::SeqCst);
-            true
-        }
-        fn memory_status(&self) -> (bool, bool, String, u64) {
-            self.0.fetch_add(1, Ordering::SeqCst);
-            (true, true, String::new(), 0)
-        }
-        fn set_memory_enabled(&self, _enabled: bool) {
-            self.0.fetch_add(1, Ordering::SeqCst);
-        }
-        fn clear_memory(&self) {
-            self.0.fetch_add(1, Ordering::SeqCst);
-        }
-        fn models(&self) -> Vec<String> {
-            self.0.fetch_add(1, Ordering::SeqCst);
-            vec![]
-        }
-        fn capabilities(&self) -> Vec<AssistantCapability> {
-            self.0.fetch_add(1, Ordering::SeqCst);
-            vec![]
-        }
-    }
-
     #[test]
-    fn sin_dueno_no_hay_asistente_y_un_impostor_no_recibe_nada() {
+    fn sin_dueno_o_con_impostor_cada_comando_falla_sin_filtrar_la_clave() {
         let Some(bus) = BusPrivado::arrancar() else {
             eprintln!("sin dbus-daemon: no se prueba el pegamento de D-Bus");
             return;
@@ -1620,12 +1729,23 @@ mod tests {
                 "El asistente no está en ejecución."
             );
 
-            let llamadas = Arc::new(AtomicUsize::new(0));
-            let _impostor = zbus::connection::Builder::session()
+            // Un impostor que **dueña el nombre conocido**, sin servir ninguna
+            // interfaz (con las dos zbus en el árbol `#[interface]` no compila). La
+            // conexión se mantiene viva —`_impostor`— hasta el final del bloque,
+            // así que tiene el nombre tomado durante todas las llamadas de abajo.
+            //
+            // Esto es humo de integración: comprueba que, con un impostor en el
+            // nombre, cada comando falla y la clave nunca aparece en el error. NO
+            // demuestra por sí solo que `verify_owner` haya atrapado al impostor ni
+            // que no se haya enviado la llamada —`rechazado` también aceptaría un
+            // error posterior al envío, y en CI (sin systemd) la negativa viene de
+            // otra rama (fail-closed)—. La decisión del owner-check la prueba, de
+            // forma determinista, el test puro `el_chequeo_de_dueno_...` de más
+            // arriba; que `assistant_call` sólo envía tras `verify_owner(&conn)
+            // .await?` lo garantiza la estructura del código.
+            let _impostor = zbus5::connection::Builder::session()
                 .unwrap()
                 .name(SERVICE)
-                .unwrap()
-                .serve_at(PATH, Impostor(llamadas.clone()))
                 .unwrap()
                 .build()
                 .await
@@ -1655,8 +1775,6 @@ mod tests {
                 &set_assistant_memory_enabled(true).await.unwrap_err()
             ));
             assert!(rechazado(&clear_assistant_memory().await.unwrap_err()));
-            // La clave, ni ninguna otra llamada, llegó al impostor.
-            assert_eq!(llamadas.load(Ordering::SeqCst), 0);
         });
     }
 

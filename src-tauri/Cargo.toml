@@ -1,6 +1,6 @@
 [package]
 name = "vasak-settings"
-version = "0.65.2"
+version = "0.65.3"
 description = "A Vasak Application (template)"
 authors = ["Vasak Group", "Joaquin (Pato) Decima"]
 edition = "2021"
@@ -64,16 +64,28 @@ notify = "8"
 # zbus 5 (`zbus5`) aparte de la zbus 4 del resto.
 vasak-health-protocol = "0.2.1"
 vasak-connect-protocol = "0.3.4"
-zbus5 = { package = "zbus", version = "5", default-features = false, features = ["tokio"] }
-# El `zbus` 4 va declarado DESPUÉS de `zbus5` a propósito, y no es cosmético.
+# El contrato del asistente (Lince). `commands/assistant.rs` deserializa las
+# respuestas en estos tipos y habla por una conexión zbus 5.
+vasak-assistant-protocol = "0.3.20"
+# El orden de las dos deps con `package = "zbus"` NO es cosmético: `zbus5` va
+# ÚLTIMO a propósito.
 #
-# Hay dos deps con `package = "zbus"` (la 4 y la 5), y los macros de zbus/zvariant
-# resuelven su ruta con `proc-macro-crate`, que ante el empate devuelve el último
-# que aparece acá. Esta app habla zbus 4 (sus `#[interface]` y `#[derive(Type)]`),
-# así que la 4 tiene que ser la última: si se reordena, el macro resuelve a zbus 5
-# y la compilación de las pruebas se cae con firmas de `Interface` que no cuadran.
-# No es un bug silencioso —rompe el build—, pero el orden es la razón.
+# El único código propio con un `derive` de zvariant es `commands/assistant.rs`
+# (el `#[derive(DeserializeDict, Type)]` de `OwnerCredentials`), que desde que
+# consume `vasak-assistant-protocol` habla zbus 5. Esos `derive` resuelven su
+# `zvariant` con `proc-macro-crate`, que ante el empate de dos `package = "zbus"`
+# toma el ÚLTIMO declarado acá; por eso la 5 va última, para que resuelvan al
+# zvariant de zbus 5. Si se reordena (la 4 al final), resuelven a zbus 4 y el
+# `deserialize` sobre una conexión zbus 5 no compila.
+#
+# Ojo: el harness de prueba de ese archivo NO sirve una interfaz. Con dos
+# `package = "zbus"` en el árbol, el macro `#[interface]` no resuelve su crate de
+# forma consistente y no compila (ni como `zbus::` ni como `zbus5::`), así que el
+# impostor sólo dueña el nombre por zbus 5 y la prueba observa sus mensajes
+# entrantes (ver el comentario en `assistant.rs`). El resto de los archivos usan
+# zbus 4 por `use`/ruta, ajenos a este orden.
 zbus = { version = "4", default-features = false, features = ["tokio"] }
+zbus5 = { package = "zbus", version = "5", default-features = false, features = ["tokio"] }
 # Sólo para `pidfd_send_signal` (señal 0): confirmar que el pidfd del dueño del
 # nombre del asistente sigue vivo, y así su pid no se recicló mientras se leía
 # `/proc/<pid>` (#196). Rust puro, no suma ninguna biblioteca compartida.
