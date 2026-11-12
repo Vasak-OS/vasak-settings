@@ -1,6 +1,6 @@
 [package]
 name = "vasak-settings"
-version = "0.65.1"
+version = "0.65.2"
 description = "A Vasak Application (template)"
 authors = ["Vasak Group", "Joaquin (Pato) Decima"]
 edition = "2021"
@@ -57,6 +57,22 @@ once_cell = "1"
 dirs = "7"
 futures-util = "0.3"
 notify = "8"
+# Los contratos D-Bus compartidos, por crates.io (vasak-settings#195): el tipo lo
+# fija el servicio y un cambio de firma deja de compilar en vez de volverse un
+# informe que no cuadra. Derivan `Type` de zbus 5, que ya convive en el árbol (lo
+# mete tauri-plugin-single-instance), así que estas llamadas van por una conexión
+# zbus 5 (`zbus5`) aparte de la zbus 4 del resto.
+vasak-health-protocol = "0.2.1"
+vasak-connect-protocol = "0.3.4"
+zbus5 = { package = "zbus", version = "5", default-features = false, features = ["tokio"] }
+# El `zbus` 4 va declarado DESPUÉS de `zbus5` a propósito, y no es cosmético.
+#
+# Hay dos deps con `package = "zbus"` (la 4 y la 5), y los macros de zbus/zvariant
+# resuelven su ruta con `proc-macro-crate`, que ante el empate devuelve el último
+# que aparece acá. Esta app habla zbus 4 (sus `#[interface]` y `#[derive(Type)]`),
+# así que la 4 tiene que ser la última: si se reordena, el macro resuelve a zbus 5
+# y la compilación de las pruebas se cae con firmas de `Interface` que no cuadran.
+# No es un bug silencioso —rompe el build—, pero el orden es la razón.
 zbus = { version = "4", default-features = false, features = ["tokio"] }
 # Sólo para `pidfd_send_signal` (señal 0): confirmar que el pidfd del dueño del
 # nombre del asistente sigue vivo, y así su pid no se recicló mientras se leía

@@ -5236,8 +5236,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 
 [[package]]
+name = "vasak-connect-protocol"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e87777eebaefe1a265f3082fc0de86803926f57c4a9100b6cd5fecc9fa4a5958"
+dependencies = [
+ "serde",
+ "zbus 5.19.0",
+]
+
+[[package]]
+name = "vasak-health-protocol"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af885266a16dd34651d237db6ce5b0dbaf5159a3f257bf86ed03f96da286a428"
+dependencies = [
+ "serde",
+ "zbus 5.19.0",
+]
+
+[[package]]
 name = "vasak-settings"
-version = "0.65.1"
+version = "0.65.2"
 dependencies = [
  "base64 0.23.1",
  "chrono",
@@ -5274,8 +5294,11 @@ dependencies = [
  "tokio-rustls",
  "url",
  "uuid",
+ "vasak-connect-protocol",
+ "vasak-health-protocol",
  "webkit2gtk",
  "zbus 4.4.0",
+ "zbus 5.19.0",
 ]
 
 [[package]]
@@ -6135,6 +6158,7 @@ dependencies = [
  "rustix",
  "serde",
  "serde_repr",
+ "tokio",
  "tracing",
  "uds_windows",
  "uuid",

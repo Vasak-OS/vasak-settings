@@ -2,46 +2,30 @@
 //!
 //! Este puente no decide ni mide nada: pregunta. El servicio lleva la
 //! contabilidad —qué aplicación estuvo enfocada, cuánto, en qué hora del día— y
-//! la devuelve; acá sólo se traduce la respuesta de D-Bus a lo que la ventana
-//! necesita y se le pega a cada aplicación su icono y su nombre.
+//! la devuelve; acá sólo se le pega a cada aplicación su icono y su nombre, que
+//! el servicio no sabe.
 //!
-//! # Sobre los tipos escritos a mano
+//! # El contrato vive en `vasak-health-protocol`
 //!
-//! El contrato vive en el crate `vasak-health-protocol`, y depender de él sería
-//! el motivo de tenerlo. No se puede todavía: ese crate deriva `Type` del
-//! `zvariant` de zbus 5 y esta aplicación está clavada en zbus 4 (por el menú de
-//! la bandeja, igual que el escritorio). Así que se replica la firma acá, como ya
-//! hacen `connect.rs` y `permissions.rs`. Si el contrato cambia en el servicio,
-//! este archivo tiene que cambiar con él y nada lo va a recordar — por eso hay
-//! una prueba que fija la firma esperada.
+//! El tipo lo fija el crate del servicio (vasak-settings#195): si el contrato
+//! cambia, el crate cambia y esto deja de compilar, en vez de volverse en
+//! silencio un informe que no cuadra. El crate deriva `Type` del `zvariant` de
+//! zbus 5 y trae su proxy; esta aplicación tiene su zbus clavado en 4 (por el
+//! menú de la bandeja), así que estas llamadas van por una conexión `zbus5`
+//! aparte, que ya convive en el árbol.
 
-use serde::{Deserialize, Serialize};
-
-/// El servicio corre en el bus de **sesión**: el tiempo de pantalla es de quien
-/// está sentado en la máquina y no sale de ahí.
-const SERVICE_NAME: &str = "ar.net.vasak.os.Health";
-const SERVICE_PATH: &str = "/ar/net/vasak/os/Health";
-const SERVICE_INTERFACE: &str = "ar.net.vasak.os.Health";
+use serde::Serialize;
+use vasak_health_protocol::{self as health, HealthProxy};
 
 /// Cuántas cubetas trae el desglose por hora: una por cada hora del día local.
 const HOURS_IN_DAY: usize = 24;
 
-/// La firma de `ScreenTimeReport` tal como la manda el servicio: `(bssa(sa(sstat)))`.
-///
-/// Se deserializa a tuplas anidadas y no a una estructura con `Type` derivado
-/// porque el `zvariant` de zbus 4 ya sabe hacer las tuplas y los `Vec`, y así no
-/// hace falta arrastrar el derive del crate del protocolo. El orden es, de
-/// afuera hacia adentro: `enabled`, `today`, `first_day`, y los días, cada uno
-/// con su fecha y sus aplicaciones `(app_id, category, millis, hours)`.
-type RawReport = (
-    bool,
-    String,
-    String,
-    Vec<(String, Vec<(String, String, u64, Vec<u64>)>)>,
-);
-
 /// Cuánto usó una aplicación en un día, lista para la ventana.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+///
+/// Es la vista, no el contrato: suma el icono y el nombre, que el servicio no
+/// manda porque cuenta tiempo y no sabe de iconos. El resto sale del
+/// [`health::AppUsage`] que devuelve el servicio.
+#[derive(Debug, Clone, Serialize)]
 pub struct AppUsage {
     pub app_id: String,
     pub category: String,
@@ -49,26 +33,23 @@ pub struct AppUsage {
     /// Milisegundos por hora del día local: siempre 24 valores. Pueden venir
     /// todos en cero en datos viejos que sólo guardaban el total.
     pub hours: Vec<u64>,
-    /// El icono del tema, resuelto **acá** desde el `.desktop` y no por el
-    /// servicio: el servicio cuenta tiempo y no sabe de iconos. Se completa
-    /// después de leer la respuesta, de ahí el `default`.
-    #[serde(default)]
+    /// El icono del tema, resuelto **acá** desde el `.desktop`: el servicio no
+    /// sabe de iconos. Se completa después de leer la respuesta.
     pub icon: String,
     /// El nombre visible, también resuelto acá. Cae en el propio `app_id` cuando
     /// ningún `.desktop` lo nombra.
-    #[serde(default)]
     pub name: String,
 }
 
 /// Un día con el uso de cada aplicación.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct DayUsage {
     pub date: String,
     pub apps: Vec<AppUsage>,
 }
 
-/// Lo que devuelve una consulta de tiempo de pantalla.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Lo que devuelve una consulta de tiempo de pantalla, lista para la ventana.
+#[derive(Debug, Clone, Serialize)]
 pub struct ScreenTimeReport {
     pub enabled: bool,
     pub today: String,
@@ -76,25 +57,26 @@ pub struct ScreenTimeReport {
     pub days: Vec<DayUsage>,
 }
 
-/// Arma el informe desde la respuesta cruda, completando hora por hora.
+/// Arma la vista desde el informe del contrato, completando hora por hora.
 ///
 /// Si un día trae menos de 24 cubetas se rellenan con ceros, para que la ventana
 /// nunca tenga que preguntarse cuántas hay: siempre son 24.
-fn report_from_raw(raw: RawReport) -> ScreenTimeReport {
-    let (enabled, today, first_day, days) = raw;
-
-    let days = days
+fn report_from_contract(report: health::ScreenTimeReport) -> ScreenTimeReport {
+    let days = report
+        .days
         .into_iter()
-        .map(|(date, apps)| DayUsage {
-            date,
-            apps: apps
+        .map(|day| DayUsage {
+            date: day.date,
+            apps: day
+                .apps
                 .into_iter()
-                .map(|(app_id, category, millis, mut hours)| {
+                .map(|app| {
+                    let mut hours = app.hours;
                     hours.resize(HOURS_IN_DAY, 0);
                     AppUsage {
-                        app_id,
-                        category,
-                        millis,
+                        app_id: app.app_id,
+                        category: app.category,
+                        millis: app.millis,
                         hours,
                         icon: String::new(),
                         name: String::new(),
@@ -105,9 +87,9 @@ fn report_from_raw(raw: RawReport) -> ScreenTimeReport {
         .collect();
 
     ScreenTimeReport {
-        enabled,
-        today,
-        first_day,
+        enabled: report.enabled,
+        today: report.today,
+        first_day: report.first_day,
         days,
     }
 }
@@ -135,37 +117,32 @@ fn fill_icons_and_names(report: &mut ScreenTimeReport) {
     }
 }
 
-async fn service() -> Result<zbus::Connection, String> {
-    zbus::Connection::session().await.map_err(|e| {
-        format!(
-            "No se pudo contactar al servicio de salud: {e}. \
-             Comprobá que vasak-health-service esté disponible."
-        )
-    })
+/// El mensaje cuando no se llega al servicio, igual en todas las llamadas.
+fn sin_servicio(e: impl std::fmt::Display) -> String {
+    format!(
+        "No se pudo contactar al servicio de salud: {e}. \
+         Comprobá que vasak-health-service esté disponible."
+    )
+}
+
+/// El proxy del servicio por una conexión zbus 5 nueva. La conexión vive en el
+/// `await` de cada comando; el proxy guarda su propia referencia.
+async fn health(connection: &zbus5::Connection) -> Result<HealthProxy<'_>, String> {
+    HealthProxy::new(connection).await.map_err(sin_servicio)
 }
 
 /// El informe de tiempo de pantalla entre dos fechas (`AAAA-MM-DD`, incluidas).
 #[tauri::command]
 pub async fn screen_time(from: String, to: String) -> Result<ScreenTimeReport, String> {
-    let connection = service().await?;
+    let connection = zbus5::Connection::session().await.map_err(sin_servicio)?;
+    let proxy = health(&connection).await?;
 
-    let reply = connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "ScreenTime",
-            &(from.as_str(), to.as_str()),
-        )
+    let report = proxy
+        .screen_time(&from, &to)
         .await
         .map_err(|e| format!("No se pudo leer el tiempo de pantalla: {e}"))?;
 
-    let raw: RawReport = reply
-        .body()
-        .deserialize()
-        .map_err(|e| format!("Respuesta inesperada del servicio de salud: {e}"))?;
-
-    let mut report = report_from_raw(raw);
+    let mut report = report_from_contract(report);
     fill_icons_and_names(&mut report);
     Ok(report)
 }
@@ -173,18 +150,12 @@ pub async fn screen_time(from: String, to: String) -> Result<ScreenTimeReport, S
 /// Borra todo el historial de tiempo de pantalla.
 #[tauri::command]
 pub async fn clear_screen_time() -> Result<(), String> {
-    let connection = service().await?;
+    let connection = zbus5::Connection::session().await.map_err(sin_servicio)?;
+    let proxy = health(&connection).await?;
 
-    connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "ClearScreenTime",
-            &(),
-        )
+    proxy
+        .clear_screen_time()
         .await
-        .map(|_| ())
         .map_err(|e| format!("No se pudo borrar el historial: {e}"))
 }
 
@@ -196,102 +167,84 @@ pub async fn clear_screen_time() -> Result<(), String> {
 /// sin esperar a que el servicio relea el archivo.
 #[tauri::command]
 pub async fn screen_time_set_enabled(enabled: bool) -> Result<(), String> {
-    let connection = service().await?;
+    let connection = zbus5::Connection::session().await.map_err(sin_servicio)?;
+    let proxy = health(&connection).await?;
 
-    connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "SetEnabled",
-            &(enabled,),
-        )
+    proxy
+        .set_enabled(enabled)
         .await
-        .map(|_| ())
         .map_err(|e| format!("No se pudo cambiar el registro de tiempo de pantalla: {e}"))
 }
 
 /// Si el registro está prendido ahora mismo, según el servicio.
 #[tauri::command]
 pub async fn screen_time_enabled() -> Result<bool, String> {
-    let connection = service().await?;
+    let connection = zbus5::Connection::session().await.map_err(sin_servicio)?;
+    let proxy = health(&connection).await?;
 
-    let reply = connection
-        .call_method(
-            Some(SERVICE_NAME),
-            SERVICE_PATH,
-            Some(SERVICE_INTERFACE),
-            "Enabled",
-            &(),
-        )
+    proxy
+        .enabled()
         .await
-        .map_err(|e| format!("No se pudo consultar el estado del registro: {e}"))?;
-
-    reply
-        .body()
-        .deserialize()
-        .map_err(|e| format!("Respuesta inesperada del servicio de salud: {e}"))
+        .map_err(|e| format!("No se pudo consultar el estado del registro: {e}"))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn raw_de_ejemplo() -> RawReport {
-        (
-            true,
-            "2026-10-05".to_string(),
-            "2026-10-01".to_string(),
-            vec![(
-                "2026-10-05".to_string(),
-                vec![
-                    (
-                        "org.gnome.Nautilus".to_string(),
-                        "System".to_string(),
-                        3_600_000,
-                        vec![0; HOURS_IN_DAY],
-                    ),
-                    // Un día viejo, sin desglose por hora: menos de 24 cubetas.
-                    ("firefox".to_string(), "Network".to_string(), 1_000, vec![]),
-                ],
-            )],
-        )
-    }
-
-    #[test]
-    fn el_informe_se_arma_desde_la_tupla() {
-        let report = report_from_raw(raw_de_ejemplo());
-
-        assert!(report.enabled);
-        assert_eq!(report.today, "2026-10-05");
-        assert_eq!(report.first_day, "2026-10-01");
-        assert_eq!(report.days.len(), 1);
-        assert_eq!(report.days[0].apps.len(), 2);
-        assert_eq!(report.days[0].apps[0].millis, 3_600_000);
-    }
-
-    #[test]
-    fn las_horas_siempre_son_veinticuatro() {
-        // La segunda aplicación venía con cero cubetas; se rellenan a 24 para que
-        // la ventana nunca tenga que preguntarse cuántas hay.
-        let report = report_from_raw(raw_de_ejemplo());
-
-        for day in &report.days {
-            for app in &day.apps {
-                assert_eq!(app.hours.len(), HOURS_IN_DAY);
-            }
+    fn contract_report(hours: Vec<u64>) -> health::ScreenTimeReport {
+        health::ScreenTimeReport {
+            enabled: true,
+            today: "2026-11-12".into(),
+            first_day: "2026-11-01".into(),
+            days: vec![health::DayUsage {
+                date: "2026-11-11".into(),
+                apps: vec![health::AppUsage {
+                    app_id: "firefox".into(),
+                    category: "Network".into(),
+                    millis: 5_000,
+                    hours,
+                }],
+            }],
         }
     }
 
     #[test]
-    fn un_app_id_sin_desktop_cae_en_su_propio_nombre() {
-        // Sin `.desktop` que lo nombre, el nombre es el propio `app_id` y el icono
-        // el genérico — nunca una cadena vacía, que dejaría la fila muda.
-        let mut report = report_from_raw(raw_de_ejemplo());
-        fill_icons_and_names(&mut report);
+    fn un_desglose_corto_se_rellena_con_ceros_hasta_24() {
+        let view = report_from_contract(contract_report(vec![7, 8]));
+        let hours = &view.days[0].apps[0].hours;
+        assert_eq!(hours.len(), HOURS_IN_DAY);
+        assert_eq!(&hours[..3], &[7, 8, 0]);
+        assert!(hours[2..].iter().all(|h| *h == 0));
+    }
 
-        let app = &report.days[0].apps[0];
-        assert!(!app.icon.is_empty());
-        assert!(!app.name.is_empty());
+    #[test]
+    fn un_desglose_vacio_queda_con_24_ceros() {
+        let view = report_from_contract(contract_report(vec![]));
+        assert_eq!(view.days[0].apps[0].hours, vec![0; HOURS_IN_DAY]);
+    }
+
+    #[test]
+    fn un_desglose_largo_se_recorta_a_24() {
+        let view = report_from_contract(contract_report((1..=30).collect()));
+        let hours = &view.days[0].apps[0].hours;
+        assert_eq!(hours.len(), HOURS_IN_DAY);
+        assert_eq!(hours[23], 24);
+    }
+
+    #[test]
+    fn copia_fiel_los_campos_y_deja_icono_y_nombre_vacios() {
+        let view = report_from_contract(contract_report(vec![0; 24]));
+        assert!(view.enabled);
+        assert_eq!(view.today, "2026-11-12");
+        assert_eq!(view.first_day, "2026-11-01");
+        assert_eq!(view.days.len(), 1);
+        assert_eq!(view.days[0].date, "2026-11-11");
+        let app = &view.days[0].apps[0];
+        assert_eq!(app.app_id, "firefox");
+        assert_eq!(app.category, "Network");
+        assert_eq!(app.millis, 5_000);
+        assert_eq!(app.icon, "");
+        assert_eq!(app.name, "");
     }
 }
