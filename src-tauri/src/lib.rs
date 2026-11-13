@@ -280,6 +280,7 @@ pub fn run() {
             commands::screen_time::clear_screen_time,
             commands::screen_time::screen_time_set_enabled,
             commands::screen_time::screen_time_enabled,
+            commands::gamification::gamification,
             commands::assistant::assistant_unit_state,
             commands::assistant::set_assistant_service_enabled,
             commands::assistant::restart_assistant_service,

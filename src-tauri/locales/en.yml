@@ -446,6 +446,26 @@ views:
       system: System
       utility: Utilities
       other: Other
+    gamification:
+      title: Progress
+      description: Points and achievements earned by following the health reminders.
+      xp: Experience points
+      streak: Day streak
+      achievementsTitle: Unlocked achievements
+      errorLoading: "Could not read the progress: {0}"
+      loading: Loading progress…
+      off:
+        title: Progress is turned off
+        note: It cannot be turned on from here yet; that will come later.
+      empty:
+        title: No progress yet
+        note: Follow the health reminders and your points and achievements will show up here.
+      achievements:
+        xp100: 100 points
+        xp500: 500 points
+        xp1000: 1000 points
+        firstBreak: First break
+        firstHydration: First hydration
     clear:
       title: Clear history
       description: Removes all saved screen time. This cannot be undone.

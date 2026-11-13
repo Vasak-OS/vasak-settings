@@ -31,8 +31,9 @@ import {
 import { computed, onMounted, ref } from 'vue';
 import AppIcon from '@/components/permissions/AppIcon.vue';
 import { useScreenTimeSettings } from '@/composables/useScreenTimeSettings';
-import { type ScreenTimeReport, screenTime } from '@/services/health.service';
+import { gamification, type ScreenTimeReport, screenTime } from '@/services/health.service';
 import { readScreenTimeEnabled } from '@/utils/config-values';
+import { achievementIcon, achievementKey, type GamificationProgress } from '@/utils/gamification';
 import {
 	aggregateByApp,
 	aggregateByCategory,
@@ -68,6 +69,11 @@ const CATEGORIES: Record<string, { icon: string; key: string }> = {
 	Settings: { icon: 'preferences-system', key: 'settings' },
 	System: { icon: 'applications-system', key: 'system' },
 	Utility: { icon: 'applications-utilities', key: 'utility' },
+};
+
+const achievementName = (id: string) => {
+	const key = achievementKey(id);
+	return key ? t(`views.screenTime.gamification.achievements.${key}`) : id;
 };
 
 const categoryIcon = (category: string) => CATEGORIES[category]?.icon ?? 'application-x-executable';
@@ -116,6 +122,27 @@ const report = ref<ScreenTimeReport | null>(null);
 const loading = ref(true);
 /** El error de la carga del informe; los del interruptor y el borrado son de `settings`. */
 const loadError = ref('');
+
+const progress = ref<GamificationProgress | null>(null);
+const progressLoading = ref(true);
+const progressError = ref('');
+const progressEmpty = computed(
+	() => !!progress.value && progress.value.xp === 0 && progress.value.achievements.length === 0
+);
+
+// Sólo se lee una vez al montar: es de sólo lectura y no depende del período.
+const loadProgress = async () => {
+	try {
+		progress.value = await gamification();
+	} catch (err) {
+		progressError.value = t('views.screenTime.gamification.errorLoading').replace(
+			'{0}',
+			String(err)
+		);
+	} finally {
+		progressLoading.value = false;
+	}
+};
 
 const byApp = computed(() => (report.value ? aggregateByApp(report.value) : []));
 const byCategory = computed(() => (report.value ? aggregateByCategory(report.value) : []));
@@ -240,7 +267,7 @@ onMounted(async () => {
 		// Si la configuración no se pudo leer, el estado real llega igual con el
 		// informe de abajo.
 	}
-	await load();
+	await Promise.all([load(), loadProgress()]);
 });
 </script>
 
@@ -359,6 +386,64 @@ onMounted(async () => {
 				</ConfigSection>
 			</template>
 		</template>
+
+		<!-- El progreso de gamificación: sólo lectura. El daemon lee si está prendida
+		     al arrancar, así que acá no hay interruptor. -->
+		<ConfigSection
+			:title="t('views.screenTime.gamification.title')"
+			:description="t('views.screenTime.gamification.description')"
+		>
+			<EmptyState
+				v-if="progressLoading"
+				:title="t('views.screenTime.gamification.loading')"
+				icon="starred"
+				bordered
+			/>
+			<AlertMessage v-else-if="progressError" tone="error">{{ progressError }}</AlertMessage>
+			<EmptyState
+				v-else-if="progress && !progress.enabled"
+				:title="t('views.screenTime.gamification.off.title')"
+				:note="t('views.screenTime.gamification.off.note')"
+				icon="starred"
+				bordered
+			/>
+			<EmptyState
+				v-else-if="progressEmpty"
+				:title="t('views.screenTime.gamification.empty.title')"
+				:note="t('views.screenTime.gamification.empty.note')"
+				icon="starred"
+				bordered
+			/>
+			<div v-else-if="progress" class="flex flex-col gap-3">
+				<div class="grid grid-cols-1 gap-3 @sm:grid-cols-2">
+					<StatTile
+						:label="t('views.screenTime.gamification.xp')"
+						:value="String(progress.xp)"
+						icon="starred"
+					/>
+					<StatTile
+						:label="t('views.screenTime.gamification.streak')"
+						:value="String(progress.streak_days)"
+						icon="view-calendar"
+					/>
+				</div>
+				<template v-if="progress.achievements.length > 0">
+					<h3 class="text-sm font-medium text-tx-muted">
+						{{ t('views.screenTime.gamification.achievementsTitle') }}
+					</h3>
+					<ul class="flex flex-wrap gap-2">
+						<li
+							v-for="id in progress.achievements"
+							:key="id"
+							class="flex min-h-8 min-w-0 items-center gap-2 rounded-corner-m border border-ui-border bg-ui-surface/70 px-3 py-1"
+						>
+							<ThemeIcon :name="achievementIcon(id)" :size="20" type="symbol" />
+							<span class="min-w-0 truncate text-sm text-tx-main">{{ achievementName(id) }}</span>
+						</li>
+					</ul>
+				</template>
+			</div>
+		</ConfigSection>
 
 		<!-- Borrar el historial. Destructivo y no se deshace, así que pide una
 		     confirmación en el lugar antes de llamar a `ClearScreenTime`. -->

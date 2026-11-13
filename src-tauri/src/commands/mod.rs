@@ -10,6 +10,7 @@ pub mod datetime;
 pub mod dav_discover;
 pub mod fastfetch;
 pub mod game_mode;
+pub mod gamification;
 pub mod greeter;
 pub mod iconos_de_apps;
 pub mod idle;
