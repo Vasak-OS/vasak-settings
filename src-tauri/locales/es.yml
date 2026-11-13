@@ -456,9 +456,12 @@ views:
       achievementsTitle: Logros desbloqueados
       errorLoading: "No se pudo leer el progreso: {0}"
       loading: Cargando el progreso…
+      toggle: Gamificación
+      toggleHint: Prendida, el servicio lleva la cuenta de tus puntos y logros.
+      errorSaving: "No se pudo cambiar la gamificación: {0}"
       off:
         title: El progreso está apagado
-        note: Todavía no se puede prender desde acá; va a llegar más adelante.
+        note: Prendé la gamificación para empezar a sumar puntos y logros.
       empty:
         title: Todavía no hay progreso
         note: Cumplí los recordatorios de salud y acá van a aparecer tus puntos y logros.

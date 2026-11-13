@@ -22,6 +22,7 @@ import {
 	PANEL_STYLES,
 	type PinnedApp,
 	readBarPosition,
+	readGamificationEnabled,
 	readMenuSettings,
 	readPanelAnimation,
 	readPanelAutohide,
@@ -39,6 +40,7 @@ import {
 	WINDOW_CONTROLS_ORDERS,
 	WINDOW_CONTROLS_STYLES,
 	writeBarPosition,
+	writeGamificationEnabled,
 	writeMenuSettings,
 	writePanelAppearance,
 	writePanelIndicators,
@@ -928,5 +930,48 @@ describe('el icono del botón de menú', () => {
 		const config: Record<string, unknown> = { panel: { position: 'left', weather: false } };
 		writeMenuIcon(config, 'open-menu');
 		expect(config.panel).toEqual({ position: 'left', weather: false, menuIcon: 'open-menu' });
+	});
+});
+
+describe('readGamificationEnabled', () => {
+	test('la clave ausente significa apagada', () => {
+		expect(readGamificationEnabled({})).toBe(false);
+		expect(readGamificationEnabled({ gamification: {} })).toBe(false);
+	});
+
+	test('toma el booleano cuando está', () => {
+		expect(readGamificationEnabled({ gamification: { enabled: true } })).toBe(true);
+		expect(readGamificationEnabled({ gamification: { enabled: false } })).toBe(false);
+	});
+
+	test('un valor que no es booleano cae en apagada', () => {
+		expect(readGamificationEnabled({ gamification: { enabled: 'yes' } })).toBe(false);
+		expect(readGamificationEnabled({ gamification: 'on' })).toBe(false);
+	});
+
+	test('no lee la sección de tiempo de pantalla', () => {
+		expect(readGamificationEnabled({ screen_time: { enabled: true } })).toBe(false);
+	});
+});
+
+describe('writeGamificationEnabled', () => {
+	test('deja el interruptor puesto', () => {
+		const config: Record<string, unknown> = {};
+
+		writeGamificationEnabled(config, true);
+
+		expect(config.gamification).toEqual({ enabled: true });
+	});
+
+	test('y conserva lo que el servicio haya guardado en la sección', () => {
+		const config: Record<string, unknown> = {
+			gamification: { enabled: false, xp_rate: 2 },
+			screen_time: { enabled: true },
+		};
+
+		writeGamificationEnabled(config, true);
+
+		expect(config.gamification).toEqual({ enabled: true, xp_rate: 2 });
+		expect(config.screen_time).toEqual({ enabled: true });
 	});
 });

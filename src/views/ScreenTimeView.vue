@@ -30,6 +30,7 @@ import {
 } from '@vasakgroup/vue-libvasak';
 import { computed, onMounted, ref } from 'vue';
 import AppIcon from '@/components/permissions/AppIcon.vue';
+import { useGamificationSettings } from '@/composables/useGamificationSettings';
 import { useScreenTimeSettings } from '@/composables/useScreenTimeSettings';
 import { gamification, type ScreenTimeReport, screenTime } from '@/services/health.service';
 import { readScreenTimeEnabled } from '@/utils/config-values';
@@ -130,10 +131,24 @@ const progressEmpty = computed(
 	() => !!progress.value && progress.value.xp === 0 && progress.value.achievements.length === 0
 );
 
-// Sólo se lee una vez al montar: es de sólo lectura y no depende del período.
+/**
+ * El interruptor de la gamificación. Persiste `gamification.enabled` y llama a
+ * `SetEnabled` para que el cambio sea inmediato; su `enabled` se siembra del
+ * progreso al cargarlo y se recarga tras cada cambio, de donde sale la verdad.
+ */
+const gamificationSettings = useGamificationSettings((reason) =>
+	t('views.screenTime.gamification.errorSaving').replace('{0}', reason)
+);
+const { enabled: gamificationEnabled, busy: gamificationBusy } = gamificationSettings;
+const gamificationError = computed(() => gamificationSettings.error.value || progressError.value);
+
+// El progreso se relee tras cada cambio del interruptor; `enabled` se siembra de
+// `progress.enabled`, que es lo que informa el servicio.
 const loadProgress = async () => {
+	progressError.value = '';
 	try {
 		progress.value = await gamification();
+		gamificationEnabled.value = progress.value.enabled;
 	} catch (err) {
 		progressError.value = t('views.screenTime.gamification.errorLoading').replace(
 			'{0}',
@@ -142,6 +157,12 @@ const loadProgress = async () => {
 	} finally {
 		progressLoading.value = false;
 	}
+};
+
+/** Prende o apaga la gamificación y recarga el progreso con la verdad del servicio. */
+const toggleGamification = async (value: boolean) => {
+	await gamificationSettings.toggle(value);
+	await loadProgress();
 };
 
 const byApp = computed(() => (report.value ? aggregateByApp(report.value) : []));
@@ -387,19 +408,32 @@ onMounted(async () => {
 			</template>
 		</template>
 
-		<!-- El progreso de gamificación: sólo lectura. El daemon lee si está prendida
-		     al arrancar, así que acá no hay interruptor. -->
+		<!-- El progreso de gamificación. El interruptor prende o apaga la capa en el
+		     acto; apagada, lo ganado se sigue viendo pero no se suma nada nuevo. -->
 		<ConfigSection
 			:title="t('views.screenTime.gamification.title')"
 			:description="t('views.screenTime.gamification.description')"
 		>
+			<div class="flex flex-wrap items-start justify-between gap-4">
+				<p class="min-w-0 flex-1 text-sm text-tx-muted">
+					{{ t('views.screenTime.gamification.toggleHint') }}
+				</p>
+				<SwitchToggle
+					:label="t('views.screenTime.gamification.toggle')"
+					:model-value="gamificationEnabled"
+					:disabled="gamificationBusy || progressLoading"
+					@update:model-value="(value) => toggleGamification(value)"
+				/>
+			</div>
+
+			<AlertMessage v-if="gamificationError" tone="error">{{ gamificationError }}</AlertMessage>
+
 			<EmptyState
 				v-if="progressLoading"
 				:title="t('views.screenTime.gamification.loading')"
 				icon="starred"
 				bordered
 			/>
-			<AlertMessage v-else-if="progressError" tone="error">{{ progressError }}</AlertMessage>
 			<EmptyState
 				v-else-if="progress && !progress.enabled"
 				:title="t('views.screenTime.gamification.off.title')"

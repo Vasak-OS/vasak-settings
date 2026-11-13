@@ -1,6 +1,6 @@
 [package]
 name = "vasak-settings"
-version = "0.66.0"
+version = "0.67.0"
 description = "A Vasak Application (template)"
 authors = ["Vasak Group", "Joaquin (Pato) Decima"]
 edition = "2021"
@@ -66,7 +66,7 @@ vasak-health-protocol = "0.2.1"
 # El contrato del nuevo servicio de gamificación (XP, racha, logros), que salió
 # de health a su propio servicio reutilizable. Mismo patrón: deriva `Type` de
 # zbus 5 y se habla por la conexión `zbus5` aparte. Ver `commands/gamification.rs`.
-vasak-gamification-protocol = "0.1.0"
+vasak-gamification-protocol = "0.2.0"
 vasak-connect-protocol = "0.3.4"
 # El contrato del asistente (Lince). `commands/assistant.rs` deserializa las
 # respuestas en estos tipos y habla por una conexión zbus 5.
