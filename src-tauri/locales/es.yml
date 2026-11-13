@@ -448,6 +448,26 @@ views:
       system: Sistema
       utility: Utilidades
       other: Otras
+    gamification:
+      title: Progreso
+      description: Puntos y logros que se ganan al cumplir los recordatorios de salud.
+      xp: Puntos de experiencia
+      streak: Racha de días
+      achievementsTitle: Logros desbloqueados
+      errorLoading: "No se pudo leer el progreso: {0}"
+      loading: Cargando el progreso…
+      off:
+        title: El progreso está apagado
+        note: Todavía no se puede prender desde acá; va a llegar más adelante.
+      empty:
+        title: Todavía no hay progreso
+        note: Cumplí los recordatorios de salud y acá van a aparecer tus puntos y logros.
+      achievements:
+        xp100: 100 puntos
+        xp500: 500 puntos
+        xp1000: 1000 puntos
+        firstBreak: Primera pausa
+        firstHydration: Primera hidratación
     clear:
       title: Borrar el historial
       description: Elimina todo el tiempo de pantalla guardado. No se puede deshacer.

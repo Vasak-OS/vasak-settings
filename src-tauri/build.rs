@@ -131,6 +131,7 @@ fn main() {
             "clear_screen_time",
             "screen_time_set_enabled",
             "screen_time_enabled",
+            "gamification",
             "assistant_unit_state",
             "set_assistant_service_enabled",
             "restart_assistant_service",

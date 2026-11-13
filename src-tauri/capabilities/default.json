@@ -173,6 +173,7 @@
     "allow-clear-screen-time",
     "allow-screen-time-set-enabled",
     "allow-screen-time-enabled",
+    "allow-gamification",
     "allow-assistant-unit-state",
     "allow-set-assistant-service-enabled",
     "allow-restart-assistant-service",

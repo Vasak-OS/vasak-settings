@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import type { GamificationProgress } from '@/utils/gamification';
 import type { ScreenTimeReport } from '@/utils/screen-time';
 
 export type { ScreenTimeReport } from '@/utils/screen-time';
@@ -27,3 +28,7 @@ export const setScreenTimeEnabled = (enabled: boolean): Promise<void> =>
 
 /** Si el registro está prendido ahora mismo, según el servicio. */
 export const screenTimeEnabled = (): Promise<boolean> => invoke<boolean>('screen_time_enabled');
+
+/** El progreso de gamificación (XP, racha y logros) que lleva el servicio de salud. */
+export const gamification = (): Promise<GamificationProgress> =>
+	invoke<GamificationProgress>('gamification');

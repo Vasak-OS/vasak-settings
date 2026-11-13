@@ -5256,6 +5256,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "vasak-gamification-protocol"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "80afaf5aee0251cda17c3a33a4b6014231f2cba3ac9cf8f3db32042084309bea"
+dependencies = [
+ "serde",
+ "zbus 5.19.0",
+]
+
+[[package]]
 name = "vasak-health-protocol"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5267,7 +5277,7 @@ dependencies = [
 
 [[package]]
 name = "vasak-settings"
-version = "0.65.3"
+version = "0.66.0"
 dependencies = [
  "base64 0.23.1",
  "chrono",
@@ -5306,6 +5316,7 @@ dependencies = [
  "uuid",
  "vasak-assistant-protocol",
  "vasak-connect-protocol",
+ "vasak-gamification-protocol",
  "vasak-health-protocol",
  "webkit2gtk",
  "zbus 4.4.0",
