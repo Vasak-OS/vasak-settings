@@ -39,3 +39,20 @@ pub async fn gamification() -> Result<GamificationProgress, String> {
         .await
         .map_err(|e| format!("No se pudo leer el progreso de gamificación: {e}"))
 }
+
+/// Prende o apaga la gamificación en el acto. La vista además persiste
+/// `gamification.enabled` en `vasak.conf`, de donde el servicio lo lee al
+/// arrancar; esto lo hace inmediato, sin esperar a esa relectura. Mismo puente
+/// delgado que `gamification()`: sólo reenvía la orden al servicio.
+#[tauri::command]
+pub async fn set_gamification_enabled(enabled: bool) -> Result<(), String> {
+    let connection = zbus5::Connection::session().await.map_err(sin_servicio)?;
+    let proxy = GamificationProxy::new(&connection)
+        .await
+        .map_err(sin_servicio)?;
+
+    proxy
+        .set_enabled(enabled)
+        .await
+        .map_err(|e| format!("No se pudo cambiar la gamificación: {e}"))
+}

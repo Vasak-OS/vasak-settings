@@ -32,3 +32,13 @@ export const screenTimeEnabled = (): Promise<boolean> => invoke<boolean>('screen
 /** El progreso de gamificación (XP, racha y logros) que lleva el servicio de salud. */
 export const gamification = (): Promise<GamificationProgress> =>
 	invoke<GamificationProgress>('gamification');
+
+/**
+ * Prende o apaga la gamificación en el acto.
+ *
+ * La vista además persiste `gamification.enabled` en `vasak.conf` con el plugin
+ * de configuración: esto es lo que lo hace inmediato, sin esperar a que el
+ * servicio relea el archivo. Mismo patrón que `setScreenTimeEnabled`.
+ */
+export const setGamificationEnabled = (enabled: boolean): Promise<void> =>
+	invoke<void>('set_gamification_enabled', { enabled });

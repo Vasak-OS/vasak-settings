@@ -113,6 +113,32 @@ export function writeScreenTimeEnabled(config: Record<string, unknown>, enabled:
 }
 
 /**
+ * Si la gamificación está prendida.
+ *
+ * La sección `gamification` no existe en el archivo hasta que alguien toca el
+ * interruptor, y la clave ausente significa **apagada**: no se enciende sola, se
+ * elige. El servicio `vasak-gamification` lee `gamification.enabled` con este
+ * mismo criterio al arrancar.
+ */
+export function readGamificationEnabled(config: unknown): boolean {
+	const section =
+		config && typeof config === 'object'
+			? ((config as Record<string, unknown>).gamification as Record<string, unknown> | undefined)
+			: undefined;
+	return configBoolean(section?.enabled, false);
+}
+
+/**
+ * Deja la sección `gamification` con el interruptor puesto, conservando lo que
+ * ya hubiera: es compartida con lo que el servicio guarde después, y
+ * reemplazarla entera borraría claves ajenas.
+ */
+export function writeGamificationEnabled(config: Record<string, unknown>, enabled: boolean): void {
+	const previous = (config.gamification as Record<string, unknown> | undefined) ?? {};
+	config.gamification = { ...previous, enabled };
+}
+
+/**
  * Lo que el panel muestra y se puede apagar, en el orden en que aparece.
  *
  * Las primeras cinco son los indicadores de siempre; las cinco últimas se
