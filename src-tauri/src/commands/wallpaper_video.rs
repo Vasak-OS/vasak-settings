@@ -22,6 +22,7 @@
 //! y el fondo funciona como antes. Una optimización que impide poner un fondo
 //! sería peor que no tenerla.
 
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 
@@ -132,7 +133,7 @@ pub fn cache_key(source: &Path, size: u64, modified_secs: u64, target: (u32, u32
 fn playable_extension(source: &Path) -> Option<String> {
     source
         .extension()
-        .and_then(|ext| ext.to_str())
+        .and_then(OsStr::to_str)
         .map(str::to_ascii_lowercase)
         .filter(|ext| WALLPAPER_VIDEO_EXTENSIONS.contains(&ext.as_str()))
 }
@@ -146,7 +147,7 @@ fn playable_extension(source: &Path) -> Option<String> {
 async fn land_copy(source: &Path, dest: &Path, detail: &str) -> Result<PreparedWallpaper, String> {
     if !tokio::fs::try_exists(dest).await.unwrap_or(false) {
         let dir = dest.parent().ok_or("ruta de destino inválida")?;
-        let ext = dest.extension().and_then(|e| e.to_str()).unwrap_or("mp4");
+        let ext = dest.extension().and_then(OsStr::to_str).unwrap_or("mp4");
         let partial = dir.join(format!(".parcial-{}.{ext}", uuid::Uuid::new_v4()));
         if let Err(error) = tokio::fs::copy(source, &partial).await {
             let _ = tokio::fs::remove_file(&partial).await;
