@@ -222,7 +222,11 @@ const saveWallpaperConfig = async () => {
 	successMessage.value = '';
 
 	try {
-		let finalPath = selectedWallpaperPath.value.trim();
+		// La selección sin recortar, para comparar después: `finalPath` va recortado,
+		// así que si lo que se escribió tenía un espacio al inicio, comparar contra
+		// el recortado nunca coincidiría y la selección quedaría en el origen.
+		const originalSelection = selectedWallpaperPath.value;
+		let finalPath = originalSelection.trim();
 
 		// Un video se prepara una vez, acá, y no en cada cuadro después: se
 		// baja a la resolución de la pantalla, se limita a 30 fps y se le saca
@@ -232,7 +236,6 @@ const saveWallpaperConfig = async () => {
 		// crearía un duplicado). Uno de una carpeta cualquiera —incluida la carpeta
 		// propia configurada— sí se prepara: ahí está sin escalar y con audio.
 		if (finalPath && selectedIsVideo.value && !libraryWallpapers.value.includes(finalPath)) {
-			const requested = finalPath;
 			optimizing.value = true;
 			optimizeProgress.value = 0;
 			optimizeDetail.value = '';
@@ -243,11 +246,13 @@ const saveWallpaperConfig = async () => {
 					{ path: finalPath }
 				);
 				finalPath = prepared.path;
-				optimizeDetail.value = prepared.detail;
-				// Dejar la selección en la copia preparada: si no, un guardado posterior
-				// (p.ej. «pausar con batería») volvería a preparar el origen, que pudo
-				// moverse. Si mientras tanto se eligió otro fondo, no lo pisamos.
-				if (selectedWallpaperPath.value === requested) {
+				// El detalle y la selección se actualizan sólo si sigue elegido este
+				// video: si se cambió a otro durante la preparación, no mostramos su
+				// detalle ni pisamos la nueva selección. Dejar la selección en la copia
+				// preparada evita que un guardado posterior («pausar con batería»)
+				// vuelva a preparar el origen, que pudo moverse.
+				if (selectedWallpaperPath.value === originalSelection) {
+					optimizeDetail.value = prepared.detail;
 					selectedWallpaperPath.value = finalPath;
 				}
 				// El video preparado ya vive en la biblioteca: refrescar la grilla no
@@ -256,7 +261,9 @@ const saveWallpaperConfig = async () => {
 			} catch (err) {
 				// Que no se pueda optimizar no es motivo para no poder poner el
 				// fondo: se guarda el original y el escritorio lo reproduce igual.
-				optimizeDetail.value = String(err);
+				if (selectedWallpaperPath.value === originalSelection) {
+					optimizeDetail.value = String(err);
+				}
 			} finally {
 				optimizing.value = false;
 			}
@@ -266,11 +273,10 @@ const saveWallpaperConfig = async () => {
 			// copia: así queda bajo una raíz estable que todas las apps ven, en vez
 			// de una ruta arbitraria que no se terminaba aplicando. El backend copia
 			// el original si no puede optimizar, así que esto no impide poner el fondo.
-			const requested = finalPath;
-			finalPath = await importWallpaper(requested);
+			finalPath = await importWallpaper(finalPath);
 			// Si mientras se importaba se eligió otro fondo, no lo pisamos; igual se
 			// guarda el que se mandó a importar.
-			if (selectedWallpaperPath.value === requested) {
+			if (selectedWallpaperPath.value === originalSelection) {
 				selectedWallpaperPath.value = finalPath;
 			}
 			void loadThumbnail(finalPath);
