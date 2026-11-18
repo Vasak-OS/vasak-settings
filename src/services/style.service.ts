@@ -83,6 +83,21 @@ export const getCustomWallpapers = (folder: string): Promise<string[]> => {
 	return invoke<string[]>('get_custom_wallpapers', { folder });
 };
 
+/** Los fondos propios ya importados a la biblioteca gestionada. */
+export const getLibraryWallpapers = (): Promise<string[]> => {
+	return invoke<string[]>('get_library_wallpapers');
+};
+
+/**
+ * Importa una imagen a la biblioteca propia —escalada y recodificada a WebP— y
+ * devuelve la ruta importada, que es la que hay que guardar como fondo. Así el
+ * fondo queda bajo una raíz estable que todas las apps pueden leer, en lugar de
+ * una ruta arbitraria que podía no aplicarse.
+ */
+export const importWallpaper = (path: string): Promise<string> => {
+	return invoke<string>('import_wallpaper', { path });
+};
+
 /**
  * Da acceso del protocolo de assets a un archivo de fondo y devuelve su ruta
  * canónica, la que hay que usar con `convertFileSrc`. El mismo contrato que el

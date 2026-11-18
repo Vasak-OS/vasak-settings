@@ -78,6 +78,8 @@
     "allow-get-icon-pack-icons",
     "allow-get-official-wallpapers",
     "allow-get-custom-wallpapers",
+    "allow-get-library-wallpapers",
+    "allow-import-wallpaper",
     "allow-allow-wallpaper-asset",
     "allow-get-shortcuts",
     "allow-save-shortcuts",

@@ -36,6 +36,8 @@ fn main() {
             "get_icon_pack_icons",
             "get_official_wallpapers",
             "get_custom_wallpapers",
+            "get_library_wallpapers",
+            "import_wallpaper",
             "allow_wallpaper_asset",
             "get_shortcuts",
             "save_shortcuts",

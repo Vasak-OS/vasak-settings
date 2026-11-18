@@ -186,6 +186,8 @@ pub fn run() {
             commands::system_config::get_official_wallpapers,
             commands::system_config::get_custom_wallpapers,
             commands::wallpaper_assets::allow_wallpaper_asset,
+            commands::wallpaper_library::import_wallpaper,
+            commands::wallpaper_library::get_library_wallpapers,
             commands::shortcuts::get_shortcuts,
             commands::shortcuts::save_shortcuts,
             commands::wayfire_ini::read_wayfire_section,

@@ -222,7 +222,7 @@ pub fn parse_ffprobe(text: &str) -> Result<VideoFacts, String> {
 }
 
 /// La resolución a la que conviene dejar el video: la del monitor más grande.
-async fn target_resolution() -> (u32, u32) {
+pub(crate) async fn target_resolution() -> (u32, u32) {
     match super::monitors::get_detected_monitors().await {
         Ok(report) => report
             .monitors

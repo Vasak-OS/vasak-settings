@@ -873,6 +873,10 @@ views:
     officialTitle: Wallpapers Oficiales
     optionsCount: '{0} opciones'
     noWallpapers: No se encontraron wallpapers en /usr/share/backgrounds/vasakos.
+    libraryTitle: Mi biblioteca
+    libraryHint: >-
+      Las imágenes que elegiste o arrastraste, ya optimizadas y copiadas acá para
+      que el escritorio y las demás apps puedan usarlas.
     customFolderTitle: Carpeta propia
     customFolderHint: >-
       Elegí una carpeta —dentro o fuera del hogar— y sus imágenes y videos se
