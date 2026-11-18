@@ -228,7 +228,11 @@ const saveWallpaperConfig = async () => {
 		// baja a la resolución de la pantalla, se limita a 30 fps y se le saca
 		// el audio, que en un fondo no suena pero se decodifica igual. Si no
 		// hay nada que mejorar devuelve el original sin copiar nada.
-		if (finalPath && selectedIsVideo.value && !isAlreadyManaged(finalPath)) {
+		// Un video ya en la biblioteca está optimizado: no se vuelve a preparar (eso
+		// crearía un duplicado). Uno de una carpeta cualquiera —incluida la carpeta
+		// propia configurada— sí se prepara: ahí está sin escalar y con audio.
+		if (finalPath && selectedIsVideo.value && !libraryWallpapers.value.includes(finalPath)) {
+			const requested = finalPath;
 			optimizing.value = true;
 			optimizeProgress.value = 0;
 			optimizeDetail.value = '';
@@ -240,6 +244,12 @@ const saveWallpaperConfig = async () => {
 				);
 				finalPath = prepared.path;
 				optimizeDetail.value = prepared.detail;
+				// Dejar la selección en la copia preparada: si no, un guardado posterior
+				// (p.ej. «pausar con batería») volvería a preparar el origen, que pudo
+				// moverse. Si mientras tanto se eligió otro fondo, no lo pisamos.
+				if (selectedWallpaperPath.value === requested) {
+					selectedWallpaperPath.value = finalPath;
+				}
 				// El video preparado ya vive en la biblioteca: refrescar la grilla no
 				// debe impedir guardar, así que un fallo acá se traga.
 				void loadLibraryWallpapers().catch(() => {});
