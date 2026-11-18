@@ -26,6 +26,8 @@ export interface AssistantConfig {
 	url: string;
 	model: string;
 	allowRemote: boolean;
+	/** Las carpetas que Lince puede leer (`lince_files_roots`). Vacío: ninguna. */
+	filesRoots: string[];
 }
 
 /** Lo que el formulario del modelo edita; `remote` es «Proveedor remoto» (allow_remote). */
@@ -40,6 +42,18 @@ const isBackend = (value: unknown): value is AssistantBackend =>
 	(ASSISTANT_PROVIDERS as readonly unknown[]).includes(value);
 
 const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+
+/** Una lista de rutas: sólo los textos no vacíos, recortados, sin repetir. */
+const stringArray = (value: unknown): string[] => {
+	if (!Array.isArray(value)) return [];
+	const out: string[] = [];
+	for (const item of value) {
+		if (typeof item !== 'string') continue;
+		const clean = item.trim();
+		if (clean && !out.includes(clean)) out.push(clean);
+	}
+	return out;
+};
 
 const sectionOf = (config: unknown): Record<string, unknown> => {
 	const section =
@@ -71,6 +85,7 @@ export function readAssistantConfig(config: unknown): AssistantConfig {
 		url: text(section.url) || DEFAULT_URLS[backend],
 		model: text(section.model),
 		allowRemote: configBoolean(section.allow_remote, false),
+		filesRoots: stringArray(section.lince_files_roots),
 	};
 }
 
@@ -80,6 +95,7 @@ export interface AssistantPatch {
 	url?: string;
 	model?: string;
 	allowRemote?: boolean;
+	filesRoots?: string[];
 }
 
 /**
@@ -105,6 +121,11 @@ export function writeAssistantConfig(
 		else delete section[key];
 	}
 	if (patch.allowRemote !== undefined) section.allow_remote = patch.allowRemote;
+	if (patch.filesRoots !== undefined) {
+		const roots = stringArray(patch.filesRoots);
+		if (roots.length) section.lince_files_roots = roots;
+		else delete section.lince_files_roots;
+	}
 	config.assistant = section;
 	return config;
 }
