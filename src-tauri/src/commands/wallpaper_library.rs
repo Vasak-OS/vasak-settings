@@ -26,7 +26,9 @@ use std::path::{Path, PathBuf};
 
 use tokio::process::Command;
 
-use super::system_config::{list_wallpapers_in, WALLPAPER_IMAGE_EXTENSIONS};
+use super::system_config::{
+    list_wallpapers_in, WALLPAPER_IMAGE_EXTENSIONS, WALLPAPER_VIDEO_EXTENSIONS,
+};
 
 /// Dónde viven los fondos propios ya importados.
 pub fn library_dir() -> Option<PathBuf> {
@@ -199,9 +201,16 @@ pub async fn get_library_wallpapers() -> Result<Vec<String>, String> {
     let Some(dir) = library_dir() else {
         return Ok(vec![]);
     };
-    // Un temporal de importación que quedó colgado tiene extensión de imagen;
-    // se lo deja afuera para que no aparezca como un fondo en la grilla.
-    Ok(list_wallpapers_in(&dir, &WALLPAPER_IMAGE_EXTENSIONS)
+    // Imágenes y videos: ambos se importan a la biblioteca (los videos los
+    // prepara `wallpaper_video`, que ahora escribe acá y no en la caché).
+    let allowed: Vec<&str> = WALLPAPER_IMAGE_EXTENSIONS
+        .iter()
+        .chain(WALLPAPER_VIDEO_EXTENSIONS.iter())
+        .copied()
+        .collect();
+    // Un temporal de importación que quedó colgado tiene extensión de imagen o
+    // de video; se lo deja afuera para que no aparezca como un fondo en la grilla.
+    Ok(list_wallpapers_in(&dir, &allowed)
         .into_iter()
         .filter(|path| !is_partial(path))
         .collect())
@@ -284,11 +293,18 @@ mod tests {
     }
 
     #[test]
-    fn la_biblioteca_lista_solo_imagenes() {
+    fn la_biblioteca_lista_imagenes_y_videos_pero_no_temporales() {
         con_datos_temporales("lista", |base| {
             let dir = base.join("vasak").join("wallpapers");
             std::fs::create_dir_all(&dir).unwrap();
-            for name in ["b.webp", "a.png", "loop.mp4", "notas.txt"] {
+            for name in [
+                "b.webp",
+                "a.png",
+                "loop.mp4",
+                "notas.txt",
+                ".parcial-abc.mp4",
+                ".parcial-abc.webp",
+            ] {
                 std::fs::write(dir.join(name), b"x").unwrap();
             }
             let lista = tauri::async_runtime::block_on(get_library_wallpapers()).unwrap();
@@ -303,7 +319,7 @@ mod tests {
                         .to_owned()
                 })
                 .collect();
-            assert_eq!(nombres, ["a.png", "b.webp"]);
+            assert_eq!(nombres, ["a.png", "b.webp", "loop.mp4"]);
         });
     }
 

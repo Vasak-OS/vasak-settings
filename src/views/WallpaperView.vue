@@ -213,6 +213,70 @@ async function clearCustomFolder() {
 const optimizing = ref(false);
 const optimizeProgress = ref(0);
 const optimizeDetail = ref('');
+/** La ruta cuyo `optimizeDetail` estamos mostrando. */
+const optimizeDetailPath = ref('');
+
+// El detalle describe la preparación de un video puntual; sólo se muestra
+// mientras ese video siga elegido. Si se pasa a otro fondo deja de
+// corresponder, aunque el texto todavía esté en memoria.
+const visibleOptimizeDetail = computed(() =>
+	optimizeDetailPath.value && optimizeDetailPath.value === selectedWallpaperPath.value
+		? optimizeDetail.value
+		: ''
+);
+
+/**
+ * Prepara un video de una carpeta cualquiera (se baja a la resolución de la
+ * pantalla, se limita a 30 fps y se le saca el audio) y lo deja en la biblioteca.
+ * Devuelve la ruta a guardar: la copia preparada, o el original si no se pudo
+ * optimizar (no es motivo para no poder poner el fondo). El detalle y la
+ * selección se actualizan sólo si sigue elegido este video al terminar.
+ */
+async function prepareVideoForSave(source: string, originalSelection: string): Promise<string> {
+	optimizing.value = true;
+	optimizeProgress.value = 0;
+	optimizeDetail.value = '';
+	try {
+		const prepared = await invoke<{ path: string; optimized: boolean; detail: string }>(
+			'prepare_wallpaper_video',
+			{ path: source }
+		);
+		if (selectedWallpaperPath.value === originalSelection) {
+			optimizeDetail.value = prepared.detail;
+			selectedWallpaperPath.value = prepared.path;
+			optimizeDetailPath.value = prepared.path;
+		}
+		// Refrescar la grilla no debe impedir guardar: si falla, el fondo igual se aplica.
+		void loadLibraryWallpapers().catch(() => {});
+		return prepared.path;
+	} catch (err) {
+		if (selectedWallpaperPath.value === originalSelection) {
+			optimizeDetail.value = String(err);
+			optimizeDetailPath.value = selectedWallpaperPath.value;
+		}
+		return source;
+	} finally {
+		optimizing.value = false;
+	}
+}
+
+/**
+ * Importa a la biblioteca propia —escalada y a WebP— una imagen de una carpeta
+ * cualquiera (arrastrada o escrita a mano) y devuelve esa copia, que queda bajo
+ * una raíz estable que todas las apps ven, en vez de una ruta arbitraria que no
+ * se terminaba aplicando. El backend copia el original si no puede optimizar.
+ */
+async function importImageForSave(source: string, originalSelection: string): Promise<string> {
+	const imported = await importWallpaper(source);
+	// Si mientras se importaba se eligió otro fondo, no lo pisamos; igual se
+	// guarda el que se mandó a importar.
+	if (selectedWallpaperPath.value === originalSelection) {
+		selectedWallpaperPath.value = imported;
+	}
+	void loadThumbnail(imported);
+	void loadLibraryWallpapers().catch(() => {});
+	return imported;
+}
 
 const saveWallpaperConfig = async () => {
 	if (!vskConfig.value) return;
@@ -222,48 +286,21 @@ const saveWallpaperConfig = async () => {
 	successMessage.value = '';
 
 	try {
-		let finalPath = selectedWallpaperPath.value.trim();
+		// La selección sin recortar, para comparar después: `finalPath` va recortado,
+		// así que si lo que se escribió tenía un espacio al inicio, comparar contra
+		// el recortado nunca coincidiría y la selección quedaría en el origen.
+		const originalSelection = selectedWallpaperPath.value;
+		let finalPath = originalSelection.trim();
 
-		// Un video se prepara una vez, acá, y no en cada cuadro después: se
-		// baja a la resolución de la pantalla, se limita a 30 fps y se le saca
-		// el audio, que en un fondo no suena pero se decodifica igual. Si no
-		// hay nada que mejorar devuelve el original sin copiar nada.
-		if (finalPath && selectedIsVideo.value) {
-			optimizing.value = true;
-			optimizeProgress.value = 0;
-			optimizeDetail.value = '';
-
-			try {
-				const prepared = await invoke<{ path: string; optimized: boolean; detail: string }>(
-					'prepare_wallpaper_video',
-					{ path: finalPath }
-				);
-				finalPath = prepared.path;
-				optimizeDetail.value = prepared.detail;
-			} catch (err) {
-				// Que no se pueda optimizar no es motivo para no poder poner el
-				// fondo: se guarda el original y el escritorio lo reproduce igual.
-				optimizeDetail.value = String(err);
-			} finally {
-				optimizing.value = false;
-			}
-		} else if (finalPath && !isAlreadyManaged(finalPath)) {
-			// Una imagen de una carpeta cualquiera (arrastrada o escrita a mano) se
-			// importa a la biblioteca propia —escalada y a WebP— y se guarda esa
-			// copia: así queda bajo una raíz estable que todas las apps ven, en vez
-			// de una ruta arbitraria que no se terminaba aplicando. El backend copia
-			// el original si no puede optimizar, así que esto no impide poner el fondo.
-			const requested = finalPath;
-			finalPath = await importWallpaper(requested);
-			// Si mientras se importaba se eligió otro fondo, no lo pisamos; igual se
-			// guarda el que se mandó a importar.
-			if (selectedWallpaperPath.value === requested) {
-				selectedWallpaperPath.value = finalPath;
-			}
-			void loadThumbnail(finalPath);
-			// Refrescar la grilla de la biblioteca no debe impedir guardar: si eso
-			// falla, el fondo igual se aplica.
-			void loadLibraryWallpapers().catch(() => {});
+		// Un video ya en la biblioteca está optimizado: no se vuelve a preparar (eso
+		// crearía un duplicado). Uno de una carpeta cualquiera —incluida la carpeta
+		// propia configurada— sí se prepara. Una imagen de una ruta cualquiera se
+		// importa. Ambas cosas dejan el fondo bajo una raíz estable que todas las
+		// apps ven, en vez de una ruta arbitraria que no se terminaba aplicando.
+		if (finalPath && selectedIsVideo.value && !libraryWallpapers.value.includes(finalPath)) {
+			finalPath = await prepareVideoForSave(finalPath, originalSelection);
+		} else if (finalPath && !selectedIsVideo.value && !isAlreadyManaged(finalPath)) {
+			finalPath = await importImageForSave(finalPath, originalSelection);
 		}
 		vskConfig.value.desktop = {
 			...vskConfig.value.desktop,
@@ -384,8 +421,8 @@ onUnmounted(() => {
 					<ProgressBar show-value :decimals="1" :value="optimizeProgress" :label="`${optimizeProgress}%`" />
 				</div>
 
-				<p v-else-if="optimizeDetail" class="mt-4 text-sm text-tx-muted">
-					{{ t('views.appearanceWallpaper.optimized').replace('{0}', optimizeDetail) }}
+				<p v-else-if="visibleOptimizeDetail" class="mt-4 text-sm text-tx-muted">
+					{{ t('views.appearanceWallpaper.optimized').replace('{0}', visibleOptimizeDetail) }}
 				</p>
 
 				<div class="mt-4 flex items-center justify-between">

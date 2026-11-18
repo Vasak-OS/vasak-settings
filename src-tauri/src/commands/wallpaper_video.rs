@@ -22,6 +22,7 @@
 //! y el fondo funciona como antes. Una optimización que impide poner un fondo
 //! sería peor que no tenerla.
 
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 
@@ -29,6 +30,8 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
+
+use super::system_config::WALLPAPER_VIDEO_EXTENSIONS;
 
 /// Arriba de esto no se nota en un fondo y cuesta el doble.
 const MAX_FPS: f64 = 30.0;
@@ -121,6 +124,73 @@ pub fn cache_key(source: &Path, size: u64, modified_secs: u64, target: (u32, u32
     target.hash(&mut hasher);
 
     format!("fondo-{:016x}.mp4", hasher.finish())
+}
+
+/// La extensión del video en minúsculas, sólo si es una que el player reproduce
+/// (`mp4`/`webm`/`ogv`). Un contenedor que no está en la lista no se copia a la
+/// biblioteca bajo un nombre reproducible: quedaría listado como fondo y el
+/// escritorio no podría con él.
+fn playable_extension(source: &Path) -> Option<String> {
+    source
+        .extension()
+        .and_then(OsStr::to_str)
+        .map(str::to_ascii_lowercase)
+        .filter(|ext| WALLPAPER_VIDEO_EXTENSIONS.contains(&ext.as_str()))
+}
+
+/// Copia un video sin recodificar a su lugar en la biblioteca y arma la
+/// respuesta. Si ya está —se eligió antes— se reutiliza sin volver a copiar. El
+/// temporal lleva el prefijo que el listado ignora, y se renombra al final, para
+/// que un proceso muerto a mitad no deje un archivo que se liste como fondo. Si
+/// la copia o el renombrado fallan, se borra el temporal para no dejar bytes a
+/// medias ocupando lugar.
+async fn land_copy(source: &Path, dest: &Path, detail: &str) -> Result<PreparedWallpaper, String> {
+    if !tokio::fs::try_exists(dest).await.unwrap_or(false) {
+        let dir = dest.parent().ok_or("ruta de destino inválida")?;
+        let ext = dest.extension().and_then(OsStr::to_str).unwrap_or("mp4");
+        let partial = dir.join(format!(".parcial-{}.{ext}", uuid::Uuid::new_v4()));
+        if let Err(error) = tokio::fs::copy(source, &partial).await {
+            let _ = tokio::fs::remove_file(&partial).await;
+            return Err(format!("{error}"));
+        }
+        if let Err(error) = tokio::fs::rename(&partial, dest).await {
+            let _ = tokio::fs::remove_file(&partial).await;
+            return Err(format!("{error}"));
+        }
+    }
+    Ok(PreparedWallpaper {
+        path: dest.to_string_lossy().into_owned(),
+        optimized: false,
+        detail: detail.to_string(),
+    })
+}
+
+/// Lleva el original a la biblioteca cuando no se recodifica (ya estaba óptimo, o
+/// ffmpeg no pudo). Si el contenedor no es reproducible, o la copia falla —nombre
+/// demasiado largo, disco lleno—, se devuelve el original sin tocar: una
+/// importación que no se puede hacer no es motivo para no poder poner el fondo.
+async fn land_original(
+    source: &Path,
+    dir: &Path,
+    len: u64,
+    modified: u64,
+    detail: &str,
+    original: &str,
+) -> PreparedWallpaper {
+    let keep_original = || PreparedWallpaper {
+        path: original.to_string(),
+        optimized: false,
+        detail: detail.to_string(),
+    };
+    let Some(ext) = playable_extension(source) else {
+        return keep_original();
+    };
+    let dest = dir.join(super::wallpaper_library::import_name(
+        source, len, modified, &ext,
+    ));
+    land_copy(source, &dest, detail)
+        .await
+        .unwrap_or_else(|_| keep_original())
 }
 
 /// El avance que informa ffmpeg, en segundos de video ya procesados.
@@ -402,17 +472,19 @@ where
 
     let facts = match probe(&path).await {
         Ok(facts) => facts,
+        // shortcut: si ffprobe no lo entiende se devuelve el original sin
+        // importar; es un formato raro que el player tampoco va a poder, y no
+        // tiene sentido copiarlo a la biblioteca. Importarlo igual el día que
+        // el player acepte algo que ffprobe no.
         Err(error) => return Ok(unchanged(&format!("no se pudo analizar: {error}"))),
     };
 
     let target = target_resolution().await;
     let plan = plan_for(&facts, target);
 
-    if plan.is_empty() {
-        return Ok(unchanged("ya estaba en el formato más conveniente"));
-    }
-
-    let metadata = std::fs::metadata(&source).map_err(|e| format!("{e}"))?;
+    let metadata = tokio::fs::metadata(&source)
+        .await
+        .map_err(|e| format!("{e}"))?;
     let modified = metadata
         .modified()
         .ok()
@@ -420,8 +492,30 @@ where
         .map(|d| d.as_secs())
         .unwrap_or(0);
 
-    let dir = cache_dir().ok_or("no se pudo determinar la carpeta de caché")?;
-    std::fs::create_dir_all(&dir).map_err(|e| format!("{e}"))?;
+    // A la biblioteca gestionada, no a la caché: el fondo tiene que quedar en una
+    // ruta durable y autorizada, igual que las imágenes importadas. La caché se
+    // limpia, y servirlo desde una ruta cualquiera es justo el error que esto
+    // viene a cerrar.
+    let dir = super::wallpaper_library::library_dir()
+        .ok_or("no se pudo determinar la carpeta de la biblioteca")?;
+    tokio::fs::create_dir_all(&dir)
+        .await
+        .map_err(|e| format!("{e}"))?;
+
+    // Un video ya óptimo no se recodifica, pero se copia igual a la biblioteca:
+    // así se puede aplicar y queda listado junto a los demás.
+    if plan.is_empty() {
+        return Ok(land_original(
+            &source,
+            &dir,
+            metadata.len(),
+            modified,
+            "ya estaba en el formato más conveniente",
+            &path,
+        )
+        .await);
+    }
+
     let target_path = dir.join(cache_key(&source, metadata.len(), modified, target));
 
     if target_path.exists() {
@@ -433,9 +527,11 @@ where
     }
 
     // Se escribe aparte y se renombra al final: si la recodificación se
-    // interrumpe, la caché no queda con un archivo a medias que después se
-    // sirve como si estuviera bien.
-    let partial = target_path.with_extension("parcial.mp4");
+    // interrumpe, la biblioteca no queda con un archivo a medias que después se
+    // sirve como si estuviera bien. El prefijo `.parcial-` es el que
+    // `get_library_wallpapers` deja afuera del listado; el nombre es único para
+    // que dos preparaciones a la vez no pisen el mismo temporal.
+    let partial = dir.join(format!(".parcial-{}.mp4", uuid::Uuid::new_v4()));
     let mut filters: Vec<String> = Vec::new();
 
     if let Some((width, height)) = plan.scale_to {
@@ -507,12 +603,27 @@ where
     // ahora también desde la línea de comandos (`wallpaper_cli.rs`).
     if !status.success() {
         let _ = tokio::fs::remove_file(&partial).await;
-        return Ok(unchanged("ffmpeg no pudo optimizarlo"));
+        // No se pudo recodificar, pero es un video válido: se copia el original
+        // a la biblioteca igual, para que el fondo se pueda aplicar (durable y
+        // autorizado) en vez de quedar en una ruta cualquiera.
+        return Ok(land_original(
+            &source,
+            &dir,
+            metadata.len(),
+            modified,
+            "no se pudo optimizar, se usó el original",
+            &path,
+        )
+        .await);
     }
 
-    tokio::fs::rename(&partial, &target_path)
-        .await
-        .map_err(|e| format!("{e}"))?;
+    // Si el renombrado final falla, el optimizado completo quedaría como un
+    // `.parcial-` colgado: se borra y se devuelve el original, que sí se puede
+    // aplicar.
+    if tokio::fs::rename(&partial, &target_path).await.is_err() {
+        let _ = tokio::fs::remove_file(&partial).await;
+        return Ok(unchanged("no se pudo guardar la copia optimizada"));
+    }
 
     let mut done: Vec<String> = Vec::new();
     if let Some((width, height)) = plan.scale_to {
@@ -727,5 +838,85 @@ mod tests {
             );
         }
         assert_eq!(cache_dir_under(None), None);
+    }
+    #[test]
+    fn la_extension_reproducible_se_normaliza_a_minusculas() {
+        for (entrada, esperada) in [
+            ("/x/a.mp4", "mp4"),
+            ("/x/a.webm", "webm"),
+            ("/x/a.ogv", "ogv"),
+            ("/x/a.MP4", "mp4"),
+            ("/x/a.WebM", "webm"),
+        ] {
+            assert_eq!(
+                playable_extension(Path::new(entrada)).as_deref(),
+                Some(esperada)
+            );
+        }
+    }
+
+    #[test]
+    fn un_contenedor_que_no_se_reproduce_no_tiene_extension() {
+        // No se copia a la biblioteca bajo un nombre reproducible: quedaría
+        // listado y el escritorio no podría con él.
+        for entrada in ["/x/a.mkv", "/x/a.jpg", "/x/sin-extension"] {
+            assert_eq!(playable_extension(Path::new(entrada)), None);
+        }
+    }
+
+    fn carpeta_temporal(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("vasak-wpv-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn copiar_a_la_biblioteca_deja_el_video_y_ningun_temporal() {
+        let dir = carpeta_temporal("copia");
+        let source = dir.join("origen.mp4");
+        let dest = dir.join("destino.mp4");
+        std::fs::write(&source, b"video").unwrap();
+
+        let result = tauri::async_runtime::block_on(land_copy(&source, &dest, "listo")).unwrap();
+
+        assert_eq!(result.path, dest.to_string_lossy());
+        assert!(!result.optimized);
+        assert_eq!(result.detail, "listo");
+        assert_eq!(std::fs::read(&dest).unwrap(), b"video");
+        let sobrantes: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .flatten()
+            .filter(|e| e.file_name().to_string_lossy().starts_with(".parcial-"))
+            .collect();
+        assert!(sobrantes.is_empty(), "no debe quedar ningún .parcial-*");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn si_el_destino_ya_existe_no_se_vuelve_a_copiar() {
+        let dir = carpeta_temporal("existe");
+        let source = dir.join("origen.mp4");
+        let dest = dir.join("destino.mp4");
+        std::fs::write(&source, b"nuevo").unwrap();
+        std::fs::write(&dest, b"previo").unwrap();
+
+        let result = tauri::async_runtime::block_on(land_copy(&source, &dest, "otra vez")).unwrap();
+
+        assert_eq!(std::fs::read(&dest).unwrap(), b"previo");
+        assert!(!result.optimized);
+        assert_eq!(result.detail, "otra vez");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn copiar_un_origen_inexistente_es_un_error_sin_dejar_temporal() {
+        let dir = carpeta_temporal("falla");
+        let dest = dir.join("destino.mp4");
+        let result =
+            tauri::async_runtime::block_on(land_copy(&dir.join("no-existe.mp4"), &dest, "x"));
+        assert!(result.is_err());
+        assert!(!dest.exists());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
