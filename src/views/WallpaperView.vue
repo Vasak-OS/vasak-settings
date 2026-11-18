@@ -225,6 +225,59 @@ const visibleOptimizeDetail = computed(() =>
 		: ''
 );
 
+/**
+ * Prepara un video de una carpeta cualquiera (se baja a la resolución de la
+ * pantalla, se limita a 30 fps y se le saca el audio) y lo deja en la biblioteca.
+ * Devuelve la ruta a guardar: la copia preparada, o el original si no se pudo
+ * optimizar (no es motivo para no poder poner el fondo). El detalle y la
+ * selección se actualizan sólo si sigue elegido este video al terminar.
+ */
+async function prepareVideoForSave(source: string, originalSelection: string): Promise<string> {
+	optimizing.value = true;
+	optimizeProgress.value = 0;
+	optimizeDetail.value = '';
+	try {
+		const prepared = await invoke<{ path: string; optimized: boolean; detail: string }>(
+			'prepare_wallpaper_video',
+			{ path: source }
+		);
+		if (selectedWallpaperPath.value === originalSelection) {
+			optimizeDetail.value = prepared.detail;
+			selectedWallpaperPath.value = prepared.path;
+			optimizeDetailPath.value = prepared.path;
+		}
+		// Refrescar la grilla no debe impedir guardar: si falla, el fondo igual se aplica.
+		void loadLibraryWallpapers().catch(() => {});
+		return prepared.path;
+	} catch (err) {
+		if (selectedWallpaperPath.value === originalSelection) {
+			optimizeDetail.value = String(err);
+			optimizeDetailPath.value = selectedWallpaperPath.value;
+		}
+		return source;
+	} finally {
+		optimizing.value = false;
+	}
+}
+
+/**
+ * Importa a la biblioteca propia —escalada y a WebP— una imagen de una carpeta
+ * cualquiera (arrastrada o escrita a mano) y devuelve esa copia, que queda bajo
+ * una raíz estable que todas las apps ven, en vez de una ruta arbitraria que no
+ * se terminaba aplicando. El backend copia el original si no puede optimizar.
+ */
+async function importImageForSave(source: string, originalSelection: string): Promise<string> {
+	const imported = await importWallpaper(source);
+	// Si mientras se importaba se eligió otro fondo, no lo pisamos; igual se
+	// guarda el que se mandó a importar.
+	if (selectedWallpaperPath.value === originalSelection) {
+		selectedWallpaperPath.value = imported;
+	}
+	void loadThumbnail(imported);
+	void loadLibraryWallpapers().catch(() => {});
+	return imported;
+}
+
 const saveWallpaperConfig = async () => {
 	if (!vskConfig.value) return;
 
@@ -239,63 +292,15 @@ const saveWallpaperConfig = async () => {
 		const originalSelection = selectedWallpaperPath.value;
 		let finalPath = originalSelection.trim();
 
-		// Un video se prepara una vez, acá, y no en cada cuadro después: se
-		// baja a la resolución de la pantalla, se limita a 30 fps y se le saca
-		// el audio, que en un fondo no suena pero se decodifica igual. Si no
-		// hay nada que mejorar devuelve el original sin copiar nada.
 		// Un video ya en la biblioteca está optimizado: no se vuelve a preparar (eso
 		// crearía un duplicado). Uno de una carpeta cualquiera —incluida la carpeta
-		// propia configurada— sí se prepara: ahí está sin escalar y con audio.
+		// propia configurada— sí se prepara. Una imagen de una ruta cualquiera se
+		// importa. Ambas cosas dejan el fondo bajo una raíz estable que todas las
+		// apps ven, en vez de una ruta arbitraria que no se terminaba aplicando.
 		if (finalPath && selectedIsVideo.value && !libraryWallpapers.value.includes(finalPath)) {
-			optimizing.value = true;
-			optimizeProgress.value = 0;
-			optimizeDetail.value = '';
-
-			try {
-				const prepared = await invoke<{ path: string; optimized: boolean; detail: string }>(
-					'prepare_wallpaper_video',
-					{ path: finalPath }
-				);
-				finalPath = prepared.path;
-				// El detalle y la selección se actualizan sólo si sigue elegido este
-				// video: si se cambió a otro durante la preparación, no mostramos su
-				// detalle ni pisamos la nueva selección. Dejar la selección en la copia
-				// preparada evita que un guardado posterior («pausar con batería»)
-				// vuelva a preparar el origen, que pudo moverse.
-				if (selectedWallpaperPath.value === originalSelection) {
-					optimizeDetail.value = prepared.detail;
-					selectedWallpaperPath.value = finalPath;
-					optimizeDetailPath.value = finalPath;
-				}
-				// El video preparado ya vive en la biblioteca: refrescar la grilla no
-				// debe impedir guardar, así que un fallo acá se traga.
-				void loadLibraryWallpapers().catch(() => {});
-			} catch (err) {
-				// Que no se pueda optimizar no es motivo para no poder poner el
-				// fondo: se guarda el original y el escritorio lo reproduce igual.
-				if (selectedWallpaperPath.value === originalSelection) {
-					optimizeDetail.value = String(err);
-					optimizeDetailPath.value = selectedWallpaperPath.value;
-				}
-			} finally {
-				optimizing.value = false;
-			}
+			finalPath = await prepareVideoForSave(finalPath, originalSelection);
 		} else if (finalPath && !selectedIsVideo.value && !isAlreadyManaged(finalPath)) {
-			// Una imagen de una carpeta cualquiera (arrastrada o escrita a mano) se
-			// importa a la biblioteca propia —escalada y a WebP— y se guarda esa
-			// copia: así queda bajo una raíz estable que todas las apps ven, en vez
-			// de una ruta arbitraria que no se terminaba aplicando. El backend copia
-			// el original si no puede optimizar, así que esto no impide poner el fondo.
-			finalPath = await importWallpaper(finalPath);
-			// Si mientras se importaba se eligió otro fondo, no lo pisamos; igual se
-			// guarda el que se mandó a importar.
-			if (selectedWallpaperPath.value === originalSelection) {
-				selectedWallpaperPath.value = finalPath;
-			}
-			void loadThumbnail(finalPath);
-			// Refrescar la grilla de la biblioteca no debe impedir guardar: si eso
-			// falla, el fondo igual se aplica.
-			void loadLibraryWallpapers().catch(() => {});
+			finalPath = await importImageForSave(finalPath, originalSelection);
 		}
 		vskConfig.value.desktop = {
 			...vskConfig.value.desktop,
