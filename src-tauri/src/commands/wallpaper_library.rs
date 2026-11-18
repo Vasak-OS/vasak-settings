@@ -21,6 +21,7 @@
 //! que se note en pantalla. Si ffmpeg no está o falla, se copia el original tal
 //! cual: poder optimizar no es condición para poder poner el fondo.
 
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
 use tokio::process::Command;
@@ -42,7 +43,7 @@ const PARTIAL_PREFIX: &str = ".parcial-";
 fn is_partial(path: &str) -> bool {
     Path::new(path)
         .file_name()
-        .and_then(|name| name.to_str())
+        .and_then(OsStr::to_str)
         .is_some_and(|name| name.starts_with(PARTIAL_PREFIX))
 }
 
@@ -50,8 +51,8 @@ fn is_partial(path: &str) -> bool {
 /// no: los fondos en movimiento se preparan aparte (`wallpaper_video`).
 pub fn is_importable_image(path: &Path) -> bool {
     path.extension()
-        .and_then(|ext| ext.to_str())
-        .map(|ext| ext.to_ascii_lowercase())
+        .and_then(OsStr::to_str)
+        .map(str::to_ascii_lowercase)
         .map(|ext| WALLPAPER_IMAGE_EXTENSIONS.contains(&ext.as_str()))
         .unwrap_or(false)
 }
@@ -63,7 +64,7 @@ pub fn is_importable_image(path: &Path) -> bool {
 pub fn import_name(source: &Path, len: u64, modified: u64, extension: &str) -> String {
     let stem = source
         .file_stem()
-        .and_then(|s| s.to_str())
+        .and_then(OsStr::to_str)
         .unwrap_or("fondo");
     format!("{stem}-{len}-{modified}.{extension}")
 }
@@ -164,9 +165,10 @@ pub async fn import_wallpaper(path: String) -> Result<String, String> {
     let (width, height) = super::wallpaper_video::target_resolution().await;
     let partial = dir.join(format!("{PARTIAL_PREFIX}{unique}.webp"));
     if optimize_to_webp(&source, &partial, width, height).await {
-        tokio::fs::rename(&partial, &optimized)
-            .await
-            .map_err(|error| format!("{error}"))?;
+        if let Err(error) = tokio::fs::rename(&partial, &optimized).await {
+            let _ = tokio::fs::remove_file(&partial).await;
+            return Err(format!("{error}"));
+        }
         return Ok(optimized.to_string_lossy().into_owned());
     }
     let _ = tokio::fs::remove_file(&partial).await;
@@ -174,10 +176,7 @@ pub async fn import_wallpaper(path: String) -> Result<String, String> {
     // Que no se pueda optimizar no es motivo para no poder poner el fondo: se
     // copia el original tal cual. Se copia a un parcial y recién se renombra,
     // para que una copia cortada a la mitad no quede con nombre de fondo válido.
-    let extension = source
-        .extension()
-        .and_then(|ext| ext.to_str())
-        .unwrap_or("img");
+    let extension = source.extension().and_then(OsStr::to_str).unwrap_or("img");
     let copy = dir.join(import_name(&source, len, modified, extension));
     if path_exists(&copy).await {
         return Ok(copy.to_string_lossy().into_owned());
@@ -187,9 +186,10 @@ pub async fn import_wallpaper(path: String) -> Result<String, String> {
         let _ = tokio::fs::remove_file(&partial_copy).await;
         return Err(format!("{error}"));
     }
-    tokio::fs::rename(&partial_copy, &copy)
-        .await
-        .map_err(|error| format!("{error}"))?;
+    if let Err(error) = tokio::fs::rename(&partial_copy, &copy).await {
+        let _ = tokio::fs::remove_file(&partial_copy).await;
+        return Err(format!("{error}"));
+    }
     Ok(copy.to_string_lossy().into_owned())
 }
 
