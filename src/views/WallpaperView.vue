@@ -213,6 +213,17 @@ async function clearCustomFolder() {
 const optimizing = ref(false);
 const optimizeProgress = ref(0);
 const optimizeDetail = ref('');
+/** La ruta cuyo `optimizeDetail` estamos mostrando. */
+const optimizeDetailPath = ref('');
+
+// El detalle describe la preparación de un video puntual; sólo se muestra
+// mientras ese video siga elegido. Si se pasa a otro fondo deja de
+// corresponder, aunque el texto todavía esté en memoria.
+const visibleOptimizeDetail = computed(() =>
+	optimizeDetailPath.value && optimizeDetailPath.value === selectedWallpaperPath.value
+		? optimizeDetail.value
+		: ''
+);
 
 const saveWallpaperConfig = async () => {
 	if (!vskConfig.value) return;
@@ -254,6 +265,7 @@ const saveWallpaperConfig = async () => {
 				if (selectedWallpaperPath.value === originalSelection) {
 					optimizeDetail.value = prepared.detail;
 					selectedWallpaperPath.value = finalPath;
+					optimizeDetailPath.value = finalPath;
 				}
 				// El video preparado ya vive en la biblioteca: refrescar la grilla no
 				// debe impedir guardar, así que un fallo acá se traga.
@@ -263,6 +275,7 @@ const saveWallpaperConfig = async () => {
 				// fondo: se guarda el original y el escritorio lo reproduce igual.
 				if (selectedWallpaperPath.value === originalSelection) {
 					optimizeDetail.value = String(err);
+					optimizeDetailPath.value = selectedWallpaperPath.value;
 				}
 			} finally {
 				optimizing.value = false;
@@ -403,8 +416,8 @@ onUnmounted(() => {
 					<ProgressBar show-value :decimals="1" :value="optimizeProgress" :label="`${optimizeProgress}%`" />
 				</div>
 
-				<p v-else-if="optimizeDetail" class="mt-4 text-sm text-tx-muted">
-					{{ t('views.appearanceWallpaper.optimized').replace('{0}', optimizeDetail) }}
+				<p v-else-if="visibleOptimizeDetail" class="mt-4 text-sm text-tx-muted">
+					{{ t('views.appearanceWallpaper.optimized').replace('{0}', visibleOptimizeDetail) }}
 				</p>
 
 				<div class="mt-4 flex items-center justify-between">
