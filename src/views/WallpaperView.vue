@@ -305,8 +305,11 @@ onMounted(async () => {
 		await loadThumbnail(selectedWallpaperPath.value);
 
 		// La biblioteca propia: los fondos ya importados, junto a los oficiales.
-		// Que falle no debe dejar sin registrar el drag-drop ni la carpeta propia.
-		await loadLibraryWallpapers().catch(() => {});
+		// Si falla se avisa, pero sin cortar la carga de la carpeta propia ni el
+		// registro del drag-drop, que si no quedaría la pantalla sin arrastre.
+		await loadLibraryWallpapers().catch((err) => {
+			error.value = t('views.appearanceWallpaper.errorLoading').replace('{0}', String(err));
+		});
 
 		// La carpeta propia (vasak-settings#148): la misma clave que lee el
 		// escritorio. Sus imágenes se suman a las oficiales.

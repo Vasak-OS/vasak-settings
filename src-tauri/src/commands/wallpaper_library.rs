@@ -32,6 +32,20 @@ pub fn library_dir() -> Option<PathBuf> {
     dirs::data_dir().map(|data| data.join("vasak").join("wallpapers"))
 }
 
+/// El prefijo de los archivos temporales de la importación. Llevan extensión de
+/// imagen (el WebP tiene que ser `.webp` para que ffmpeg elija el formato), así
+/// que si un proceso muere a mitad de camino uno podría quedar en la carpeta y
+/// listarse como fondo. Se los reconoce por este prefijo para dejarlos afuera.
+const PARTIAL_PREFIX: &str = ".parcial-";
+
+/// Si un nombre de archivo es un temporal de importación a medio hacer.
+fn is_partial(path: &str) -> bool {
+    Path::new(path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.starts_with(PARTIAL_PREFIX))
+}
+
 /// Si una ruta es una imagen que se puede importar, por su extensión. Un video
 /// no: los fondos en movimiento se preparan aparte (`wallpaper_video`).
 pub fn is_importable_image(path: &Path) -> bool {
@@ -148,7 +162,7 @@ pub async fn import_wallpaper(path: String) -> Result<String, String> {
     let unique = uuid::Uuid::new_v4();
 
     let (width, height) = super::wallpaper_video::target_resolution().await;
-    let partial = dir.join(format!(".parcial-{unique}.webp"));
+    let partial = dir.join(format!("{PARTIAL_PREFIX}{unique}.webp"));
     if optimize_to_webp(&source, &partial, width, height).await {
         tokio::fs::rename(&partial, &optimized)
             .await
@@ -168,7 +182,7 @@ pub async fn import_wallpaper(path: String) -> Result<String, String> {
     if path_exists(&copy).await {
         return Ok(copy.to_string_lossy().into_owned());
     }
-    let partial_copy = dir.join(format!(".parcial-{unique}.{extension}"));
+    let partial_copy = dir.join(format!("{PARTIAL_PREFIX}{unique}.{extension}"));
     if let Err(error) = tokio::fs::copy(&source, &partial_copy).await {
         let _ = tokio::fs::remove_file(&partial_copy).await;
         return Err(format!("{error}"));
@@ -185,7 +199,12 @@ pub async fn get_library_wallpapers() -> Result<Vec<String>, String> {
     let Some(dir) = library_dir() else {
         return Ok(vec![]);
     };
-    Ok(list_wallpapers_in(&dir, &WALLPAPER_IMAGE_EXTENSIONS))
+    // Un temporal de importación que quedó colgado tiene extensión de imagen;
+    // se lo deja afuera para que no aparezca como un fondo en la grilla.
+    Ok(list_wallpapers_in(&dir, &WALLPAPER_IMAGE_EXTENSIONS)
+        .into_iter()
+        .filter(|path| !is_partial(path))
+        .collect())
 }
 
 #[cfg(test)]
@@ -200,6 +219,14 @@ mod tests {
         assert!(!is_importable_image(Path::new("/x/video.mp4")));
         assert!(!is_importable_image(Path::new("/x/video.webm")));
         assert!(!is_importable_image(Path::new("/x/sin-extension")));
+    }
+
+    #[test]
+    fn un_parcial_colgado_no_es_un_fondo() {
+        assert!(is_partial("/x/.parcial-abc123.webp"));
+        assert!(is_partial("/x/.parcial-abc123.jpg"));
+        assert!(!is_partial("/x/foto-10-20.webp"));
+        assert!(!is_partial("/x/.otro-oculto.webp"));
     }
 
     #[test]
