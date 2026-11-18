@@ -253,10 +253,17 @@ const saveWallpaperConfig = async () => {
 			// copia: así queda bajo una raíz estable que todas las apps ven, en vez
 			// de una ruta arbitraria que no se terminaba aplicando. El backend copia
 			// el original si no puede optimizar, así que esto no impide poner el fondo.
-			finalPath = await importWallpaper(finalPath);
-			await loadLibraryWallpapers();
-			selectedWallpaperPath.value = finalPath;
+			const requested = finalPath;
+			finalPath = await importWallpaper(requested);
+			// Si mientras se importaba se eligió otro fondo, no lo pisamos; igual se
+			// guarda el que se mandó a importar.
+			if (selectedWallpaperPath.value === requested) {
+				selectedWallpaperPath.value = finalPath;
+			}
 			void loadThumbnail(finalPath);
+			// Refrescar la grilla de la biblioteca no debe impedir guardar: si eso
+			// falla, el fondo igual se aplica.
+			void loadLibraryWallpapers().catch(() => {});
 		}
 		vskConfig.value.desktop = {
 			...vskConfig.value.desktop,
@@ -298,7 +305,8 @@ onMounted(async () => {
 		await loadThumbnail(selectedWallpaperPath.value);
 
 		// La biblioteca propia: los fondos ya importados, junto a los oficiales.
-		await loadLibraryWallpapers();
+		// Que falle no debe dejar sin registrar el drag-drop ni la carpeta propia.
+		await loadLibraryWallpapers().catch(() => {});
 
 		// La carpeta propia (vasak-settings#148): la misma clave que lee el
 		// escritorio. Sus imágenes se suman a las oficiales.

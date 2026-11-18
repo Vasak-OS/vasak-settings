@@ -55,8 +55,10 @@ pub fn import_name(source: &Path, len: u64, modified: u64, extension: &str) -> S
 }
 
 /// El tamaño y la fecha de modificación de un archivo, para armar su nombre.
-fn len_and_modified(path: &Path) -> Result<(u64, u64), String> {
-    let metadata = std::fs::metadata(path).map_err(|error| format!("{error}"))?;
+async fn len_and_modified(path: &Path) -> Result<(u64, u64), String> {
+    let metadata = tokio::fs::metadata(path)
+        .await
+        .map_err(|error| format!("{error}"))?;
     let modified = metadata
         .modified()
         .ok()
@@ -64,6 +66,12 @@ fn len_and_modified(path: &Path) -> Result<(u64, u64), String> {
         .map(|elapsed| elapsed.as_secs())
         .unwrap_or(0);
     Ok((metadata.len(), modified))
+}
+
+/// Si un archivo existe, sin bloquear el runtime. Un error al mirar (permisos,
+/// la carpeta no está) cuenta como «no está»: peor caso, se rehace la copia.
+async fn path_exists(path: &Path) -> bool {
+    tokio::fs::try_exists(path).await.unwrap_or(false)
 }
 
 /// Baja la imagen a lo sumo a `width`×`height` —sin agrandarla nunca— y la
@@ -109,7 +117,8 @@ async fn optimize_to_webp(source: &Path, output: &Path, width: u32, height: u32)
 /// sin rehacer nada.
 #[tauri::command]
 pub async fn import_wallpaper(path: String) -> Result<String, String> {
-    let source = std::fs::canonicalize(path.trim())
+    let source = tokio::fs::canonicalize(path.trim())
+        .await
         .map_err(|error| format!("no se pudo resolver {}: {error}", path.trim()))?;
 
     if !is_importable_image(&source) {
@@ -120,34 +129,53 @@ pub async fn import_wallpaper(path: String) -> Result<String, String> {
     }
 
     let dir = library_dir().ok_or("no se pudo determinar la carpeta de la biblioteca")?;
-    std::fs::create_dir_all(&dir).map_err(|error| format!("{error}"))?;
+    tokio::fs::create_dir_all(&dir)
+        .await
+        .map_err(|error| format!("{error}"))?;
 
-    let (len, modified) = len_and_modified(&source)?;
+    let (len, modified) = len_and_modified(&source).await?;
 
     // La copia optimizada: si ya está, no se rehace.
     let optimized = dir.join(import_name(&source, len, modified, "webp"));
-    if optimized.exists() {
+    if path_exists(&optimized).await {
         return Ok(optimized.to_string_lossy().into_owned());
     }
+
+    // Un parcial con nombre único por importación: dos guardados del mismo
+    // archivo —o dos procesos— no se pisan el temporal, que si no uno podía
+    // renombrarlo mientras el otro lo escribía y dejar un WebP cortado tomado
+    // por bueno.
+    let unique = uuid::Uuid::new_v4();
 
     let (width, height) = super::wallpaper_video::target_resolution().await;
-    let partial = optimized.with_extension("parcial.webp");
+    let partial = dir.join(format!(".parcial-{unique}.webp"));
     if optimize_to_webp(&source, &partial, width, height).await {
-        std::fs::rename(&partial, &optimized).map_err(|error| format!("{error}"))?;
+        tokio::fs::rename(&partial, &optimized)
+            .await
+            .map_err(|error| format!("{error}"))?;
         return Ok(optimized.to_string_lossy().into_owned());
     }
-    let _ = std::fs::remove_file(&partial);
+    let _ = tokio::fs::remove_file(&partial).await;
 
     // Que no se pueda optimizar no es motivo para no poder poner el fondo: se
-    // copia el original tal cual, con su extensión, a la misma carpeta.
+    // copia el original tal cual. Se copia a un parcial y recién se renombra,
+    // para que una copia cortada a la mitad no quede con nombre de fondo válido.
     let extension = source
         .extension()
         .and_then(|ext| ext.to_str())
         .unwrap_or("img");
     let copy = dir.join(import_name(&source, len, modified, extension));
-    if !copy.exists() {
-        std::fs::copy(&source, &copy).map_err(|error| format!("{error}"))?;
+    if path_exists(&copy).await {
+        return Ok(copy.to_string_lossy().into_owned());
     }
+    let partial_copy = dir.join(format!(".parcial-{unique}.{extension}"));
+    if let Err(error) = tokio::fs::copy(&source, &partial_copy).await {
+        let _ = tokio::fs::remove_file(&partial_copy).await;
+        return Err(format!("{error}"));
+    }
+    tokio::fs::rename(&partial_copy, &copy)
+        .await
+        .map_err(|error| format!("{error}"))?;
     Ok(copy.to_string_lossy().into_owned())
 }
 
