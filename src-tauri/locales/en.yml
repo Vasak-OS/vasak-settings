@@ -869,6 +869,10 @@ views:
     officialTitle: Official Wallpapers
     optionsCount: '{0} options'
     noWallpapers: No wallpapers were found in /usr/share/backgrounds/vasakos.
+    libraryTitle: My library
+    libraryHint: >-
+      The images you picked or dropped, already optimised and copied here so the
+      desktop and other apps can use them.
     customFolderTitle: Custom folder
     customFolderHint: >-
       Pick a folder —inside or outside your home— and its images and videos are

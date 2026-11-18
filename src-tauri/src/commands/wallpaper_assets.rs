@@ -67,6 +67,8 @@ pub struct WallpaperRoots {
     pub official: Option<PathBuf>,
     /// La caché de miniaturas y videos preparados.
     pub cache: Option<PathBuf>,
+    /// La biblioteca propia de fondos importados (`wallpaper_library`).
+    pub library: Option<PathBuf>,
     /// La carpeta propia configurada (vasak-settings#148).
     pub custom_folder: Option<PathBuf>,
     /// El fondo aplicado ahora, que puede estar en cualquier lado.
@@ -83,6 +85,7 @@ pub fn is_wallpaper_asset(canonical: &Path, roots: &WallpaperRoots) -> bool {
 
     under(&roots.official)
         || under(&roots.cache)
+        || under(&roots.library)
         || under(&roots.custom_folder)
         || roots
             .applied
@@ -149,6 +152,7 @@ fn wallpaper_roots() -> WallpaperRoots {
         cache: canonicalize_if_present(
             dirs::cache_dir().map(|c| c.join("vasak").join("wallpapers")),
         ),
+        library: canonicalize_if_present(super::wallpaper_library::library_dir()),
         custom_folder: canonicalize_if_present(folder.map(PathBuf::from)),
         applied: canonicalize_if_present(applied.map(PathBuf::from)),
     }
@@ -229,6 +233,7 @@ mod tests {
         WallpaperRoots {
             official: Some(base.join("oficiales")),
             cache: Some(base.join("cache")),
+            library: Some(base.join("biblioteca")),
             custom_folder: Some(base.join("propia")),
             applied: Some(base.join("otra").join("aplicado.jpg")),
         }
@@ -240,6 +245,10 @@ mod tests {
         let r = roots(base);
         assert!(is_wallpaper_asset(&base.join("oficiales/w1.jpg"), &r));
         assert!(is_wallpaper_asset(&base.join("cache/miniatura-x.jpg"), &r));
+        assert!(is_wallpaper_asset(
+            &base.join("biblioteca/foto-1-2.webp"),
+            &r
+        ));
         assert!(is_wallpaper_asset(&base.join("propia/sub/foto.png"), &r));
     }
 

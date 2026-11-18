@@ -29,6 +29,7 @@ pub mod system_info;
 pub mod users;
 pub mod wallpaper_assets;
 pub mod wallpaper_colors;
+pub mod wallpaper_library;
 pub mod wallpaper_video;
 pub mod wayfire_config;
 pub mod wayfire_ini;

@@ -21,7 +21,9 @@ import {
 import { computed, onMounted, onUnmounted, type Ref, ref } from 'vue';
 import {
 	getCustomWallpapers,
+	getLibraryWallpapers,
 	getOfficialWallpapers,
+	importWallpaper,
 	persistWallpaperFolder,
 	wallpaperThumbnailUrl,
 } from '@/services/style.service';
@@ -35,6 +37,8 @@ const error = ref('');
 const successMessage = ref('');
 
 const officialWallpapers = ref<string[]>([]);
+/** Los fondos propios ya importados a la biblioteca gestionada. */
+const libraryWallpapers = ref<string[]>([]);
 const selectedWallpaperPath = ref('');
 
 /**
@@ -59,6 +63,17 @@ const getWallpaperLabel = (path: string) => {
 };
 
 const isSelected = (path: string) => selectedWallpaperPath.value === path;
+
+/**
+ * Si una imagen ya vive en un lugar que las apps ven y pueden leer —los
+ * oficiales, la biblioteca propia o la carpeta propia configurada—. Las que no,
+ * se importan a la biblioteca al guardar, para que el fondo no quede en una ruta
+ * arbitraria que no se termina aplicando.
+ */
+const isAlreadyManaged = (path: string) =>
+	officialWallpapers.value.includes(path) ||
+	libraryWallpapers.value.includes(path) ||
+	customWallpapers.value.includes(path);
 
 const applyWallpaperPath = (path: string) => {
 	selectedWallpaperPath.value = path.trim();
@@ -139,6 +154,12 @@ function enqueueThumbnails(paths: readonly string[]): void {
 		// Una que falle no corta la cola: la siguiente igual se pide.
 		thumbnailChain = thumbnailChain.then(() => loadThumbnail(path)).catch(() => {});
 	}
+}
+
+/** Lista la biblioteca propia y encola las miniaturas de sus imágenes. */
+async function loadLibraryWallpapers() {
+	libraryWallpapers.value = await getLibraryWallpapers();
+	enqueueThumbnails(libraryWallpapers.value);
 }
 
 /** Lista la carpeta propia y encola las miniaturas de sus imágenes. */
@@ -226,6 +247,16 @@ const saveWallpaperConfig = async () => {
 			} finally {
 				optimizing.value = false;
 			}
+		} else if (finalPath && !isAlreadyManaged(finalPath)) {
+			// Una imagen de una carpeta cualquiera (arrastrada o escrita a mano) se
+			// importa a la biblioteca propia —escalada y a WebP— y se guarda esa
+			// copia: así queda bajo una raíz estable que todas las apps ven, en vez
+			// de una ruta arbitraria que no se terminaba aplicando. El backend copia
+			// el original si no puede optimizar, así que esto no impide poner el fondo.
+			finalPath = await importWallpaper(finalPath);
+			await loadLibraryWallpapers();
+			selectedWallpaperPath.value = finalPath;
+			void loadThumbnail(finalPath);
 		}
 		vskConfig.value.desktop = {
 			...vskConfig.value.desktop,
@@ -265,6 +296,9 @@ onMounted(async () => {
 		}
 
 		await loadThumbnail(selectedWallpaperPath.value);
+
+		// La biblioteca propia: los fondos ya importados, junto a los oficiales.
+		await loadLibraryWallpapers();
 
 		// La carpeta propia (vasak-settings#148): la misma clave que lee el
 		// escritorio. Sus imágenes se suman a las oficiales.
@@ -438,6 +472,34 @@ onUnmounted(() => {
 					</div>
 				</Panel>
 			</div>
+
+			<Panel as="article" v-if="libraryWallpapers.length > 0">
+				<div class="flex items-center justify-between">
+					<h2 class="text-lg font-semibold">{{ t('views.appearanceWallpaper.libraryTitle') }}</h2>
+					<span class="text-sm text-tx-muted">{{ t('views.appearanceWallpaper.optionsCount').replace('{0}', String(libraryWallpapers.length)) }}</span>
+				</div>
+				<p class="mt-1 text-sm text-tx-muted">{{ t('views.appearanceWallpaper.libraryHint') }}</p>
+
+				<div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+					<button
+						v-for="wallpaperPath in libraryWallpapers"
+						:key="wallpaperPath"
+						type="button"
+						class="group overflow-hidden rounded-corner-m border text-left transition-all duration-200"
+						:class="isSelected(wallpaperPath) ? 'border-primary bg-primary/10' : 'border-ui-border bg-ui-surface/30 hover:border-primary/50'"
+						@click="applyWallpaperPath(wallpaperPath)"
+					>
+						<div class="aspect-video w-full overflow-hidden bg-ui-surface/70">
+							<WallpaperThumbnail v-if="thumbnailFor(wallpaperPath)" fill :src="thumbnailFor(wallpaperPath)" :alt="getWallpaperLabel(wallpaperPath)" :video="isVideoPath(wallpaperPath)" />
+							<div v-else class="h-full w-full animate-pulse bg-ui-surface/60"></div>
+						</div>
+						<div class="p-3">
+							<p class="truncate text-sm font-medium">{{ getWallpaperLabel(wallpaperPath) }}</p>
+							<p class="mt-1 truncate text-xs text-tx-muted">{{ wallpaperPath }}</p>
+						</div>
+					</button>
+				</div>
+			</Panel>
 
 			<Panel as="article">
 				<div class="flex flex-wrap items-start justify-between gap-3">
