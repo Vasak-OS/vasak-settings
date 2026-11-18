@@ -51,6 +51,7 @@ describe('readAssistantConfig', () => {
 				url: DEFAULT_URLS.ollama,
 				model: '',
 				allowRemote: false,
+				filesRoots: [],
 			});
 		}
 	});
@@ -71,7 +72,23 @@ describe('readAssistantConfig', () => {
 			url: 'https://api.ejemplo.com/v1',
 			model: 'gpt-x',
 			allowRemote: true,
+			filesRoots: [],
 		});
+	});
+
+	test('lee las carpetas de Lince y descarta lo que no es texto, lo vacío y lo repetido', () => {
+		const config = {
+			assistant: {
+				lince_files_roots: [' /home/a ', 3, null, '', '   ', '/home/b', '/home/a', {}],
+			},
+		};
+		expect(readAssistantConfig(config).filesRoots).toEqual(['/home/a', '/home/b']);
+	});
+
+	test('si las carpetas no son una lista, quedan vacías', () => {
+		expect(readAssistantConfig({ assistant: { lince_files_roots: '/home/a' } }).filesRoots).toEqual(
+			[]
+		);
 	});
 
 	test('la URL por omisión sigue al proveedor', () => {
@@ -137,6 +154,35 @@ describe('writeAssistantConfig', () => {
 		expect(config).toEqual({
 			assistant: { name: 'Ada', backend: 'ollama', allow_remote: true },
 		});
+	});
+});
+
+describe('writeAssistantConfig: carpetas de Lince', () => {
+	test('escribe la lista y conserva el resto de la sección y de la raíz', () => {
+		const config = { style: { radius: 8 }, assistant: { name: 'Ada', model: 'm' } };
+		writeAssistantConfig(config, { filesRoots: ['/home/a', '/home/b'] });
+		expect(config).toEqual({
+			style: { radius: 8 },
+			assistant: { name: 'Ada', model: 'm', lince_files_roots: ['/home/a', '/home/b'] },
+		});
+	});
+
+	test('una lista vacía borra la clave y conserva el resto', () => {
+		const config = { assistant: { name: 'Ada', lince_files_roots: ['/home/a'] } };
+		writeAssistantConfig(config, { filesRoots: [] });
+		expect(config.assistant).toEqual({ name: 'Ada' });
+	});
+
+	test('limpia la lista al escribirla: recorta, quita vacíos y repetidos', () => {
+		const config: Record<string, unknown> = {};
+		writeAssistantConfig(config, { filesRoots: [' /home/a ', '', '/home/a'] });
+		expect(config).toEqual({ assistant: { lince_files_roots: ['/home/a'] } });
+	});
+
+	test('sin filesRoots en el parche no se tocan las carpetas', () => {
+		const config = { assistant: { lince_files_roots: ['/home/a'] } };
+		writeAssistantConfig(config, { name: 'Ada' });
+		expect(config.assistant).toEqual({ name: 'Ada', lince_files_roots: ['/home/a'] });
 	});
 });
 
