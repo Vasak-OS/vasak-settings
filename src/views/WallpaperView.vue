@@ -228,7 +228,7 @@ const saveWallpaperConfig = async () => {
 		// baja a la resolución de la pantalla, se limita a 30 fps y se le saca
 		// el audio, que en un fondo no suena pero se decodifica igual. Si no
 		// hay nada que mejorar devuelve el original sin copiar nada.
-		if (finalPath && selectedIsVideo.value) {
+		if (finalPath && selectedIsVideo.value && !isAlreadyManaged(finalPath)) {
 			optimizing.value = true;
 			optimizeProgress.value = 0;
 			optimizeDetail.value = '';
@@ -240,6 +240,9 @@ const saveWallpaperConfig = async () => {
 				);
 				finalPath = prepared.path;
 				optimizeDetail.value = prepared.detail;
+				// El video preparado ya vive en la biblioteca: refrescar la grilla no
+				// debe impedir guardar, así que un fallo acá se traga.
+				void loadLibraryWallpapers().catch(() => {});
 			} catch (err) {
 				// Que no se pueda optimizar no es motivo para no poder poner el
 				// fondo: se guarda el original y el escritorio lo reproduce igual.
@@ -247,7 +250,7 @@ const saveWallpaperConfig = async () => {
 			} finally {
 				optimizing.value = false;
 			}
-		} else if (finalPath && !isAlreadyManaged(finalPath)) {
+		} else if (finalPath && !selectedIsVideo.value && !isAlreadyManaged(finalPath)) {
 			// Una imagen de una carpeta cualquiera (arrastrada o escrita a mano) se
 			// importa a la biblioteca propia —escalada y a WebP— y se guarda esa
 			// copia: así queda bajo una raíz estable que todas las apps ven, en vez

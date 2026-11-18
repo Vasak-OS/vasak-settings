@@ -125,29 +125,33 @@ pub fn cache_key(source: &Path, size: u64, modified_secs: u64, target: (u32, u32
     format!("fondo-{:016x}.mp4", hasher.finish())
 }
 
-/// La extensión del video, en minúsculas, para nombrar la copia en la
-/// biblioteca. Si no es una conocida se usa `mp4`, que es lo que la grilla lista.
-fn video_extension(source: &Path) -> String {
+/// La extensión del video en minúsculas, sólo si es una que el player reproduce
+/// (`mp4`/`webm`/`ogv`). Un contenedor que no está en la lista no se copia a la
+/// biblioteca bajo un nombre reproducible: quedaría listado como fondo y el
+/// escritorio no podría con él.
+fn playable_extension(source: &Path) -> Option<String> {
     source
         .extension()
         .and_then(|ext| ext.to_str())
         .map(str::to_ascii_lowercase)
         .filter(|ext| WALLPAPER_VIDEO_EXTENSIONS.contains(&ext.as_str()))
-        .unwrap_or_else(|| "mp4".to_string())
 }
 
 /// Copia un video sin recodificar a su lugar en la biblioteca y arma la
 /// respuesta. Si ya está —se eligió antes— se reutiliza sin volver a copiar. El
 /// temporal lleva el prefijo que el listado ignora, y se renombra al final, para
-/// que un proceso muerto a mitad no deje un archivo que se liste como fondo.
+/// que un proceso muerto a mitad no deje un archivo que se liste como fondo. Si
+/// la copia o el renombrado fallan, se borra el temporal para no dejar bytes a
+/// medias ocupando lugar.
 async fn land_copy(source: &Path, dest: &Path, detail: &str) -> Result<PreparedWallpaper, String> {
     if !tokio::fs::try_exists(dest).await.unwrap_or(false) {
         let dir = dest.parent().ok_or("ruta de destino inválida")?;
         let ext = dest.extension().and_then(|e| e.to_str()).unwrap_or("mp4");
         let partial = dir.join(format!(".parcial-{}.{ext}", uuid::Uuid::new_v4()));
-        tokio::fs::copy(source, &partial)
-            .await
-            .map_err(|e| format!("{e}"))?;
+        if let Err(error) = tokio::fs::copy(source, &partial).await {
+            let _ = tokio::fs::remove_file(&partial).await;
+            return Err(format!("{error}"));
+        }
         if let Err(error) = tokio::fs::rename(&partial, dest).await {
             let _ = tokio::fs::remove_file(&partial).await;
             return Err(format!("{error}"));
@@ -158,6 +162,34 @@ async fn land_copy(source: &Path, dest: &Path, detail: &str) -> Result<PreparedW
         optimized: false,
         detail: detail.to_string(),
     })
+}
+
+/// Lleva el original a la biblioteca cuando no se recodifica (ya estaba óptimo, o
+/// ffmpeg no pudo). Si el contenedor no es reproducible, o la copia falla —nombre
+/// demasiado largo, disco lleno—, se devuelve el original sin tocar: una
+/// importación que no se puede hacer no es motivo para no poder poner el fondo.
+async fn land_original(
+    source: &Path,
+    dir: &Path,
+    len: u64,
+    modified: u64,
+    detail: &str,
+    original: &str,
+) -> PreparedWallpaper {
+    let keep_original = || PreparedWallpaper {
+        path: original.to_string(),
+        optimized: false,
+        detail: detail.to_string(),
+    };
+    let Some(ext) = playable_extension(source) else {
+        return keep_original();
+    };
+    let dest = dir.join(super::wallpaper_library::import_name(
+        source, len, modified, &ext,
+    ));
+    land_copy(source, &dest, detail)
+        .await
+        .unwrap_or_else(|_| keep_original())
 }
 
 /// El avance que informa ffmpeg, en segundos de video ya procesados.
@@ -472,13 +504,15 @@ where
     // Un video ya óptimo no se recodifica, pero se copia igual a la biblioteca:
     // así se puede aplicar y queda listado junto a los demás.
     if plan.is_empty() {
-        let dest = dir.join(super::wallpaper_library::import_name(
+        return Ok(land_original(
             &source,
+            &dir,
             metadata.len(),
             modified,
-            &video_extension(&source),
-        ));
-        return land_copy(&source, &dest, "ya estaba en el formato más conveniente").await;
+            "ya estaba en el formato más conveniente",
+            &path,
+        )
+        .await);
     }
 
     let target_path = dir.join(cache_key(&source, metadata.len(), modified, target));
@@ -571,18 +605,24 @@ where
         // No se pudo recodificar, pero es un video válido: se copia el original
         // a la biblioteca igual, para que el fondo se pueda aplicar (durable y
         // autorizado) en vez de quedar en una ruta cualquiera.
-        let dest = dir.join(super::wallpaper_library::import_name(
+        return Ok(land_original(
             &source,
+            &dir,
             metadata.len(),
             modified,
-            &video_extension(&source),
-        ));
-        return land_copy(&source, &dest, "no se pudo optimizar, se usó el original").await;
+            "no se pudo optimizar, se usó el original",
+            &path,
+        )
+        .await);
     }
 
-    tokio::fs::rename(&partial, &target_path)
-        .await
-        .map_err(|e| format!("{e}"))?;
+    // Si el renombrado final falla, el optimizado completo quedaría como un
+    // `.parcial-` colgado: se borra y se devuelve el original, que sí se puede
+    // aplicar.
+    if tokio::fs::rename(&partial, &target_path).await.is_err() {
+        let _ = tokio::fs::remove_file(&partial).await;
+        return Ok(unchanged("no se pudo guardar la copia optimizada"));
+    }
 
     let mut done: Vec<String> = Vec::new();
     if let Some((width, height)) = plan.scale_to {
@@ -799,7 +839,7 @@ mod tests {
         assert_eq!(cache_dir_under(None), None);
     }
     #[test]
-    fn la_extension_del_video_se_normaliza_a_minusculas() {
+    fn la_extension_reproducible_se_normaliza_a_minusculas() {
         for (entrada, esperada) in [
             ("/x/a.mp4", "mp4"),
             ("/x/a.webm", "webm"),
@@ -807,14 +847,19 @@ mod tests {
             ("/x/a.MP4", "mp4"),
             ("/x/a.WebM", "webm"),
         ] {
-            assert_eq!(video_extension(Path::new(entrada)), esperada);
+            assert_eq!(
+                playable_extension(Path::new(entrada)).as_deref(),
+                Some(esperada)
+            );
         }
     }
 
     #[test]
-    fn una_extension_que_no_es_de_video_cae_a_mp4() {
+    fn un_contenedor_que_no_se_reproduce_no_tiene_extension() {
+        // No se copia a la biblioteca bajo un nombre reproducible: quedaría
+        // listado y el escritorio no podría con él.
         for entrada in ["/x/a.mkv", "/x/a.jpg", "/x/sin-extension"] {
-            assert_eq!(video_extension(Path::new(entrada)), "mp4");
+            assert_eq!(playable_extension(Path::new(entrada)), None);
         }
     }
 
