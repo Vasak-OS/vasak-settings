@@ -255,6 +255,14 @@ views:
         contacts: Contacts
         files: Files
         web: Web
+    files:
+      title: Folders it can read
+      description: >-
+        Lince only searches and reads files inside these folders. With none, it
+        sees nothing. Choose carefully; never add the whole disk.
+      empty: You have not added any folder yet.
+      add: Add folder…
+      remove: Remove
     memory:
       title: Memory
       label: Remember between conversations

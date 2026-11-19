@@ -255,6 +255,14 @@ views:
         contacts: Contactos
         files: Archivos
         web: Web
+    files:
+      title: Carpetas que puede leer
+      description: >-
+        Lince sólo busca y lee archivos dentro de estas carpetas. Sin ninguna, no
+        ve nada. Elegí con cuidado; nunca agregues todo el disco.
+      empty: Todavía no agregaste ninguna carpeta.
+      add: Agregar carpeta…
+      remove: Quitar
     memory:
       title: Memoria
       label: Recordar entre conversaciones

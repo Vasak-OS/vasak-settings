@@ -8,6 +8,7 @@
  * apenas termina el intento y no se escribe en ningún registro.
  */
 
+import { open } from '@tauri-apps/plugin-dialog';
 import { readConfig, type VSKConfig, writeConfig } from '@vasakgroup/plugin-config-manager';
 import { type Ref, ref } from 'vue';
 import {
@@ -52,7 +53,15 @@ export interface AssistantDeps {
 	memoryStatus: () => Promise<AssistantMemoryStatus | null>;
 	setMemoryEnabled: (enabled: boolean) => Promise<void>;
 	clearMemory: () => Promise<void>;
+	/** Abre el selector de carpetas; `null` si la persona lo cancela. */
+	pickFolder: () => Promise<string | null>;
 }
+
+/** El selector de carpetas de Tauri, una sola carpeta. */
+const pickFolderDialog = async (): Promise<string | null> => {
+	const picked = await open({ directory: true, multiple: false });
+	return typeof picked === 'string' ? picked : null;
+};
 
 const defaultDeps: AssistantDeps = {
 	read: readConfig,
@@ -68,6 +77,7 @@ const defaultDeps: AssistantDeps = {
 	memoryStatus: assistantMemoryStatus,
 	setMemoryEnabled: setAssistantMemoryEnabled,
 	clearMemory: clearAssistantMemory,
+	pickFolder: pickFolderDialog,
 };
 
 /** Los textos de los mensajes, ya traducidos. */
@@ -108,6 +118,10 @@ export interface AssistantSettings {
 	saveName: () => Promise<void>;
 	saveModel: () => Promise<void>;
 	saveKey: () => Promise<void>;
+	/** Abre el selector y agrega la carpeta al alcance de Lince (si no estaba). */
+	addFilesRoot: () => Promise<void>;
+	/** Saca una carpeta del alcance de Lince. */
+	removeFilesRoot: (path: string) => Promise<void>;
 	toggleMemory: (enabled: boolean) => Promise<void>;
 	/** Pide confirmación; no borra. */
 	clearMemory: () => void;
@@ -276,6 +290,38 @@ export function useAssistantSettings(
 		});
 	};
 
+	// El demonio lee `lince_files_roots` al arrancar, así que un cambio de
+	// carpetas reinicia el servicio si corre, como el del modelo.
+	const saveFilesRoots = (roots: string[]) =>
+		run(messages.errorSaving, async () => {
+			await persist({ filesRoots: roots });
+			try {
+				if (unit.value?.active) await deps.restart();
+			} catch (err) {
+				// El archivo ya tiene las carpetas nuevas; que `config` no quede atrás
+				// o la próxima edición restauraría lo recién sacado.
+				await loadConfig();
+				throw err;
+			}
+			await refresh();
+			succeed();
+		});
+
+	const addFilesRoot = async () => {
+		let dir: string | null;
+		try {
+			dir = await deps.pickFolder();
+		} catch (err) {
+			error.value = messages.errorSaving(String(err));
+			return;
+		}
+		if (!dir || config.value.filesRoots.includes(dir)) return;
+		await saveFilesRoots([...config.value.filesRoots, dir]);
+	};
+
+	const removeFilesRoot = (path: string) =>
+		saveFilesRoots(config.value.filesRoots.filter((root) => root !== path));
+
 	const refreshMemory = async () => {
 		try {
 			memoryStatus.value = await deps.memoryStatus();
@@ -338,6 +384,8 @@ export function useAssistantSettings(
 		saveName,
 		saveModel,
 		saveKey,
+		addFilesRoot,
+		removeFilesRoot,
 		toggleMemory,
 		clearMemory,
 		cancelClear,

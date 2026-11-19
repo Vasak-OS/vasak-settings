@@ -106,6 +106,10 @@ function fake(
 			log.push('clearMemory');
 			memory = { ...memory, bytes: 0 };
 		},
+		pickFolder: async () => {
+			log.push('pickFolder');
+			return null;
+		},
 		...overrides,
 	};
 	return { deps, log, file: () => file };
@@ -343,6 +347,107 @@ describe('useAssistantSettings: saveModel', () => {
 		expect(s.error.value).toContain('no se guardó');
 		expect(s.successMessage.value).toBe('');
 		expect(s.busy.value).toBe(false);
+	});
+});
+
+describe('useAssistantSettings: carpetas de Lince', () => {
+	const roots = (f: Fake) =>
+		(f.file().assistant as Record<string, unknown> | undefined)?.lince_files_roots;
+
+	test('agregar abre el selector, persiste la lista con la carpeta nueva y reinicia si corre', async () => {
+		const f = fake({ assistant: { name: 'Ada', lince_files_roots: ['/a'] } }, ACTIVE, {
+			pickFolder: async () => '/b',
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		f.log.length = 0;
+		await s.addFilesRoot();
+		expect(roots(f)).toEqual(['/a', '/b']);
+		expect((f.file().assistant as Record<string, unknown>).name).toBe('Ada');
+		expect(f.log.indexOf('write')).toBeLessThan(f.log.indexOf('restart'));
+		expect(s.config.value.filesRoots).toEqual(['/a', '/b']);
+		expect(s.successMessage.value).toBe('guardado');
+	});
+
+	test('con el servicio apagado agrega pero no reinicia', async () => {
+		const f = fake({}, INACTIVE, { pickFolder: async () => '/b' });
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		await s.addFilesRoot();
+		expect(roots(f)).toEqual(['/b']);
+		expect(f.log).not.toContain('restart');
+	});
+
+	test('una carpeta que ya estaba no se duplica ni escribe', async () => {
+		const f = fake({ assistant: { lince_files_roots: ['/a'] } }, ACTIVE, {
+			pickFolder: async () => '/a',
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		f.log.length = 0;
+		await s.addFilesRoot();
+		expect(roots(f)).toEqual(['/a']);
+		expect(f.log).not.toContain('write');
+		expect(f.log).not.toContain('restart');
+	});
+
+	test('cancelar el selector no escribe ni reinicia', async () => {
+		const f = fake({ assistant: { lince_files_roots: ['/a'] } }, ACTIVE, {
+			pickFolder: async () => null,
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		f.log.length = 0;
+		await s.addFilesRoot();
+		expect(f.log).not.toContain('write');
+		expect(f.log).not.toContain('restart');
+		expect(s.successMessage.value).toBe('');
+	});
+
+	test('quitar persiste la lista sin esa carpeta y reinicia si corre', async () => {
+		const f = fake({ assistant: { lince_files_roots: ['/a', '/b'] } }, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		f.log.length = 0;
+		await s.removeFilesRoot('/a');
+		expect(roots(f)).toEqual(['/b']);
+		expect(f.log).toContain('restart');
+	});
+
+	test('quitar la última carpeta borra la clave', async () => {
+		const f = fake({ assistant: { lince_files_roots: ['/a'] } }, INACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		await s.removeFilesRoot('/a');
+		expect(roots(f)).toBeUndefined();
+	});
+
+	test('si el reinicio falla, config se reconcilia con lo persistido y queda el error', async () => {
+		const f = fake({ assistant: { lince_files_roots: ['/a', '/b'] } }, ACTIVE, {
+			restart: async () => {
+				throw new Error('boom');
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		await s.removeFilesRoot('/a');
+		expect(roots(f)).toEqual(['/b']);
+		expect(s.error.value).toContain('boom');
+		expect(s.config.value.filesRoots).toEqual(['/b']);
+	});
+
+	test('si el selector falla, queda el error de guardado y no se escribe ni se relanza', async () => {
+		const f = fake({ assistant: { lince_files_roots: ['/a'] } }, ACTIVE, {
+			pickFolder: async () => {
+				throw new Error('sin selector');
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		f.log.length = 0;
+		await s.addFilesRoot();
+		expect(s.error.value).toContain('sin selector');
+		expect(f.log).not.toContain('write');
 	});
 });
 

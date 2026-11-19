@@ -259,6 +259,37 @@ onMounted(settings.refresh);
 				</div>
 			</ConfigSection>
 
+			<ConfigSection
+				:title="t('views.assistant.files.title')"
+				:description="t('views.assistant.files.description')"
+			>
+				<div class="flex flex-col gap-2">
+					<p v-if="!config.filesRoots.length" class="text-sm text-tx-muted">
+						{{ t('views.assistant.files.empty') }}
+					</p>
+					<div
+						v-for="root in config.filesRoots"
+						:key="root"
+						class="flex items-center justify-between gap-3 rounded-corner-m bg-ui-surface/70 px-3 py-2"
+					>
+						<span class="min-w-0 truncate text-sm" :title="root">{{ root }}</span>
+						<ActionButton
+							:label="t('views.assistant.files.remove')"
+							variant="secondary"
+							:disabled="busy"
+							@click="settings.removeFilesRoot(root)"
+						/>
+					</div>
+					<div>
+						<ActionButton
+							:label="t('views.assistant.files.add')"
+							:disabled="busy"
+							@click="settings.addFilesRoot()"
+						/>
+					</div>
+				</div>
+			</ConfigSection>
+
 			<ConfigSection :title="t('views.assistant.memory.title')">
 				<SwitchRow
 					:label="t('views.assistant.memory.label')"
