@@ -295,15 +295,27 @@ export function useAssistantSettings(
 	const saveFilesRoots = (roots: string[]) =>
 		run(messages.errorSaving, async () => {
 			await persist({ filesRoots: roots });
-			if (unit.value?.active) await deps.restart();
+			try {
+				if (unit.value?.active) await deps.restart();
+			} catch (err) {
+				// El archivo ya tiene las carpetas nuevas; que `config` no quede atrás
+				// o la próxima edición restauraría lo recién sacado.
+				await loadConfig();
+				throw err;
+			}
 			await refresh();
 			succeed();
 		});
 
 	const addFilesRoot = async () => {
-		const dir = await deps.pickFolder();
-		if (!dir) return;
-		if (config.value.filesRoots.includes(dir)) return;
+		let dir: string | null;
+		try {
+			dir = await deps.pickFolder();
+		} catch (err) {
+			error.value = messages.errorSaving(String(err));
+			return;
+		}
+		if (!dir || config.value.filesRoots.includes(dir)) return;
 		await saveFilesRoots([...config.value.filesRoots, dir]);
 	};
 
