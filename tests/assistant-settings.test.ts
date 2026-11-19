@@ -421,6 +421,34 @@ describe('useAssistantSettings: carpetas de Lince', () => {
 		await s.removeFilesRoot('/a');
 		expect(roots(f)).toBeUndefined();
 	});
+
+	test('si el reinicio falla, config se reconcilia con lo persistido y queda el error', async () => {
+		const f = fake({ assistant: { lince_files_roots: ['/a', '/b'] } }, ACTIVE, {
+			restart: async () => {
+				throw new Error('boom');
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		await s.removeFilesRoot('/a');
+		expect(roots(f)).toEqual(['/b']);
+		expect(s.error.value).toContain('boom');
+		expect(s.config.value.filesRoots).toEqual(['/b']);
+	});
+
+	test('si el selector falla, queda el error de guardado y no se escribe ni se relanza', async () => {
+		const f = fake({ assistant: { lince_files_roots: ['/a'] } }, ACTIVE, {
+			pickFolder: async () => {
+				throw new Error('sin selector');
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		f.log.length = 0;
+		await s.addFilesRoot();
+		expect(s.error.value).toContain('sin selector');
+		expect(f.log).not.toContain('write');
+	});
 });
 
 describe('useAssistantSettings: saveKey', () => {
