@@ -28,6 +28,7 @@ import { computed, onMounted } from 'vue';
 import { useAssistantSettings } from '@/composables/useAssistantSettings';
 import { ASSISTANT_PROVIDERS, canSaveKey, DEFAULT_URLS } from '@/utils/assistant-config';
 import {
+	type ConsentRow,
 	canClearMemory,
 	canToggleMemory,
 	consentRows,
@@ -46,13 +47,22 @@ const settings = useAssistantSettings({
 	invalidName: () => t('views.assistant.name.invalid'),
 	emptyKey: () => t('views.assistant.key.empty'),
 	errorMemory: (reason) => t('views.assistant.memory.error').replace('{0}', () => reason),
+	errorConsent: (reason) => t('views.assistant.consent.error').replace('{0}', () => reason),
 });
 const { unit, status, capabilities, models, hasKey, config, draft, busy } = settings;
 
 const view = computed(() => serviceView(unit.value, status.value));
 const installed = computed(() => !!unit.value?.installed);
 const notice = computed(() => remoteNotice(status.value?.model ?? null));
-const rows = computed(() => consentRows(capabilities.value));
+const rows = computed(() => consentRows(capabilities.value, settings.consent.value));
+
+/** El texto bajo cada interruptor de consentimiento, según su estado. */
+const consentHint = (row: ConsentRow): string => {
+	if (!row.resource) return t('views.assistant.consent.disabledNote');
+	if (row.granted && !row.available)
+		return row.reason || t('views.assistant.consent.grantedUnavailable');
+	return '';
+};
 const memory = computed(() =>
 	memoryRow(unit.value, settings.memoryStatus.value, settings.memoryError.value)
 );
@@ -252,9 +262,10 @@ onMounted(settings.refresh);
 						v-for="row in rows"
 						:key="row.domain"
 						:label="t(`views.assistant.consent.domains.${row.domain}`)"
-						:description="row.reason || t('views.assistant.consent.disabledNote')"
-						:model-value="row.available"
-						disabled
+						:description="consentHint(row)"
+						:model-value="row.granted"
+						:disabled="busy || !row.resource"
+						@update:model-value="(value) => settings.toggleConsent(row.domain, value)"
 					/>
 				</div>
 			</ConfigSection>

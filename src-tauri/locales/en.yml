@@ -245,10 +245,10 @@ views:
       boundTo: "Stored for {0}"
     consent:
       title: What it can look at
-      description: The assistant can only look at what is listed here as available.
-      disabledNote: "It cannot be changed from here yet: the permission is missing in Permissions."
-      available: Available
-      unavailable: Unavailable
+      description: Turn on what Lince can see and do. Each domain is a system permission and asks for your authorization when changed.
+      disabledNote: The web is not available as a skill yet.
+      grantedUnavailable: Granted, but not ready to use yet.
+      error: "The permission could not be changed: {0}"
       domains:
         mail: Mail
         calendar: Calendar

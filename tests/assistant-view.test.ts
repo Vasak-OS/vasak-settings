@@ -60,14 +60,38 @@ async function mountView(opts: {
 	memory?: AssistantMemoryStatus | null;
 	/** Hace que `assistant_memory_status` se rechace con este motivo. */
 	memoryError?: string;
+	/** Las decisiones de `vasak-permissions` del asistente, por recurso. */
+	decisions?: Record<string, string>;
+	/** Hace que `set_permission` se rechace (polkit) con este motivo. */
+	setPermissionError?: string;
+	capabilities?: { domain: string; available: boolean; reason: string }[];
 }) {
 	backend = fakeBackend(opts.config ?? {});
 	backend.handlers.assistant_unit_state = () => opts.unit ?? ACTIVE;
 	backend.handlers.assistant_status = () => opts.status ?? status(true, '127.0.0.1');
-	backend.handlers.assistant_capabilities = () => [
-		{ domain: 'mail', available: true, reason: '' },
-		{ domain: 'memory', available: true, reason: '' },
+	backend.handlers.assistant_capabilities = () =>
+		opts.capabilities ?? [
+			{ domain: 'mail', available: true, reason: '' },
+			{ domain: 'memory', available: true, reason: '' },
+		];
+	const decisions = { ...(opts.decisions ?? {}) };
+	backend.handlers.list_permissions = () => [
+		{
+			application: { binary_path: '/usr/bin/vasak-assistant' },
+			asks: false,
+			decisions,
+		},
+		// Otra aplicación con una decisión propia: no debe filtrarse al asistente.
+		{
+			application: { binary_path: '/usr/bin/otra-app' },
+			asks: false,
+			decisions: { 'store.email': 'allowed', files: 'allowed' },
+		},
 	];
+	backend.handlers.set_permission = (args) => {
+		if (opts.setPermissionError) throw new Error(opts.setPermissionError);
+		decisions[String(args?.resourceId)] = args?.allowed ? 'allowed' : 'denied';
+	};
 	backend.handlers.assistant_models = () => ['llama3'];
 	backend.handlers.assistant_has_provider_key = () => false;
 	backend.handlers.assistant_memory_status = () => {
@@ -92,14 +116,101 @@ const noticeShown = (wrapper: VueWrapper, host: string) =>
 	);
 
 describe('la pantalla del asistente', () => {
-	test('el consentimiento por dominio está deshabilitado aunque el demonio diga que sí', async () => {
+	test('el consentimiento: las cuatro filas con recurso se pueden tocar y la web no', async () => {
 		const wrapper = await mountView({});
 		const switches = wrapper.findAll('[role="switch"]');
 		// Servicio + cinco dominios + memoria.
 		expect(switches).toHaveLength(7);
-		for (const row of switches.slice(1, 6)) {
-			expect(row.attributes('disabled')).toBeDefined();
+		for (const row of switches.slice(1, 5)) {
+			expect(row.attributes('disabled')).toBeUndefined();
 		}
+		expect(switches[5].attributes('disabled')).toBeDefined();
+	});
+
+	test('el interruptor de consentimiento refleja la decisión guardada', async () => {
+		const wrapper = await mountView({
+			decisions: { 'store.email': 'allowed', 'store.calendar': 'denied' },
+		});
+		const checked = wrapper.findAll('[role="switch"]').map((s) => s.attributes('aria-checked'));
+		// mail, calendar, contacts, files, web
+		expect(checked.slice(1, 6)).toEqual(['true', 'false', 'false', 'false', 'false']);
+	});
+
+	test('las decisiones de otra aplicación no encienden el consentimiento del asistente', async () => {
+		const wrapper = await mountView({});
+		const checked = wrapper.findAll('[role="switch"]').map((s) => s.attributes('aria-checked'));
+		expect(checked.slice(1, 6)).toEqual(['false', 'false', 'false', 'false', 'false']);
+	});
+
+	test('tocar «Correo» concede store.email al asistente y el interruptor queda encendido', async () => {
+		const wrapper = await mountView({});
+		await wrapper.findAll('[role="switch"]')[1].trigger('click');
+		await flushPromises();
+		const call = backend.calls.find((c) => c.command === 'set_permission');
+		expect(call?.args).toEqual({
+			binaryPath: '/usr/bin/vasak-assistant',
+			resourceId: 'store.email',
+			allowed: true,
+		});
+		expect(wrapper.findAll('[role="switch"]')[1].attributes('aria-checked')).toBe('true');
+	});
+
+	test('tocar un dominio concedido lo revoca', async () => {
+		const wrapper = await mountView({ decisions: { files: 'allowed' } });
+		await wrapper.findAll('[role="switch"]')[4].trigger('click');
+		await flushPromises();
+		const call = backend.calls.find((c) => c.command === 'set_permission');
+		expect(call?.args).toEqual({
+			binaryPath: '/usr/bin/vasak-assistant',
+			resourceId: 'files',
+			allowed: false,
+		});
+		expect(wrapper.findAll('[role="switch"]')[4].attributes('aria-checked')).toBe('false');
+	});
+
+	test('el consentimiento se puede cambiar con el servicio apagado, sin hablarle al demonio', async () => {
+		const wrapper = await mountView({ unit: { ...ACTIVE, active: false, enabled: false } });
+		await wrapper.findAll('[role="switch"]')[1].trigger('click');
+		await flushPromises();
+		expect(backend.commands()).toContain('set_permission');
+		expect(backend.commands()).not.toContain('assistant_capabilities');
+	});
+
+	test('concedido pero no disponible muestra el motivo del demonio', async () => {
+		const wrapper = await mountView({
+			decisions: { 'store.email': 'allowed' },
+			capabilities: [{ domain: 'mail', available: false, reason: 'el modelo no usa herramientas' }],
+		});
+		expect(wrapper.text()).toContain('el modelo no usa herramientas');
+	});
+
+	test('concedido, no disponible y sin motivo muestra el aviso genérico', async () => {
+		const wrapper = await mountView({
+			decisions: { 'store.contacts': 'allowed' },
+			capabilities: [],
+		});
+		expect(
+			textsOf('views.assistant.consent.grantedUnavailable').some((t) => wrapper.text().includes(t))
+		).toBe(true);
+	});
+
+	test('la fila de la web explica que no está disponible', async () => {
+		const wrapper = await mountView({});
+		expect(
+			textsOf('views.assistant.consent.disabledNote').some((t) => wrapper.text().includes(t))
+		).toBe(true);
+	});
+
+	test('si polkit rechaza el cambio se muestra el error y el interruptor no queda encendido', async () => {
+		withCatalog();
+		const wrapper = await mountView({ setPermissionError: 'autenticación cancelada' });
+		await wrapper.findAll('[role="switch"]')[1].trigger('click');
+		await flushPromises();
+		const template = textsOf('views.assistant.consent.error')[1] ?? '';
+		expect(wrapper.text()).toContain(
+			template.replace('{0}', () => 'Error: autenticación cancelada')
+		);
+		expect(wrapper.findAll('[role="switch"]')[1].attributes('aria-checked')).toBe('false');
 	});
 
 	test('el interruptor del servicio refleja la unidad y se puede tocar', async () => {

@@ -1,5 +1,12 @@
 import { invoke } from '@tauri-apps/api/core';
 
+/**
+ * La ruta instalada del asistente: la identidad con la que `vasak-permissions`
+ * acota sus recursos (`store.email`, `store.calendar`, `store.contacts`,
+ * `files`). El consentimiento por dominio se concede y se revoca sobre ella.
+ */
+export const ASSISTANT_BINARY = '/usr/bin/vasak-assistant';
+
 /** Cómo está la unidad systemd de usuario del asistente. */
 export interface AssistantUnitState {
 	installed: boolean;

@@ -86,11 +86,45 @@ describe('consentRows', () => {
 		for (const caps of [null, []]) {
 			const rows = consentRows(caps);
 			expect(rows.map((r) => r.domain)).toEqual([...CONSENT_DOMAINS]);
-			expect(rows.every((r) => !r.available)).toBe(true);
+			expect(rows.every((r) => !r.available && !r.granted)).toBe(true);
 		}
 	});
 
-	test('toma lo que contesta el demonio, ignora los dominios desconocidos y completa los que faltan', () => {
+	test('cada dominio apunta a su recurso de permisos y la web no tiene', () => {
+		expect(consentRows(null).map((r) => r.resource)).toEqual([
+			'store.email',
+			'store.calendar',
+			'store.contacts',
+			'files',
+			null,
+		]);
+	});
+
+	test('«concedido» sale de la decisión y no de lo que diga el demonio', () => {
+		const caps: AssistantCapability[] = [{ domain: 'mail', available: true, reason: '' }];
+		const rows = consentRows(caps, {
+			'store.email': 'allowed',
+			'store.calendar': 'denied',
+			files: 'unknown',
+		});
+		const by = (d: string) => rows.find((r) => r.domain === d);
+		expect(by('mail')?.granted).toBe(true);
+		expect(by('calendar')?.granted).toBe(false);
+		expect(by('files')?.granted).toBe(false);
+		expect(by('contacts')?.granted).toBe(false);
+		// Disponible sin estar concedido: son ejes independientes.
+		expect(consentRows(caps, {}).find((r) => r.domain === 'mail')).toMatchObject({
+			granted: false,
+			available: true,
+		});
+	});
+
+	test('la web nunca figura concedida, ni con una decisión suelta', () => {
+		const rows = consentRows(null, { web: 'allowed' });
+		expect(rows.find((r) => r.domain === 'web')?.granted).toBe(false);
+	});
+
+	test('toma disponibilidad y motivo del demonio, ignora dominios desconocidos y completa los que faltan', () => {
 		const caps: AssistantCapability[] = [
 			{ domain: 'web', available: true, reason: '' },
 			{ domain: 'marte', available: true, reason: '' },
@@ -103,6 +137,8 @@ describe('consentRows', () => {
 		expect(rows.find((r) => r.domain === 'mail')?.reason).toBe('sin cuenta');
 		expect(rows.find((r) => r.domain === 'files')).toEqual({
 			domain: 'files',
+			resource: 'files',
+			granted: false,
 			available: false,
 			reason: '',
 		});
