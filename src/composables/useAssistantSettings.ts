@@ -103,6 +103,7 @@ export interface AssistantMessages {
 	emptyKey: () => string;
 	errorMemory: (reason: string) => string;
 	errorConsent: (reason: string) => string;
+	errorConsentRead: (reason: string) => string;
 }
 
 export interface AssistantSettings {
@@ -249,7 +250,8 @@ export function useAssistantSettings(
 			consentLoaded.value = true;
 			consentError.value = '';
 		} catch (err) {
-			if (seq === consentRequest) consentError.value = messages.errorConsent(String(err));
+			// Fallo de lectura, no de cambio: su propio mensaje, no «no se pudo cambiar».
+			if (seq === consentRequest) consentError.value = messages.errorConsentRead(String(err));
 		}
 	};
 

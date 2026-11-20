@@ -248,7 +248,9 @@ views:
       description: Turn on what Lince can see and do. Each domain is a system permission and asks for your authorization when changed.
       disabledNote: The web is not available as a skill yet.
       grantedUnavailable: Granted, but not ready to use yet.
+      unknown: Unknown state.
       error: "The permission could not be changed: {0}"
+      readError: "The consent could not be read: {0}"
       domains:
         mail: Mail
         calendar: Calendar

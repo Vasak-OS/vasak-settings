@@ -209,11 +209,15 @@ describe('la pantalla del asistente', () => {
 	test('si la primera lectura falla los interruptores quedan bloqueados y se muestra el error', async () => {
 		withCatalog();
 		const wrapper = await mountView({ decisionsError: 'bus caído' });
-		const template = textsOf('views.assistant.consent.error')[1] ?? '';
+		const template = textsOf('views.assistant.consent.readError')[1] ?? '';
 		expect(wrapper.text()).toContain(template.replace('{0}', () => 'Error: bus caído'));
 		for (const row of wrapper.findAll('[role="switch"]').slice(1, 6)) {
 			expect(row.attributes('disabled')).toBeDefined();
 		}
+		// Desconocido no es «apagado»: la fila lo dice (las cuatro con recurso).
+		const unknown = textsOf('views.assistant.consent.unknown');
+		const count = unknown.map((t) => wrapper.text().split(t).length - 1).sort((x, y) => y - x)[0];
+		expect(count).toBeGreaterThanOrEqual(4);
 	});
 
 	test('si una lectura posterior falla se conservan las decisiones y se avisa; una buena limpia el error', async () => {
@@ -227,7 +231,7 @@ describe('la pantalla del asistente', () => {
 		};
 		await wrapper.findAll('[role="switch"]')[1].trigger('click');
 		await flushPromises();
-		const template = textsOf('views.assistant.consent.error')[1] ?? '';
+		const template = textsOf('views.assistant.consent.readError')[1] ?? '';
 		expect(wrapper.text()).toContain(template.replace('{0}', () => 'Error: bus caído'));
 		expect(files().attributes('aria-checked')).toBe('true');
 		expect(files().attributes('disabled')).toBeUndefined();

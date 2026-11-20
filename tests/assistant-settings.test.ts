@@ -26,6 +26,7 @@ const MESSAGES: AssistantMessages = {
 	emptyKey: () => 'falta la clave',
 	errorMemory: (reason) => `memoria: ${reason}`,
 	errorConsent: (reason) => `consentimiento: ${reason}`,
+	errorConsentRead: (reason) => `lectura: ${reason}`,
 };
 
 const ACTIVE: AssistantUnitState = { installed: true, enabled: true, active: true, masked: false };
@@ -861,7 +862,7 @@ describe('la lectura del consentimiento', () => {
 		falla = true;
 		await s.refresh();
 		expect(s.consent.value).toEqual({ files: 'allowed' });
-		expect(s.consentError.value).toBe('consentimiento: Error: bus caído');
+		expect(s.consentError.value).toBe('lectura: Error: bus caído');
 		expect(s.error.value).toBe('');
 		falla = false;
 		await s.refresh();

@@ -248,7 +248,9 @@ views:
       description: Encendé qué puede ver y hacer Lince. Cada dominio es un permiso del sistema y pide tu autorización al cambiarlo.
       disabledNote: La web todavía no está disponible como habilidad.
       grantedUnavailable: Concedido, pero todavía no está listo para usarse.
+      unknown: Estado desconocido.
       error: "No se pudo cambiar el permiso: {0}"
+      readError: "No se pudo leer el consentimiento: {0}"
       domains:
         mail: Correo
         calendar: Calendario

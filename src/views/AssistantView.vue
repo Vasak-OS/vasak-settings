@@ -48,6 +48,7 @@ const settings = useAssistantSettings({
 	emptyKey: () => t('views.assistant.key.empty'),
 	errorMemory: (reason) => t('views.assistant.memory.error').replace('{0}', () => reason),
 	errorConsent: (reason) => t('views.assistant.consent.error').replace('{0}', () => reason),
+	errorConsentRead: (reason) => t('views.assistant.consent.readError').replace('{0}', () => reason),
 });
 const { unit, status, capabilities, models, hasKey, config, draft, busy } = settings;
 
@@ -59,6 +60,8 @@ const rows = computed(() => consentRows(capabilities.value, settings.consent.val
 /** El texto bajo cada interruptor de consentimiento, según su estado. */
 const consentHint = (row: ConsentRow): string => {
 	if (!row.resource) return t('views.assistant.consent.disabledNote');
+	// Sin una lectura buena el estado es desconocido, no «apagado».
+	if (!settings.consentLoaded.value) return t('views.assistant.consent.unknown');
 	if (row.granted && !row.available)
 		return row.reason || t('views.assistant.consent.grantedUnavailable');
 	return '';
