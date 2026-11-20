@@ -258,13 +258,16 @@ onMounted(settings.refresh);
 				:description="t('views.assistant.consent.description')"
 			>
 				<div class="flex flex-col gap-2">
+					<AlertMessage v-if="settings.consentError.value" tone="error">
+						{{ settings.consentError.value }}
+					</AlertMessage>
 					<SwitchRow
 						v-for="row in rows"
 						:key="row.domain"
 						:label="t(`views.assistant.consent.domains.${row.domain}`)"
 						:description="consentHint(row)"
 						:model-value="row.granted"
-						:disabled="busy || !row.resource"
+						:disabled="busy || !row.resource || !settings.consentLoaded.value"
 						@update:model-value="(value) => settings.toggleConsent(row.domain, value)"
 					/>
 				</div>

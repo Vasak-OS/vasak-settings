@@ -25,6 +25,7 @@ const MESSAGES: AssistantMessages = {
 	invalidName: () => 'nombre inválido',
 	emptyKey: () => 'falta la clave',
 	errorMemory: (reason) => `memoria: ${reason}`,
+	errorConsent: (reason) => `consentimiento: ${reason}`,
 };
 
 const ACTIVE: AssistantUnitState = { installed: true, enabled: true, active: true, masked: false };
@@ -815,5 +816,69 @@ describe('useAssistantSettings: memoria', () => {
 		await Promise.all([primera, segunda]);
 		expect(llamadas).toBe(1);
 		expect(s.busy.value).toBe(false);
+	});
+});
+
+describe('la lectura del consentimiento', () => {
+	const deferred = <T>() => {
+		let resolve!: (v: T) => void;
+		const promise = new Promise<T>((ok) => {
+			resolve = ok;
+		});
+		return { promise, resolve };
+	};
+
+	test('una lectura vieja que termina después de una nueva no la pisa', async () => {
+		const vieja = deferred<Record<string, 'allowed' | 'denied' | 'unknown'>>();
+		const nueva = deferred<Record<string, 'allowed' | 'denied' | 'unknown'>>();
+		const respuestas = [vieja.promise, nueva.promise];
+		const s = useAssistantSettings(
+			MESSAGES,
+			fake({}, INACTIVE, { decisions: () => respuestas.shift() ?? nueva.promise }).deps
+		);
+		const a = s.refresh();
+		const b = s.refresh();
+		nueva.resolve({ files: 'allowed' });
+		await b;
+		vieja.resolve({ files: 'denied' });
+		await a;
+		expect(s.consent.value).toEqual({ files: 'allowed' });
+	});
+
+	test('si la lectura falla no se borran las decisiones y se avisa en su propio error', async () => {
+		let falla = false;
+		const s = useAssistantSettings(
+			MESSAGES,
+			fake({}, INACTIVE, {
+				decisions: async () => {
+					if (falla) throw new Error('bus caído');
+					return { files: 'allowed' };
+				},
+			}).deps
+		);
+		await s.refresh();
+		expect(s.consentLoaded.value).toBe(true);
+		falla = true;
+		await s.refresh();
+		expect(s.consent.value).toEqual({ files: 'allowed' });
+		expect(s.consentError.value).toBe('consentimiento: Error: bus caído');
+		expect(s.error.value).toBe('');
+		falla = false;
+		await s.refresh();
+		expect(s.consentError.value).toBe('');
+	});
+
+	test('sin una primera lectura buena no está cargado', async () => {
+		const s = useAssistantSettings(
+			MESSAGES,
+			fake({}, INACTIVE, {
+				decisions: async () => {
+					throw new Error('x');
+				},
+			}).deps
+		);
+		await s.refresh();
+		expect(s.consentLoaded.value).toBe(false);
+		expect(s.consentError.value).not.toBe('');
 	});
 });

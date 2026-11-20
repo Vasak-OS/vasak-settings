@@ -111,6 +111,10 @@ export interface AssistantSettings {
 	capabilities: Ref<AssistantCapability[] | null>;
 	/** Las decisiones de consentimiento del asistente, por recurso de `vasak-permissions`. */
 	consent: Ref<Record<string, Decision>>;
+	/** Si ya hubo una lectura buena del consentimiento; hasta entonces es desconocido. */
+	consentLoaded: Ref<boolean>;
+	/** Por qué no se pudo leer el consentimiento; vacío si se pudo. */
+	consentError: Ref<string>;
 	/** Los modelos que ofrece el proveedor; `null` si no se pudo pedir (la vista cae a texto). */
 	models: Ref<string[] | null>;
 	/** `null`: el demonio es viejo y no tiene memoria; `undefined`: no se preguntó. */
@@ -166,6 +170,12 @@ export function useAssistantSettings(
 	const status = ref<AssistantStatus | null>(null);
 	const capabilities = ref<AssistantCapability[] | null>(null);
 	const consent = ref<Record<string, Decision>>({});
+	// Hasta la primera lectura buena el consentimiento es desconocido, no «negado»:
+	// mostrarlo apagado y tocable dejaría revocar algo que en realidad está concedido.
+	const consentLoaded = ref(false);
+	// Error propio de la lectura del consentimiento, como `memoryError`: no pisa el
+	// error general (p. ej. el del servicio) ni se disfraza de él.
+	const consentError = ref('');
 	const models = ref<string[] | null>(null);
 	const hasKey = ref<boolean | null | undefined>(undefined);
 	const memoryStatus = ref<AssistantMemoryStatus | null | undefined>(undefined);
@@ -224,11 +234,22 @@ export function useAssistantSettings(
 
 	// El consentimiento vive en `vasak-permissions` (bus del sistema), no en el
 	// demonio: se puede leer y cambiar aunque el servicio esté apagado.
+	//
+	// `loadConsent` corre desde el montaje, desde `refresh` y desde el recargo al
+	// final de `toggleConsent`, sin orden entre sí. Se numera cada lectura y sólo
+	// se aplica la última: una lectura vieja que termina después no pisa a una
+	// nueva. Un fallo no borra lo último bueno; sólo avisa.
+	let consentRequest = 0;
 	const loadConsent = async () => {
+		const seq = ++consentRequest;
 		try {
-			consent.value = await deps.decisions();
-		} catch {
-			consent.value = {};
+			const decisions = await deps.decisions();
+			if (seq !== consentRequest) return;
+			consent.value = decisions;
+			consentLoaded.value = true;
+			consentError.value = '';
+		} catch (err) {
+			if (seq === consentRequest) consentError.value = messages.errorConsent(String(err));
 		}
 	};
 
@@ -414,6 +435,8 @@ export function useAssistantSettings(
 		status,
 		capabilities,
 		consent,
+		consentLoaded,
+		consentError,
 		models,
 		hasKey,
 		memoryStatus,

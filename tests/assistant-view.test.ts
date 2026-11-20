@@ -64,6 +64,8 @@ async function mountView(opts: {
 	decisions?: Record<string, string>;
 	/** Hace que `set_permission` se rechace (polkit) con este motivo. */
 	setPermissionError?: string;
+	/** Hace que `list_permissions` se rechace con este motivo. */
+	decisionsError?: string;
 	capabilities?: { domain: string; available: boolean; reason: string }[];
 }) {
 	backend = fakeBackend(opts.config ?? {});
@@ -75,19 +77,22 @@ async function mountView(opts: {
 			{ domain: 'memory', available: true, reason: '' },
 		];
 	const decisions = { ...(opts.decisions ?? {}) };
-	backend.handlers.list_permissions = () => [
-		{
-			application: { binary_path: '/usr/bin/vasak-assistant' },
-			asks: false,
-			decisions,
-		},
-		// Otra aplicación con una decisión propia: no debe filtrarse al asistente.
-		{
-			application: { binary_path: '/usr/bin/otra-app' },
-			asks: false,
-			decisions: { 'store.email': 'allowed', files: 'allowed' },
-		},
-	];
+	backend.handlers.list_permissions = () => {
+		if (opts.decisionsError) throw new Error(opts.decisionsError);
+		return [
+			{
+				application: { binary_path: '/usr/bin/vasak-assistant' },
+				asks: false,
+				decisions,
+			},
+			// Otra aplicación con una decisión propia: no debe filtrarse al asistente.
+			{
+				application: { binary_path: '/usr/bin/otra-app' },
+				asks: false,
+				decisions: { 'store.email': 'allowed', files: 'allowed' },
+			},
+		];
+	};
 	backend.handlers.set_permission = (args) => {
 		if (opts.setPermissionError) throw new Error(opts.setPermissionError);
 		decisions[String(args?.resourceId)] = args?.allowed ? 'allowed' : 'denied';
@@ -199,6 +204,38 @@ describe('la pantalla del asistente', () => {
 		expect(
 			textsOf('views.assistant.consent.disabledNote').some((t) => wrapper.text().includes(t))
 		).toBe(true);
+	});
+
+	test('si la primera lectura falla los interruptores quedan bloqueados y se muestra el error', async () => {
+		withCatalog();
+		const wrapper = await mountView({ decisionsError: 'bus caído' });
+		const template = textsOf('views.assistant.consent.error')[1] ?? '';
+		expect(wrapper.text()).toContain(template.replace('{0}', () => 'Error: bus caído'));
+		for (const row of wrapper.findAll('[role="switch"]').slice(1, 6)) {
+			expect(row.attributes('disabled')).toBeDefined();
+		}
+	});
+
+	test('si una lectura posterior falla se conservan las decisiones y se avisa; una buena limpia el error', async () => {
+		withCatalog();
+		const wrapper = await mountView({ decisions: { files: 'allowed' } });
+		const files = () => wrapper.findAll('[role="switch"]')[4];
+		expect(files().attributes('aria-checked')).toBe('true');
+		const good = backend.handlers.list_permissions;
+		backend.handlers.list_permissions = () => {
+			throw new Error('bus caído');
+		};
+		await wrapper.findAll('[role="switch"]')[1].trigger('click');
+		await flushPromises();
+		const template = textsOf('views.assistant.consent.error')[1] ?? '';
+		expect(wrapper.text()).toContain(template.replace('{0}', () => 'Error: bus caído'));
+		expect(files().attributes('aria-checked')).toBe('true');
+		expect(files().attributes('disabled')).toBeUndefined();
+
+		backend.handlers.list_permissions = good;
+		await wrapper.findAll('[role="switch"]')[1].trigger('click');
+		await flushPromises();
+		expect(wrapper.text()).not.toContain(template.replace('{0}', () => 'Error: bus caído'));
 	});
 
 	test('si polkit rechaza el cambio se muestra el error y el interruptor no queda encendido', async () => {
