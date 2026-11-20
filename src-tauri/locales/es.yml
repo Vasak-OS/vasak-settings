@@ -245,10 +245,12 @@ views:
       boundTo: "Se guarda para {0}"
     consent:
       title: Qué puede consultar
-      description: El asistente sólo puede mirar lo que acá figure como disponible.
-      disabledNote: "Todavía no se puede cambiar desde acá: falta el permiso en Permisos."
-      available: Disponible
-      unavailable: No disponible
+      description: Encendé qué puede ver y hacer Lince. Cada dominio es un permiso del sistema y pide tu autorización al cambiarlo.
+      disabledNote: La web todavía no está disponible como habilidad.
+      grantedUnavailable: Concedido, pero todavía no está listo para usarse.
+      unknown: Estado desconocido.
+      error: "No se pudo cambiar el permiso: {0}"
+      readError: "No se pudo leer el consentimiento: {0}"
       domains:
         mail: Correo
         calendar: Calendario

@@ -7,6 +7,7 @@ import type {
 	AssistantStatus,
 	AssistantUnitState,
 } from '@/services/assistant.service';
+import type { Decision } from '@/services/permissions.service';
 
 export type ServiceView = 'notInstalled' | 'off' | 'starting' | 'ready' | 'unavailable';
 
@@ -31,17 +32,58 @@ export function serviceView(
 /** Los dominios con consentimiento, en el orden en que se muestran. */
 export const CONSENT_DOMAINS = ['mail', 'calendar', 'contacts', 'files', 'web'] as const;
 
+/**
+ * El recurso de `vasak-permissions` que enciende y apaga cada dominio, el mismo
+ * al que acota el asistente. `null` cuando todavía no se puede tocar desde acá:
+ * `web` no tiene recurso ni habilidad, así que la fila queda informativa.
+ */
+export const CONSENT_RESOURCE: Record<(typeof CONSENT_DOMAINS)[number], string | null> = {
+	mail: 'store.email',
+	calendar: 'store.calendar',
+	contacts: 'store.contacts',
+	files: 'files',
+	web: null,
+};
+
 const NOT_AVAILABLE = (domain: string): AssistantCapability => ({
 	domain,
 	available: false,
 	reason: '',
 });
 
-/** Una fila por dominio, siempre las cinco; falta o es desconocido → no disponible. */
-export function consentRows(capabilities: AssistantCapability[] | null): AssistantCapability[] {
-	return CONSENT_DOMAINS.map(
-		(domain) => capabilities?.find((c) => c.domain === domain) ?? NOT_AVAILABLE(domain)
-	);
+export interface ConsentRow {
+	domain: string;
+	/** El recurso que enciende/apaga; `null` si la fila no se toca desde el panel. */
+	resource: string | null;
+	/** La decisión guardada en `vasak-permissions` es «permitido». */
+	granted: boolean;
+	/** El demonio reporta el dominio como usable (habilidad + almacén + modelo con tools). */
+	available: boolean;
+	/** Por qué no está disponible aunque esté concedido, tal como lo da el demonio. */
+	reason: string;
+}
+
+/**
+ * Una fila por dominio, siempre las cinco. `granted` sale de la decisión de
+ * `vasak-permissions` (independiente del demonio); `available` y `reason`, de lo
+ * que el demonio reporta: un dominio puede estar concedido y aún no usable (sin
+ * modelo con herramientas, por ejemplo).
+ */
+export function consentRows(
+	capabilities: AssistantCapability[] | null,
+	decisions: Record<string, Decision> = {}
+): ConsentRow[] {
+	return CONSENT_DOMAINS.map((domain) => {
+		const cap = capabilities?.find((c) => c.domain === domain) ?? NOT_AVAILABLE(domain);
+		const resource = CONSENT_RESOURCE[domain];
+		return {
+			domain,
+			resource,
+			granted: resource ? decisions[resource] === 'allowed' : false,
+			available: cap.available,
+			reason: cap.reason,
+		};
+	});
 }
 
 export type MemoryState = 'unsupported' | 'error' | 'notInstalled' | 'off' | 'ready';

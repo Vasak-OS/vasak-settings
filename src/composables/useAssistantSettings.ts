@@ -12,6 +12,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { readConfig, type VSKConfig, writeConfig } from '@vasakgroup/plugin-config-manager';
 import { type Ref, ref } from 'vue';
 import {
+	ASSISTANT_BINARY,
 	type AssistantCapability,
 	type AssistantMemoryStatus,
 	type AssistantStatus,
@@ -28,6 +29,7 @@ import {
 	setAssistantProviderKey,
 	setAssistantServiceEnabled,
 } from '@/services/assistant.service';
+import { type Decision, listPermissions, setPermission } from '@/services/permissions.service';
 import {
 	type AssistantBackend,
 	type AssistantConfig,
@@ -38,6 +40,7 @@ import {
 	validateModelDraft,
 	writeAssistantConfig,
 } from '@/utils/assistant-config';
+import { CONSENT_RESOURCE } from '@/utils/assistant-state';
 
 export interface AssistantDeps {
 	read: () => Promise<VSKConfig | null>;
@@ -53,6 +56,10 @@ export interface AssistantDeps {
 	memoryStatus: () => Promise<AssistantMemoryStatus | null>;
 	setMemoryEnabled: (enabled: boolean) => Promise<void>;
 	clearMemory: () => Promise<void>;
+	/** Las decisiones de `vasak-permissions` del asistente, por recurso. */
+	decisions: () => Promise<Record<string, Decision>>;
+	/** Concede o revoca un recurso del asistente; pasa por polkit y puede rechazarse. */
+	setConsent: (resource: string, allowed: boolean) => Promise<void>;
 	/** Abre el selector de carpetas; `null` si la persona lo cancela. */
 	pickFolder: () => Promise<string | null>;
 }
@@ -77,6 +84,13 @@ const defaultDeps: AssistantDeps = {
 	memoryStatus: assistantMemoryStatus,
 	setMemoryEnabled: setAssistantMemoryEnabled,
 	clearMemory: clearAssistantMemory,
+	decisions: async () => {
+		const entry = (await listPermissions()).find(
+			(e) => e.application.binary_path === ASSISTANT_BINARY
+		);
+		return entry?.decisions ?? {};
+	},
+	setConsent: (resource, allowed) => setPermission(ASSISTANT_BINARY, resource, allowed),
 	pickFolder: pickFolderDialog,
 };
 
@@ -88,12 +102,20 @@ export interface AssistantMessages {
 	invalidName: () => string;
 	emptyKey: () => string;
 	errorMemory: (reason: string) => string;
+	errorConsent: (reason: string) => string;
+	errorConsentRead: (reason: string) => string;
 }
 
 export interface AssistantSettings {
 	unit: Ref<AssistantUnitState | null>;
 	status: Ref<AssistantStatus | null>;
 	capabilities: Ref<AssistantCapability[] | null>;
+	/** Las decisiones de consentimiento del asistente, por recurso de `vasak-permissions`. */
+	consent: Ref<Record<string, Decision>>;
+	/** Si ya hubo una lectura buena del consentimiento; hasta entonces es desconocido. */
+	consentLoaded: Ref<boolean>;
+	/** Por qué no se pudo leer el consentimiento; vacío si se pudo. */
+	consentError: Ref<string>;
 	/** Los modelos que ofrece el proveedor; `null` si no se pudo pedir (la vista cae a texto). */
 	models: Ref<string[] | null>;
 	/** `null`: el demonio es viejo y no tiene memoria; `undefined`: no se preguntó. */
@@ -115,6 +137,8 @@ export interface AssistantSettings {
 	successMessage: Ref<string>;
 	refresh: () => Promise<void>;
 	toggleService: (enabled: boolean) => Promise<void>;
+	/** Concede o revoca el dominio en `vasak-permissions`; no hace nada si no es tocable. */
+	toggleConsent: (domain: string, allowed: boolean) => Promise<void>;
 	saveName: () => Promise<void>;
 	saveModel: () => Promise<void>;
 	saveKey: () => Promise<void>;
@@ -146,6 +170,13 @@ export function useAssistantSettings(
 	const unit = ref<AssistantUnitState | null>(null);
 	const status = ref<AssistantStatus | null>(null);
 	const capabilities = ref<AssistantCapability[] | null>(null);
+	const consent = ref<Record<string, Decision>>({});
+	// Hasta la primera lectura buena el consentimiento es desconocido, no «negado»:
+	// mostrarlo apagado y tocable dejaría revocar algo que en realidad está concedido.
+	const consentLoaded = ref(false);
+	// Error propio de la lectura del consentimiento, como `memoryError`: no pisa el
+	// error general (p. ej. el del servicio) ni se disfraza de él.
+	const consentError = ref('');
 	const models = ref<string[] | null>(null);
 	const hasKey = ref<boolean | null | undefined>(undefined);
 	const memoryStatus = ref<AssistantMemoryStatus | null | undefined>(undefined);
@@ -202,6 +233,28 @@ export function useAssistantSettings(
 		else memoryError.value = String(mem.reason);
 	};
 
+	// El consentimiento vive en `vasak-permissions` (bus del sistema), no en el
+	// demonio: se puede leer y cambiar aunque el servicio esté apagado.
+	//
+	// `loadConsent` corre desde el montaje, desde `refresh` y desde el recargo al
+	// final de `toggleConsent`, sin orden entre sí. Se numera cada lectura y sólo
+	// se aplica la última: una lectura vieja que termina después no pisa a una
+	// nueva. Un fallo no borra lo último bueno; sólo avisa.
+	let consentRequest = 0;
+	const loadConsent = async () => {
+		const seq = ++consentRequest;
+		try {
+			const decisions = await deps.decisions();
+			if (seq !== consentRequest) return;
+			consent.value = decisions;
+			consentLoaded.value = true;
+			consentError.value = '';
+		} catch (err) {
+			// Fallo de lectura, no de cambio: su propio mensaje, no «no se pudo cambiar».
+			if (seq === consentRequest) consentError.value = messages.errorConsentRead(String(err));
+		}
+	};
+
 	const refresh = async () => {
 		await loadConfig();
 		try {
@@ -210,7 +263,7 @@ export function useAssistantSettings(
 			unit.value = null;
 			error.value = messages.errorService(String(err));
 		}
-		await loadDaemon();
+		await Promise.all([loadConsent(), loadDaemon()]);
 	};
 
 	/** Corre una acción con el aviso de ocupado y el error ya traducido. */
@@ -232,6 +285,23 @@ export function useAssistantSettings(
 			unit.value = await deps.setEnabled(enabled);
 			await loadDaemon();
 		});
+
+	const toggleConsent = (domain: string, allowed: boolean) => {
+		const resource = CONSENT_RESOURCE[domain as keyof typeof CONSENT_RESOURCE];
+		if (!resource) return Promise.resolve();
+		return run(messages.errorConsent, async () => {
+			await deps.setConsent(resource, allowed);
+			await loadConsent();
+			// La disponibilidad del dominio depende del permiso: que el demonio la recalcule.
+			if (unit.value?.active) {
+				try {
+					capabilities.value = await deps.capabilities();
+				} catch {
+					// Deja la última lectura; el consentimiento ya quedó bien.
+				}
+			}
+		});
+	};
 
 	const persist = async (patch: Parameters<typeof writeAssistantConfig>[1]) => {
 		const current = await deps.read();
@@ -366,6 +436,9 @@ export function useAssistantSettings(
 		unit,
 		status,
 		capabilities,
+		consent,
+		consentLoaded,
+		consentError,
 		models,
 		hasKey,
 		memoryStatus,
@@ -381,6 +454,7 @@ export function useAssistantSettings(
 		successMessage,
 		refresh,
 		toggleService,
+		toggleConsent,
 		saveName,
 		saveModel,
 		saveKey,
