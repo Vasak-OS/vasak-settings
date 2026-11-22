@@ -34,15 +34,14 @@ export const CONSENT_DOMAINS = ['mail', 'calendar', 'contacts', 'files', 'web'] 
 
 /**
  * El recurso de `vasak-permissions` que enciende y apaga cada dominio, el mismo
- * al que acota el asistente. `null` cuando todavía no se puede tocar desde acá:
- * `web` no tiene recurso ni habilidad, así que la fila queda informativa.
+ * al que acota el asistente. `null` si un dominio no se puede tocar desde acá.
  */
 export const CONSENT_RESOURCE: Record<(typeof CONSENT_DOMAINS)[number], string | null> = {
 	mail: 'store.email',
 	calendar: 'store.calendar',
 	contacts: 'store.contacts',
 	files: 'files',
-	web: null,
+	web: 'web',
 };
 
 const NOT_AVAILABLE = (domain: string): AssistantCapability => ({

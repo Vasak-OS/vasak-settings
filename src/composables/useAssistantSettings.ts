@@ -36,6 +36,7 @@ import {
 	canSaveKey as keyAllowed,
 	type ModelDraft,
 	normalizeAssistantName,
+	normalizeWebHost,
 	readAssistantConfig,
 	validateModelDraft,
 	writeAssistantConfig,
@@ -130,6 +131,8 @@ export interface AssistantSettings {
 	nameDraft: Ref<string>;
 	draft: Ref<ModelDraft>;
 	keyDraft: Ref<string>;
+	/** Lo que se escribe en el campo de «Sitios que puede leer». */
+	webHostDraft: Ref<string>;
 	/** Claves i18n de lo que está mal en el borrador del modelo. */
 	modelErrors: Ref<string[]>;
 	busy: Ref<boolean>;
@@ -146,6 +149,10 @@ export interface AssistantSettings {
 	addFilesRoot: () => Promise<void>;
 	/** Saca una carpeta del alcance de Lince. */
 	removeFilesRoot: (path: string) => Promise<void>;
+	/** Agrega el host de `webHostDraft` (normalizado) al alcance web de Lince. */
+	addWebHost: (host?: string) => Promise<void>;
+	/** Saca un host del alcance web de Lince. */
+	removeWebHost: (host: string) => Promise<void>;
 	toggleMemory: (enabled: boolean) => Promise<void>;
 	/** Pide confirmación; no borra. */
 	clearMemory: () => void;
@@ -186,6 +193,7 @@ export function useAssistantSettings(
 	const nameDraft = ref(config.value.name);
 	const draft = ref<ModelDraft>(draftOf(config.value));
 	const keyDraft = ref('');
+	const webHostDraft = ref('');
 	const modelErrors = ref<string[]>([]);
 	const busy = ref(false);
 	const error = ref('');
@@ -392,6 +400,30 @@ export function useAssistantSettings(
 	const removeFilesRoot = (path: string) =>
 		saveFilesRoots(config.value.filesRoots.filter((root) => root !== path));
 
+	// Igual que las carpetas: el demonio lee `web_allowed_hosts` al arrancar.
+	const saveWebHosts = (hosts: string[]) =>
+		run(messages.errorSaving, async () => {
+			await persist({ webAllowedHosts: hosts });
+			try {
+				if (unit.value?.active) await deps.restart();
+			} catch (err) {
+				await loadConfig();
+				throw err;
+			}
+			await refresh();
+			succeed();
+		});
+
+	const addWebHost = async (raw = webHostDraft.value) => {
+		const host = normalizeWebHost(raw);
+		if (!host || config.value.webAllowedHosts.includes(host)) return;
+		await saveWebHosts([...config.value.webAllowedHosts, host]);
+		webHostDraft.value = '';
+	};
+
+	const removeWebHost = (host: string) =>
+		saveWebHosts(config.value.webAllowedHosts.filter((h) => h !== host));
+
 	const refreshMemory = async () => {
 		try {
 			memoryStatus.value = await deps.memoryStatus();
@@ -448,6 +480,7 @@ export function useAssistantSettings(
 		nameDraft,
 		draft,
 		keyDraft,
+		webHostDraft,
 		modelErrors,
 		busy,
 		error,
@@ -460,6 +493,8 @@ export function useAssistantSettings(
 		saveKey,
 		addFilesRoot,
 		removeFilesRoot,
+		addWebHost,
+		removeWebHost,
 		toggleMemory,
 		clearMemory,
 		cancelClear,

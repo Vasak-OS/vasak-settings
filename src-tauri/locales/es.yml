@@ -246,7 +246,6 @@ views:
     consent:
       title: Qué puede consultar
       description: Encendé qué puede ver y hacer Lince. Cada dominio es un permiso del sistema y pide tu autorización al cambiarlo.
-      disabledNote: La web todavía no está disponible como habilidad.
       grantedUnavailable: Concedido, pero todavía no está listo para usarse.
       unknown: Estado desconocido.
       error: "No se pudo cambiar el permiso: {0}"
@@ -264,6 +263,16 @@ views:
         ve nada. Elegí con cuidado; nunca agregues todo el disco.
       empty: Todavía no agregaste ninguna carpeta.
       add: Agregar carpeta…
+      remove: Quitar
+    web:
+      title: Sitios que puede leer en la web
+      description: >-
+        Lince sólo abre páginas de estos sitios (y sus subdominios). Sin ninguno,
+        no sale a la web. Escribí sólo el dominio, por ejemplo wikipedia.org.
+      empty: Todavía no agregaste ningún sitio.
+      label: Sitio
+      placeholder: ejemplo.org
+      add: Agregar sitio
       remove: Quitar
     memory:
       title: Memoria

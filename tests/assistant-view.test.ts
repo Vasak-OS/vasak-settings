@@ -121,15 +121,27 @@ const noticeShown = (wrapper: VueWrapper, host: string) =>
 	);
 
 describe('la pantalla del asistente', () => {
-	test('el consentimiento: las cuatro filas con recurso se pueden tocar y la web no', async () => {
+	test('el consentimiento: las cinco filas se pueden tocar', async () => {
 		const wrapper = await mountView({});
 		const switches = wrapper.findAll('[role="switch"]');
 		// Servicio + cinco dominios + memoria.
 		expect(switches).toHaveLength(7);
-		for (const row of switches.slice(1, 5)) {
+		for (const row of switches.slice(1, 6)) {
 			expect(row.attributes('disabled')).toBeUndefined();
 		}
-		expect(switches[5].attributes('disabled')).toBeDefined();
+	});
+
+	test('tocar «Web» concede el recurso web al asistente', async () => {
+		const wrapper = await mountView({});
+		await wrapper.findAll('[role="switch"]')[5].trigger('click');
+		await flushPromises();
+		const call = backend.calls.find((c) => c.command === 'set_permission');
+		expect(call?.args).toEqual({
+			binaryPath: '/usr/bin/vasak-assistant',
+			resourceId: 'web',
+			allowed: true,
+		});
+		expect(wrapper.findAll('[role="switch"]')[5].attributes('aria-checked')).toBe('true');
 	});
 
 	test('el interruptor de consentimiento refleja la decisión guardada', async () => {
@@ -196,13 +208,6 @@ describe('la pantalla del asistente', () => {
 		});
 		expect(
 			textsOf('views.assistant.consent.grantedUnavailable').some((t) => wrapper.text().includes(t))
-		).toBe(true);
-	});
-
-	test('la fila de la web explica que no está disponible', async () => {
-		const wrapper = await mountView({});
-		expect(
-			textsOf('views.assistant.consent.disabledNote').some((t) => wrapper.text().includes(t))
 		).toBe(true);
 	});
 
@@ -443,6 +448,59 @@ describe('la pantalla del asistente', () => {
 				].includes(c)
 			);
 		expect(dbus).toEqual([]);
+	});
+});
+
+describe('los sitios web que puede leer Lince en la pantalla', () => {
+	const webHosts = () =>
+		(backend.config().assistant as Record<string, unknown> | undefined)?.web_allowed_hosts;
+	const addButton = (wrapper: VueWrapper) =>
+		wrapper
+			.findAll('button')
+			.find((b) => textsOf('views.assistant.web.add').includes(b.text().trim()));
+	const removeButtons = (wrapper: VueWrapper) =>
+		wrapper
+			.findAll('button')
+			.filter((b) => textsOf('views.assistant.web.remove').includes(b.text().trim()));
+
+	test('lista los hosts guardados, cada uno con su botón de quitar', async () => {
+		const wrapper = await mountView({
+			config: { assistant: { web_allowed_hosts: ['a.com', 'b.org'] } },
+		});
+		expect(wrapper.text()).toContain('a.com');
+		expect(wrapper.text()).toContain('b.org');
+		expect(removeButtons(wrapper)).toHaveLength(2);
+	});
+
+	test('«Agregar» está deshabilitado con el campo vacío', async () => {
+		const wrapper = await mountView({});
+		expect(addButton(wrapper)?.attributes('disabled')).toBeDefined();
+		await wrapper.find('input[placeholder]').setValue('x.com');
+		expect(addButton(wrapper)?.attributes('disabled')).toBeUndefined();
+	});
+
+	test('escribir un host y pulsar «Agregar» guarda el host normalizado', async () => {
+		const wrapper = await mountView({});
+		const input = wrapper
+			.findAll('input')
+			.find((i) =>
+				textsOf('views.assistant.web.placeholder').includes(i.attributes('placeholder') ?? '')
+			);
+		await input?.setValue('https://Es.Wikipedia.org/wiki/X');
+		await addButton(wrapper)?.trigger('click');
+		await flushPromises();
+		expect(webHosts()).toEqual(['es.wikipedia.org']);
+		expect(wrapper.text()).toContain('es.wikipedia.org');
+	});
+
+	test('«Quitar» saca el host de la lista y de la configuración', async () => {
+		const wrapper = await mountView({
+			config: { assistant: { web_allowed_hosts: ['a.com', 'b.org'] } },
+		});
+		await removeButtons(wrapper)[0].trigger('click');
+		await flushPromises();
+		expect(webHosts()).toEqual(['b.org']);
+		expect(wrapper.text()).not.toContain('a.com');
 	});
 });
 

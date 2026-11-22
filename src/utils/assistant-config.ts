@@ -28,6 +28,8 @@ export interface AssistantConfig {
 	allowRemote: boolean;
 	/** Las carpetas que Lince puede leer (`lince_files_roots`). Vacío: ninguna. */
 	filesRoots: string[];
+	/** Los sitios web que Lince puede leer (`web_allowed_hosts`). Vacío: no sale a la web. */
+	webAllowedHosts: string[];
 }
 
 /** Lo que el formulario del modelo edita; `remote` es «Proveedor remoto» (allow_remote). */
@@ -75,6 +77,25 @@ export function normalizeAssistantName(raw: string): string | null {
 	return name;
 }
 
+/**
+ * El host de lo que la persona pegó: sin esquema, credenciales, puerto, ruta,
+ * consulta ni punto final, en minúsculas. `''` si no queda nada.
+ */
+export function normalizeWebHost(raw: string): string {
+	const host = raw
+		.trim()
+		.toLowerCase()
+		.replace(/^[a-z][a-z0-9+.-]*:\/\//, '')
+		.split(/[/?#]/)[0]
+		.replace(/^.*@/, '');
+	// Un host IPv6 entre corchetes conserva los dos puntos de adentro; el puerto va
+	// después del `]` (`[::1]:8080` → `[::1]`). El resto pierde el `:puerto` final.
+	const stripped = host.startsWith('[')
+		? host.replace(/](:\d+)?$/, ']')
+		: host.replace(/:\d*$/, '');
+	return stripped.replace(/\.$/, '');
+}
+
 export function readAssistantConfig(config: unknown): AssistantConfig {
 	const section = sectionOf(config);
 	const backend = isBackend(section.backend) ? section.backend : 'ollama';
@@ -86,6 +107,7 @@ export function readAssistantConfig(config: unknown): AssistantConfig {
 		model: text(section.model),
 		allowRemote: configBoolean(section.allow_remote, false),
 		filesRoots: stringArray(section.lince_files_roots),
+		webAllowedHosts: stringArray(section.web_allowed_hosts),
 	};
 }
 
@@ -96,6 +118,7 @@ export interface AssistantPatch {
 	model?: string;
 	allowRemote?: boolean;
 	filesRoots?: string[];
+	webAllowedHosts?: string[];
 }
 
 /**
@@ -125,6 +148,11 @@ export function writeAssistantConfig(
 		const roots = stringArray(patch.filesRoots);
 		if (roots.length) section.lince_files_roots = roots;
 		else delete section.lince_files_roots;
+	}
+	if (patch.webAllowedHosts !== undefined) {
+		const hosts = stringArray(patch.webAllowedHosts);
+		if (hosts.length) section.web_allowed_hosts = hosts;
+		else delete section.web_allowed_hosts;
 	}
 	config.assistant = section;
 	return config;

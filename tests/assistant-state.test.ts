@@ -90,13 +90,13 @@ describe('consentRows', () => {
 		}
 	});
 
-	test('cada dominio apunta a su recurso de permisos y la web no tiene', () => {
+	test('cada dominio apunta a su recurso de permisos', () => {
 		expect(consentRows(null).map((r) => r.resource)).toEqual([
 			'store.email',
 			'store.calendar',
 			'store.contacts',
 			'files',
-			null,
+			'web',
 		]);
 	});
 
@@ -119,9 +119,9 @@ describe('consentRows', () => {
 		});
 	});
 
-	test('la web nunca figura concedida, ni con una decisión suelta', () => {
+	test('la web figura concedida cuando su recurso está permitido', () => {
 		const rows = consentRows(null, { web: 'allowed' });
-		expect(rows.find((r) => r.domain === 'web')?.granted).toBe(false);
+		expect(rows.find((r) => r.domain === 'web')?.granted).toBe(true);
 	});
 
 	test('toma disponibilidad y motivo del demonio, ignora dominios desconocidos y completa los que faltan', () => {

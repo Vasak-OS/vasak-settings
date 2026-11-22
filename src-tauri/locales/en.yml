@@ -246,7 +246,6 @@ views:
     consent:
       title: What it can look at
       description: Turn on what Lince can see and do. Each domain is a system permission and asks for your authorization when changed.
-      disabledNote: The web is not available as a skill yet.
       grantedUnavailable: Granted, but not ready to use yet.
       unknown: Unknown state.
       error: "The permission could not be changed: {0}"
@@ -264,6 +263,17 @@ views:
         sees nothing. Choose carefully; never add the whole disk.
       empty: You have not added any folder yet.
       add: Add folder…
+      remove: Remove
+    web:
+      title: Sites it can read on the web
+      description: >-
+        Lince only opens pages from these sites (and their subdomains). With none,
+        it does not go out to the web. Enter just the domain, for example
+        wikipedia.org.
+      empty: You have not added any site yet.
+      label: Site
+      placeholder: example.org
+      add: Add site
       remove: Remove
     memory:
       title: Memory

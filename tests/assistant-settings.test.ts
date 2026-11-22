@@ -883,3 +883,87 @@ describe('la lectura del consentimiento', () => {
 		expect(s.consentError.value).not.toBe('');
 	});
 });
+
+describe('useAssistantSettings: sitios web de Lince', () => {
+	const hosts = (f: Fake) =>
+		(f.file().assistant as Record<string, unknown> | undefined)?.web_allowed_hosts;
+
+	test('agregar normaliza el host, persiste, vacía el borrador y reinicia si corre', async () => {
+		const f = fake({ assistant: { name: 'Ada', web_allowed_hosts: ['a.com'] } }, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		f.log.length = 0;
+		s.webHostDraft.value = ' https://Es.Wikipedia.org:8443/wiki/X ';
+		await s.addWebHost();
+		expect(hosts(f)).toEqual(['a.com', 'es.wikipedia.org']);
+		expect((f.file().assistant as Record<string, unknown>).name).toBe('Ada');
+		expect(f.log.indexOf('write')).toBeLessThan(f.log.indexOf('restart'));
+		expect(s.config.value.webAllowedHosts).toEqual(['a.com', 'es.wikipedia.org']);
+		expect(s.webHostDraft.value).toBe('');
+		expect(s.successMessage.value).toBe('guardado');
+	});
+
+	test('con el servicio apagado agrega pero no reinicia', async () => {
+		const f = fake({}, INACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		await s.addWebHost('b.org');
+		expect(hosts(f)).toEqual(['b.org']);
+		expect(f.log).not.toContain('restart');
+	});
+
+	test('un host repetido (aunque venga como URL) no se duplica ni escribe', async () => {
+		const f = fake({ assistant: { web_allowed_hosts: ['a.com'] } }, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		f.log.length = 0;
+		await s.addWebHost('HTTPS://A.com/x');
+		expect(hosts(f)).toEqual(['a.com']);
+		expect(f.log).not.toContain('write');
+		expect(f.log).not.toContain('restart');
+	});
+
+	test('un borrador vacío o sin host no escribe ni reinicia', async () => {
+		const f = fake({}, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		f.log.length = 0;
+		s.webHostDraft.value = '   ';
+		await s.addWebHost();
+		await s.addWebHost('https://');
+		expect(f.log).not.toContain('write');
+		expect(f.log).not.toContain('restart');
+	});
+
+	test('quitar persiste la lista sin ese host y reinicia si corre', async () => {
+		const f = fake({ assistant: { web_allowed_hosts: ['a.com', 'b.org'] } }, ACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		f.log.length = 0;
+		await s.removeWebHost('a.com');
+		expect(hosts(f)).toEqual(['b.org']);
+		expect(f.log).toContain('restart');
+	});
+
+	test('quitar el último host borra la clave', async () => {
+		const f = fake({ assistant: { web_allowed_hosts: ['a.com'] } }, INACTIVE);
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		await s.removeWebHost('a.com');
+		expect(hosts(f)).toBeUndefined();
+	});
+
+	test('si el reinicio falla, config se reconcilia con lo persistido y queda el error', async () => {
+		const f = fake({ assistant: { web_allowed_hosts: ['a.com', 'b.org'] } }, ACTIVE, {
+			restart: async () => {
+				throw new Error('boom');
+			},
+		});
+		const s = useAssistantSettings(MESSAGES, f.deps);
+		await s.refresh();
+		await s.removeWebHost('a.com');
+		expect(hosts(f)).toEqual(['b.org']);
+		expect(s.error.value).toContain('boom');
+		expect(s.config.value.webAllowedHosts).toEqual(['b.org']);
+	});
+});

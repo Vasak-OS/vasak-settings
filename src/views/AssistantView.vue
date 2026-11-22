@@ -59,7 +59,6 @@ const rows = computed(() => consentRows(capabilities.value, settings.consent.val
 
 /** El texto bajo cada interruptor de consentimiento, según su estado. */
 const consentHint = (row: ConsentRow): string => {
-	if (!row.resource) return t('views.assistant.consent.disabledNote');
 	// Sin una lectura buena el estado es desconocido, no «apagado».
 	if (!settings.consentLoaded.value) return t('views.assistant.consent.unknown');
 	if (row.granted && !row.available)
@@ -304,6 +303,53 @@ onMounted(settings.refresh);
 							@click="settings.addFilesRoot()"
 						/>
 					</div>
+				</div>
+			</ConfigSection>
+
+			<ConfigSection
+				:title="t('views.assistant.web.title')"
+				:description="t('views.assistant.web.description')"
+			>
+				<div class="flex flex-col gap-2">
+					<p v-if="!config.webAllowedHosts.length" class="text-sm text-tx-muted">
+						{{ t('views.assistant.web.empty') }}
+					</p>
+					<div
+						v-for="host in config.webAllowedHosts"
+						:key="host"
+						class="flex items-center justify-between gap-3 rounded-corner-m bg-ui-surface/70 px-3 py-2"
+					>
+						<span class="min-w-0 truncate text-sm" :title="host">{{ host }}</span>
+						<ActionButton
+							:label="t('views.assistant.web.remove')"
+							variant="secondary"
+							:disabled="busy"
+							@click="settings.removeWebHost(host)"
+						/>
+					</div>
+					<form
+						class="flex flex-wrap items-end gap-2"
+						@submit.prevent="settings.addWebHost()"
+					>
+						<FormGroup
+							class="min-w-0 flex-1"
+							:label="t('views.assistant.web.label')"
+							v-slot="{ id, describedBy }"
+						>
+							<TextInput
+								:id="id"
+								v-model="settings.webHostDraft.value"
+								:described-by="describedBy"
+								:placeholder="t('views.assistant.web.placeholder')"
+								:disabled="busy"
+							/>
+						</FormGroup>
+						<ActionButton
+							:label="t('views.assistant.web.add')"
+							:disabled="busy || !settings.webHostDraft.value.trim()"
+							@click="settings.addWebHost()"
+						/>
+					</form>
 				</div>
 			</ConfigSection>
 
