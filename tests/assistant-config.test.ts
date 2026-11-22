@@ -10,6 +10,7 @@ import {
 	type ModelDraft,
 	normalizeAssistantName,
 	normalizedDraftUrl,
+	normalizeWebHost,
 	readAssistantConfig,
 	validateModelDraft,
 	writeAssistantConfig,
@@ -52,6 +53,7 @@ describe('readAssistantConfig', () => {
 				model: '',
 				allowRemote: false,
 				filesRoots: [],
+				webAllowedHosts: [],
 			});
 		}
 	});
@@ -73,6 +75,7 @@ describe('readAssistantConfig', () => {
 			model: 'gpt-x',
 			allowRemote: true,
 			filesRoots: [],
+			webAllowedHosts: [],
 		});
 	});
 
@@ -304,5 +307,62 @@ describe('normalizedDraftUrl y canSaveKey', () => {
 		expect(canSaveKey({ active: true }, saved, { ...draft, url: 'https://otra.com/v1' })).toBe(
 			false
 		);
+	});
+});
+
+describe('normalizeWebHost', () => {
+	test('deja sólo el host: sin esquema, puerto, ruta, consulta ni fragmento', () => {
+		expect(normalizeWebHost('https://Es.Wikipedia.org:8443/wiki/X?q=1#y')).toBe('es.wikipedia.org');
+	});
+
+	test('saca las credenciales', () => {
+		expect(normalizeWebHost('https://user:clave@example.com/a')).toBe('example.com');
+		expect(normalizeWebHost('user@example.com')).toBe('example.com');
+	});
+
+	test('recorta, pasa a minúsculas y saca el punto final', () => {
+		expect(normalizeWebHost('  Example.COM.  ')).toBe('example.com');
+		expect(normalizeWebHost('example.com:80')).toBe('example.com');
+	});
+
+	test('un IPv6 entre corchetes conserva sus dos puntos pero pierde el puerto', () => {
+		expect(normalizeWebHost('[::1]')).toBe('[::1]');
+		expect(normalizeWebHost('http://[::1]:8080/x')).toBe('[::1]');
+		expect(normalizeWebHost('[2606:4700::1]:443')).toBe('[2606:4700::1]');
+	});
+
+	test('una cadena vacía o sin host da vacío', () => {
+		expect(normalizeWebHost('')).toBe('');
+		expect(normalizeWebHost('   ')).toBe('');
+		expect(normalizeWebHost('https://')).toBe('');
+		expect(normalizeWebHost('/solo/ruta')).toBe('');
+	});
+});
+
+describe('sitios web permitidos en la configuración', () => {
+	test('sin la clave, la lista está vacía', () => {
+		expect(readAssistantConfig({ assistant: {} }).webAllowedHosts).toEqual([]);
+	});
+
+	test('lee web_allowed_hosts', () => {
+		const config = { assistant: { web_allowed_hosts: ['a.com', 'b.org'] } };
+		expect(readAssistantConfig(config).webAllowedHosts).toEqual(['a.com', 'b.org']);
+	});
+
+	test('escribe la lista y se lee igual (ida y vuelta)', () => {
+		const config: Record<string, unknown> = { assistant: { name: 'Ada' } };
+		writeAssistantConfig(config, { webAllowedHosts: ['a.com', 'b.org'] });
+		expect((config.assistant as Record<string, unknown>).web_allowed_hosts).toEqual([
+			'a.com',
+			'b.org',
+		]);
+		expect(readAssistantConfig(config).webAllowedHosts).toEqual(['a.com', 'b.org']);
+		expect(readAssistantConfig(config).name).toBe('Ada');
+	});
+
+	test('una lista vacía borra la clave', () => {
+		const config = { assistant: { web_allowed_hosts: ['a.com'] } };
+		writeAssistantConfig(config, { webAllowedHosts: [] });
+		expect('web_allowed_hosts' in config.assistant).toBe(false);
 	});
 });
